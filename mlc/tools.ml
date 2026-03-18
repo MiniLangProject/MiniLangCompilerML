@@ -205,11 +205,122 @@ function _arr_tail_to_array(tail)
   n = arr_chunk_tail_len(tail)
   if n <= 0 then return [] end if
   if typeof(tail.data) != "array" then return [] end if
-  outv = []
+
+  has_void = false
   for i = 0 to n - 1
-    outv = outv + [_arr_unwrap_value(tail.data[i])]
+    cell = tail.data[i]
+    if typeof(cell) == "struct" and cell == _arr_void_sentinel then
+      has_void = true
+      break
+    end if
+    if typeof(cell) == "void" then
+      has_void = true
+      break
+    end if
   end for
-  return outv
+
+  if has_void == false then
+    outv = _arr_fill(n, 0)
+    for i = 0 to n - 1
+      outv[i] = tail.data[i]
+    end for
+    return outv
+  end if
+
+  parts = []
+  blk = []
+  blk_cap = 256
+  for i = 0 to n - 1
+    blk = blk + [_arr_unwrap_value(tail.data[i])]
+    if len(blk) >= blk_cap then
+      parts = parts + [blk]
+      blk = []
+    end if
+  end for
+  if len(blk) > 0 then
+    parts = parts + [blk]
+  end if
+  return arr_merge_chunks_balanced(parts)
+end function
+
+function _chunks_paged_tag()
+  return "__acp__"
+end function
+
+function _chunks_is_paged(chunks)
+  if typeof(chunks) != "array" or len(chunks) < 3 then return false end if
+  if typeof(chunks[0]) != "string" then return false end if
+  return chunks[0] == _chunks_paged_tag()
+end function
+
+function _chunks_paged_new()
+  return [_chunks_paged_tag(), [], _arr_tail_new(256)]
+end function
+
+function _chunks_paged_push(chunks, chunk)
+  p = chunks
+  if _chunks_is_paged(p) == false then p = _chunks_paged_new() end if
+
+  pages = p[1]
+  if typeof(pages) != "array" then pages = [] end if
+  t = p[2]
+  if typeof(t) == "array" then t = _arr_tail_from_array(t, 256) end if
+  if typeof(t) != "struct" or typeof(t.data) != "array" then t = _arr_tail_new(256) end if
+
+  if arr_chunk_tail_len(t) >= 256 then
+    pages = pages + [_arr_tail_to_array(t)]
+    t = _arr_tail_new(256)
+  end if
+
+  t.data[t.used] = _arr_wrap_value(chunk)
+  t.used = t.used + 1
+  p[1] = pages
+  p[2] = t
+  return p
+end function
+
+function _chunks_paged_from_array(chunks)
+  p = _chunks_paged_new()
+  if typeof(chunks) != "array" or len(chunks) <= 0 then return p end if
+  for i = 0 to len(chunks) - 1
+    p = _chunks_paged_push(p, chunks[i])
+  end for
+  return p
+end function
+
+function _chunks_push_chunk(chunks, chunk)
+  if _chunks_is_paged(chunks) then
+    return _chunks_paged_push(chunks, chunk)
+  end if
+  if typeof(chunks) != "array" then
+    return [chunk]
+  end if
+  if len(chunks) < 64 then
+    return chunks + [chunk]
+  end if
+  p = _chunks_paged_from_array(chunks)
+  return _chunks_paged_push(p, chunk)
+end function
+
+function _chunks_materialize(chunks)
+  if _chunks_is_paged(chunks) == false then
+    if typeof(chunks) == "array" then return chunks end if
+    return []
+  end if
+
+  pages = chunks[1]
+  if typeof(pages) != "array" then pages = [] end if
+  t = chunks[2]
+  tail_arr = _arr_tail_to_array(t)
+
+  flat = []
+  if len(pages) > 0 then
+    flat = arr_merge_chunks_balanced(pages)
+  end if
+
+  if len(flat) <= 0 then return tail_arr end if
+  if len(tail_arr) <= 0 then return flat end if
+  return arr_merge_chunks_balanced([flat, tail_arr])
 end function
 
 function arr_chunk_new(cap)
@@ -219,7 +330,7 @@ function arr_chunk_new(cap)
 end function
 
 function arr_chunked_push(chunks, tail, value, cap)
-  if typeof(chunks) != "array" then chunks = [] end if
+  if _chunks_is_paged(chunks) == false and typeof(chunks) != "array" then chunks = [] end if
   ccap = cap
   if typeof(ccap) != "int" or ccap <= 0 then ccap = 64 end if
   t = tail
@@ -229,13 +340,13 @@ function arr_chunked_push(chunks, tail, value, cap)
   if typeof(t.cap) != "int" or t.cap <= 0 then t.cap = ccap end if
   if t.cap != ccap then
     if arr_chunk_tail_len(t) > 0 then
-      chunks = chunks + [_arr_tail_to_array(t)]
+      chunks = _chunks_push_chunk(chunks, _arr_tail_to_array(t))
     end if
     t = _arr_tail_new(ccap)
   end if
 
   if arr_chunk_tail_len(t) >= ccap then
-    chunks = chunks + [_arr_tail_to_array(t)]
+    chunks = _chunks_push_chunk(chunks, _arr_tail_to_array(t))
     t = _arr_tail_new(ccap)
   end if
 
@@ -278,13 +389,13 @@ function arr_merge_chunks_balanced(chunks)
 end function
 
 function arr_chunked_finish(chunks, tail)
-  all = []
-  if typeof(chunks) == "array" and len(chunks) > 0 then
-    all = chunks
-  end if
+  all = _chunks_materialize(chunks)
   tail_arr = _arr_tail_to_array(tail)
   if typeof(tail_arr) == "array" and len(tail_arr) > 0 then
     all = all + [tail_arr]
+  end if
+  if typeof(all) == "array" and len(all) == 1 and typeof(all[0]) == "array" then
+    return all[0]
   end if
   return arr_merge_chunks_balanced(all)
 end function
@@ -323,7 +434,19 @@ function _bp_chunk_get(bp, idx)
     return pg[po]
   end if
   ti = idx - (len(bp.chunk_pages) << 8)
-  return arr_chunk_tail_get(bp.chunk_tail, ti, bytes(65536, 0))
+  if typeof(bp.chunk_tail) == "array" then
+    if ti >= 0 and ti < len(bp.chunk_tail) and typeof(bp.chunk_tail[ti]) == "bytes" then
+      return bp.chunk_tail[ti]
+    end if
+  else
+    if typeof(bp.chunk_tail) == "struct" and typeof(bp.chunk_tail.data) == "array" then
+      tn = arr_chunk_tail_len(bp.chunk_tail)
+      if ti >= 0 and ti < tn and typeof(bp.chunk_tail.data[ti]) == "bytes" then
+        return bp.chunk_tail.data[ti]
+      end if
+    end if
+  end if
+  return bytes(65536, 0)
 end function
 
 function _bp_chunk_set(bp, idx, page)

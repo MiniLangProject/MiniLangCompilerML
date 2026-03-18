@@ -20,11 +20,18 @@ struct FrontCheckResult
   visited,
   modules,
   aliases,
+  parsed_modules,
 end struct
 
 struct ModuleInfo
   path,
   package_name,
+end struct
+
+struct ParsedModule
+  path,
+  source,
+  program,
 end struct
 
 struct StrPair
@@ -79,6 +86,7 @@ struct ExternSig
 end struct
 
 _mem_probe_enabled = false
+_path_norm_cache = []
 
 function _usage()
   print "MiniLang self-hosted compiler (bootstrap frontend)"
@@ -210,14 +218,35 @@ function _path_norm(p)
   return s.toLowerAscii(_path_canon(p))
 end function
 
+function _path_norm_cached(p)
+  global _path_norm_cache
+  if typeof(p) != "string" then return _path_norm(p) end if
+  if typeof(_path_norm_cache) != "array" then _path_norm_cache = [] end if
+  if len(_path_norm_cache) > 0 then
+    i = len(_path_norm_cache) - 1
+    while i >= 0
+      it = _path_norm_cache[i]
+      if typeof(it) == "array" and len(it) >= 2 and it[0] == p and typeof(it[1]) == "string" then
+        return it[1]
+      end if
+      i = i - 1
+    end while
+  end if
+  n = _path_norm(p)
+  _path_norm_cache = _path_norm_cache + [[p, n]]
+  return n
+end function
+
 function _path_eq(a, b)
-  return _path_norm(a) == _path_norm(b)
+  if a == b then return true end if
+  return _path_norm_cached(a) == _path_norm_cached(b)
 end function
 
 function _path_in(arr, value)
   if len(arr) <= 0 then return false end if
+  nv = _path_norm_cached(value)
   for i = 0 to len(arr) - 1
-    if _path_eq(arr[i], value) then return true end if
+    if _path_norm_cached(arr[i]) == nv then return true end if
   end for
   return false
 end function
@@ -361,7 +390,9 @@ function _relpath_from_root(path, root)
   if _endsWith(pref, "\\") == false then
     pref = pref + "\\"
   end if
-  if _startsWith(_path_norm(p), _path_norm(pref)) then
+  np = _path_norm_cached(p)
+  npr = _path_norm_cached(pref)
+  if _startsWith(np, npr) then
     return s.substr(p, len(pref), len(p) - len(pref))
   end if
   return ""
@@ -554,23 +585,49 @@ function _visited_contains(visited, path)
   return _path_in(visited, path)
 end function
 
-function _module_visit(path, entry_path, include_dirs, stack, visited, modules, aliases, diags, keep_going, max_errors)
+function _parsed_module_get(parsed_modules, path)
+  if typeof(parsed_modules) != "array" or len(parsed_modules) <= 0 then return 0 end if
+  for i = 0 to len(parsed_modules) - 1
+    it = parsed_modules[i]
+    if typeof(it) == "struct" and _path_eq(it.path, path) then
+      return it
+    end if
+  end for
+  return 0
+end function
+
+function _parsed_module_set(parsed_modules, path, source, program)
+  if typeof(parsed_modules) != "array" then parsed_modules = [] end if
+  rec = ParsedModule(path, source, program)
+  if len(parsed_modules) > 0 then
+    for i = 0 to len(parsed_modules) - 1
+      it = parsed_modules[i]
+      if typeof(it) == "struct" and _path_eq(it.path, path) then
+        parsed_modules[i] = rec
+        return parsed_modules
+      end if
+    end for
+  end if
+  return parsed_modules + [rec]
+end function
+
+function _module_visit(path, entry_path, include_dirs, stack, visited, modules, aliases, parsed_modules, diags, keep_going, max_errors)
   if len(diags) >= max_errors then
-    return FrontCheckResult(diags, visited, modules, aliases)
+    return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
   if _stack_contains(stack, path) then
     // import cycles are tolerated at loader level
-    return FrontCheckResult(diags, visited, modules, aliases)
+    return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
   if _visited_contains(visited, path) then
-    return FrontCheckResult(diags, visited, modules, aliases)
+    return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
   if fs.exists(path) == false then
     diags = _add_diag(diags, "CompileError", path, 0, "Import file not found: " + path)
-    return FrontCheckResult(diags, visited, modules, aliases)
+    return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
   parsed = 0
@@ -582,7 +639,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
 
   if typeof(parsed) != "struct" then
     diags = _add_diag(diags, "CompileError", path, 0, "frontend.parse_program returned non-struct")
-    return FrontCheckResult(diags, visited, modules, aliases)
+    return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
   if typeof(parsed.errors) == "array" and len(parsed.errors) > 0 then
@@ -600,11 +657,11 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
       end if
     end for
     if keep_going == false then
-      return FrontCheckResult(diags, visited, modules, aliases)
+      return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
     end if
     // keep-going mode: mark module as visited and continue with other files
     visited = _append_unique_path(visited, path)
-    return FrontCheckResult(diags, visited, modules, aliases)
+    return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
   program = parsed.program
@@ -614,24 +671,37 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
   if _path_eq(path, entry_path) == false then
     if typeof(program) == "array" and len(program) > 0 then
       for si = 0 to len(program) - 1
-        cr = _check_decl_stmt(program[si], path, diags, keep_going, max_errors)
+        stx = program[si]
+        // Fast-path for common declaration-only node kinds to avoid expensive helper calls.
+        if typeof(stx) == "struct" then
+          kx = stx.node_kind
+          if kx == "FunctionDef" or kx == "StructDef" or kx == "NamespaceDecl" or kx == "ExternFunctionDef" or kx == "ExternFunctionDecl" or kx == "Assign" or kx == "Import" then
+            continue
+          end if
+        end if
+        cr = _check_decl_stmt(stx, path, diags, keep_going, max_errors)
         diags = cr.diagnostics
         if cr.failed then
           if keep_going == false then
-            return FrontCheckResult(diags, visited, modules, aliases)
+            return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
           end if
           visited = _append_unique_path(visited, path)
-          return FrontCheckResult(diags, visited, modules, aliases)
+          return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
         end if
         if len(diags) >= max_errors then
-          return FrontCheckResult(diags, visited, modules, aliases)
+          return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
         end if
       end for
     end if
   end if
 
   stack2 = stack +[path]
+  base_dir = _dirname(path)
   imports = _extract_imports(program)
+  part_for_codegen = _filter_non_import_stmts(program)
+  source_text = ""
+  if typeof(parsed.source) == "string" then source_text = parsed.source end if
+  parsed_modules = _parsed_module_set(parsed_modules, path, source_text, part_for_codegen)
   // Drop full AST early: below we only need import nodes.
   parsed.program = []
   program = []
@@ -648,32 +718,33 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
       if typeof(req) != "string" then
         diags = _add_diag_from_stmt(diags, "CompileError", st, path, "Import statement missing path")
         if keep_going == false then
-          return FrontCheckResult(diags, visited, modules, aliases)
+          return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
         end if
         continue
       end if
 
-      rr = _resolve_import(req, _dirname(path), include_dirs)
+      rr = _resolve_import(req, base_dir, include_dirs)
       if rr.resolved == "" then
         diags = _add_diag_from_stmt(diags, "CompileError", st, path, "Import file not found: " + req)
         if keep_going == false then
-          return FrontCheckResult(diags, visited, modules, aliases)
+          return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
         end if
         continue
       end if
       if len(rr.matches) > 1 then
         diags = _add_diag_from_stmt(diags, "CompileError", st, path, "Ambiguous import: " + req)
         if keep_going == false then
-          return FrontCheckResult(diags, visited, modules, aliases)
+          return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
         end if
         continue
       end if
 
-      sub = _module_visit(rr.resolved, entry_path, include_dirs, stack2, visited, modules, aliases, diags, keep_going, max_errors)
+      sub = _module_visit(rr.resolved, entry_path, include_dirs, stack2, visited, modules, aliases, parsed_modules, diags, keep_going, max_errors)
       diags = sub.diagnostics
       visited = sub.visited
       modules = sub.modules
       aliases = sub.aliases
+      parsed_modules = sub.parsed_modules
 
       declared_pkg = _module_get_package(modules, rr.resolved)
       expected_pkg = _expected_package_for_file(rr.resolved, rr.resolved_kind, rr.resolved_root)
@@ -687,7 +758,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
         "File declares package " + declared_pkg + ", but was found as " + expected_pkg + ": " + rr.resolved
       )
         if keep_going == false then
-          return FrontCheckResult(diags, visited, modules, aliases)
+          return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
         end if
       end if
 
@@ -702,7 +773,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
         "Module import " + expected_mod + " points to file declaring package " + declared_pkg + ": " + rr.resolved
       )
         if keep_going == false then
-          return FrontCheckResult(diags, visited, modules, aliases)
+          return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
         end if
       end if
 
@@ -712,7 +783,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
         if alias == "try" or alias == "error" then
           diags = _add_diag_from_stmt(diags, "CompileError", st, path, "import alias '" + alias + "' is reserved")
           if keep_going == false then
-            return FrontCheckResult(diags, visited, modules, aliases)
+            return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
           end if
           continue
         end if
@@ -725,7 +796,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
           "import ... as " + alias + " requires imported file to declare `package`: " + rr.resolved
         )
           if keep_going == false then
-            return FrontCheckResult(diags, visited, modules, aliases)
+            return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
           end if
           continue
         end if
@@ -739,7 +810,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
           "import alias " + alias + " refers to multiple packages: " + prev + " and " + declared_pkg
         )
           if keep_going == false then
-            return FrontCheckResult(diags, visited, modules, aliases)
+            return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
           end if
           continue
         end if
@@ -761,7 +832,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
                 "Implicit import alias '" + implicit + "' is ambiguous between packages " + prev2 + " and " + declared_pkg + ". Use 'import ... as <alias>' to disambiguate."
               )
                 if keep_going == false then
-                  return FrontCheckResult(diags, visited, modules, aliases)
+                  return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
                 end if
               end if
             end if
@@ -772,7 +843,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
   end if
 
   visited = _append_unique_path(visited, path)
-  return FrontCheckResult(diags, visited, modules, aliases)
+  return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
 end function
 
 function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
@@ -783,7 +854,7 @@ function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
       dirs = _append_unique_path(dirs, include_dirs[i])
     end for
   end if
-  return _module_visit(entry, entry, dirs,[], [],[], [],[], keep_going, max_errors)
+  return _module_visit(entry, entry, dirs, [], [], [], [], [], [], keep_going, max_errors)
 end function
 
 function _print_diag(d)
@@ -1321,69 +1392,30 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   merged_chunks_tail = []
   entry_source = ""
   visited = check.visited
+  parsed_modules = check.parsed_modules
+  if typeof(parsed_modules) != "array" then parsed_modules = [] end if
   if typeof(visited) != "array" or len(visited) <= 0 then
     visited =[entry]
   end if
 
   for i = 0 to len(visited) - 1
     path = visited[i]
-    parsed = 0
-    if keep_going then
-      parsed = frontend.parse_program_keepgoing(path, max_errors)
-    else
-      parsed = frontend.parse_program(path)
-    end if
-
+    parsed = _parsed_module_get(parsed_modules, path)
     if typeof(parsed) != "struct" then
-      diags = _add_diag(diags, "CompileError", path, 0, "frontend.parse_program returned non-struct")
-      if keep_going == false then
-        return LoadProgramResult(diags, "", _merge_array_chunks_balanced(t.arr_chunked_finish(merged_chunks, merged_chunks_tail)), check.aliases)
-      end if
-      if len(diags) >= max_errors then
-        return LoadProgramResult(diags, "", _merge_array_chunks_balanced(t.arr_chunked_finish(merged_chunks, merged_chunks_tail)), check.aliases)
-      end if
-      continue
+      diags = _add_diag(diags, "CompileError", path, 0, "internal frontend cache miss for: " + path)
+      return LoadProgramResult(diags, "", _merge_array_chunks_balanced(t.arr_chunked_finish(merged_chunks, merged_chunks_tail)), check.aliases)
     end if
 
-    if typeof(parsed.errors) == "array" and len(parsed.errors) > 0 then
-      for ei = 0 to len(parsed.errors) - 1
-        if len(diags) >= max_errors then break end if
-        e = parsed.errors[ei]
-        if typeof(e) == "struct" and typeof(e.message) == "string" then
-          fn = path
-          if typeof(e.filename) == "string" then fn = e.filename end if
-          ep = 0
-          if typeof(e.pos) == "int" then ep = e.pos end if
-          diags = _add_diag(diags, "ParseError", fn, ep, e.message)
-        else
-          diags = _add_diag(diags, "ParseError", path, 0, "Unknown parser error")
-        end if
-      end for
-
-      parsed.program = []
-      parsed.source = ""
-      if i % 4 == 0 then gc_collect() end if
-
-      if keep_going == false then
-        return LoadProgramResult(diags, "", _merge_array_chunks_balanced(t.arr_chunked_finish(merged_chunks, merged_chunks_tail)), check.aliases)
-      end if
-      if len(diags) >= max_errors then
-        return LoadProgramResult(diags, "", _merge_array_chunks_balanced(t.arr_chunked_finish(merged_chunks, merged_chunks_tail)), check.aliases)
-      end if
-      continue
+    if _path_eq(path, entry) and typeof(parsed.source) == "string" then
+      entry_source = parsed.source
     end if
 
-    if _path_eq(path, entry) then
-      if typeof(parsed.source) == "string" then entry_source = parsed.source end if
-    end if
-    part = _filter_non_import_stmts(parsed.program)
+    part = parsed.program
     if typeof(part) == "array" and len(part) > 0 then
       appm = t.arr_chunked_push(merged_chunks, merged_chunks_tail, part, 16)
       merged_chunks = appm[0]
       merged_chunks_tail = appm[1]
     end if
-    parsed.program = []
-    parsed.source = ""
     part = []
     if i % 4 == 0 then gc_collect() end if
     if i % 16 == 0 then _heap_probe("load:file_" + i) end if
@@ -1719,3 +1751,4 @@ function run_cli(args)
 
   return compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
 end function
+

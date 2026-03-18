@@ -354,13 +354,7 @@ function _substr(text, start, length)
   if typeof(text) != "string" then return "" end if
   if start < 0 then start = 0 end if
   if length <= 0 or start >= len(text) then return "" end if
-  stop = start + length
-  if stop > len(text) then stop = len(text) end if
-  txt = ""
-  for i = start to stop - 1
-    txt = txt + text[i]
-  end for
-  return txt
+  return s.substr(text, start, length)
 end function
 
 function _charCode(ch)
