@@ -1,0 +1,1 @@
+enum E are A = 1, B = "x", C end enum struct S a, b static function sum(x, y) return x + y end function end struct function main(args) x = 0; while x < 2 x = x + 1 end while if x == 2 then print "ok" else print "bad" end if print E.C; print S.sum(2, 3); print "no-newlines [OK]" end function

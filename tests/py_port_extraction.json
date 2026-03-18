@@ -1,0 +1,680 @@
+[
+  {
+    "func": "test_unhandled_error_top_level",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "unhandled_top.ml",
+        "content": "print \"=== UNHANDLED ERROR TOP ===\"\nfunction boom()\n  return error(7, \"boom\")\nend function\nboom()\nprint \"SHOULD NOT REACH\"\n",
+        "raw": "'\\n'.join(['print \"=== UNHANDLED ERROR TOP ===\"', 'function boom()', '  return error(7, \"boom\")', 'end function', 'boom()', 'print \"SHOULD NOT REACH\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_unhandled_error_main_return",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "unhandled_main.ml",
+        "content": "print \"=== UNHANDLED ERROR MAIN ===\"\nfunction main(args)\n  return error(9, \"boom main\")\nend function\n",
+        "raw": "'\\n'.join(['print \"=== UNHANDLED ERROR MAIN ===\"', 'function main(args)', '  return error(9, \"boom main\")', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_unhandled_error_origin_top_level",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "unhandled_origin_top.ml",
+        "content": "print \"=== UNHANDLED ORIGIN TOP ===\"\nfunction boom()\n  x = 123\n  return error(7, \"boom\")\nend function\nboom()\n",
+        "raw": "'\\n'.join(lines) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_unhandled_error_origin_main_return",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "unhandled_origin_main.ml",
+        "content": "print \"=== UNHANDLED ORIGIN MAIN ===\"\nfunction main(args)\n  a = 1\n  return error(9, \"boom main\")\nend function\n",
+        "raw": "'\\n'.join(lines) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_unhandled_error_origin_omitted_when_cleared",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "unhandled_origin_cleared.ml",
+        "content": "print \"=== UNHANDLED ORIGIN CLEARED ===\"\nfunction boom()\n  e = error(11, \"boom cleared\")\n  e.script = \"\"\n  e.func = \"\"\n  e.line = 0\n  return e\nend function\nboom()\n",
+        "raw": "'\\n'.join(lines) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_reserved_identifiers",
+    "writes": [
+      {
+        "var": "bad",
+        "rel": "reserved_ident.ml",
+        "content": "function try(a)\n  return a\nend function\n\nfunction main(args)\n  x = 1\n  error = 2\n  return 0\nend function\n",
+        "raw": "'\\n'.join(['function try(a)', '  return a', 'end function', '', 'function main(args)', '  x = 1', '  error = 2', '  return 0', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_keep_going_reports_multiple_errors",
+    "writes": [
+      {
+        "var": "lib1",
+        "rel": "lib_bad1.ml",
+        "content": "print \"BAD1\"\nfunction f1()\n  return 1\nend function\n",
+        "raw": "'\\n'.join(['print \"BAD1\"', 'function f1()', '  return 1', 'end function']) + '\\n'"
+      },
+      {
+        "var": "lib2",
+        "rel": "lib_bad2.ml",
+        "content": "print \"BAD2\"\nfunction f2()\n  return 2\nend function\n",
+        "raw": "'\\n'.join(['print \"BAD2\"', 'function f2()', '  return 2', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_keepgoing.ml",
+        "content": "import \"{lib1_abs}\"\nimport \"{lib2_abs}\"\n\nfunction main(args)\n  return 0\nend function\n",
+        "raw": "'\\n'.join([f'import \"{lib1_abs}\"', f'import \"{lib2_abs}\"', '', 'function main(args)', '  return 0', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_keep_going_respects_max_errors",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "main_keepgoing_max.ml",
+        "content": "\nfunction main(args)\n  return 0\nend function\n",
+        "raw": "'\\n'.join(imports + ['', 'function main(args)', '  return 0', 'end function']) + '\\n'"
+      },
+      {
+        "var": "p",
+        "rel": "p.ml",
+        "content": "print \"BAD{i}\"\nfunction f{i}()\n  return {i}\nend function\n",
+        "raw": "'\\n'.join([f'print \"BAD{i}\"', f'function f{i}()', f'  return {i}', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_package_basic",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "geom_pkg.ml",
+        "content": "package geom\n\nfunction add(a, b)\n  return a + b\nend function\n",
+        "raw": "'\\n'.join(['package geom', '', 'function add(a, b)', '  return a + b', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_pkg.ml",
+        "content": "import \"{lib_abs}\"\n\nimport std.assert as t\n\nfunction assertEq(actual, expected, label)\n  return t.assertEq(actual, expected, label)\nend function\n\nprint \"=== PACKAGE BASIC ===\"\nassertEq(geom.add(2, 3), 5, \"geom.add\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join([f'import \"{lib_abs}\"', '', 'import std.assert as t', '', 'function assertEq(actual, expected, label)', '  return t.assertEq(actual, expected, label)', 'end function', '', 'print \"=== PACKAGE BASIC ===\"', 'assertEq(geom.add(2, 3), 5, \"geom.add\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_package_dotted",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "geom_vec_pkg.ml",
+        "content": "package geom.vec\n\nfunction add(a, b)\n  return a + b\nend function\n",
+        "raw": "'\\n'.join(['package geom.vec', '', 'function add(a, b)', '  return a + b', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_pkg_dotted.ml",
+        "content": "import \"{lib_abs}\"\n\nimport std.assert as t\n\nfunction assertEq(actual, expected, label)\n  return t.assertEq(actual, expected, label)\nend function\n\nprint \"=== PACKAGE DOTTED ===\"\nassertEq(geom.vec.add(2, 3), 5, \"geom.vec.add\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join([f'import \"{lib_abs}\"', '', 'import std.assert as t', '', 'function assertEq(actual, expected, label)', '  return t.assertEq(actual, expected, label)', 'end function', '', 'print \"=== PACKAGE DOTTED ===\"', 'assertEq(geom.vec.add(2, 3), 5, \"geom.vec.add\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_as_alias",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "geom_alias.ml",
+        "content": "package geom.vec\n\nfunction add(a, b)\n  return a + b\nend function\n",
+        "raw": "'\\n'.join(['package geom.vec', '', 'function add(a, b)', '  return a + b', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_import_as.ml",
+        "content": "import \"{lib_abs}\" as g\n\nimport std.assert as t\n\nfunction assertEq(actual, expected, label)\n  return t.assertEq(actual, expected, label)\nend function\n\nprint \"=== IMPORT AS ===\"\nassertEq(g.add(2, 3), 5, \"g.add\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join([f'import \"{lib_abs}\" as g', '', 'import std.assert as t', '', 'function assertEq(actual, expected, label)', '  return t.assertEq(actual, expected, label)', 'end function', '', 'print \"=== IMPORT AS ===\"', 'assertEq(g.add(2, 3), 5, \"g.add\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_module_package_mismatch",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "bar.ml",
+        "content": "package other\n\nfunction add(a, b)\n  return a + b\nend function\n",
+        "raw": "'\\n'.join(['package other', '', 'function add(a, b)', '  return a + b', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_import_mod.ml",
+        "content": "import foo.bar\n\nfunction main(args)\n  return 0\nend function\n",
+        "raw": "'\\n'.join(['import foo.bar', '', 'function main(args)', '  return 0', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_package_path_mismatch",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "foo/qux.ml",
+        "content": "package foo.bar\n\nfunction add(a, b)\n  return a + b\nend function\n",
+        "raw": "'\\n'.join(['package foo.bar', '', 'function add(a, b)', '  return a + b', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_import_path_pkg_mismatch.ml",
+        "content": "import \"foo/qux.ml\"\n\nfunction main(args)\n  return foo.bar.add(2, 3)\nend function\n",
+        "raw": "'\\n'.join(['import \"foo/qux.ml\"', '', 'function main(args)', '  return foo.bar.add(2, 3)', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_ambiguous_include_paths",
+    "writes": [
+      {
+        "var": "local_lib",
+        "rel": "bar.ml",
+        "content": "package foo.bar\n\nfunction add(a, b)\n  return a + b\nend function\n",
+        "raw": "'\\n'.join(['package foo.bar', '', 'function add(a, b)', '  return a + b', 'end function']) + '\\n'"
+      },
+      {
+        "var": "inc_lib",
+        "rel": "bar.ml",
+        "content": "package foo.bar\n\nfunction add(a, b)\n  return a + b\nend function\n",
+        "raw": "'\\n'.join(['package foo.bar', '', 'function add(a, b)', '  return a + b', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_import_ambig.ml",
+        "content": "import foo.bar\n\nfunction main(args)\n  return foo.bar.add(2, 3)\nend function\n",
+        "raw": "'\\n'.join(['import foo.bar', '', 'function main(args)', '  return foo.bar.add(2, 3)', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_include_paths",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "bar.ml",
+        "content": "package foo.bar\n\nfunction add(a, b)\n  return a + b\nend function\n",
+        "raw": "'\\n'.join(['package foo.bar', '', 'function add(a, b)', '  return a + b', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_import_I.ml",
+        "content": "import foo.bar\n\nfunction main(args)\n  // Reference imported symbol so resolution is required.\n  return foo.bar.add(2, 3)\nend function\n",
+        "raw": "'\\n'.join(['import foo.bar', '', 'function main(args)', '  // Reference imported symbol so resolution is required.', '  return foo.bar.add(2, 3)', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_package_not_first",
+    "writes": [
+      {
+        "var": "bad",
+        "rel": "pkg_not_first.ml",
+        "content": "function foo()\n  return 1\nend function\n\npackage nope\n",
+        "raw": "'\\n'.join(['function foo()', '  return 1', 'end function', '', 'package nope']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_package_duplicate",
+    "writes": [
+      {
+        "var": "bad",
+        "rel": "pkg_dup.ml",
+        "content": "package a\npackage b\nfunction foo()\n  return 1\nend function\n",
+        "raw": "'\\n'.join(['package a', 'package b', 'function foo()', '  return 1', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_main_in_package",
+    "writes": [
+      {
+        "var": "bad",
+        "rel": "main_in_pkg.ml",
+        "content": "package p\nfunction main(args)\n  return 0\nend function\n",
+        "raw": "'\\n'.join(['package p', 'function main(args)', '  return 0', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_namespace_dotted",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "geom_vec_ns.ml",
+        "content": "namespace geom.vec\nfunction add(a, b)\n  return a + b\nend function\nend namespace\n",
+        "raw": "'\\n'.join(['namespace geom.vec', 'function add(a, b)', '  return a + b', 'end function', 'end namespace']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_ns_dotted.ml",
+        "content": "import \"{lib_abs}\"\n\nimport std.assert as t\n\nfunction assertEq(actual, expected, label)\n  return t.assertEq(actual, expected, label)\nend function\n\nprint \"=== NAMESPACE DOTTED ===\"\nassertEq(geom.vec.add(2, 3), 5, \"geom.vec.add\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join([f'import \"{lib_abs}\"', '', 'import std.assert as t', '', 'function assertEq(actual, expected, label)', '  return t.assertEq(actual, expected, label)', 'end function', '', 'print \"=== NAMESPACE DOTTED ===\"', 'assertEq(geom.vec.add(2, 3), 5, \"geom.vec.add\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_namespace_nested",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "geom_vec_nested_ns.ml",
+        "content": "namespace geom\nnamespace vec\nfunction add(a, b)\n  return a + b\nend function\nend namespace\nend namespace\n",
+        "raw": "'\\n'.join(['namespace geom', 'namespace vec', 'function add(a, b)', '  return a + b', 'end function', 'end namespace', 'end namespace']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_ns_nested.ml",
+        "content": "import \"{lib_abs}\"\n\nimport std.assert as t\n\nfunction assertEq(actual, expected, label)\n  return t.assertEq(actual, expected, label)\nend function\n\nprint \"=== NAMESPACE NESTED ===\"\nassertEq(geom.vec.add(2, 3), 5, \"geom.vec.add\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join([f'import \"{lib_abs}\"', '', 'import std.assert as t', '', 'function assertEq(actual, expected, label)', '  return t.assertEq(actual, expected, label)', 'end function', '', 'print \"=== NAMESPACE NESTED ===\"', 'assertEq(geom.vec.add(2, 3), 5, \"geom.vec.add\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_cycle_allowed",
+    "writes": [
+      {
+        "var": "a_ml",
+        "rel": "a.ml",
+        "content": "package cyc.a\nimport cyc.b\nfunction a()\n  return 11\nend function\n",
+        "raw": "'\\n'.join(['package cyc.a', 'import cyc.b', 'function a()', '  return 11', 'end function']) + '\\n'"
+      },
+      {
+        "var": "b_ml",
+        "rel": "b.ml",
+        "content": "package cyc.b\nimport cyc.a\nfunction b()\n  return 22\nend function\n",
+        "raw": "'\\n'.join(['package cyc.b', 'import cyc.a', 'function b()', '  return 22', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_cycle_ok.ml",
+        "content": "import cyc.a\nimport std.assert as t\nprint \"=== IMPORT CYCLE OK ===\"\nt.assertEq(cyc.a.a(), 11, \"cyc.a.a\")\nt.assertEq(cyc.b.b(), 22, \"cyc.b.b\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join(['import cyc.a', 'import std.assert as t', 'print \"=== IMPORT CYCLE OK ===\"', 't.assertEq(cyc.a.a(), 11, \"cyc.a.a\")', 't.assertEq(cyc.b.b(), 22, \"cyc.b.b\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_self_ignored",
+    "writes": [
+      {
+        "var": "mod_ml",
+        "rel": "doomdef.ml",
+        "content": "package doom.doomdef\nimport doom.doomdef\nfunction answer()\n  return 42\nend function\n",
+        "raw": "'\\n'.join(['package doom.doomdef', 'import doom.doomdef', 'function answer()', '  return 42', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_self_import_ok.ml",
+        "content": "import doom.doomdef\nimport std.assert as t\nprint \"=== SELF IMPORT OK ===\"\nt.assertEq(doom.doomdef.answer(), 42, \"doom.doomdef.answer\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join(['import doom.doomdef', 'import std.assert as t', 'print \"=== SELF IMPORT OK ===\"', 't.assertEq(doom.doomdef.answer(), 42, \"doom.doomdef.answer\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_module_init_order",
+    "writes": [
+      {
+        "var": "b_ml",
+        "rel": "b.ml",
+        "content": "package mod.b\nvalue = 10\nfunction getValue()\n  return value\nend function\n",
+        "raw": "'\\n'.join(['package mod.b', 'value = 10', 'function getValue()', '  return value', 'end function']) + '\\n'"
+      },
+      {
+        "var": "a_ml",
+        "rel": "a.ml",
+        "content": "package mod.a\nimport mod.b\nvalue = mod.b.getValue() + 1\nfunction getValue()\n  return value\nend function\n",
+        "raw": "'\\n'.join(['package mod.a', 'import mod.b', 'value = mod.b.getValue() + 1', 'function getValue()', '  return value', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_modinit_order.ml",
+        "content": "import mod.a\nimport std.assert as t\nprint \"=== MODULE INIT ORDER ===\"\nt.assertEq(mod.b.getValue(), 10, \"mod.b.getValue\")\nt.assertEq(mod.a.getValue(), 11, \"mod.a.getValue\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join(['import mod.a', 'import std.assert as t', 'print \"=== MODULE INIT ORDER ===\"', 't.assertEq(mod.b.getValue(), 10, \"mod.b.getValue\")', 't.assertEq(mod.a.getValue(), 11, \"mod.a.getValue\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_module_init_once_in_cycle",
+    "writes": [
+      {
+        "var": "a_ml",
+        "rel": "a.ml",
+        "content": "package cyc.a\nimport cyc.b\ninitCount = 0\ninitCount = initCount + 1\nfunction getInitCount()\n  return initCount\nend function\n",
+        "raw": "'\\n'.join(['package cyc.a', 'import cyc.b', 'initCount = 0', 'initCount = initCount + 1', 'function getInitCount()', '  return initCount', 'end function']) + '\\n'"
+      },
+      {
+        "var": "b_ml",
+        "rel": "b.ml",
+        "content": "package cyc.b\nimport cyc.a\ninitCount = 0\ninitCount = initCount + 1\nfunction getInitCount()\n  return initCount\nend function\n",
+        "raw": "'\\n'.join(['package cyc.b', 'import cyc.a', 'initCount = 0', 'initCount = initCount + 1', 'function getInitCount()', '  return initCount', 'end function']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_modinit_once_cycle.ml",
+        "content": "import cyc.a\nimport std.assert as t\nprint \"=== MODULE INIT ONCE CYCLE ===\"\nt.assertEq(cyc.a.getInitCount(), 1, \"cyc.a init once\")\nt.assertEq(cyc.b.getInitCount(), 1, \"cyc.b init once\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join(['import cyc.a', 'import std.assert as t', 'print \"=== MODULE INIT ONCE CYCLE ===\"', 't.assertEq(cyc.a.getInitCount(), 1, \"cyc.a init once\")', 't.assertEq(cyc.b.getInitCount(), 1, \"cyc.b init once\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_decl_only_violation",
+    "writes": [
+      {
+        "var": "main_bad",
+        "rel": "main_bad.ml",
+        "content": "import \"{lib_bad_abs}\"\nprint \"should not reach\"\n",
+        "raw": "'\\n'.join([f'import \"{lib_bad_abs}\"', 'print \"should not reach\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_call_arity_mismatch",
+    "writes": [
+      {
+        "var": "main_bad",
+        "rel": "arity_bad.ml",
+        "content": "function foo()\n  return 1\nend function\n\nprint foo(1, 2)\n",
+        "raw": "'\\n'.join(['function foo()', '  return 1', 'end function', '', 'print foo(1, 2)']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_enum_unknown_variant",
+    "writes": [
+      {
+        "var": "main_bad",
+        "rel": "enum_unknown_variant.ml",
+        "content": "enum Color are\n  Red\nend enum\n\nprint Color.Nope\n",
+        "raw": "'\\n'.join(['enum Color are', '  Red', 'end enum', '', 'print Color.Nope']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_enum_duplicate_variant",
+    "writes": [
+      {
+        "var": "main_bad",
+        "rel": "enum_duplicate_variant.ml",
+        "content": "enum Color are\n  Red\n  Red\nend enum\n\nprint 1\n",
+        "raw": "'\\n'.join(['enum Color are', '  Red', '  Red', 'end enum', '', 'print 1']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_const_reassign_rejected",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "const_reassign.ml",
+        "content": "print \"=== CONST REASSIGN ===\"\nconst a = 1\na = 2\nprint \"SHOULD NOT REACH\"\n",
+        "raw": "'\\n'.join(['print \"=== CONST REASSIGN ===\"', 'const a = 1', 'a = 2', 'print \"SHOULD NOT REACH\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_enum_autoinc_ignores_strings",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "enum_autoinc_ignore_strings.ml",
+        "content": "enum E are\n  A = 1\n  B = \"x\"\n  C\n  D\nend enum\n\nenum EHead are\n  A = \"x\"\n  B\n  C\nend enum\n\nenum EMid are\n  A\n  B = \"x\"\n  C\n  D\nend enum\n\nenum EIntStr are\n  A = 5\n  B = \"x\"\n  C\nend enum\n\nprint E.A\nprint E.B\nprint E.C\nprint E.D\nprint EHead.A\nprint EHead.B\nprint EHead.C\nprint EMid.A\nprint EMid.B\nprint EMid.C\nprint EMid.D\nprint EIntStr.A\nprint EIntStr.B\nprint EIntStr.C\n",
+        "raw": "'\\n'.join(['enum E are', '  A = 1', '  B = \"x\"', '  C', '  D', 'end enum', '', 'enum EHead are', '  A = \"x\"', '  B', '  C', 'end enum', '', 'enum EMid are', '  A', '  B = \"x\"', '  C', '  D', 'end enum', '', 'enum EIntStr are', '  A = 5', '  B = \"x\"', '  C', 'end enum', '', 'print E.A', 'print E.B', 'print E.C', 'print E.D', 'print EHead.A', 'print EHead.B', 'print EHead.C', 'print EMid.A', 'print EMid.B', 'print EMid.C', 'print EMid.D', 'print EIntStr.A', 'print EIntStr.B', 'print EIntStr.C']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_typequalified_instance_method_uses_this_rejected",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "typequalified_uses_this.ml",
+        "content": "struct S\n  x\n  function inc()\n    this.x = this.x + 1\n    return this.x\n  end function\n\n  static function run()\n    // illegal: missing receiver, and method uses `this`\n    return S.inc()\n  end function\nend struct\n\nfunction main(args)\n  print S.run()\nend function\n",
+        "raw": "'\\n'.join(['struct S', '  x', '  function inc()', '    this.x = this.x + 1', '    return this.x', '  end function', '', '  static function run()', '    // illegal: missing receiver, and method uses `this`', '    return S.inc()', '  end function', 'end struct', '', 'function main(args)', '  print S.run()', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_member_call_arity_error_message",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "member_call_arity_diag.ml",
+        "content": "print \"=== CALL ARITY DIAG ===\"\nstruct Holder\n  f\nend struct\n\nfunction add2(a, b)\n  return a + b\nend function\n\nh = Holder(add2)\n// wrong: add2 expects 2 args\nh.f(1)\nprint \"SHOULD NOT REACH\"\n",
+        "raw": "'\\n'.join(['print \"=== CALL ARITY DIAG ===\"', 'struct Holder', '  f', 'end struct', '', 'function add2(a, b)', '  return a + b', 'end function', '', 'h = Holder(add2)', '// wrong: add2 expects 2 args', 'h.f(1)', 'print \"SHOULD NOT REACH\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_import_initializer_behavior",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "lib_ce_bad.ml",
+        "content": "package ce.bad\nfunction foo()\n  return 1\nend function\nconst A = foo()\n",
+        "raw": "'\\n'.join(['package ce.bad', 'function foo()', '  return 1', 'end function', 'const A = foo()']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_ce_bad.ml",
+        "content": "import \"{lib_abs}\"\nprint \"should not reach\"\n",
+        "raw": "'\\n'.join([f'import \"{lib_abs}\"', 'print \"should not reach\"']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_ce_bad.ml",
+        "content": "import \"{lib_abs}\"\nprint ce.bad.getX()\n",
+        "raw": "'\\n'.join([f'import \"{lib_abs}\"', 'print ce.bad.getX()']) + '\\n'"
+      },
+      {
+        "var": "lib",
+        "rel": "lib_ce_bad.ml",
+        "content": "package ce.bad\nfunction foo()\n  return 1\nend function\nx = foo()\nfunction getX()\n  return x\nend function\n",
+        "raw": "'\\n'.join(['package ce.bad', 'function foo()', '  return 1', 'end function', 'x = foo()', 'function getX()', '  return x', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_no_newlines_required",
+    "writes": [
+      {
+        "var": "ml_path",
+        "rel": "no_newlines_required.ml",
+        "content": "enum E are A = 1, B = \"x\", C end enum struct S a, b static function sum(x, y) return x + y end function end struct function main(args) x = 0; while x < 2 x = x + 1 end while if x == 2 then print \"ok\" else print \"bad\" end if print E.C; print S.sum(2, 3); print \"no-newlines [OK]\" end function",
+        "raw": "src"
+      }
+    ]
+  },
+  {
+    "func": "test_import_constexpr_ok",
+    "writes": [
+      {
+        "var": "lib",
+        "rel": "lib_ce_ok.ml",
+        "content": "package ce.ok\nconst A = 1 + 2\nx = 0x10 + 1\nenum Flags are\n  Read = 1\n  Write = 2\n  All = 3\nend enum\n",
+        "raw": "'\\n'.join(['package ce.ok', 'const A = 1 + 2', 'x = 0x10 + 1', 'enum Flags are', '  Read = 1', '  Write = 2', '  All = 3', 'end enum']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "main_ce_ok.ml",
+        "content": "import \"{lib_abs}\"\nimport std.assert as t\nfunction assertEq(actual, expected, label)\n  return t.assertEq(actual, expected, label)\nend function\nprint \"=== IMPORT CONSTEXPR OK ===\"\nassertEq(ce.ok.A, 3, \"ce.ok.A\")\nassertEq(ce.ok.x, 17, \"ce.ok.x\")\nassertEq(ce.ok.Flags.All, 3, \"ce.ok.Flags.All\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join([f'import \"{lib_abs}\"', 'import std.assert as t', 'function assertEq(actual, expected, label)', '  return t.assertEq(actual, expected, label)', 'end function', 'print \"=== IMPORT CONSTEXPR OK ===\"', 'assertEq(ce.ok.A, 3, \"ce.ok.A\")', 'assertEq(ce.ok.x, 17, \"ce.ok.x\")', 'assertEq(ce.ok.Flags.All, 3, \"ce.ok.Flags.All\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_main_args_and_exitcode",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "main_args.ml",
+        "content": "print \"TOP\"\n\nfunction main(args)\n  print \"MAIN\"\n  print \"argc=\" + len(args)\n  if len(args) > 0 then print args[0] end if\n  if len(args) > 1 then print args[1] end if\n  if len(args) > 2 then print args[2] end if\n  return 7\nend function\n",
+        "raw": "'\\n'.join(['print \"TOP\"', '', 'function main(args)', '  print \"MAIN\"', '  print \"argc=\" + len(args)', '  if len(args) > 0 then print args[0] end if', '  if len(args) > 1 then print args[1] end if', '  if len(args) > 2 then print args[2] end if', '  return 7', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_main_void_exit0",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "main_void.ml",
+        "content": "function main(args)\n  print \"ok\"\nend function\n",
+        "raw": "'\\n'.join(['function main(args)', '  print \"ok\"', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_main_bad_arity0",
+    "writes": [
+      {
+        "var": "main_bad",
+        "rel": "main_arity0.ml",
+        "content": "function main()\n  return 0\nend function\n",
+        "raw": "'\\n'.join(['function main()', '  return 0', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_main_bad_arity2",
+    "writes": [
+      {
+        "var": "main_bad",
+        "rel": "main_arity2.ml",
+        "content": "function main(a, b)\n  return 0\nend function\n",
+        "raw": "'\\n'.join(['function main(a, b)', '  return 0', 'end function']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_main_in_namespace",
+    "writes": [
+      {
+        "var": "main_bad",
+        "rel": "main_in_ns.ml",
+        "content": "namespace n\n  function main(args)\n    return 0\n  end function\nend namespace\n",
+        "raw": "'\\n'.join(['namespace n', '  function main(args)', '    return 0', '  end function', 'end namespace']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_heap_cli_config_applied",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "heap_cfg.ml",
+        "content": "print heap_bytes_reserved()\nprint heap_bytes_committed()\n",
+        "raw": "'\\n'.join(['print heap_bytes_reserved()', 'print heap_bytes_committed()']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_heap_cli_invalid_size",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "heap_bad.ml",
+        "content": "print 1\n",
+        "raw": "'print 1\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_ns_struct_optional",
+    "writes": [
+      {
+        "var": "main_geom",
+        "rel": "main_geom.ml",
+        "content": "import \"{testlib_abs}\"\nimport \"{geom_abs}\"\nprint \"=== NS/IMPORT STRUCT ===\"\np = geom.Point(1, 2)\nassertEq(p.x, 1, \"geom.Point.x\")\nassertEq(p.y, 2, \"geom.Point.y\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join([f'import \"{testlib_abs}\"', f'import \"{geom_abs}\"', 'print \"=== NS/IMPORT STRUCT ===\"', 'p = geom.Point(1, 2)', 'assertEq(p.x, 1, \"geom.Point.x\")', 'assertEq(p.y, 2, \"geom.Point.y\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_extern_namespaced",
+    "writes": [
+      {
+        "var": "winapi_ml",
+        "rel": "winapi.ml",
+        "content": "package winapi\nextern function GetTickCount() from \"kernel32.dll\" returns u32\n",
+        "raw": "'\\n'.join(['package winapi', 'extern function GetTickCount() from \"kernel32.dll\" returns u32']) + '\\n'"
+      },
+      {
+        "var": "main_ml",
+        "rel": "extern_ns.ml",
+        "content": "import \"{winapi_abs}\" as w\n\nfunction ok(cond, label)\n  if cond then\n    print label + \" [OK]\"\n  else\n    print label + \" [FAIL]\"\n  end if\nend function\n\nprint \"=== EXTERN NAMESPACED ===\"\nnamespace win32\n  extern function GetCurrentProcessId() from \"kernel32.dll\" returns u32\nend namespace\n\npid = win32.GetCurrentProcessId()\nok(pid > 0, \"win32.GetCurrentProcessId > 0\")\n\na = w.GetTickCount()\nb = w.GetTickCount()\nok(b >= a, \"w.GetTickCount monotonic\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join([f'import \"{winapi_abs}\" as w', '', 'function ok(cond, label)', '  if cond then', '    print label + \" [OK]\"', '  else', '    print label + \" [FAIL]\"', '  end if', 'end function', '', 'print \"=== EXTERN NAMESPACED ===\"', 'namespace win32', '  extern function GetCurrentProcessId() from \"kernel32.dll\" returns u32', 'end namespace', '', 'pid = win32.GetCurrentProcessId()', 'ok(pid > 0, \"win32.GetCurrentProcessId > 0\")', '', 'a = w.GetTickCount()', 'b = w.GetTickCount()', 'ok(b >= a, \"w.GetTickCount monotonic\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_extern_value_runtime",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "extern_value_runtime.ml",
+        "content": "extern function GetTickCount() from \"kernel32.dll\" returns u32\n\nfunction ok(cond, label)\n  if cond then\n    print label + \" [OK]\"\n  else\n    print label + \" [FAIL]\"\n  end if\nend function\n\nfunction call0(f)\n  return f()\nend function\n\nfunction make(f)\n  return f\nend function\n\nstruct Box\n  fn\nend struct\n\nprint \"=== EXTERN VALUE RUNTIME ===\"\n\n// capture extern as value\nf = GetTickCount\na = f()\nb = f()\nok(b >= a, \"direct value call\")\n\n// store in array and call via index-expression callee\narr = [f]\nc = arr[0]()\nd = arr[0]()\nok(d >= c, \"array element call\")\n\n// store in struct field (note: bx.fn() is parsed as namespace call; use temp)\nbx = Box(f)\nh = bx.fn\ne = h()\nok(e >= a, \"struct field call\")\n\n// pass as argument / return from function\nok(call0(f) >= a, \"passed as arg\")\ng = make(f)\nok(g() >= a, \"returned value\")\n\n// allocate many ephemeral objects and run GC repeatedly, then call again\nfor i = 0 to 20000\n  tmp = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" + i\n  tmp2 = [tmp, i, [i, tmp]]\n  if (i % 200) == 0 then\n    gc_collect()\n  end if\nend for\ngc_collect()\nok(arr[0]() >= a, \"after gc_collect\")\n\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join(['extern function GetTickCount() from \"kernel32.dll\" returns u32', '', 'function ok(cond, label)', '  if cond then', '    print label + \" [OK]\"', '  else', '    print label + \" [FAIL]\"', '  end if', 'end function', '', 'function call0(f)', '  return f()', 'end function', '', 'function make(f)', '  return f', 'end function', '', 'struct Box', '  fn', 'end struct', '', 'print \"=== EXTERN VALUE RUNTIME ===\"', '', '// capture extern as value', 'f = GetTickCount', 'a = f()', 'b = f()', 'ok(b >= a, \"direct value call\")', '', '// store in array and call via index-expression callee', 'arr = [f]', 'c = arr[0]()', 'd = arr[0]()', 'ok(d >= c, \"array element call\")', '', '// store in struct field (note: bx.fn() is parsed as namespace call; use temp)', 'bx = Box(f)', 'h = bx.fn', 'e = h()', 'ok(e >= a, \"struct field call\")', '', '// pass as argument / return from function', 'ok(call0(f) >= a, \"passed as arg\")', 'g = make(f)', 'ok(g() >= a, \"returned value\")', '', '// allocate many ephemeral objects and run GC repeatedly, then call again', 'for i = 0 to 20000', '  tmp = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" + i', '  tmp2 = [tmp, i, [i, tmp]]', '  if (i % 200) == 0 then', '    gc_collect()', '  end if', 'end for', 'gc_collect()', 'ok(arr[0]() >= a, \"after gc_collect\")', '', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_callable_values_runtime",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "callable_values_runtime.ml",
+        "content": "function ok(cond, label)\n  if cond then\n    print label + \" [OK]\"\n  else\n    print label + \" [FAIL]\"\n  end if\nend function\n\nfunction add1(x)\n  return x + 1\nend function\n\nfunction apply1(f, x)\n  return f(x)\nend function\n\nfunction ident(x)\n  return x\nend function\n\nstruct Pair\n  a\n  b\nend struct\n\nprint \"=== CALLABLE VALUES RUNTIME ===\"\n\n// user function as value\nf = add1\nok(f(41) == 42, \"user fn direct value call\")\narr = [f]\nok(arr[0](5) == 6, \"user fn array element call\")\nok(apply1(f, 9) == 10, \"user fn passed as arg\")\ng = ident(f)\nok(g(7) == 8, \"user fn returned value\")\n\n// struct constructor as value\nctor = Pair\np = ctor(1, 2)\nok(p.a == 1, \"struct ctor via value (a)\")\nok(p.b == 2, \"struct ctor via value (b)\")\narrc = [ctor]\nq = arrc[0](3, 4)\nok(q.a == 3, \"struct ctor array call\")\n\n// builtin as value\nl = len\nok(l([1,2,3]) == 3, \"builtin len via value (array)\")\nok(l(\"abc\") == 3, \"builtin len via value (string)\")\narrl = [l]\nok(arrl[0]([0,1,2,3]) == 4, \"builtin len in array\")\n\n// GC stress: allocate many temporaries, collect, and re-call values\nfor i = 0 to 20000\n  tmp = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" + i\n  tmp2 = [tmp, i, [i, tmp]]\n  if (i % 200) == 0 then\n    gc_collect()\n  end if\nend for\ngc_collect()\nok(arr[0](41) == 42, \"user fn after gc_collect\")\nt = arrc[0](7, 8)\nok(t.a == 7, \"struct ctor after gc_collect\")\nok(arrl[0](\"abcd\") == 4, \"builtin len after gc_collect\")\n\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join(['function ok(cond, label)', '  if cond then', '    print label + \" [OK]\"', '  else', '    print label + \" [FAIL]\"', '  end if', 'end function', '', 'function add1(x)', '  return x + 1', 'end function', '', 'function apply1(f, x)', '  return f(x)', 'end function', '', 'function ident(x)', '  return x', 'end function', '', 'struct Pair', '  a', '  b', 'end struct', '', 'print \"=== CALLABLE VALUES RUNTIME ===\"', '', '// user function as value', 'f = add1', 'ok(f(41) == 42, \"user fn direct value call\")', 'arr = [f]', 'ok(arr[0](5) == 6, \"user fn array element call\")', 'ok(apply1(f, 9) == 10, \"user fn passed as arg\")', 'g = ident(f)', 'ok(g(7) == 8, \"user fn returned value\")', '', '// struct constructor as value', 'ctor = Pair', 'p = ctor(1, 2)', 'ok(p.a == 1, \"struct ctor via value (a)\")', 'ok(p.b == 2, \"struct ctor via value (b)\")', 'arrc = [ctor]', 'q = arrc[0](3, 4)', 'ok(q.a == 3, \"struct ctor array call\")', '', '// builtin as value', 'l = len', 'ok(l([1,2,3]) == 3, \"builtin len via value (array)\")', 'ok(l(\"abc\") == 3, \"builtin len via value (string)\")', 'arrl = [l]', 'ok(arrl[0]([0,1,2,3]) == 4, \"builtin len in array\")', '', '// GC stress: allocate many temporaries, collect, and re-call values', 'for i = 0 to 20000', '  tmp = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" + i', '  tmp2 = [tmp, i, [i, tmp]]', '  if (i % 200) == 0 then', '    gc_collect()', '  end if', 'end for', 'gc_collect()', 'ok(arr[0](41) == 42, \"user fn after gc_collect\")', 't = arrc[0](7, 8)', 'ok(t.a == 7, \"struct ctor after gc_collect\")', 'ok(arrl[0](\"abcd\") == 4, \"builtin len after gc_collect\")', '', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_call_profile_counts",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "call_profile_counts.ml",
+        "content": "import std.assert as t\n\nfunction cp_f()\n  return 1\nend function\n\nfunction cp_g()\n  // cp_f called twice per cp_g call\n  return cp_f() + cp_f()\nend function\n\nprint \"=== CALL PROFILE ===\"\ncp_g()\ncp_g()\n\nstats = callStats()\nf_calls = 0\ng_calls = 0\nfor each s in stats\n  if s.name == \"cp_f\" then f_calls = s.calls end if\n  if s.name == \"cp_g\" then g_calls = s.calls end if\nend for\n\nt.assertEq(f_calls, 4, \"callprof: cp_f calls\")\nt.assertEq(g_calls, 2, \"callprof: cp_g calls\")\nprint \"=== DONE ===\"\n",
+        "raw": "'\\n'.join(['import std.assert as t', '', 'function cp_f()', '  return 1', 'end function', '', 'function cp_g()', '  // cp_f called twice per cp_g call', '  return cp_f() + cp_f()', 'end function', '', 'print \"=== CALL PROFILE ===\"', 'cp_g()', 'cp_g()', '', 'stats = callStats()', 'f_calls = 0', 'g_calls = 0', 'for each s in stats', '  if s.name == \"cp_f\" then f_calls = s.calls end if', '  if s.name == \"cp_g\" then g_calls = s.calls end if', 'end for', '', 't.assertEq(f_calls, 4, \"callprof: cp_f calls\")', 't.assertEq(g_calls, 2, \"callprof: cp_g calls\")', 'print \"=== DONE ===\"']) + '\\n'"
+      }
+    ]
+  },
+  {
+    "func": "test_trace_calls_preserves_params",
+    "writes": [
+      {
+        "var": "main_ml",
+        "rel": "trace_calls_params.ml",
+        "content": "function add4(a, b, c, d)\n  return a + b + c + d\nend function\n\nfunction gate(level, threshold)\n  if level >= threshold then\n    return 1\n  else\n    return 0\n  end if\nend function\n\nprint add4(1, 2, 3, 4)\nprint gate(5, 3)\n",
+        "raw": "'\\n'.join(['function add4(a, b, c, d)', '  return a + b + c + d', 'end function', '', 'function gate(level, threshold)', '  if level >= threshold then', '    return 1', '  else', '    return 0', '  end if', 'end function', '', 'print add4(1, 2, 3, 4)', 'print gate(5, 3)']) + '\\n'"
+      }
+    ]
+  }
+]

@@ -130,7 +130,21 @@ function _chunk_get(asm, idx)
     return pg[po]
   end if
   ti = idx - (len(asm.chunk_pages) << 8)
-  return t.arr_chunk_tail_get(asm.chunk_tail, ti, bytes(asm.chunk_size, 0))
+  if typeof(asm.chunk_tail) == "array" then
+    if ti >= 0 and ti < len(asm.chunk_tail) and typeof(asm.chunk_tail[ti]) == "bytes" then
+      return asm.chunk_tail[ti]
+    end if
+  else
+    if typeof(asm.chunk_tail) == "struct" and typeof(asm.chunk_tail.data) == "array" then
+      tn = t.arr_chunk_tail_len(asm.chunk_tail)
+      if ti >= 0 and ti < tn and typeof(asm.chunk_tail.data[ti]) == "bytes" then
+        return asm.chunk_tail.data[ti]
+      end if
+    end if
+  end if
+  cs = asm.chunk_size
+  if typeof(cs) != "int" or cs <= 0 then cs = 65536 end if
+  return bytes(cs, 0)
 end function
 
 function _chunk_set(asm, idx, chunk)
@@ -240,9 +254,12 @@ function _emit(asm, b)
 end function
 
 function _emit8(asm, x)
-  need = asm.size + 1
-  asm = _ensure_capacity(asm, need)
-  asm = _set_chunk_byte(asm, asm.size, x)
+  dst = asm.size
+  need = dst + 1
+  if (dst & 0xFFFF) == 0 then
+    asm = _ensure_capacity(asm, need)
+  end if
+  asm = _set_chunk_byte(asm, dst, x)
   asm.size = need
   asm.buf_valid = false
   return asm

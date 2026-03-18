@@ -2,6 +2,7 @@ package mlc.frontend
 import std.fs as fs
 import std.string as s
 import mlc.minilang_parser as parser
+import mlc.tools as t
 
 struct FrontendParseResult
   source,
@@ -41,13 +42,35 @@ function _prev_nonspace_char(text)
   return text[j]
 end function
 
+function _append_piece(chunks, tail, piece, last_nonspace)
+  app = t.arr_chunked_push(chunks, tail, piece, 512)
+  chunks = app[0]
+  tail = app[1]
+
+  if typeof(piece) == "string" and len(piece) > 0 then
+    j = len(piece) - 1
+    while j >= 0
+      ch = piece[j]
+      if _isSpace(ch) == false then
+        last_nonspace = ch
+        break
+      end if
+      j = j - 1
+    end while
+  end if
+
+  return [chunks, tail, last_nonspace]
+end function
+
 function normalize_code_for_tokenizer(src)
   if typeof(src) != "string" then
     return ""
   end if
 
   code = s.replaceAll(src, "\r\n", "\n")
-  normalized = ""
+  chunks = []
+  tail = []
+  last_nonspace = ""
   i = 0
   n = len(code)
   in_string = false
@@ -58,21 +81,30 @@ function normalize_code_for_tokenizer(src)
     c = code[i]
 
     if in_line_comment then
-      normalized = normalized + c
+      app0 = _append_piece(chunks, tail, c, last_nonspace)
+      chunks = app0[0]
+      tail = app0[1]
+      last_nonspace = app0[2]
       if c == "\n" then in_line_comment = false end if
       i = i + 1
       continue
     end if
 
     if in_string == false and c == "/" and i + 1 < n and code[i + 1] == "/" then
-      normalized = normalized + c + code[i + 1]
+      app1 = _append_piece(chunks, tail, c + code[i + 1], last_nonspace)
+      chunks = app1[0]
+      tail = app1[1]
+      last_nonspace = app1[2]
       i = i + 2
       in_line_comment = true
       continue
     end if
 
     if in_string then
-      normalized = normalized + c
+      app2 = _append_piece(chunks, tail, c, last_nonspace)
+      chunks = app2[0]
+      tail = app2[1]
+      last_nonspace = app2[2]
       if escape then
         escape = false
       else
@@ -89,32 +121,51 @@ function normalize_code_for_tokenizer(src)
     end if
 
     if c == "\"" then
-      normalized = normalized + c
+      app3 = _append_piece(chunks, tail, c, last_nonspace)
+      chunks = app3[0]
+      tail = app3[1]
+      last_nonspace = app3[2]
       in_string = true
       i = i + 1
       continue
     end if
 
     if c == "-" and i + 1 < n and _isDigit(code[i + 1]) then
-      p = _prev_nonspace_char(normalized)
+      p = last_nonspace
       if _isAlphaNum(p) or p == "_" or p == ")" or p == "]" then
-        if len(normalized) > 0 and _isSpace(normalized[len(normalized) - 1]) == false then
-          normalized = normalized + " "
+        if p != "" then
+          app4 = _append_piece(chunks, tail, " ", last_nonspace)
+          chunks = app4[0]
+          tail = app4[1]
+          last_nonspace = app4[2]
         end if
-        normalized = normalized + "-"
+        app5 = _append_piece(chunks, tail, "-", last_nonspace)
+        chunks = app5[0]
+        tail = app5[1]
+        last_nonspace = app5[2]
         if _isSpace(code[i + 1]) == false then
-          normalized = normalized + " "
+          app6 = _append_piece(chunks, tail, " ", last_nonspace)
+          chunks = app6[0]
+          tail = app6[1]
+          last_nonspace = app6[2]
         end if
         i = i + 1
         continue
       end if
     end if
 
-    normalized = normalized + c
+    app7 = _append_piece(chunks, tail, c, last_nonspace)
+    chunks = app7[0]
+    tail = app7[1]
+    last_nonspace = app7[2]
     i = i + 1
   end while
 
-  return normalized
+  pieces = t.arr_chunked_finish(chunks, tail)
+  if typeof(pieces) != "array" or len(pieces) <= 0 then
+    return ""
+  end if
+  return s.join(pieces, "")
 end function
 
 function parse_program(path)
