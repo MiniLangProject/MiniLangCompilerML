@@ -10,7 +10,7 @@ import mlc.codegen.codegen_expr as exprmod
 import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
 
-function _join_qname(prefix, name)
+function inline _join_qname(prefix, name)
   if typeof(prefix) != "string" or prefix == "" then return name end if
   if prefix[len(prefix) - 1] == "." then
     return prefix + name
@@ -18,7 +18,7 @@ function _join_qname(prefix, name)
   return prefix + "." + name
 end function
 
-function _coerce_name(v)
+function inline _coerce_name(v)
   if typeof(v) == "string" then return v end if
   if typeof(v) == "struct" then
     if typeof(v.name) == "string" then return v.name end if
@@ -64,13 +64,13 @@ function _heap_cfg_get_any(state, key)
   return 0
 end function
 
-function _heap_cfg_get_int(state, key, defaultv)
+function inline _heap_cfg_get_int(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
   if typeof(v) == "int" then return v end if
   return defaultv
 end function
 
-function _heap_cfg_get_bool(state, key, defaultv)
+function inline _heap_cfg_get_bool(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
   if typeof(v) == "bool" then return v end if
   return defaultv
@@ -79,21 +79,41 @@ end function
 function _set_user_function(state, qname, fn_node)
   arr = state.user_functions
   if typeof(arr) != "array" then arr =[] end if
+  idx_map = state.user_function_index
+  if typeof(idx_map) != "struct" then idx_map = t.fastmap_new(256) end if
+  idx = t.fastmap_get(idx_map, qname, -1)
+  if typeof(idx) == "int" and idx >= 0 and idx < len(arr) then
+    arr[idx] =[qname, fn_node]
+    state.user_functions = arr
+    state.user_function_index = idx_map
+    return state
+  end if
   if len(arr) > 0 then
     for i = 0 to len(arr) - 1
       p = arr[i]
       if typeof(p) == "array" and len(p) == 2 and p[0] == qname then
         arr[i] =[qname, fn_node]
+        idx_map = t.fastmap_set(idx_map, qname, i)
         state.user_functions = arr
+        state.user_function_index = idx_map
         return state
       end if
     end for
   end if
-  state.user_functions = arr +[[qname, fn_node]]
+  app = t.arr_chunked_push([], [], [qname, fn_node], 1)
+  tail = t.arr_chunked_finish(app[0], app[1])
+  if typeof(tail) == "array" and len(tail) == 1 then
+    arr = arr + tail
+  else
+    arr = arr + [[qname, fn_node]]
+  end if
+  idx_map = t.fastmap_set(idx_map, qname, len(arr) - 1)
+  state.user_function_index = idx_map
+  state.user_functions = arr
   return state
 end function
 
-function _foreach_body(st)
+function inline _foreach_body(st)
   if typeof(st) == "struct" and typeof(st.body) == "array" then
     if typeof(st.iterable) != "void" and typeof(st.var) != "void" then
       return st.body
@@ -128,16 +148,16 @@ function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   return state
 end function
 
-function _breakctx_make(kind, break_label, continue_label, break_depth, continue_depth)
+function inline _breakctx_make(kind, break_label, continue_label, break_depth, continue_depth)
   return [kind, break_label, continue_label, break_depth, continue_depth]
 end function
 
-function _breakctx_kind(ctx)
+function inline _breakctx_kind(ctx)
   if typeof(ctx) == "array" and len(ctx) >= 1 and typeof(ctx[0]) == "string" then return ctx[0] end if
   return "loop"
 end function
 
-function _breakctx_break_label(ctx)
+function inline _breakctx_break_label(ctx)
   if typeof(ctx) == "array" then
     if len(ctx) >= 2 and typeof(ctx[0]) == "string" and typeof(ctx[1]) == "string" then return ctx[1] end if
     if len(ctx) >= 1 and typeof(ctx[0]) == "string" then return ctx[0] end if
@@ -145,7 +165,7 @@ function _breakctx_break_label(ctx)
   return ""
 end function
 
-function _breakctx_continue_label(ctx)
+function inline _breakctx_continue_label(ctx)
   if typeof(ctx) == "array" then
     if len(ctx) >= 3 and typeof(ctx[0]) == "string" and typeof(ctx[2]) == "string" then return ctx[2] end if
     if len(ctx) >= 2 and typeof(ctx[1]) == "string" then return ctx[1] end if
@@ -153,12 +173,12 @@ function _breakctx_continue_label(ctx)
   return ""
 end function
 
-function _breakctx_break_depth(ctx, fallback)
+function inline _breakctx_break_depth(ctx, fallback)
   if typeof(ctx) == "array" and len(ctx) >= 4 and typeof(ctx[3]) == "int" then return ctx[3] end if
   return fallback
 end function
 
-function _breakctx_continue_depth(ctx, fallback)
+function inline _breakctx_continue_depth(ctx, fallback)
   if typeof(ctx) == "array" and len(ctx) >= 5 and typeof(ctx[4]) == "int" then return ctx[4] end if
   return fallback
 end function
@@ -1224,22 +1244,22 @@ end function
 // Compatibility wrappers (Python CodegenStmt parity)
 // ------------------------------------------------------------
 
-function _is_node(n, kind)
+function inline _is_node(n, kind)
   if typeof(n) != "struct" then return false end if
   if typeof(kind) == "string" and kind != "" then return n.node_kind == kind end if
   return typeof(n.node_kind) == "string"
 end function
 
-function _is_stmt(st)
+function inline _is_stmt(st)
   return _is_node(st, 0)
 end function
 
-function _decl_st_file(st)
+function inline _decl_st_file(st)
   if typeof(st) == "struct" and typeof(st._filename) == "string" then return st._filename end if
   return ""
 end function
 
-function _dotted_name(parts)
+function inline _dotted_name(parts)
   if typeof(parts) == "string" then return parts end if
   if typeof(parts) != "array" or len(parts) <= 0 then return "" end if
   return s.join(parts, ".")
@@ -1613,29 +1633,30 @@ end function
 function _group_program_by_file(program)
   vals =[]
   if typeof(program) != "array" or len(program) <= 0 then return vals end if
-  files = []
+  files_b = t.arr_chunk_new(64)
   groups = []
+  file_idx = t.fastmap_new(256)
 
   for i = 0 to len(program) - 1
     st = program[i]
     fn = _st_file(st)
     if fn == "" then fn = "<entry>" end if
 
-    hit = -1
-    for j = 0 to len(files) - 1
-      if files[j] == fn then hit = j break end if
-    end for
+    hit = t.fastmap_get(file_idx, fn, -1)
+    if typeof(hit) != "int" then hit = -1 end if
 
     if hit < 0 then
-      files = files +[fn]
+      files_b = t.arr_chunk_push(files_b, fn)
       groups = groups +[t.arr_chunk_new(64)]
       hit = len(groups) - 1
+      file_idx = t.fastmap_set(file_idx, fn, hit)
     end if
     gb = groups[hit]
     gb = t.arr_chunk_push(gb, st)
     groups[hit] = gb
   end for
 
+  files = t.arr_chunk_finish(files_b)
   vals_b = t.arr_chunk_new(16)
   for vi = 0 to len(files) - 1
     vals_b = t.arr_chunk_push(vals_b, [files[vi], t.arr_chunk_finish(groups[vi])])
@@ -1644,7 +1665,7 @@ function _group_program_by_file(program)
   return vals
 end function
 
-function _arr_has(arr, value)
+function inline _arr_has(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
     if arr[i] == value then return true end if
@@ -1652,7 +1673,7 @@ function _arr_has(arr, value)
   return false
 end function
 
-function _arr_add_unique(arr, value)
+function inline _arr_add_unique(arr, value)
   if typeof(arr) != "array" then arr = [] end if
   if _arr_has(arr, value) then return arr end if
   return arr + [value]
@@ -1682,7 +1703,7 @@ function _arr_union(a, b)
   return vals_out
 end function
 
-function _map_int_get(arr, key, defaultv)
+function inline _map_int_get(arr, key, defaultv)
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -2597,7 +2618,7 @@ function _closure_assign_env_layout(state, nested_fns)
   return state
 end function
 
-function _as_name(v)
+function inline _as_name(v)
   return _coerce_name(v)
 end function
 
@@ -2655,6 +2676,13 @@ function _closure_declare_capture_bindings(state, fn_node)
     fr = t.arr_chunk_finish(fr_b)
     ss[si] = fr
     state.scope_stack = ss
+    sis = state.scope_index_stack
+    if typeof(sis) == "array" and si >= 0 and si < len(sis) then
+      fm = sis[si]
+      fm = t.fastmap_set(fm, b.name, b)
+      sis[si] = fm
+      state.scope_index_stack = sis
+    end if
   end for
 
   return state
@@ -2664,12 +2692,20 @@ function emit_stmt(state, st)
   return cg_emit_stmt(state, st)
 end function
 
-function _user_function_has(state, qname)
+function inline _user_function_has(state, qname)
+  if typeof(state.user_function_index) == "struct" then
+    idx0 = t.fastmap_get(state.user_function_index, qname, -1)
+    if typeof(idx0) == "int" and idx0 >= 0 then return true end if
+  end if
   arr = state.user_functions
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
     p = arr[i]
     if typeof(p) == "array" and len(p) == 2 and p[0] == qname then
+      if typeof(state.user_function_index) != "struct" then
+        state.user_function_index = t.fastmap_new(256)
+      end if
+      state.user_function_index = t.fastmap_set(state.user_function_index, qname, i)
       return true
     end if
   end for
@@ -2838,7 +2874,7 @@ function _stmt_uses_this(st)
   return false
 end function
 
-function _named_array_get(arr, key)
+function inline _named_array_get(arr, key)
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -2870,7 +2906,7 @@ function _named_array_set(arr, key, values)
   return arr + [[key, values]]
 end function
 
-function _named_int_get(arr, key, defaultv)
+function inline _named_int_get(arr, key, defaultv)
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -2932,12 +2968,12 @@ function _next_enum_id(state)
   return mx + 1
 end function
 
-function _st_file(st)
+function inline _st_file(st)
   if typeof(st) == "struct" and typeof(st._filename) == "string" then return st._filename end if
   return ""
 end function
 
-function _has_dot_name(name)
+function inline _has_dot_name(name)
   if typeof(name) != "string" then return false end if
   for i = 0 to len(name) - 1
     if name[i] == "." then return true end if
@@ -2945,7 +2981,12 @@ function _has_dot_name(name)
   return false
 end function
 
-function _strpair_get(arr, key)
+function inline _strpair_get(arr, key)
+  if typeof(arr) == "struct" then
+    v0 = t.fastmap_get(arr, key, "")
+    if typeof(v0) == "string" then return v0 end if
+    return ""
+  end if
   if typeof(arr) != "array" or len(arr) <= 0 then return "" end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -2962,21 +3003,22 @@ function _strpair_get(arr, key)
 end function
 
 function _strpair_set(arr, key, value)
-  if typeof(arr) != "array" then arr =[] end if
-  if len(arr) > 0 then
-    for i = 0 to len(arr) - 1
-      it = arr[i]
-      if typeof(it) == "struct" and it.key == key then
-        arr[i] = [key, value]
-        return arr
-      end if
-      if typeof(it) == "array" and len(it) >= 2 and it[0] == key then
-        arr[i] = [key, value]
-        return arr
-      end if
-    end for
+  mapv = arr
+  if typeof(mapv) != "struct" then
+    mapv = t.fastmap_new(64)
+    if typeof(arr) == "array" and len(arr) > 0 then
+      for i = 0 to len(arr) - 1
+        it = arr[i]
+        if typeof(it) == "struct" and typeof(it.key) == "string" and typeof(it.value) == "string" then
+          mapv = t.fastmap_set(mapv, it.key, it.value)
+        end if
+        if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "string" and typeof(it[1]) == "string" then
+          mapv = t.fastmap_set(mapv, it[0], it[1])
+        end if
+      end for
+    end if
   end if
-  return arr + [[key, value]]
+  return t.fastmap_set(mapv, key, value)
 end function
 
 function _collect_program_decls(state, stmts, prefix, current_file, file_prefixes, file_seen_nonpackage, next_sid, next_eid, in_ns)
@@ -3180,10 +3222,16 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
           end if
         end for
       end if
-      if typeof(mdict) == "array" and len(mdict) > 0 then
+      mdict_nonempty = false
+      if typeof(mdict) == "array" and len(mdict) > 0 then mdict_nonempty = true end if
+      if typeof(mdict) == "struct" and t.fastmap_size(mdict) > 0 then mdict_nonempty = true end if
+      if mdict_nonempty then
         state.struct_methods = _named_array_set(state.struct_methods, sqn, mdict)
       end if
-      if typeof(sdict) == "array" and len(sdict) > 0 then
+      sdict_nonempty = false
+      if typeof(sdict) == "array" and len(sdict) > 0 then sdict_nonempty = true end if
+      if typeof(sdict) == "struct" and t.fastmap_size(sdict) > 0 then sdict_nonempty = true end if
+      if sdict_nonempty then
         state.struct_static_methods = _named_array_set(state.struct_static_methods, sqn, sdict)
       end if
       if typeof(methods_using_this) == "array" and len(methods_using_this) > 0 then
@@ -3704,9 +3752,130 @@ function _builtin_specs()
   ]
 end function
 
+function _reindex_named_array(arr, cap_hint)
+  cap = cap_hint
+  if typeof(cap) != "int" or cap < 64 then cap = 64 end if
+  idx = t.fastmap_new(cap)
+  if typeof(arr) != "array" or len(arr) <= 0 then return idx end if
+  for i = 0 to len(arr) - 1
+    it = arr[i]
+    k = ""
+    v = 0
+    if typeof(it) == "struct" then
+      k = _coerce_name(it.key)
+      v = it.values
+    else
+      if typeof(it) == "array" and len(it) >= 2 then
+        k = _coerce_name(it[0])
+        v = it[1]
+      end if
+    end if
+    if k == "" then continue end if
+    idx = t.fastmap_set(idx, k, v)
+  end for
+  return idx
+end function
+
+function _reindex_named_int(arr, cap_hint)
+  cap = cap_hint
+  if typeof(cap) != "int" or cap < 64 then cap = 64 end if
+  idx = t.fastmap_new(cap)
+  if typeof(arr) != "array" or len(arr) <= 0 then return idx end if
+  for i = 0 to len(arr) - 1
+    it = arr[i]
+    k = ""
+    v = 0
+    if typeof(it) == "struct" then
+      if typeof(it.value) == "int" then
+        k = _coerce_name(it.key)
+        v = it.value
+      end if
+    else
+      if typeof(it) == "array" and len(it) >= 2 and typeof(it[1]) == "int" then
+        k = _coerce_name(it[0])
+        v = it[1]
+      end if
+    end if
+    if k == "" then continue end if
+    idx = t.fastmap_set(idx, k, v)
+  end for
+  return idx
+end function
+
+function _reindex_extern_sigs(arr, cap_hint)
+  cap = cap_hint
+  if typeof(cap) != "int" or cap < 64 then cap = 64 end if
+  idx = t.fastmap_new(cap)
+  if typeof(arr) != "array" or len(arr) <= 0 then return idx end if
+  for i = 0 to len(arr) - 1
+    it = arr[i]
+    if typeof(it) != "struct" then continue end if
+    qn = _coerce_name(it.qname)
+    nm = _coerce_name(it.name)
+    if qn != "" then idx = t.fastmap_set(idx, qn, it) end if
+    if nm != "" then idx = t.fastmap_set(idx, nm, it) end if
+  end for
+  return idx
+end function
+
+function _reindex_aliases(arr, cap_hint)
+  cap = cap_hint
+  if typeof(cap) != "int" or cap < 32 then cap = 32 end if
+  idx = t.fastmap_new(cap)
+  if typeof(arr) != "array" or len(arr) <= 0 then return idx end if
+  for i = 0 to len(arr) - 1
+    it = arr[i]
+    k = ""
+    v = ""
+    if typeof(it) == "struct" then
+      k = _coerce_name(it.key)
+      v = _coerce_name(it.value)
+    else
+      if typeof(it) == "array" and len(it) >= 2 then
+        k = _coerce_name(it[0])
+        v = _coerce_name(it[1])
+      end if
+    end if
+    if k == "" or v == "" then continue end if
+    idx = t.fastmap_set(idx, k, v)
+  end for
+  return idx
+end function
+
+function _rebuild_lookup_indexes(state)
+  n_sf = 0
+  if typeof(state.struct_fields) == "array" then n_sf = len(state.struct_fields) end if
+  n_sid = 0
+  if typeof(state.struct_ids) == "array" then n_sid = len(state.struct_ids) end if
+  n_ev = 0
+  if typeof(state.enum_variants) == "array" then n_ev = len(state.enum_variants) end if
+  n_eid = 0
+  if typeof(state.enum_ids) == "array" then n_eid = len(state.enum_ids) end if
+  n_sm = 0
+  if typeof(state.struct_methods) == "array" then n_sm = len(state.struct_methods) end if
+  n_ssm = 0
+  if typeof(state.struct_static_methods) == "array" then n_ssm = len(state.struct_static_methods) end if
+  n_ex = 0
+  if typeof(state.extern_sigs) == "array" then n_ex = len(state.extern_sigs) end if
+  n_al = 0
+  if typeof(state.import_aliases) == "array" then n_al = len(state.import_aliases) end if
+
+  state.struct_fields_index = _reindex_named_array(state.struct_fields, (n_sf * 2) + 64)
+  state.struct_ids_index = _reindex_named_int(state.struct_ids, (n_sid * 2) + 64)
+  state.enum_variants_index = _reindex_named_array(state.enum_variants, (n_ev * 2) + 64)
+  state.enum_ids_index = _reindex_named_int(state.enum_ids, (n_eid * 2) + 64)
+  state.struct_methods_index = _reindex_named_array(state.struct_methods, (n_sm * 2) + 64)
+  state.struct_static_methods_index = _reindex_named_array(state.struct_static_methods, (n_ssm * 2) + 64)
+  state.extern_sig_index = _reindex_extern_sigs(state.extern_sigs, (n_ex * 3) + 64)
+  state.import_alias_index = _reindex_aliases(state.import_aliases, (n_al * 2) + 32)
+  return state
+end function
+
 function emit_program(state, program)
   state.extern_structs = []
   state.value_enum_values = []
+  state.user_function_index = t.fastmap_new(256)
+  state.qualify_cache = t.fastmap_new(4096)
   nsid = _next_struct_id(state)
   neid = _next_enum_id(state)
   decl_file_prefixes = []
@@ -3730,6 +3899,7 @@ function emit_program(state, program)
   decl_seen_nonpackage = res[3]
   next_sid = res[4]
   next_eid = res[5]
+  state = _rebuild_lookup_indexes(state)
   state = _mem_probe(state, "decls_done")
 
   state.file_prefix_map = decl_file_prefixes
@@ -4237,6 +4407,7 @@ function emit_user_function(state, fn_node)
   old_env_root = state.current_env_root_off
   old_func_globals = state.func_globals
   old_func_global_map = state.func_global_map
+  old_func_global_map_index = state.func_global_map_index
 
   boxed_names = fn_node._ml_boxed
   if typeof(boxed_names) != "array" then boxed_names = [] end if
@@ -4262,8 +4433,10 @@ function emit_user_function(state, fn_node)
   state.current_fn_boxed_names = boxed_names
   state.current_fn_env_index = env_index
   state.current_env_root_off = env_root_off
+  state.qualify_cache = t.fastmap_new(2048)
   state.func_globals = []
   state.func_global_map = []
+  state.func_global_map_index = t.fastmap_new(64)
   state = scope.cg_scope_enter(state)
 
   state.asm = a.mark(state.asm, fn_lbl)
@@ -4367,6 +4540,13 @@ function emit_user_function(state, fn_node)
                 frb[jb] = bb
                 ssb[sib] = frb
                 state.scope_stack = ssb
+                sisb = state.scope_index_stack
+                if typeof(sisb) == "array" and sib >= 0 and sib < len(sisb) then
+                  fmb = sisb[sib]
+                  fmb = t.fastmap_set(fmb, bb.name, bb)
+                  sisb[sib] = fmb
+                  state.scope_index_stack = sisb
+                end if
                 break
               end if
               jb = jb - 1
@@ -4494,6 +4674,7 @@ function emit_user_function(state, fn_node)
   state.current_env_root_off = old_env_root
   state.func_globals = old_func_globals
   state.func_global_map = old_func_global_map
+  state.func_global_map_index = old_func_global_map_index
   if qn == "" then return state end if
   return state
 end function

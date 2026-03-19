@@ -68,6 +68,9 @@ function normalize_code_for_tokenizer(src)
   end if
 
   code = s.replaceAll(src, "\r\n", "\n")
+  if s.contains(code, "-") == false then
+    return code
+  end if
   chunks = []
   tail = []
   last_nonspace = ""

@@ -23,11 +23,11 @@ struct VarBinding
   const_value_label,
 end struct
 
-function _is_ascii_digit(ch)
+function inline _is_ascii_digit(ch)
   return ch == "0" or ch == "1" or ch == "2" or ch == "3" or ch == "4" or ch == "5" or ch == "6" or ch == "7" or ch == "8" or ch == "9"
 end function
 
-function _is_ascii_alpha(ch)
+function inline _is_ascii_alpha(ch)
   if ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f" or ch == "g" or ch == "h" or ch == "i" or ch == "j" or ch == "k" or ch == "l" or ch == "m" then return true end if
   if ch == "n" or ch == "o" or ch == "p" or ch == "q" or ch == "r" or ch == "s" or ch == "t" or ch == "u" or ch == "v" or ch == "w" or ch == "x" or ch == "y" or ch == "z" then return true end if
   if ch == "A" or ch == "B" or ch == "C" or ch == "D" or ch == "E" or ch == "F" or ch == "G" or ch == "H" or ch == "I" or ch == "J" or ch == "K" or ch == "L" or ch == "M" then return true end if
@@ -61,12 +61,12 @@ function _sanitize_ident(name)
   return sanitized
 end function
 
-function _scope_depth(state)
+function inline _scope_depth(state)
   if typeof(state.scope_stack) != "array" then return 0 end if
   return len(state.scope_stack) - 1
 end function
 
-function _frame_last_binding(frame, name)
+function inline _frame_last_binding(frame, name)
   if typeof(frame) != "array" or len(frame) <= 0 then return 0 end if
   i = len(frame) - 1
   while i >= 0
@@ -94,7 +94,7 @@ function _drop_last_frame(arr)
   return outv
 end function
 
-function _is_reserved_identifier(state, name)
+function inline _is_reserved_identifier(state, name)
   rs = state.reserved_identifiers
   if typeof(rs) != "array" then return false end if
   if len(rs) <= 0 then return false end if
@@ -114,7 +114,7 @@ function _append_unique(items, value)
   return items +[value]
 end function
 
-function _arr_has(arr, value)
+function inline _arr_has(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
     if arr[i] == value then return true end if
@@ -122,7 +122,12 @@ function _arr_has(arr, value)
   return false
 end function
 
-function _map_int_get(arr, key, defaultv)
+function inline _map_int_get(arr, key, defaultv)
+  if typeof(arr) == "struct" then
+    v0 = t.fastmap_get(arr, key, defaultv)
+    if typeof(v0) == "int" then return v0 end if
+    return defaultv
+  end if
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -136,7 +141,7 @@ function _map_int_get(arr, key, defaultv)
   return defaultv
 end function
 
-function _name_has_dot(name)
+function inline _name_has_dot(name)
   if typeof(name) != "string" then return false end if
   if name == "" then return false end if
   for i = 0 to len(name) - 1
@@ -145,7 +150,12 @@ function _name_has_dot(name)
   return false
 end function
 
-function _func_global_lookup(arr, name)
+function inline _func_global_lookup(arr, name)
+  if typeof(arr) == "struct" then
+    v0 = t.fastmap_get(arr, name, "")
+    if typeof(v0) == "string" then return v0 end if
+    return ""
+  end if
   if typeof(arr) != "array" or len(arr) <= 0 then return "" end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -171,11 +181,14 @@ end function
 function cg_scope_setup(state)
   state.scope_stack =[[]]
   state.scope_declared =[[]]
+  state.scope_index_stack = [t.fastmap_new(128)]
+  state.scope_declared_index_stack = [t.fastmap_new(128)]
   state.binding_id = 0
   state.global_slots =[]
   state.globals =[]
   state.func_globals =[]
   state.func_global_map =[]
+  state.func_global_map_index = t.fastmap_new(64)
   state.function_locals =[]
   state.current_qname_prefix = ""
   state.current_file_prefix = ""
@@ -195,8 +208,16 @@ function cg_scope_enter(state)
   if typeof(state.scope_declared) != "array" then
     state.scope_declared =[[]]
   end if
+  if typeof(state.scope_index_stack) != "array" then
+    state.scope_index_stack = [t.fastmap_new(128)]
+  end if
+  if typeof(state.scope_declared_index_stack) != "array" then
+    state.scope_declared_index_stack = [t.fastmap_new(128)]
+  end if
   state.scope_stack = state.scope_stack +[[]]
   state.scope_declared = state.scope_declared +[[]]
+  state.scope_index_stack = state.scope_index_stack + [t.fastmap_new(128)]
+  state.scope_declared_index_stack = state.scope_declared_index_stack + [t.fastmap_new(128)]
   return state
 end function
 
@@ -206,6 +227,12 @@ function cg_scope_leave(state)
 
   state.scope_stack = _drop_last_frame(state.scope_stack)
   state.scope_declared = _drop_last_frame(state.scope_declared)
+  if typeof(state.scope_index_stack) == "array" and len(state.scope_index_stack) > 1 then
+    state.scope_index_stack = _drop_last_frame(state.scope_index_stack)
+  end if
+  if typeof(state.scope_declared_index_stack) == "array" and len(state.scope_declared_index_stack) > 1 then
+    state.scope_declared_index_stack = _drop_last_frame(state.scope_declared_index_stack)
+  end if
   return state
 end function
 
@@ -216,6 +243,15 @@ end function
 
 function cg_resolve_binding(state, name)
   if typeof(name) != "string" then return 0 end if
+  sis = state.scope_index_stack
+  if typeof(sis) == "array" and len(sis) > 0 then
+    si = len(sis) - 1
+    while si >= 0
+      hit0 = t.fastmap_get(sis[si], name, 0)
+      if typeof(hit0) == "struct" then return hit0 end if
+      si = si - 1
+    end while
+  end if
   ss = state.scope_stack
   if typeof(ss) != "array" or len(ss) <= 0 then return 0 end if
   i = len(ss) - 1
@@ -236,7 +272,10 @@ function cg_resolve_binding_for_write(state, name)
   // A global binding is writable only when it is explicitly mapped via `global x`
   // (func_global_map) or when the target is already qualified (contains dot).
   if state.in_function then
-    mapped = _func_global_lookup(state.func_global_map, name)
+    mapped = _func_global_lookup(state.func_global_map_index, name)
+    if mapped == "" then
+      mapped = _func_global_lookup(state.func_global_map, name)
+    end if
     if mapped == "" and _name_has_dot(name) == false then
       if b.kind == "global" then
         return 0
@@ -255,6 +294,24 @@ function _declare_in_current_scope(state, b)
   sd[di] = sd[di] +[b]
   state.scope_stack = ss
   state.scope_declared = sd
+
+  sis = state.scope_index_stack
+  if typeof(sis) == "array" and len(sis) > 0 then
+    sidx = len(sis) - 1
+    fm = sis[sidx]
+    fm = t.fastmap_set(fm, b.name, b)
+    sis[sidx] = fm
+    state.scope_index_stack = sis
+  end if
+
+  sds = state.scope_declared_index_stack
+  if typeof(sds) == "array" and len(sds) > 0 then
+    didx = len(sds) - 1
+    fmd = sds[didx]
+    fmd = t.fastmap_set(fmd, b.name, b)
+    sds[didx] = fmd
+    state.scope_declared_index_stack = sds
+  end if
   return state
 end function
 
@@ -344,6 +401,13 @@ function cg_set_const_binding_value(state, name, pyv)
           fr[j] = b
           ss[i] = fr
           state.scope_stack = ss
+          sis = state.scope_index_stack
+          if typeof(sis) == "array" and i >= 0 and i < len(sis) then
+            fmi = sis[i]
+            fmi = t.fastmap_set(fmi, b.name, b)
+            sis[i] = fmi
+            state.scope_index_stack = sis
+          end if
           return state
         end if
         j = j - 1
@@ -490,10 +554,19 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   if typeof(state.scope_declared) != "array" or len(state.scope_declared) <= 0 then
     state.scope_declared =[[]]
   end if
+  if typeof(state.scope_index_stack) != "array" or len(state.scope_index_stack) <= 0 then
+    state.scope_index_stack = [t.fastmap_new(128)]
+  end if
+  if typeof(state.scope_declared_index_stack) != "array" or len(state.scope_declared_index_stack) <= 0 then
+    state.scope_declared_index_stack = [t.fastmap_new(128)]
+  end if
 
   root = state.scope_stack[0]
   if typeof(root) != "array" then root = [] end if
-  existing = _frame_last_binding(root, nm)
+  existing = t.fastmap_get(state.scope_index_stack[0], nm, 0)
+  if typeof(existing) != "struct" then
+    existing = _frame_last_binding(root, nm)
+  end if
   if typeof(existing) == "struct" and existing.kind == "global" then
     return state
   end if
@@ -546,6 +619,20 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
 
   state.scope_stack = ss
   state.scope_declared = sd
+  sis = state.scope_index_stack
+  if typeof(sis) == "array" and len(sis) > 0 then
+    rsi = sis[0]
+    rsi = t.fastmap_set(rsi, nm, b)
+    sis[0] = rsi
+    state.scope_index_stack = sis
+  end if
+  sds = state.scope_declared_index_stack
+  if typeof(sds) == "array" and len(sds) > 0 then
+    rsd = sds[0]
+    rsd = t.fastmap_set(rsd, nm, b)
+    sds[0] = rsd
+    state.scope_declared_index_stack = sds
+  end if
   state.global_slots = _append_unique(state.global_slots, b.label)
   return state
 end function
@@ -576,6 +663,13 @@ function bind_param(state, name, offset, decl_node)
           fr[i] = b
           ss[si] = fr
           state.scope_stack = ss
+          sis = state.scope_index_stack
+          if typeof(sis) == "array" and si >= 0 and si < len(sis) then
+            fm = sis[si]
+            fm = t.fastmap_set(fm, b.name, b)
+            sis[si] = fm
+            state.scope_index_stack = sis
+          end if
           return state
         end if
         i = i - 1
@@ -887,6 +981,7 @@ function analysis_reset_function(state)
   state.function_locals =[]
   state.func_globals =[]
   state.func_global_map =[]
+  state.func_global_map_index = t.fastmap_new(64)
   return state
 end function
 
@@ -914,5 +1009,9 @@ function declare_function_global(state, local_name, qualified_name)
   qn = _coerce_name(qualified_name)
   state.func_globals = _append_unique(state.func_globals, ln)
   state.func_global_map = _append_unique(state.func_global_map, [ln, qn])
+  if typeof(state.func_global_map_index) != "struct" then
+    state.func_global_map_index = t.fastmap_new(64)
+  end if
+  state.func_global_map_index = t.fastmap_set(state.func_global_map_index, ln, qn)
   return state
 end function

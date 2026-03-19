@@ -99,7 +99,7 @@ function _usage()
   print "  --mem-probe"
 end function
 
-function _startsWith(text, pref)
+function inline _startsWith(text, pref)
   if len(pref) > len(text) then return false end if
   for i = 0 to len(pref) - 1
     if text[i] != pref[i] then return false end if
@@ -107,7 +107,7 @@ function _startsWith(text, pref)
   return true
 end function
 
-function _endsWith(text, suf)
+function inline _endsWith(text, suf)
   if len(suf) > len(text) then return false end if
   off = len(text) - len(suf)
   for i = 0 to len(suf) - 1
@@ -116,7 +116,7 @@ function _endsWith(text, suf)
   return true
 end function
 
-function _array_contains(arr, value)
+function inline _array_contains(arr, value)
   if len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
     if arr[i] == value then return true end if
@@ -124,7 +124,7 @@ function _array_contains(arr, value)
   return false
 end function
 
-function _containsDot(txt)
+function inline _containsDot(txt)
   if typeof(txt) != "string" then return false end if
   for i = 0 to len(txt) - 1
     if txt[i] == "." then return true end if
@@ -132,7 +132,7 @@ function _containsDot(txt)
   return false
 end function
 
-function _last_segment_after_dot(txt)
+function inline _last_segment_after_dot(txt)
   if typeof(txt) != "string" then return "" end if
   i = len(txt) - 1
   while i >= 0
@@ -144,7 +144,7 @@ function _last_segment_after_dot(txt)
   return txt
 end function
 
-function _to_int_or(defv, text)
+function inline _to_int_or(defv, text)
   n = toNumber(text)
   if typeof(n) != "int" then return defv end if
   return n
@@ -221,23 +221,15 @@ end function
 function _path_norm_cached(p)
   global _path_norm_cache
   if typeof(p) != "string" then return _path_norm(p) end if
-  if typeof(_path_norm_cache) != "array" then _path_norm_cache = [] end if
-  if len(_path_norm_cache) > 0 then
-    i = len(_path_norm_cache) - 1
-    while i >= 0
-      it = _path_norm_cache[i]
-      if typeof(it) == "array" and len(it) >= 2 and it[0] == p and typeof(it[1]) == "string" then
-        return it[1]
-      end if
-      i = i - 1
-    end while
-  end if
+  if typeof(_path_norm_cache) != "struct" then _path_norm_cache = t.fastmap_new(4096) end if
+  hit = t.fastmap_get(_path_norm_cache, p, 0)
+  if typeof(hit) == "string" then return hit end if
   n = _path_norm(p)
-  _path_norm_cache = _path_norm_cache + [[p, n]]
+  _path_norm_cache = t.fastmap_set(_path_norm_cache, p, n)
   return n
 end function
 
-function _path_eq(a, b)
+function inline _path_eq(a, b)
   if a == b then return true end if
   return _path_norm_cached(a) == _path_norm_cached(b)
 end function
@@ -256,7 +248,7 @@ function _append_unique_path(arr, value)
   return arr +[value]
 end function
 
-function _is_abs_path(p)
+function inline _is_abs_path(p)
   if typeof(p) != "string" then return false end if
   if len(p) >= 2 and p[1] == ":" then return true end if
   if len(p) >= 2 and p[0] == "\\" and p[1] == "\\" then return true end if
@@ -264,7 +256,7 @@ function _is_abs_path(p)
   return false
 end function
 
-function _dirname(path)
+function inline _dirname(path)
   if typeof(path) != "string" then return "." end if
   i = len(path) - 1
   while i >= 0
@@ -278,13 +270,13 @@ function _dirname(path)
   return "."
 end function
 
-function _node_pos(st)
+function inline _node_pos(st)
   if typeof(st) != "struct" then return 0 end if
   if typeof(st._pos) == "int" then return st._pos end if
   return 0
 end function
 
-function _node_file(st, fallback)
+function inline _node_file(st, fallback)
   if typeof(st) == "struct" and typeof(st._filename) == "string" then
     return st._filename
   end if
@@ -322,7 +314,7 @@ function _module_set_package(modules, path, package_name)
   return modules +[ModuleInfo(path, package_name)]
 end function
 
-function _alias_get(aliases, key)
+function inline _alias_get(aliases, key)
   if len(aliases) <= 0 then return "" end if
   for i = 0 to len(aliases) - 1
     if aliases[i].key == key then return aliases[i].value end if
@@ -551,8 +543,10 @@ function _resolve_import(requested, base_dir, include_dirs)
   end if
   cands = t.arr_chunked_finish(cands_chunks, cands_tail)
 
-  tried =[]
-  matches = []
+  tried_seen = t.fastmap_new(128)
+  matches_seen = t.fastmap_new(128)
+  tried_b = t.arr_chunk_new(64)
+  matches_b = t.arr_chunk_new(64)
   resolved = ""
   resolved_kind = ""
   resolved_root = ""
@@ -560,10 +554,15 @@ function _resolve_import(requested, base_dir, include_dirs)
   if len(cands) > 0 then
     for i = 0 to len(cands) - 1
       cand = cands[i]
-      tried = _append_unique_path(tried, cand.path)
+      cnp = _path_norm_cached(cand.path)
+      if t.fastmap_has(tried_seen, cnp) == false then
+        tried_seen = t.fastmap_set(tried_seen, cnp, 1)
+        tried_b = t.arr_chunk_push(tried_b, cand.path)
+      end if
       if fs.exists(cand.path) then
-        if _path_in(matches, cand.path) == false then
-          matches = matches +[cand.path]
+        if t.fastmap_has(matches_seen, cnp) == false then
+          matches_seen = t.fastmap_set(matches_seen, cnp, 1)
+          matches_b = t.arr_chunk_push(matches_b, cand.path)
           if resolved == "" then
             resolved = cand.path
             resolved_kind = cand.kind
@@ -574,6 +573,8 @@ function _resolve_import(requested, base_dir, include_dirs)
     end for
   end if
 
+  tried = t.arr_chunk_finish(tried_b)
+  matches = t.arr_chunk_finish(matches_b)
   return ResolveResult(resolved, tried, matches, resolved_kind, resolved_root)
 end function
 
@@ -586,6 +587,9 @@ function _visited_contains(visited, path)
 end function
 
 function _parsed_module_get(parsed_modules, path)
+  if typeof(parsed_modules) == "struct" then
+    return t.fastmap_get(parsed_modules, path, 0)
+  end if
   if typeof(parsed_modules) != "array" or len(parsed_modules) <= 0 then return 0 end if
   for i = 0 to len(parsed_modules) - 1
     it = parsed_modules[i]
@@ -597,18 +601,20 @@ function _parsed_module_get(parsed_modules, path)
 end function
 
 function _parsed_module_set(parsed_modules, path, source, program)
-  if typeof(parsed_modules) != "array" then parsed_modules = [] end if
-  rec = ParsedModule(path, source, program)
-  if len(parsed_modules) > 0 then
-    for i = 0 to len(parsed_modules) - 1
-      it = parsed_modules[i]
-      if typeof(it) == "struct" and _path_eq(it.path, path) then
-        parsed_modules[i] = rec
-        return parsed_modules
-      end if
-    end for
+  if typeof(parsed_modules) != "struct" then
+    pm = t.fastmap_new(256)
+    if typeof(parsed_modules) == "array" and len(parsed_modules) > 0 then
+      for pi = 0 to len(parsed_modules) - 1
+        it0 = parsed_modules[pi]
+        if typeof(it0) == "struct" and typeof(it0.path) == "string" then
+          pm = t.fastmap_set(pm, it0.path, it0)
+        end if
+      end for
+    end if
+    parsed_modules = pm
   end if
-  return parsed_modules + [rec]
+  rec = ParsedModule(path, source, program)
+  return t.fastmap_set(parsed_modules, path, rec)
 end function
 
 function _module_visit(path, entry_path, include_dirs, stack, visited, modules, aliases, parsed_modules, diags, keep_going, max_errors)
@@ -847,6 +853,8 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
 end function
 
 function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
+  global _path_norm_cache
+  _path_norm_cache = t.fastmap_new(4096)
   dirs =[]
   dirs = _append_unique_path(dirs, _dirname(entry))
   if len(include_dirs) > 0 then
@@ -1393,7 +1401,7 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   entry_source = ""
   visited = check.visited
   parsed_modules = check.parsed_modules
-  if typeof(parsed_modules) != "array" then parsed_modules = [] end if
+  if typeof(parsed_modules) != "array" and typeof(parsed_modules) != "struct" then parsed_modules = [] end if
   if typeof(visited) != "array" or len(visited) <= 0 then
     visited =[entry]
   end if
@@ -1644,6 +1652,15 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     end for
   end if
   labels = t.arr_chunked_finish(labels_chunks, labels_tail)
+  label_map = t.fastmap_new((len(labels) * 2) + 64)
+  if typeof(labels) == "array" and len(labels) > 0 then
+    for li = 0 to len(labels) - 1
+      lbi = labels[li]
+      if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
+        label_map = t.fastmap_set(label_map, lbi.key, lbi.value)
+      end if
+    end for
+  end if
 
   buf = text_buf
   patches = a.get_patches(st.asm)
@@ -1653,7 +1670,12 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
       if typeof(pt) != "struct" then continue end if
       if typeof(pt.target) != "string" or typeof(pt.pos) != "int" then continue end if
 
-      trg = _label_get(labels, pt.target, -1)
+      trg = t.fastmap_get(label_map, pt.target, -1)
+      if typeof(trg) != "int" then trg = -1 end if
+      if trg < 0 then
+        // Safety fallback: tolerate non-fastmap label containers during transition.
+        trg = _label_get(labels, pt.target, -1)
+      end if
       if trg < 0 then
         print "CompileError: unknown patch target: " + pt.target
         return 2

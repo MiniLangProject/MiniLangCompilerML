@@ -74,6 +74,10 @@ function _upsert_range_label(labels, name, offset, length)
 end function
 
 function _find_pool_entry(pool, key)
+  if typeof(pool) == "struct" and typeof(pool.cap) == "int" and typeof(pool.keys) == "array" and typeof(pool.values) == "array" and typeof(pool.used) == "array" then
+    return t.fastmap_get(pool, key, 0)
+  end if
+
   if typeof(pool) == "array" then
     if len(pool) <= 0 then return 0 end if
     for i = 0 to len(pool) - 1
@@ -107,7 +111,7 @@ function _find_pool_entry(pool, key)
 end function
 
 function newDataBuilder()
-  return DataBuilder(bytes(1024, 0), [], 0)
+  return DataBuilder(bytes(16384, 0), [], 0)
 end function
 
 function newBssBuilder()
@@ -115,7 +119,7 @@ function newBssBuilder()
 end function
 
 function newRDataBuilder()
-  return RDataBuilder(bytes(1024, 0), [], t.arr_chunk_new(256), t.arr_chunk_new(128), t.arr_chunk_new(128), 0)
+  return RDataBuilder(bytes(16384, 0), [], t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
 end function
 
 function _buf_used(db)
@@ -216,7 +220,7 @@ function _rdata_intern_raw(rb, name, raw)
   off = _buf_used(rb)
   rb = _buf_append(rb, raw)
   rec = PoolEntry(raw, off, len(raw))
-  rb.pool_raw = t.arr_chunk_push(rb.pool_raw, rec)
+  rb.pool_raw = t.fastmap_set(rb.pool_raw, raw, rec)
   rb.labels = _upsert_range_label(rb.labels, name, off, len(raw))
   return rb
 end function
@@ -334,7 +338,7 @@ function rdata_add_obj_string(rb, name, text)
   ln = _buf_used(rb) - off
 
   rb.labels = _upsert_range_label(rb.labels, name, off, ln)
-  rb.pool_obj_string = t.arr_chunk_push(rb.pool_obj_string, PoolEntry(payload, off, ln))
+  rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln))
   return rb
 end function
 
@@ -355,6 +359,6 @@ function rdata_add_obj_float(rb, name, value)
   ln = _buf_used(rb) - off
 
   rb.labels = _upsert_range_label(rb.labels, name, off, ln)
-  rb.pool_obj_float = t.arr_chunk_push(rb.pool_obj_float, PoolEntry(packed, off, ln))
+  rb.pool_obj_float = t.fastmap_set(rb.pool_obj_float, packed, PoolEntry(packed, off, ln))
   return rb
 end function

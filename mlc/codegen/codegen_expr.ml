@@ -13,7 +13,7 @@ struct ConstEvalResult
   value,
 end struct
 
-function _opt_truthy(v)
+function inline _opt_truthy(v)
   tv = typeof(v)
   if tv == "void" then return false end if
   if tv == "bool" then return v end if
@@ -24,17 +24,17 @@ function _opt_truthy(v)
   return true
 end function
 
-function _is_number_no_bool(v)
+function inline _is_number_no_bool(v)
   tv = typeof(v)
   if tv == "int" or tv == "float" then return true end if
   return false
 end function
 
-function _is_int_no_bool(v)
+function inline _is_int_no_bool(v)
   return typeof(v) == "int"
 end function
 
-function _coerce_name(v)
+function inline _coerce_name(v)
   if typeof(v) == "string" then return v end if
   if typeof(v) == "struct" then
     if typeof(v.name) == "string" then return v.name end if
@@ -43,23 +43,21 @@ function _coerce_name(v)
   return "" + v
 end function
 
-function _named_array_get(arr, key)
+function inline _named_array_get(arr, key)
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
   for i = 0 to len(arr) - 1
     it = arr[i]
     if typeof(it) == "struct" and it.key == key then
-      if typeof(it.values) == "array" then return it.values end if
-      return 0
+      return it.values
     end if
     if typeof(it) == "array" and len(it) >= 2 and it[0] == key then
-      if typeof(it[1]) == "array" then return it[1] end if
-      return 0
+      return it[1]
     end if
   end for
   return 0
 end function
 
-function _named_int_get(arr, key, defaultv)
+function inline _named_int_get(arr, key, defaultv)
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -75,7 +73,47 @@ function _named_int_get(arr, key, defaultv)
   return defaultv
 end function
 
-function _strpair_get(arr, key)
+function inline _state_struct_id_get(state, key, defaultv)
+  if typeof(state.struct_ids_index) == "struct" then
+    v0 = t.fastmap_get(state.struct_ids_index, key, defaultv)
+    if typeof(v0) == "int" then return v0 end if
+  end if
+  return _named_int_get(state.struct_ids, key, defaultv)
+end function
+
+function inline _state_enum_id_get(state, key, defaultv)
+  if typeof(state.enum_ids_index) == "struct" then
+    v0 = t.fastmap_get(state.enum_ids_index, key, defaultv)
+    if typeof(v0) == "int" then return v0 end if
+  end if
+  return _named_int_get(state.enum_ids, key, defaultv)
+end function
+
+function inline _state_named_array_get(index_map, arr, key)
+  if typeof(index_map) == "struct" then
+    return t.fastmap_get(index_map, key, 0)
+  end if
+  return _named_array_get(arr, key)
+end function
+
+function inline _state_struct_fields_get(state, key)
+  return _state_named_array_get(state.struct_fields_index, state.struct_fields, key)
+end function
+
+function inline _state_enum_variants_get(state, key)
+  return _state_named_array_get(state.enum_variants_index, state.enum_variants, key)
+end function
+
+function inline _state_struct_static_methods_get(state, key)
+  return _state_named_array_get(state.struct_static_methods_index, state.struct_static_methods, key)
+end function
+
+function inline _strpair_get(arr, key)
+  if typeof(arr) == "struct" then
+    v0 = t.fastmap_get(arr, key, "")
+    if typeof(v0) == "string" then return v0 end if
+    return ""
+  end if
   if typeof(arr) != "array" or len(arr) <= 0 then return "" end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -91,7 +129,12 @@ function _strpair_get(arr, key)
   return ""
 end function
 
-function _method_map_get(map_arr, method_name)
+function inline _method_map_get(map_arr, method_name)
+  if typeof(map_arr) == "struct" then
+    mv = t.fastmap_get(map_arr, method_name, "")
+    if typeof(mv) == "string" then return mv end if
+    return ""
+  end if
   if typeof(map_arr) != "array" or len(map_arr) <= 0 then return "" end if
   for i = 0 to len(map_arr) - 1
     it = map_arr[i]
@@ -107,6 +150,14 @@ end function
 
 function _user_function_get(state, qname)
   arr = state.user_functions
+  idx_map = state.user_function_index
+  if typeof(idx_map) == "struct" and typeof(arr) == "array" then
+    idx = t.fastmap_get(idx_map, qname, -1)
+    if typeof(idx) == "int" and idx >= 0 and idx < len(arr) then
+      it0 = arr[idx]
+      if typeof(it0) == "array" and len(it0) == 2 then return it0[1] end if
+    end if
+  end if
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -165,7 +216,7 @@ function _has_any_global_prefix(state, base)
   return false
 end function
 
-function _builtin_label(name)
+function inline _builtin_label(name)
   nm = name
   if typeof(nm) != "string" then return "" end if
   if nm == "len" then return "fn_builtin_len" end if
@@ -191,13 +242,18 @@ function _builtin_label(name)
   return ""
 end function
 
-function _next_lid(state)
+function inline _next_lid(state)
   lid = state.label_id
   state.label_id = state.label_id + 1
   return lid
 end function
 
-function _alias_lookup(alias_map, key)
+function inline _alias_lookup(alias_map, key)
+  if typeof(alias_map) == "struct" then
+    v0 = t.fastmap_get(alias_map, key, "")
+    if typeof(v0) == "string" then return v0 end if
+    return ""
+  end if
   if typeof(alias_map) != "array" or len(alias_map) <= 0 then return "" end if
   for i = 0 to len(alias_map) - 1
     p = alias_map[i]
@@ -210,23 +266,33 @@ end function
 
 function _apply_import_alias(state, qname)
   if typeof(qname) != "string" then return "" end if
-  if s.contains(qname, ".") == false then return qname end if
-  parts = s.split(qname, ".")
-  if len(parts) <= 1 then return qname end if
-  alias = parts[0]
-  target = _alias_lookup(state.import_aliases, alias)
-  if target == "" then return qname end if
-  tail_b = t.arr_chunk_new(8)
-  for i = 1 to len(parts) - 1
-    tail_b = t.arr_chunk_push(tail_b, _coerce_name(parts[i]))
+  qn_len = len(qname)
+  if qn_len <= 0 then return qname end if
+  dot = -1
+  for i = 0 to qn_len - 1
+    if qname[i] == "." then
+      dot = i
+      break
+    end if
   end for
-  tail = t.arr_chunk_finish(tail_b)
-  if typeof(tail) != "array" then tail = [] end if
-  if len(tail) <= 0 then return target end if
-  return target + "." + s.join(tail, ".")
+  if dot < 0 then return qname end if
+  alias = s.substr(qname, 0, dot)
+  target = ""
+  if typeof(state.import_alias_index) == "struct" then
+    t0 = t.fastmap_get(state.import_alias_index, alias, "")
+    if typeof(t0) == "string" then target = t0 end if
+  end if
+  if target == "" then
+    target = _alias_lookup(state.import_aliases, alias)
+  end if
+  if target == "" then return qname end if
+  if dot + 1 >= qn_len then return target end if
+  tail = s.substr(qname, dot + 1, qn_len - dot - 1)
+  if tail == "" then return target end if
+  return target + "." + tail
 end function
 
-function _arr_has_str(arr, value)
+function inline _arr_has_str(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
     if arr[i] == value then return true end if
@@ -272,6 +338,21 @@ end function
 function _qualify_identifier(state, name)
   if typeof(name) != "string" then return "" end if
   if name == "" then return "" end if
+
+  qpref0 = ""
+  if typeof(state.current_qname_prefix) == "string" then qpref0 = state.current_qname_prefix end if
+  fpref0 = ""
+  if typeof(state.current_file_prefix) == "string" then fpref0 = state.current_file_prefix end if
+  bid0 = 0
+  if typeof(state.binding_id) == "int" then bid0 = state.binding_id end if
+  qkey = bid0 + "|" + qpref0 + "|" + fpref0 + "|" + name
+  if typeof(state.qualify_cache) == "struct" then
+    hitq = t.fastmap_get(state.qualify_cache, qkey, 0)
+    if typeof(hitq) == "string" then return hitq end if
+  else
+    state.qualify_cache = t.fastmap_new(1024)
+  end if
+
   n1 = _apply_import_alias(state, name)
 
   fn_pref = ""
@@ -299,7 +380,10 @@ function _qualify_identifier(state, name)
   if len(cands) > 0 then
     for i = 0 to len(cands) - 1
       b = scope.cg_resolve_binding(state, cands[i])
-      if typeof(b) == "struct" then return cands[i] end if
+      if typeof(b) == "struct" then
+        state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, cands[i])
+        return cands[i]
+      end if
     end for
   end if
 
@@ -308,7 +392,10 @@ function _qualify_identifier(state, name)
     for ci = 0 to len(cands) - 1
       cand = cands[ci]
       for pi = 0 to len(pools) - 1
-        if _pool_has_key(pools[pi], cand) then return cand end if
+        if _pool_has_key(pools[pi], cand) then
+          state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, cand)
+          return cand
+        end if
       end for
     end for
   end if
@@ -320,10 +407,13 @@ function _qualify_identifier(state, name)
       hits = _pool_collect_suffix(pools[pi2], pkg_pref, suffix, hits)
     end for
     if typeof(hits) == "array" and len(hits) == 1 then
-      return hits[0]
+      out1 = hits[0]
+      state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, out1)
+      return out1
     end if
   end if
 
+  state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, n1)
   return n1
 end function
 
@@ -347,6 +437,10 @@ end function
 
 function _extern_sig_get(state, qname)
   if typeof(qname) != "string" or qname == "" then return 0 end if
+  if typeof(state.extern_sig_index) == "struct" then
+    hit = t.fastmap_get(state.extern_sig_index, qname, 0)
+    if typeof(hit) == "struct" then return hit end if
+  end if
   xs = state.extern_sigs
   if typeof(xs) != "array" or len(xs) <= 0 then return 0 end if
   for i = 0 to len(xs) - 1
@@ -388,7 +482,7 @@ function _emit_struct_field_index_dispatch(state, field, struct_id_reg, out_reg,
       end for
       if fidx < 0 then continue end if
 
-      sid = _named_int_get(state.struct_ids, sname, 0)
+      sid = _state_struct_id_get(state, sname, 0)
       if sid != 0 then
         pairs_b = t.arr_chunk_push(pairs_b, [sid, fidx])
       end if
@@ -630,12 +724,12 @@ function cg_emit_expr(state, expr)
       ty_q = _apply_import_alias(state, ty_q)
     else
       cand_s = _qualify_identifier(state, ty_q)
-      sid_c = _named_int_get(state.struct_ids, cand_s, 0)
+      sid_c = _state_struct_id_get(state, cand_s, 0)
       if sid_c != 0 then
         ty_q = cand_s
       else
         cand_e = _qualify_identifier(state, ty_q)
-        eid_c = _named_int_get(state.enum_ids, cand_e, -1)
+        eid_c = _state_enum_id_get(state, cand_e, -1)
         if eid_c >= 0 then
           ty_q = cand_e
         else
@@ -652,7 +746,7 @@ function cg_emit_expr(state, expr)
         base_parts_ty = slice(parts_ty, 0, len(parts_ty) - 1)
         if typeof(base_parts_ty) != "array" then base_parts_ty = [] end if
         base_ty = s.join(base_parts_ty, ".")
-        vars_ty = _named_array_get(state.enum_variants, base_ty)
+        vars_ty = _state_enum_variants_get(state, base_ty)
         if typeof(vars_ty) == "array" and len(vars_ty) > 0 then
           hit_var = false
           for vi_ty = 0 to len(vars_ty) - 1
@@ -661,14 +755,14 @@ function cg_emit_expr(state, expr)
               break
             end if
           end for
-          if hit_var and _named_int_get(state.enum_ids, base_ty, -1) >= 0 then
+          if hit_var and _state_enum_id_get(state, base_ty, -1) >= 0 then
             ty_q = base_ty
           end if
         end if
       end if
     end if
 
-    sid = _named_int_get(state.struct_ids, ty_q, 0)
+    sid = _state_struct_id_get(state, ty_q, 0)
     if sid != 0 then
       state = cg_emit_expr(state, expr.expr)
       fid_s = _next_lid(state)
@@ -709,7 +803,7 @@ function cg_emit_expr(state, expr)
       return state
     end if
 
-    eid = _named_int_get(state.enum_ids, ty_q, -1)
+    eid = _state_enum_id_get(state, ty_q, -1)
     if eid >= 0 then
       state = cg_emit_expr(state, expr.expr)
       fid_e = _next_lid(state)
@@ -833,11 +927,11 @@ function cg_emit_expr(state, expr)
       if base_q_m == "" then base_q_m = base_q end if
 
       // Static struct method reference: StructName.method -> StructName.__static__.method
-      smap = _named_array_get(state.struct_static_methods, base_q_m)
-      if typeof(smap) != "array" or len(smap) <= 0 then
-        smap = _named_array_get(state.struct_static_methods, base_q)
+      smap = _state_struct_static_methods_get(state, base_q_m)
+      if (typeof(smap) != "array" and typeof(smap) != "struct") or (typeof(smap) == "array" and len(smap) <= 0) then
+        smap = _state_struct_static_methods_get(state, base_q)
       end if
-      if typeof(smap) == "array" and len(smap) > 0 then
+      if (typeof(smap) == "array" and len(smap) > 0) or typeof(smap) == "struct" then
         sqfn = _method_map_get(smap, mname)
         if sqfn != "" then
           return scope.emit_load_var_scoped(state, sqfn)
@@ -845,16 +939,16 @@ function cg_emit_expr(state, expr)
       end if
 
       // Enum variant literal: Color.Red
-      vars = _named_array_get(state.enum_variants, base_q_m)
+      vars = _state_enum_variants_get(state, base_q_m)
       enum_base = base_q_m
       if typeof(vars) != "array" or len(vars) <= 0 then
-        vars = _named_array_get(state.enum_variants, base_q)
+        vars = _state_enum_variants_get(state, base_q)
         enum_base = base_q
       end if
       if typeof(vars) == "array" and len(vars) > 0 then
         for vi = 0 to len(vars) - 1
           if _coerce_name(vars[vi]) == mname then
-            eid = _named_int_get(state.enum_ids, enum_base, -1)
+            eid = _state_enum_id_get(state, enum_base, -1)
             if eid >= 0 then
               state.asm = a.mov_rax_imm64(state.asm, t.enc_enum(eid, vi))
               return state
@@ -883,10 +977,10 @@ function cg_emit_expr(state, expr)
         if typeof(_user_function_get(state, qc)) == "struct" then
           return scope.emit_load_var_scoped(state, qc)
         end if
-        if _named_int_get(state.struct_ids, qc, 0) != 0 then
+        if _state_struct_id_get(state, qc, 0) != 0 then
           return scope.emit_load_var_scoped(state, qc)
         end if
-        if _named_int_get(state.enum_ids, qc, -1) >= 0 then
+        if _state_enum_id_get(state, qc, -1) >= 0 then
           return scope.emit_load_var_scoped(state, qc)
         end if
         if typeof(_extern_sig_get(state, qc)) == "struct" then
@@ -1893,7 +1987,7 @@ function cg_emit_expr(state, expr)
                   member_runtime = true
                 else
                   base_q_rt = _qualify_identifier(state, base_rt)
-                  flds_rt = _named_array_get(state.struct_fields, base_q_rt)
+                  flds_rt = _state_struct_fields_get(state, base_q_rt)
                   if typeof(flds_rt) != "array" then
                     member_runtime = true
                   end if
@@ -1908,14 +2002,14 @@ function cg_emit_expr(state, expr)
               tq_a = _apply_import_alias(state, tq_rt)
               tq_q = _qualify_identifier(state, tq_a)
               target_compile = false
-              if typeof(_named_array_get(state.struct_fields, tq_a)) == "array" then target_compile = true end if
-              if typeof(_named_array_get(state.struct_fields, tq_q)) == "array" then target_compile = true end if
+              if typeof(_state_struct_fields_get(state, tq_a)) == "array" then target_compile = true end if
+              if typeof(_state_struct_fields_get(state, tq_q)) == "array" then target_compile = true end if
               if typeof(_user_function_get(state, tq_a)) == "struct" then target_compile = true end if
               if typeof(_user_function_get(state, tq_q)) == "struct" then target_compile = true end if
-              if _named_int_get(state.struct_ids, tq_a, 0) != 0 then target_compile = true end if
-              if _named_int_get(state.struct_ids, tq_q, 0) != 0 then target_compile = true end if
-              if _named_int_get(state.enum_ids, tq_a, -1) >= 0 then target_compile = true end if
-              if _named_int_get(state.enum_ids, tq_q, -1) >= 0 then target_compile = true end if
+              if _state_struct_id_get(state, tq_a, 0) != 0 then target_compile = true end if
+              if _state_struct_id_get(state, tq_q, 0) != 0 then target_compile = true end if
+              if _state_enum_id_get(state, tq_a, -1) >= 0 then target_compile = true end if
+              if _state_enum_id_get(state, tq_q, -1) >= 0 then target_compile = true end if
               if typeof(_extern_sig_get(state, tq_a)) == "struct" then target_compile = true end if
               if typeof(_extern_sig_get(state, tq_q)) == "struct" then target_compile = true end if
               if target_compile == false then
@@ -1967,7 +2061,9 @@ function cg_emit_expr(state, expr)
               md_dyn = sm_it[1]
             end if
           end if
-          if sqn_dyn == "" or typeof(md_dyn) != "array" or len(md_dyn) <= 0 then continue end if
+          if sqn_dyn == "" then continue end if
+          if typeof(md_dyn) != "array" and typeof(md_dyn) != "struct" then continue end if
+          if typeof(md_dyn) == "array" and len(md_dyn) <= 0 then continue end if
 
           fnq_dyn = _method_map_get(md_dyn, mname_dyn)
           if fnq_dyn == "" then continue end if
@@ -1977,7 +2073,7 @@ function cg_emit_expr(state, expr)
           if typeof(fndef_dyn.params) == "array" then exp_dyn = len(fndef_dyn.params) end if
           if exp_dyn != total_dyn then continue end if
 
-          sid_dyn = _named_int_get(state.struct_ids, sqn_dyn, -1)
+          sid_dyn = _state_struct_id_get(state, sqn_dyn, -1)
           if sid_dyn < 0 then continue end if
           cand_b = t.arr_chunk_push(cand_b, [sid_dyn, fnq_dyn])
         end for
@@ -2142,12 +2238,12 @@ function cg_emit_expr(state, expr)
       arg_name = _expr_to_qualname(state, arg0)
       if arg_name != "" then arg_name = _apply_import_alias(state, arg_name) end if
       if arg_name != "" then
-        flds0 = _named_array_get(state.struct_fields, arg_name)
+        flds0 = _state_struct_fields_get(state, arg_name)
         if typeof(flds0) == "array" then
           state.asm = a.lea_rax_rip(state.asm, "obj_type_struct")
           return state
         end if
-        if _named_int_get(state.enum_ids, arg_name, -1) >= 0 then
+        if _state_enum_id_get(state, arg_name, -1) >= 0 then
           state.asm = a.lea_rax_rip(state.asm, "obj_type_enum")
           return state
         end if
@@ -2158,8 +2254,8 @@ function cg_emit_expr(state, expr)
             bp_t = slice(ps_t, 0, len(ps_t) - 1)
             if typeof(bp_t) != "array" then bp_t = [] end if
             b_t = _apply_import_alias(state, s.join(bp_t, "."))
-            vars_t = _named_array_get(state.enum_variants, b_t)
-            if _named_int_get(state.enum_ids, b_t, -1) >= 0 and typeof(vars_t) == "array" and _arr_has_str(vars_t, v_t) then
+            vars_t = _state_enum_variants_get(state, b_t)
+            if _state_enum_id_get(state, b_t, -1) >= 0 and typeof(vars_t) == "array" and _arr_has_str(vars_t, v_t) then
               state.asm = a.lea_rax_rip(state.asm, "obj_type_enum")
               return state
             end if
@@ -2178,7 +2274,7 @@ function cg_emit_expr(state, expr)
       if argn != "" then argn = _apply_import_alias(state, argn) end if
 
       if argn != "" then
-        flds1 = _named_array_get(state.struct_fields, argn)
+        flds1 = _state_struct_fields_get(state, argn)
         if typeof(flds1) == "array" then
           lbl_s = _strpair_get(state.typename_struct_by_qname, argn)
           if lbl_s != "" then
@@ -2189,7 +2285,7 @@ function cg_emit_expr(state, expr)
           return state
         end if
 
-        if _named_int_get(state.enum_ids, argn, -1) >= 0 then
+        if _state_enum_id_get(state, argn, -1) >= 0 then
           lbl_e = _strpair_get(state.typename_enum_by_qname, argn)
           if lbl_e != "" then
             state.asm = a.lea_rax_rip(state.asm, lbl_e)
@@ -2206,8 +2302,8 @@ function cg_emit_expr(state, expr)
             bp_n = slice(ps_n, 0, len(ps_n) - 1)
             if typeof(bp_n) != "array" then bp_n = [] end if
             b_n = _apply_import_alias(state, s.join(bp_n, "."))
-            vars_n = _named_array_get(state.enum_variants, b_n)
-            if _named_int_get(state.enum_ids, b_n, -1) >= 0 and typeof(vars_n) == "array" and _arr_has_str(vars_n, vn_n) then
+            vars_n = _state_enum_variants_get(state, b_n)
+            if _state_enum_id_get(state, b_n, -1) >= 0 and typeof(vars_n) == "array" and _arr_has_str(vars_n, vn_n) then
               lbl_be = _strpair_get(state.typename_enum_by_qname, b_n)
               if lbl_be != "" then
                 state.asm = a.lea_rax_rip(state.asm, lbl_be)
@@ -2591,9 +2687,9 @@ function cg_emit_expr(state, expr)
     end if
 
     scallee = callee
-    sid = _named_int_get(state.struct_ids, scallee, 0)
+    sid = _state_struct_id_get(state, scallee, 0)
     if sid == 0 and raw_name != "" and raw_name != scallee then
-      sid2 = _named_int_get(state.struct_ids, raw_name, 0)
+      sid2 = _state_struct_id_get(state, raw_name, 0)
       if sid2 != 0 then
         sid = sid2
         scallee = raw_name
@@ -2601,7 +2697,7 @@ function cg_emit_expr(state, expr)
     end if
     if sid != 0 then
       expected = 0
-      flds = _named_array_get(state.struct_fields, scallee)
+      flds = _state_struct_fields_get(state, scallee)
       if typeof(flds) == "array" then expected = len(flds) end if
 
       if sid == c.ERROR_STRUCT_ID then
@@ -3249,6 +3345,18 @@ function _is_instance_method_qname(state, qname)
       md = it.values
     else
       if typeof(it) == "array" and len(it) >= 2 then md = it[1] end if
+    end if
+    if typeof(md) == "struct" then
+      md_items = t.fastmap_items(md)
+      if typeof(md_items) == "array" and len(md_items) > 0 then
+        for j = 0 to len(md_items) - 1
+          entm = md_items[j]
+          fnq2 = ""
+          if typeof(entm) == "array" and len(entm) >= 2 then fnq2 = _coerce_name(entm[1]) end if
+          if fnq2 == qname then return true end if
+        end for
+      end if
+      continue
     end if
     if typeof(md) != "array" or len(md) <= 0 then continue end if
     for j = 0 to len(md) - 1
@@ -4211,9 +4319,7 @@ function emit_extern_stubs(state)
     if out_args < 0 then out_args = 0 end if
 
     stub_lbl = ""
-    if typeof(state.extern_stub_labels) == "array" then
-      stub_lbl = _strpair_get(state.extern_stub_labels, qn)
-    end if
+    stub_lbl = _strpair_get(state.extern_stub_labels, qn)
     if stub_lbl == "" then
       safe = s.replaceAll(qn, ".", "_")
       safe = s.replaceAll(safe, "-", "_")
