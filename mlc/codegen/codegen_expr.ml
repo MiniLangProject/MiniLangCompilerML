@@ -2406,6 +2406,98 @@ function cg_emit_expr(state, expr)
       raw_name = _expr_to_qualname(state, cal)
     end if
 
+    if callee == "array" then
+      if nargs != 1 and nargs != 2 then
+        state.diagnostics = state.diagnostics +["array() expects 1 or 2 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      if nargs == 2 then
+        state = mem.ensure_gc_data(state)
+      end if
+
+      lid_arr = _next_lid(state)
+      l_fail_arr = "array_init_fail_" + lid_arr
+      l_fill_top = "array_init_fill_top_" + lid_arr
+      l_fill_done = "array_init_fill_done_" + lid_arr
+      l_done_arr = "array_init_done_" + lid_arr
+
+      // validate + decode size (tagged int >= 0 and <= 0x7fffffff)
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x20)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_fail_arr)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_fail_arr)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_fail_arr)
+
+      // optional fill root across fn_alloc (allocator can trigger GC)
+      if nargs == 2 then
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x28)
+        state.asm = a.mov_rip_qword_r11(state.asm, "gc_tmp0")
+      end if
+
+      // allocate payload bytes = 8 + len*8
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x20)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.shl_r64_imm8(state.asm, "rcx", 3)
+      state.asm = a.add_r64_imm(state.asm, "rcx", 8)
+      state.asm = a.call(state.asm, "fn_alloc")
+
+      // r11 = array base
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+
+      // header len (u32)
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x20)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+      state.asm = a.mov_membase_disp_r32(state.asm, "r11", 4, "edx")
+
+      // fill value in rdx
+      if nargs == 2 then
+        state.asm = a.mov_rdx_rip_qword(state.asm, "gc_tmp0")
+      else
+        state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_void())
+      end if
+
+      // fill payload with rdx
+      state.asm = a.lea_r64_membase_disp(state.asm, "r8", "r11", 8)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "r11", 4)
+      state.asm = a.mark(state.asm, l_fill_top)
+      state.asm = a.test_r32_r32(state.asm, "r9d", "r9d")
+      state.asm = a.jcc(state.asm, "e", l_fill_done)
+      state.asm = a.mov_membase_disp_r64(state.asm, "r8", 0, "rdx")
+      state.asm = a.add_r64_imm(state.asm, "r8", 8)
+      state.asm = a.dec_r32(state.asm, "r9d")
+      state.asm = a.jmp(state.asm, l_fill_top)
+      state.asm = a.mark(state.asm, l_fill_done)
+
+      if nargs == 2 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        state.asm = a.mov_rip_qword_rax(state.asm, "gc_tmp0")
+      end if
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.jmp(state.asm, l_done_arr)
+
+      state.asm = a.mark(state.asm, l_fail_arr)
+      if nargs == 2 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        state.asm = a.mov_rip_qword_rax(state.asm, "gc_tmp0")
+      end if
+      state = _emit_make_error_const(state, c.ERR_ARRAY_INIT_SIZE, "array() size must be an int in range 0..2147483647")
+      state = _emit_auto_errprop(state)
+
+      state.asm = a.mark(state.asm, l_done_arr)
+      return state
+    end if
+
     if callee == "bytes" or callee == "byteBuffer" then
       if nargs == 0 then
         state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")

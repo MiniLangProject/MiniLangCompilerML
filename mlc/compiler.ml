@@ -53,6 +53,11 @@ struct ResolveResult
   resolved_root,
 end struct
 
+struct PathStackNode
+  path,
+  parent,
+end struct
+
 struct DeclCheckResult
   diagnostics,
   failed,
@@ -87,6 +92,8 @@ end struct
 
 _mem_probe_enabled = false
 _path_norm_cache = []
+_front_visited_set = []
+_front_resolve_cache = []
 
 function _usage()
   print "MiniLang self-hosted compiler (bootstrap frontend)"
@@ -234,17 +241,14 @@ function inline _path_eq(a, b)
   return _path_norm_cached(a) == _path_norm_cached(b)
 end function
 
-function _path_in(arr, value)
-  if len(arr) <= 0 then return false end if
-  nv = _path_norm_cached(value)
-  for i = 0 to len(arr) - 1
-    if _path_norm_cached(arr[i]) == nv then return true end if
-  end for
-  return false
-end function
-
 function _append_unique_path(arr, value)
-  if _path_in(arr, value) then return arr end if
+  if typeof(arr) != "array" then arr = [] end if
+  if len(arr) > 0 then
+    nv = _path_norm_cached(value)
+    for i = 0 to len(arr) - 1
+      if _path_norm_cached(arr[i]) == nv then return arr end if
+    end for
+  end if
   return arr +[value]
 end function
 
@@ -292,6 +296,12 @@ function _add_diag_from_stmt(diags, kind, st, fallback_file, message)
 end function
 
 function _module_get_package(modules, path)
+  if typeof(modules) == "struct" then
+    key = _path_norm_cached(path)
+    v = t.fastmap_get(modules, key, "")
+    if typeof(v) == "string" then return v end if
+    return ""
+  end if
   if len(modules) <= 0 then return "" end if
   for i = 0 to len(modules) - 1
     if _path_eq(modules[i].path, path) then
@@ -302,6 +312,10 @@ function _module_get_package(modules, path)
 end function
 
 function _module_set_package(modules, path, package_name)
+  if typeof(modules) == "struct" then
+    key = _path_norm_cached(path)
+    return t.fastmap_set(modules, key, package_name)
+  end if
   if len(modules) <= 0 then
     return [ModuleInfo(path, package_name)]
   end if
@@ -315,6 +329,11 @@ function _module_set_package(modules, path, package_name)
 end function
 
 function inline _alias_get(aliases, key)
+  if typeof(aliases) == "struct" then
+    v = t.fastmap_get(aliases, key, "")
+    if typeof(v) == "string" then return v end if
+    return ""
+  end if
   if len(aliases) <= 0 then return "" end if
   for i = 0 to len(aliases) - 1
     if aliases[i].key == key then return aliases[i].value end if
@@ -323,6 +342,9 @@ function inline _alias_get(aliases, key)
 end function
 
 function _alias_set(aliases, key, value)
+  if typeof(aliases) == "struct" then
+    return t.fastmap_set(aliases, key, value)
+  end if
   if len(aliases) <= 0 then
     return [StrPair(key, value)]
   end if
@@ -333,6 +355,25 @@ function _alias_set(aliases, key, value)
     end if
   end for
   return aliases +[StrPair(key, value)]
+end function
+
+function _alias_to_array(aliases)
+  if typeof(aliases) == "array" then return aliases end if
+  if typeof(aliases) != "struct" then return [] end if
+  items = t.fastmap_items(aliases)
+  out_chunks = []
+  out_tail = []
+  if len(items) > 0 then
+    for i = 0 to len(items) - 1
+      it = items[i]
+      if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "string" and typeof(it[1]) == "string" then
+        app = t.arr_chunked_push(out_chunks, out_tail, StrPair(it[0], it[1]), 32)
+        out_chunks = app[0]
+        out_tail = app[1]
+      end if
+    end for
+  end if
+  return t.arr_chunked_finish(out_chunks, out_tail)
 end function
 
 function _path_to_package(rel_path)
@@ -522,27 +563,32 @@ function _extract_imports(program)
   return t.arr_chunked_finish(imports_chunks, imports_tail)
 end function
 
-function _resolve_import(requested, base_dir, include_dirs)
-  cands_chunks = []
-  cands_tail = []
-  if _is_abs_path(requested) then
-    appa = t.arr_chunked_push(cands_chunks, cands_tail, ResolveCand(requested, "abs", ""), 16)
-    cands_chunks = appa[0]
-    cands_tail = appa[1]
-  else
-    appr = t.arr_chunked_push(cands_chunks, cands_tail, ResolveCand(fs.joinPath(base_dir, requested), "rel", base_dir), 16)
-    cands_chunks = appr[0]
-    cands_tail = appr[1]
-    if len(include_dirs) > 0 then
-      for i = 0 to len(include_dirs) - 1
-        appi = t.arr_chunked_push(cands_chunks, cands_tail, ResolveCand(fs.joinPath(include_dirs[i], requested), "include", include_dirs[i]), 16)
-        cands_chunks = appi[0]
-        cands_tail = appi[1]
-      end for
-    end if
+function _split_imports_nonimports(program)
+  imports_chunks = []
+  imports_tail = []
+  body_chunks = []
+  body_tail = []
+  if typeof(program) != "array" then
+    return [t.arr_chunked_finish(imports_chunks, imports_tail), t.arr_chunked_finish(body_chunks, body_tail)]
   end if
-  cands = t.arr_chunked_finish(cands_chunks, cands_tail)
+  if len(program) > 0 then
+    for i = 0 to len(program) - 1
+      st = program[i]
+      if typeof(st) == "struct" and st.node_kind == "Import" then
+        appi = t.arr_chunked_push(imports_chunks, imports_tail, st, 32)
+        imports_chunks = appi[0]
+        imports_tail = appi[1]
+      else
+        appb = t.arr_chunked_push(body_chunks, body_tail, st, 64)
+        body_chunks = appb[0]
+        body_tail = appb[1]
+      end if
+    end for
+  end if
+  return [t.arr_chunked_finish(imports_chunks, imports_tail), t.arr_chunked_finish(body_chunks, body_tail)]
+end function
 
+function _resolve_import(requested, base_dir, include_dirs)
   tried_seen = t.fastmap_new(128)
   matches_seen = t.fastmap_new(128)
   tried_b = t.arr_chunk_new(64)
@@ -550,27 +596,56 @@ function _resolve_import(requested, base_dir, include_dirs)
   resolved = ""
   resolved_kind = ""
   resolved_root = ""
-
-  if len(cands) > 0 then
-    for i = 0 to len(cands) - 1
-      cand = cands[i]
-      cnp = _path_norm_cached(cand.path)
-      if t.fastmap_has(tried_seen, cnp) == false then
-        tried_seen = t.fastmap_set(tried_seen, cnp, 1)
-        tried_b = t.arr_chunk_push(tried_b, cand.path)
+  if _is_abs_path(requested) then
+    cpath = requested
+    cnp = _path_norm_cached(cpath)
+    if t.fastmap_has(tried_seen, cnp) == false then
+      tried_seen = t.fastmap_set(tried_seen, cnp, 1)
+      tried_b = t.arr_chunk_push(tried_b, cpath)
+    end if
+    if fs.exists(cpath) and t.fastmap_has(matches_seen, cnp) == false then
+      matches_seen = t.fastmap_set(matches_seen, cnp, 1)
+      matches_b = t.arr_chunk_push(matches_b, cpath)
+      resolved = cpath
+      resolved_kind = "abs"
+      resolved_root = ""
+    end if
+  else
+    cpath = fs.joinPath(base_dir, requested)
+    cnp = _path_norm_cached(cpath)
+    if t.fastmap_has(tried_seen, cnp) == false then
+      tried_seen = t.fastmap_set(tried_seen, cnp, 1)
+      tried_b = t.arr_chunk_push(tried_b, cpath)
+    end if
+    if fs.exists(cpath) and t.fastmap_has(matches_seen, cnp) == false then
+      matches_seen = t.fastmap_set(matches_seen, cnp, 1)
+      matches_b = t.arr_chunk_push(matches_b, cpath)
+      if resolved == "" then
+        resolved = cpath
+        resolved_kind = "rel"
+        resolved_root = base_dir
       end if
-      if fs.exists(cand.path) then
-        if t.fastmap_has(matches_seen, cnp) == false then
+    end if
+
+    if len(include_dirs) > 0 then
+      for i = 0 to len(include_dirs) - 1
+        cpath = fs.joinPath(include_dirs[i], requested)
+        cnp = _path_norm_cached(cpath)
+        if t.fastmap_has(tried_seen, cnp) == false then
+          tried_seen = t.fastmap_set(tried_seen, cnp, 1)
+          tried_b = t.arr_chunk_push(tried_b, cpath)
+        end if
+        if fs.exists(cpath) and t.fastmap_has(matches_seen, cnp) == false then
           matches_seen = t.fastmap_set(matches_seen, cnp, 1)
-          matches_b = t.arr_chunk_push(matches_b, cand.path)
+          matches_b = t.arr_chunk_push(matches_b, cpath)
           if resolved == "" then
-            resolved = cand.path
-            resolved_kind = cand.kind
-            resolved_root = cand.root
+            resolved = cpath
+            resolved_kind = "include"
+            resolved_root = include_dirs[i]
           end if
         end if
-      end if
-    end for
+      end for
+    end if
   end if
 
   tried = t.arr_chunk_finish(tried_b)
@@ -578,17 +653,68 @@ function _resolve_import(requested, base_dir, include_dirs)
   return ResolveResult(resolved, tried, matches, resolved_kind, resolved_root)
 end function
 
-function _stack_contains(stack, path)
-  return _path_in(stack, path)
+function _resolve_import_cache_key(requested, base_dir)
+  req = requested
+  if typeof(req) != "string" then req = "" + req end if
+  return _path_norm_cached(base_dir) + "|" + s.toLowerAscii(req)
 end function
 
-function _visited_contains(visited, path)
-  return _path_in(visited, path)
+function _resolve_import_cached(requested, base_dir, include_dirs)
+  global _front_resolve_cache
+  if typeof(_front_resolve_cache) != "struct" then _front_resolve_cache = t.fastmap_new(2048) end if
+  key = _resolve_import_cache_key(requested, base_dir)
+  hit = t.fastmap_get(_front_resolve_cache, key, 0)
+  if typeof(hit) == "struct" then return hit end if
+  rr = _resolve_import(requested, base_dir, include_dirs)
+  _front_resolve_cache = t.fastmap_set(_front_resolve_cache, key, rr)
+  return rr
+end function
+
+function _stack_contains(stack, path)
+  cur = stack
+  while typeof(cur) == "struct"
+    if _path_eq(cur.path, path) then return true end if
+    cur = cur.parent
+  end while
+  return false
+end function
+
+function _visited_contains(path)
+  global _front_visited_set
+  if typeof(_front_visited_set) != "struct" then return false end if
+  return t.fastmap_has(_front_visited_set, _path_norm_cached(path))
+end function
+
+function _visited_add(visited, path)
+  global _front_visited_set
+  np = _path_norm_cached(path)
+  if typeof(_front_visited_set) != "struct" then _front_visited_set = t.fastmap_new(4096) end if
+  if t.fastmap_has(_front_visited_set, np) then return visited end if
+  _front_visited_set = t.fastmap_set(_front_visited_set, np, 1)
+  if typeof(visited) != "struct" then
+    vb = t.arr_chunk_new(256)
+    if typeof(visited) == "array" and len(visited) > 0 then
+      for vi = 0 to len(visited) - 1
+        vb = t.arr_chunk_push(vb, visited[vi])
+      end for
+    end if
+    visited = vb
+  end if
+  return t.arr_chunk_push(visited, path)
+end function
+
+function _visited_finish(visited, fallback_entry)
+  resv = visited
+  if typeof(resv) == "struct" then resv = t.arr_chunk_finish(resv) end if
+  if typeof(resv) != "array" or len(resv) <= 0 then
+    resv = [fallback_entry]
+  end if
+  return resv
 end function
 
 function _parsed_module_get(parsed_modules, path)
   if typeof(parsed_modules) == "struct" then
-    return t.fastmap_get(parsed_modules, path, 0)
+    return t.fastmap_get(parsed_modules, _path_norm_cached(path), 0)
   end if
   if typeof(parsed_modules) != "array" or len(parsed_modules) <= 0 then return 0 end if
   for i = 0 to len(parsed_modules) - 1
@@ -607,14 +733,14 @@ function _parsed_module_set(parsed_modules, path, source, program)
       for pi = 0 to len(parsed_modules) - 1
         it0 = parsed_modules[pi]
         if typeof(it0) == "struct" and typeof(it0.path) == "string" then
-          pm = t.fastmap_set(pm, it0.path, it0)
+          pm = t.fastmap_set(pm, _path_norm_cached(it0.path), it0)
         end if
       end for
     end if
     parsed_modules = pm
   end if
   rec = ParsedModule(path, source, program)
-  return t.fastmap_set(parsed_modules, path, rec)
+  return t.fastmap_set(parsed_modules, _path_norm_cached(path), rec)
 end function
 
 function _module_visit(path, entry_path, include_dirs, stack, visited, modules, aliases, parsed_modules, diags, keep_going, max_errors)
@@ -627,7 +753,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
     return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
-  if _visited_contains(visited, path) then
+  if _visited_contains(path) then
     return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
@@ -666,7 +792,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
       return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
     end if
     // keep-going mode: mark module as visited and continue with other files
-    visited = _append_unique_path(visited, path)
+    visited = _visited_add(visited, path)
     return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
   end if
 
@@ -691,7 +817,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
           if keep_going == false then
             return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
           end if
-          visited = _append_unique_path(visited, path)
+          visited = _visited_add(visited, path)
           return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
         end if
         if len(diags) >= max_errors then
@@ -701,12 +827,13 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
     end if
   end if
 
-  stack2 = stack +[path]
+  stack2 = PathStackNode(path, stack)
   base_dir = _dirname(path)
-  imports = _extract_imports(program)
-  part_for_codegen = _filter_non_import_stmts(program)
+  splitp = _split_imports_nonimports(program)
+  imports = splitp[0]
+  part_for_codegen = splitp[1]
   source_text = ""
-  if typeof(parsed.source) == "string" then source_text = parsed.source end if
+  if _path_eq(path, entry_path) and typeof(parsed.source) == "string" then source_text = parsed.source end if
   parsed_modules = _parsed_module_set(parsed_modules, path, source_text, part_for_codegen)
   // Drop full AST early: below we only need import nodes.
   parsed.program = []
@@ -729,7 +856,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
         continue
       end if
 
-      rr = _resolve_import(req, base_dir, include_dirs)
+      rr = _resolve_import_cached(req, base_dir, include_dirs)
       if rr.resolved == "" then
         diags = _add_diag_from_stmt(diags, "CompileError", st, path, "Import file not found: " + req)
         if keep_going == false then
@@ -848,21 +975,52 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
     end while
   end if
 
-  visited = _append_unique_path(visited, path)
+  visited = _visited_add(visited, path)
   return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
 end function
 
 function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
-  global _path_norm_cache
+  global _path_norm_cache, _front_visited_set, _front_resolve_cache
   _path_norm_cache = t.fastmap_new(4096)
-  dirs =[]
-  dirs = _append_unique_path(dirs, _dirname(entry))
+  _front_visited_set = t.fastmap_new(4096)
+  _front_resolve_cache = t.fastmap_new(2048)
+
+  dirs_seen = t.fastmap_new(128)
+  dirs_chunks = []
+  dirs_tail = []
+  d0 = _dirname(entry)
+  nd0 = _path_norm_cached(d0)
+  dirs_seen = t.fastmap_set(dirs_seen, nd0, 1)
+  appd0 = t.arr_chunked_push(dirs_chunks, dirs_tail, d0, 8)
+  dirs_chunks = appd0[0]
+  dirs_tail = appd0[1]
   if len(include_dirs) > 0 then
     for i = 0 to len(include_dirs) - 1
-      dirs = _append_unique_path(dirs, include_dirs[i])
+      di = include_dirs[i]
+      ndi = _path_norm_cached(di)
+      if t.fastmap_has(dirs_seen, ndi) == false then
+        dirs_seen = t.fastmap_set(dirs_seen, ndi, 1)
+        appdi = t.arr_chunked_push(dirs_chunks, dirs_tail, di, 8)
+        dirs_chunks = appdi[0]
+        dirs_tail = appdi[1]
+      end if
     end for
   end if
-  return _module_visit(entry, entry, dirs, [], [], [], [], [], [], keep_going, max_errors)
+  dirs = t.arr_chunked_finish(dirs_chunks, dirs_tail)
+  res = _module_visit(
+    entry,
+    entry,
+    dirs,
+    0,
+    t.arr_chunk_new(256),
+    t.fastmap_new(512),
+    t.fastmap_new(128),
+    t.fastmap_new(256),
+    [],
+    keep_going,
+    max_errors
+  )
+  return FrontCheckResult(res.diagnostics, _visited_finish(res.visited, entry), res.modules, _alias_to_array(res.aliases), res.parsed_modules)
 end function
 
 function _print_diag(d)
@@ -1396,8 +1554,7 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
     return LoadProgramResult(diags, "",[], check.aliases)
   end if
 
-  merged_chunks = []
-  merged_chunks_tail = []
+  merged_b = t.arr_chunk_new(2048)
   entry_source = ""
   visited = check.visited
   parsed_modules = check.parsed_modules
@@ -1405,13 +1562,23 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   if typeof(visited) != "array" or len(visited) <= 0 then
     visited =[entry]
   end if
+  mod_count = len(visited)
+  gc_stride = 128
+  if mod_count > 0 and mod_count <= 96 then
+    gc_stride = 32
+  else
+    if mod_count > 96 and mod_count <= 256 then
+      gc_stride = 64
+    end if
+  end if
+  probe_stride = 128
 
   for i = 0 to len(visited) - 1
     path = visited[i]
     parsed = _parsed_module_get(parsed_modules, path)
     if typeof(parsed) != "struct" then
       diags = _add_diag(diags, "CompileError", path, 0, "internal frontend cache miss for: " + path)
-      return LoadProgramResult(diags, "", _merge_array_chunks_balanced(t.arr_chunked_finish(merged_chunks, merged_chunks_tail)), check.aliases)
+      return LoadProgramResult(diags, "", t.arr_chunk_finish(merged_b), check.aliases)
     end if
 
     if _path_eq(path, entry) and typeof(parsed.source) == "string" then
@@ -1420,13 +1587,14 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
 
     part = parsed.program
     if typeof(part) == "array" and len(part) > 0 then
-      appm = t.arr_chunked_push(merged_chunks, merged_chunks_tail, part, 16)
-      merged_chunks = appm[0]
-      merged_chunks_tail = appm[1]
+      for pi = 0 to len(part) - 1
+        merged_b = t.arr_chunk_push(merged_b, part[pi])
+      end for
     end if
-    part = []
-    if i % 4 == 0 then gc_collect() end if
-    if i % 16 == 0 then _heap_probe("load:file_" + i) end if
+    parsed.program = []
+    if _path_eq(path, entry) == false then parsed.source = "" end if
+    if gc_stride > 0 and i > 0 and (i % gc_stride) == 0 then gc_collect() end if
+    if probe_stride > 0 and (i % probe_stride) == 0 then _heap_probe("load:file_" + i) end if
   end for
 
   if entry_source == "" and fs.exists(entry) then
@@ -1436,11 +1604,7 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
     end if
   end if
 
-  merged_lists = t.arr_chunked_finish(merged_chunks, merged_chunks_tail)
-  merged_chunks = []
-  merged_chunks_tail = []
-  merged = _merge_array_chunks_balanced(merged_lists)
-  merged_lists = []
+  merged = t.arr_chunk_finish(merged_b)
   visited = []
   gc_collect()
   _heap_probe("load:done")
