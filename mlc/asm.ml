@@ -732,7 +732,9 @@ function _grp1_imm(asm, reg_name, subop, imm, w, imm8)
     return asm
   end if
 
-  if subop == 0 and(rd & 7) == 0 then
+  // `ADD rax/eax, imm` short form is only valid for exact register id 0.
+  // Do not apply it to extended registers like r8/r8d (their low 3 bits are also 0).
+  if subop == 0 and rd == 0 then
     asm = _emit8(asm, 0x05)
     asm = _emit32(asm, imm)
     return asm
