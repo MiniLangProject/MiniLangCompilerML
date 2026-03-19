@@ -259,7 +259,42 @@ function _emit8(asm, x)
   if (dst & 0xFFFF) == 0 then
     asm = _ensure_capacity(asm, need)
   end if
-  asm = _set_chunk_byte(asm, dst, x)
+  ci = dst >> 16
+  off = dst & 0xFFFF
+  pi = ci >> 8
+  po = ci & 0xFF
+  wrote = false
+  if pi < len(asm.chunk_pages) then
+    pg = asm.chunk_pages[pi]
+    ch = pg[po]
+    ch[off] = x & 0xFF
+    pg[po] = ch
+    asm.chunk_pages[pi] = pg
+    wrote = true
+  else
+    ti = ci - (len(asm.chunk_pages) << 8)
+    if typeof(asm.chunk_tail) == "array" then
+      if ti >= 0 and ti < len(asm.chunk_tail) and typeof(asm.chunk_tail[ti]) == "bytes" then
+        ch2 = asm.chunk_tail[ti]
+        ch2[off] = x & 0xFF
+        asm.chunk_tail[ti] = ch2
+        wrote = true
+      end if
+    else
+      if typeof(asm.chunk_tail) == "struct" and typeof(asm.chunk_tail.data) == "array" then
+        tn = t.arr_chunk_tail_len(asm.chunk_tail)
+        if ti >= 0 and ti < tn and typeof(asm.chunk_tail.data[ti]) == "bytes" then
+          ch3 = asm.chunk_tail.data[ti]
+          ch3[off] = x & 0xFF
+          asm.chunk_tail.data[ti] = ch3
+          wrote = true
+        end if
+      end if
+    end if
+  end if
+  if wrote == false then
+    asm = _set_chunk_byte(asm, dst, x)
+  end if
   asm.size = need
   asm.buf_valid = false
   return asm
@@ -440,12 +475,22 @@ function finalize(asm)
   labels = get_labels(asm)
   if typeof(labels) != "array" then labels = [] end if
   asm.labels = labels
+  label_pos_map = t.fastmap_new((len(labels) * 2) + 64)
+  if len(labels) > 0 then
+    for li = 0 to len(labels) - 1
+      lb = labels[li]
+      if typeof(lb) == "struct" and typeof(lb.name) == "string" and typeof(lb.pos) == "int" then
+        label_pos_map = t.fastmap_set(label_pos_map, lb.name, lb.pos)
+      end if
+    end for
+  end if
   patches = get_patches(asm)
   if len(patches) > 0 then
     asm.buf_valid = false
     for i = 0 to len(patches) - 1
       p = patches[i]
-      tgt = _label_pos(labels, p.target)
+      tgt = t.fastmap_get(label_pos_map, p.target, -1)
+      if typeof(tgt) != "int" then tgt = -1 end if
       if tgt < 0 then
         continue
       end if

@@ -77,6 +77,19 @@ struct CgState
   current_fn_boxed_names,
   current_fn_env_index,
   current_env_root_off,
+  scope_index_stack,
+  scope_declared_index_stack,
+  func_global_map_index,
+  user_function_index,
+  qualify_cache,
+  struct_fields_index,
+  struct_ids_index,
+  enum_variants_index,
+  enum_ids_index,
+  struct_methods_index,
+  struct_static_methods_index,
+  extern_sig_index,
+  import_alias_index,
 end struct
 
 struct NamedArray
@@ -272,7 +285,20 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   0,
   [],
   [],
-  0
+  0,
+  [],
+  [],
+  t.fastmap_new(64),
+  t.fastmap_new(256),
+  t.fastmap_new(1024),
+  t.fastmap_new(256),
+  t.fastmap_new(256),
+  t.fastmap_new(256),
+  t.fastmap_new(256),
+  t.fastmap_new(256),
+  t.fastmap_new(256),
+  t.fastmap_new(256),
+  t.fastmap_new(128)
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)

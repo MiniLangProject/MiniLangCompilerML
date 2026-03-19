@@ -23,11 +23,156 @@ struct BytePages
   size,
 end struct
 
+struct FastMap
+  keys,
+  values,
+  used,
+  cap,
+  size,
+end struct
+
 _arr_void_sentinel = ArrayChunkVoidSentinel(0xA11D)
 
 function _u64_mask()
   // All bits set without a large out-of-range source literal.
   return 0 - 1
+end function
+
+function _fm_next_pow2(n)
+  p = 16
+  if typeof(n) != "int" or n <= 0 then return p end if
+  while p < n
+    p = p << 1
+  end while
+  return p
+end function
+
+function _fm_hash_any(key)
+  if typeof(key) == "int" then
+    return key & 0x7FFFFFFF
+  end if
+  if typeof(key) == "bool" then
+    if key then return 1 end if
+    return 0
+  end if
+
+  bs = bytes(0)
+  if typeof(key) == "bytes" then
+    bs = key
+  else
+    txt = ""
+    if typeof(key) == "string" then
+      txt = key
+    else
+      txt = "" + key
+    end if
+    bs = bytes(txt)
+  end if
+  h = 2166136261
+  if len(bs) > 0 then
+    for i = 0 to len(bs) - 1
+      h = h ^ bs[i]
+      h = (h * 16777619) & 0x7FFFFFFF
+    end for
+  end if
+  return h
+end function
+
+function _fm_is_valid(mapv)
+  if typeof(mapv) != "struct" then return false end if
+  if typeof(mapv.keys) != "array" then return false end if
+  if typeof(mapv.values) != "array" then return false end if
+  if typeof(mapv.used) != "array" then return false end if
+  if typeof(mapv.cap) != "int" or mapv.cap <= 0 then return false end if
+  if len(mapv.keys) != mapv.cap then return false end if
+  if len(mapv.values) != mapv.cap then return false end if
+  if len(mapv.used) != mapv.cap then return false end if
+  return true
+end function
+
+function fastmap_new(initial_cap)
+  cap = _fm_next_pow2(initial_cap)
+  return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), _arr_fill(cap, 0), cap, 0)
+end function
+
+function _fm_probe_slot(mapv, key)
+  if _fm_is_valid(mapv) == false then return [-1, false] end if
+  mask = mapv.cap - 1
+  idx = _fm_hash_any(key) & mask
+  steps = 0
+  while steps < mapv.cap
+    if mapv.used[idx] == 0 then return [idx, false] end if
+    if mapv.keys[idx] == key then return [idx, true] end if
+    idx = (idx + 1) & mask
+    steps = steps + 1
+  end while
+  return [-1, false]
+end function
+
+function _fm_insert_no_resize(mapv, key, value)
+  p = _fm_probe_slot(mapv, key)
+  idx = p[0]
+  found = p[1]
+  if idx < 0 then return mapv end if
+  if found == false then
+    mapv.used[idx] = 1
+    mapv.keys[idx] = key
+    mapv.size = mapv.size + 1
+  end if
+  mapv.values[idx] = value
+  return mapv
+end function
+
+function _fm_rehash(mapv, new_cap)
+  nm = fastmap_new(new_cap)
+  if _fm_is_valid(mapv) == false then return nm end if
+  for i = 0 to mapv.cap - 1
+    if mapv.used[i] != 0 then
+      nm = _fm_insert_no_resize(nm, mapv.keys[i], mapv.values[i])
+    end if
+  end for
+  return nm
+end function
+
+function fastmap_set(mapv, key, value)
+  m = mapv
+  if _fm_is_valid(m) == false then m = fastmap_new(64) end if
+  if (m.size + 1) * 10 >= m.cap * 7 then
+    m = _fm_rehash(m, m.cap * 2)
+  end if
+  return _fm_insert_no_resize(m, key, value)
+end function
+
+function fastmap_get(mapv, key, defaultv)
+  if _fm_is_valid(mapv) == false then return defaultv end if
+  p = _fm_probe_slot(mapv, key)
+  idx = p[0]
+  found = p[1]
+  if idx < 0 or found == false then return defaultv end if
+  return mapv.values[idx]
+end function
+
+function fastmap_has(mapv, key)
+  if _fm_is_valid(mapv) == false then return false end if
+  p = _fm_probe_slot(mapv, key)
+  return p[0] >= 0 and p[1]
+end function
+
+function fastmap_size(mapv)
+  if _fm_is_valid(mapv) == false then return 0 end if
+  if typeof(mapv.size) != "int" then return 0 end if
+  return mapv.size
+end function
+
+function fastmap_items(mapv)
+  out_b = arr_chunk_new(64)
+  if _fm_is_valid(mapv) == false then return arr_chunk_finish(out_b) end if
+  for i = 0 to mapv.cap - 1
+    if mapv.used[i] != 0 then
+      out_b = arr_chunk_push(out_b, [mapv.keys[i], mapv.values[i]])
+    end if
+  end for
+  return arr_chunk_finish(out_b)
 end function
 
 function align_up(n, a)
@@ -160,7 +305,7 @@ function _arr_tail_from_array(arr, cap)
   return t
 end function
 
-function arr_chunk_tail_len(tail)
+function inline arr_chunk_tail_len(tail)
   if typeof(tail) == "array" then return len(tail) end if
   if typeof(tail) != "struct" then return 0 end if
   if typeof(tail.used) != "int" or tail.used <= 0 then return 0 end if
@@ -243,11 +388,11 @@ function _arr_tail_to_array(tail)
   return arr_merge_chunks_balanced(parts)
 end function
 
-function _chunks_paged_tag()
+function inline _chunks_paged_tag()
   return "__acp__"
 end function
 
-function _chunks_is_paged(chunks)
+function inline _chunks_is_paged(chunks)
   if typeof(chunks) != "array" or len(chunks) < 3 then return false end if
   if typeof(chunks[0]) != "string" then return false end if
   return chunks[0] == _chunks_paged_tag()
@@ -266,8 +411,9 @@ function _chunks_paged_push(chunks, chunk)
   t = p[2]
   if typeof(t) == "array" then t = _arr_tail_from_array(t, 256) end if
   if typeof(t) != "struct" or typeof(t.data) != "array" then t = _arr_tail_new(256) end if
+  if typeof(t.used) != "int" or t.used < 0 then t.used = 0 end if
 
-  if arr_chunk_tail_len(t) >= 256 then
+  if t.used >= 256 then
     pages = pages + [_arr_tail_to_array(t)]
     t = _arr_tail_new(256)
   end if
@@ -338,14 +484,15 @@ function arr_chunked_push(chunks, tail, value, cap)
   if typeof(t) != "struct" or typeof(t.data) != "array" then t = _arr_tail_new(ccap) end if
 
   if typeof(t.cap) != "int" or t.cap <= 0 then t.cap = ccap end if
+  if typeof(t.used) != "int" or t.used < 0 then t.used = 0 end if
   if t.cap != ccap then
-    if arr_chunk_tail_len(t) > 0 then
+    if t.used > 0 then
       chunks = _chunks_push_chunk(chunks, _arr_tail_to_array(t))
     end if
     t = _arr_tail_new(ccap)
   end if
 
-  if arr_chunk_tail_len(t) >= ccap then
+  if t.used >= ccap then
     chunks = _chunks_push_chunk(chunks, _arr_tail_to_array(t))
     t = _arr_tail_new(ccap)
   end if
@@ -419,10 +566,21 @@ function byte_pages_new()
   return BytePages([], [], 0)
 end function
 
-function _bp_chunk_count(bp)
+function inline _bp_chunk_count(bp)
   n = 0
   if typeof(bp.chunk_pages) == "array" then n = n + (len(bp.chunk_pages) << 8) end if
-  n = n + arr_chunk_tail_len(bp.chunk_tail)
+  t = bp.chunk_tail
+  if typeof(t) == "array" then
+    n = n + len(t)
+  else
+    if typeof(t) == "struct" then
+      used = t.used
+      if typeof(used) != "int" or used < 0 then used = 0 end if
+      if typeof(t.cap) == "int" and t.cap >= 0 and used > t.cap then used = t.cap end if
+      if typeof(t.data) == "array" and used > len(t.data) then used = len(t.data) end if
+      n = n + used
+    end if
+  end if
   return n
 end function
 

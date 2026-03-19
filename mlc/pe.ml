@@ -79,6 +79,9 @@ function _bytes_write_at(dst, offset, src)
 end function
 
 function _named_get(arr, name, default_value)
+  if typeof(arr) == "struct" then
+    return t.fastmap_get(arr, name, default_value)
+  end if
   if len(arr) <= 0 then return default_value end if
   for i = 0 to len(arr) - 1
     if arr[i].name == name then return arr[i].value end if
@@ -87,16 +90,19 @@ function _named_get(arr, name, default_value)
 end function
 
 function _named_set(arr, name, value)
-  if len(arr) <= 0 then
-    return [NamedInt(name, value)]
-  end if
-  for i = 0 to len(arr) - 1
-    if arr[i].name == name then
-      arr[i] = NamedInt(name, value)
-      return arr
+  mapv = arr
+  if typeof(mapv) != "struct" then
+    mapv = t.fastmap_new(64)
+    if typeof(arr) == "array" and len(arr) > 0 then
+      for i = 0 to len(arr) - 1
+        it = arr[i]
+        if typeof(it) == "struct" and typeof(it.name) == "string" then
+          mapv = t.fastmap_set(mapv, it.name, it.value)
+        end if
+      end for
     end if
-  end for
-  return arr +[NamedInt(name, value)]
+  end if
+  return t.fastmap_set(mapv, name, value)
 end function
 
 function _imports_get_funcs(imports, dll)
@@ -342,10 +348,10 @@ function build_idata(imports, base_rva)
   buf_p = t.byte_pages_new()
   buf_p = t.byte_pages_append(buf_p, bytes(20 *(desc_count + 1), 0))
 
-  ilt_rva =[]
-  iat_rva =[]
-  dll_name_rva =[]
-  hn_rva =[]
+  ilt_rva = t.fastmap_new(64)
+  iat_rva = t.fastmap_new(64)
+  dll_name_rva = t.fastmap_new(64)
+  hn_rva = t.fastmap_new(256)
   iat_symbols_b = t.arr_chunk_new(64)
 
   // ILT
