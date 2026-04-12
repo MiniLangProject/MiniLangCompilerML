@@ -27,6 +27,37 @@ function inline _coerce_name(v)
   return "" + v
 end function
 
+function inline _fn_codegen_key(fn_node)
+  if typeof(fn_node) != "struct" then return "" end if
+  pos = 0
+  if typeof(fn_node._pos) == "int" then pos = fn_node._pos end if
+  file = _coerce_name(fn_node._filename)
+  name = _coerce_name(fn_node.name)
+  return file + "|" + pos + "|" + name
+end function
+
+function inline _fn_codegen_name(state, fn_node)
+  if typeof(fn_node) != "struct" then return "" end if
+  key = _fn_codegen_key(fn_node)
+  if key != "" and typeof(state.function_codegen_name_map) == "struct" then
+    hit = t.fastmap_get(state.function_codegen_name_map, key, "")
+    if typeof(hit) == "string" and hit != "" then return hit end if
+  end if
+  return _coerce_name(fn_node.name)
+end function
+
+function _set_fn_codegen_name(state, fn_node, code_name)
+  if typeof(fn_node) != "struct" then return state end if
+  if typeof(code_name) != "string" or code_name == "" then return state end if
+  key = _fn_codegen_key(fn_node)
+  if key == "" then return state end if
+  if typeof(state.function_codegen_name_map) != "struct" then
+    state.function_codegen_name_map = t.fastmap_new(256)
+  end if
+  state.function_codegen_name_map = t.fastmap_set(state.function_codegen_name_map, key, code_name)
+  return state
+end function
+
 function _mem_probe(state, tag)
   if typeof(state) != "struct" then return state end if
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) == false then return state end if
@@ -113,6 +144,119 @@ function _set_user_function(state, qname, fn_node)
   return state
 end function
 
+function _user_function_get_node(state, qname)
+  arr = state.user_functions
+  if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
+  if typeof(state.user_function_index) == "struct" then
+    idx = t.fastmap_get(state.user_function_index, qname, -1)
+    if typeof(idx) == "int" and idx >= 0 and idx < len(arr) then
+      it = arr[idx]
+      if typeof(it) == "array" and len(it) == 2 and typeof(it[1]) == "struct" then return it[1] end if
+    end if
+  end if
+  for i = 0 to len(arr) - 1
+    it2 = arr[i]
+    if typeof(it2) == "array" and len(it2) == 2 and it2[0] == qname and typeof(it2[1]) == "struct" then
+      return it2[1]
+    end if
+  end for
+  return 0
+end function
+
+function _user_function_keys_sorted(state)
+  keys = []
+  arr = state.user_functions
+  if typeof(arr) != "array" or len(arr) <= 0 then return keys end if
+  for i = 0 to len(arr) - 1
+    it = arr[i]
+    if typeof(it) == "array" and len(it) == 2 and typeof(it[0]) == "string" and it[0] != "" then
+      keys = keys + [it[0]]
+    end if
+  end for
+  return _sort_names(keys)
+end function
+
+function _nested_function_get_by_codegen_name(state, code_name)
+  arr = state.nested_user_functions
+  if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
+  for i = 0 to len(arr) - 1
+    nf = arr[i]
+    if typeof(nf) != "struct" then continue end if
+    if _fn_codegen_name(state, nf) == code_name then return nf end if
+  end for
+  return 0
+end function
+
+function _nested_function_codegen_names_sorted(state)
+  keys = []
+  arr = state.nested_user_functions
+  if typeof(arr) != "array" or len(arr) <= 0 then return keys end if
+  for i = 0 to len(arr) - 1
+    nf = arr[i]
+    if typeof(nf) != "struct" then continue end if
+    code_name = _fn_codegen_name(state, nf)
+    if code_name != "" then keys = keys + [code_name] end if
+  end for
+  return _sort_names(keys)
+end function
+
+function _prepare_qualify_cache(cache, min_cap)
+  need = min_cap
+  if typeof(need) != "int" or need <= 0 then need = 256 end if
+  if typeof(cache) == "struct" and typeof(cache.cap) == "int" then
+    cap = cache.cap
+    keep_cap = need << 3
+    if typeof(keep_cap) != "int" or keep_cap < need then keep_cap = need end if
+    if cap >= need and cap <= keep_cap then
+      return t.fastmap_clear(cache)
+    end if
+    if cap > keep_cap then
+      return t.fastmap_new(need << 1)
+    end if
+  end if
+  return t.fastmap_new(need)
+end function
+
+function _release_emitted_fn_node(fn_node)
+  if typeof(fn_node) != "struct" then return fn_node end if
+  fn_node.body = []
+  fn_node.params = []
+  fn_node._ml_boxed = []
+  fn_node._ml_env_slots = []
+  fn_node._ml_env_index = []
+  fn_node._ml_captures = []
+  fn_node._ml_capture_depth = []
+  fn_node._ml_capture_index = []
+  fn_node._ml_nested_functions = []
+  return fn_node
+end function
+
+function _forget_nested_function_by_codegen_name(state, code_name)
+  arr = state.nested_user_functions
+  if typeof(arr) != "array" or len(arr) <= 0 then return state end if
+  for i = 0 to len(arr) - 1
+    nf = arr[i]
+    if typeof(nf) != "struct" then continue end if
+    if _fn_codegen_name(state, nf) == code_name then
+      arr[i] = 0
+      state.nested_user_functions = arr
+      return state
+    end if
+  end for
+  return state
+end function
+
+function _maybe_phase_gc(state, tag, min_bytes)
+  need = min_bytes
+  if typeof(need) != "int" or need <= 0 then need = 256 << 20 end if
+  used = heap_bytes_used()
+  if typeof(used) == "int" and used >= need then
+    gc_collect()
+    return _mem_probe(state, tag)
+  end if
+  return state
+end function
+
 function inline _foreach_body(st)
   if typeof(st) == "struct" and typeof(st.body) == "array" then
     if typeof(st.iterable) != "void" and typeof(st.var) != "void" then
@@ -128,10 +272,98 @@ function _emit_stmt_list(state, stmt_seq_emit)
   emit_count = len(emit_items)
   emit_idx = 0
   while emit_idx < emit_count
-    state = cg_emit_stmt(state, emit_items[emit_idx])
+    st = emit_items[emit_idx]
+    state = cg_emit_stmt(state, st)
     emit_idx = emit_idx + 1
+    if typeof(st) == "struct" then
+      if st.node_kind == "Return" or st.node_kind == "Break" or st.node_kind == "Continue" then
+        break
+      end if
+    end if
   end while
   return state
+end function
+
+function _rdata_label_offset(rb, name)
+  if typeof(rb) != "struct" then return -1 end if
+  if typeof(rb.labels) != "array" or len(rb.labels) <= 0 then return -1 end if
+  for i = 0 to len(rb.labels) - 1
+    it = rb.labels[i]
+    if typeof(it) == "struct" and it.name == name then
+      if typeof(it.offset) == "int" then return it.offset end if
+      return -1
+    end if
+  end for
+  return -1
+end function
+
+function _for_unroll_body_ok(stmts, loop_var)
+  if typeof(stmts) != "array" then return false end if
+  if len(stmts) > 12 then return false end if
+  n = len(stmts)
+  i = 0
+  while i < n
+    if i < 0 or i >= len(stmts) then break end if
+    st = try(stmts[i])
+    i = i + 1
+    if typeof(st) != "struct" then return false end if
+    nk = st.node_kind
+    if nk == "Break" or nk == "Continue" or nk == "FunctionDef" or nk == "Switch" or nk == "While" or nk == "DoWhile" or nk == "For" or _is_foreach_stmt(st) then
+      return false
+    end if
+    if nk == "Assign" then
+      if _coerce_name(st.name) == loop_var then return false end if
+    end if
+    if nk == "If" then
+      if typeof(st.then_body) == "array" and _for_unroll_body_ok(st.then_body, loop_var) == false then return false end if
+      if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
+        for j = 0 to len(st.elifs) - 1
+          eb = st.elifs[j]
+          if typeof(eb) == "array" and len(eb) >= 2 then
+            eb_body = try(eb[1])
+            if typeof(eb_body) == "array" and _for_unroll_body_ok(eb_body, loop_var) == false then return false end if
+          end if
+        end for
+      end if
+      if typeof(st.else_body) == "array" and _for_unroll_body_ok(st.else_body, loop_var) == false then return false end if
+    end if
+  end while
+  return true
+end function
+
+function _for_unroll_values(state, s)
+  start_ex = s.start
+  end_ex = s.end_expr
+
+  start_v = _opt_try_const_int(state, start_ex)
+  if typeof(start_v) != "int" then return void end if
+  end_v = _opt_try_const_int(state, end_ex)
+  if typeof(end_v) != "int" then return void end if
+
+  trips = end_v - start_v
+  if trips < 0 then trips = -trips end if
+  trips = trips + 1
+  if trips <= 0 or trips > 6 then return void end if
+
+  loop_var = _coerce_name(s.var)
+  if loop_var == "" then return void end if
+  if _for_unroll_body_ok(s.body, loop_var) == false then return void end if
+
+  vals = []
+  if start_v <= end_v then
+    iv = start_v
+    while iv <= end_v
+      vals = vals + [iv]
+      iv = iv + 1
+    end while
+  else
+    iv2 = start_v
+    while iv2 >= end_v
+      vals = vals + [iv2]
+      iv2 = iv2 - 1
+    end while
+  end if
+  return vals
 end function
 
 function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
@@ -139,7 +371,6 @@ function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   state.asm = a.and_r64_imm(state.asm, "r10", 7)
   state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_VOID)
   state.asm = a.jcc(state.asm, "ne", ok_label)
-  state = core.emit_dbg_line(state, cond_expr)
   state = exprmod._emit_make_error_const(state, c.ERR_VOID_OP, "Cannot use void as condition")
   state = exprmod._emit_auto_errprop(state)
   // If not propagated (e.g. top-level), continue control flow as false.
@@ -220,7 +451,92 @@ function _emit_switch_stmt(state, stmt)
   end if
   body_labels = t.arr_chunked_finish(body_labels_chunks, body_labels_tail)
 
+  dense_pairs = []
+  dense_keys = []
+  dense_switch = false
+  total_keys = 0
   if len(cases) > 0 then
+    dense_ok = true
+    for i = 0 to len(cases) - 1
+      cs = cases[i]
+      if typeof(cs) != "struct" or typeof(cs.kind) != "string" or cs.kind != "values" then
+        dense_ok = false
+        break
+      end if
+      vals = []
+      if typeof(cs.values) == "array" then vals = cs.values end if
+      for j = 0 to len(vals) - 1
+        vv = _opt_try_const_int(state, vals[j])
+        if typeof(vv) != "int" then
+          dense_ok = false
+          break
+        end if
+        if _arr_has(dense_keys, vv) then
+          dense_ok = false
+          break
+        end if
+        dense_pairs = dense_pairs + [[vv, body_labels[i]]]
+        dense_keys = dense_keys + [vv]
+        total_keys = total_keys + 1
+      end for
+      if dense_ok == false then break end if
+    end for
+    if dense_ok and total_keys >= 4 then
+      min_v = dense_pairs[0][0]
+      max_v = dense_pairs[0][0]
+      for di = 0 to len(dense_pairs) - 1
+        kv = dense_pairs[di][0]
+        if kv < min_v then min_v = kv end if
+        if kv > max_v then max_v = kv end if
+      end for
+      span = max_v - min_v + 1
+      if min_v >= -2147483648 and min_v <= 2147483647 and span > 0 and span <= 4096 and span <= total_keys * 2 then
+        dense_switch = true
+        miss_lbl = l_end
+        if typeof(stmt.default_body) == "array" and len(stmt.default_body) > 0 then miss_lbl = l_default end if
+        tbl_lbl = "switch_jtbl_" + sid
+        state.rdata = d.rdata_pad_align(state.rdata, 8)
+        state.rdata = d.rdata_add_bytes_unique(state.rdata, tbl_lbl, bytes(8 * span, 0))
+        tbl_off = _rdata_label_offset(state.rdata, tbl_lbl)
+        if tbl_off >= 0 then
+          for ti = 0 to span - 1
+            key = min_v + ti
+            tgt_lbl = miss_lbl
+            for pj = 0 to len(dense_pairs) - 1
+              if dense_pairs[pj][0] == key then
+                tgt_lbl = dense_pairs[pj][1]
+                break
+              end if
+            end for
+            state.rdata = d.rdata_add_abs64_patch(state.rdata, tbl_off + ti * 8, tgt_lbl)
+          end for
+
+          state.asm = a.mov_r64_r64(state.asm, "r10", "r12")
+          state.asm = a.and_r64_imm(state.asm, "r10", 7)
+          state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+          state.asm = a.jcc(state.asm, "ne", miss_lbl)
+          state.asm = a.mov_r64_r64(state.asm, "rcx", "r12")
+          state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+          if min_v > 0 then
+            state.asm = a.sub_r64_imm(state.asm, "rcx", min_v)
+          else
+            if min_v < 0 then
+              state.asm = a.add_r64_imm(state.asm, "rcx", -min_v)
+            end if
+          end if
+          state.asm = a.cmp_r64_imm(state.asm, "rcx", span - 1)
+          state.asm = a.jcc(state.asm, "a", miss_lbl)
+          state.asm = a.lea_rax_rip(state.asm, tbl_lbl)
+          state.asm = a.mov_r64_mem_bis(state.asm, "rax", "rax", "rcx", 8, 0)
+          state.asm = a.jmp_r64(state.asm, "rax")
+        else
+          dense_switch = false
+        end if
+      end if
+    end if
+  end if
+
+  if dense_switch == false and len(cases) > 0 then
     for i = 0 to len(cases) - 1
       cs = cases[i]
       if typeof(cs) != "struct" then continue end if
@@ -307,7 +623,7 @@ function _emit_switch_stmt(state, stmt)
       if typeof(cs2) == "struct" and typeof(cs2.body) == "array" and len(cs2.body) > 0 then
         state = _emit_stmt_list(state, cs2.body)
       end if
-      state = scope.cg_scope_leave(state)
+      state = scope.cg_scope_leave(state, true)
       state.asm = a.jmp(state.asm, l_end)
     end for
   end if
@@ -317,7 +633,7 @@ function _emit_switch_stmt(state, stmt)
   if typeof(stmt.default_body) == "array" and len(stmt.default_body) > 0 then
     state = _emit_stmt_list(state, stmt.default_body)
   end if
-  state = scope.cg_scope_leave(state)
+  state = scope.cg_scope_leave(state, true)
 
   state.asm = a.mark(state.asm, l_end)
   state = _breakstack_pop(state)
@@ -429,7 +745,7 @@ function cg_emit_stmt(state, stmt)
     state.current_qname_prefix = _join_qname(old_pref, _coerce_name(stmt.name))
     state = scope.cg_scope_enter(state)
     state = _emit_stmt_list(state, stmt.body)
-    state = scope.cg_scope_leave(state)
+    state = scope.cg_scope_leave(state, true)
     state.current_qname_prefix = old_pref
     return state
   end if
@@ -460,24 +776,32 @@ function cg_emit_stmt(state, stmt)
     local_name = _coerce_name(stmt.name)
     if local_name == "" then local_name = qn_fn end if
 
-    nested_id = state.label_id
-    state.label_id = state.label_id + 1
-    code_name = qn_fn + ".__n" + nested_id
-    stmt.name = code_name
-    state = _set_user_function(state, code_name, stmt)
+    code_name = _fn_codegen_name(state, stmt)
+    if code_name == "" then
+      nested_id = state.label_id
+      state.label_id = state.label_id + 1
+      code_name = qn_fn + ".__n" + nested_id
+      state = _set_fn_codegen_name(state, stmt, code_name)
+    end if
 
     ar = 0
     if typeof(stmt.params) == "array" then ar = len(stmt.params) end if
-    state.asm = a.mov_rcx_imm32(state.asm, 24)
-    state.asm = a.call(state.asm, "fn_alloc")
-    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_FUNCTION, false)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, ar, false)
-    state.asm = a.lea_rdx_rip(state.asm, "fn_user_" + code_name)
-    state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rdx")
     need_parent = false
     if typeof(stmt._ml_captures) == "array" and len(stmt._ml_captures) > 0 then need_parent = true end if
     if typeof(stmt._ml_env_hop) == "bool" and stmt._ml_env_hop then need_parent = true end if
+    obj_size = 16
+    obj_type = c.OBJ_FUNCTION
+    if need_parent then
+      obj_size = 24
+      obj_type = c.OBJ_CLOSURE
+    end if
+    state.asm = a.mov_rcx_imm32(state.asm, obj_size)
+    state.asm = a.call(state.asm, "fn_alloc")
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, obj_type, false)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, ar, false)
+    state.asm = a.lea_rdx_rip(state.asm, "fn_user_" + code_name)
+    state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rdx")
     if need_parent then
       env_root = state.current_env_root_off
       if typeof(env_root) == "int" and env_root > 0 then
@@ -486,11 +810,9 @@ function cg_emit_stmt(state, stmt)
       else
         state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r15")
       end if
-    else
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 16, t.enc_void(), true)
     end if
     state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-    state = scope.emit_store_var_scoped(state, local_name)
+    state = scope.emit_store_var_scoped(state, local_name, stmt)
     return state
   end if
 
@@ -499,57 +821,84 @@ function cg_emit_stmt(state, stmt)
   end if
 
   if k == "If" then
-    lid_if = state.label_id
-    state.label_id = state.label_id + 1
-    l_else = "if_else_" + lid_if
-    l_end = "if_end_" + lid_if
-    has_elifs = typeof(stmt.elifs) == "array" and len(stmt.elifs) > 0
-    l_first_false = l_else
-    if has_elifs then
-      l_first_false = "if_elif_" + lid_if + "_0"
-    end if
-
-    state = exprmod.cg_emit_expr(state, stmt.cond)
-    l_if_ok = "if_head_cond_ok_" + lid_if
-    state = _emit_condition_nonvoid_guard(state, stmt.cond, l_if_ok, l_first_false)
-    state = core.emit_jmp_if_false_rax(state, l_first_false)
-    state = scope.cg_scope_enter(state)
-    state = _emit_stmt_list(state, stmt.then_body)
-    state = scope.cg_scope_leave(state)
-    state.asm = a.jmp(state.asm, l_end)
-
-    if has_elifs then
-      for if_ei = 0 to len(stmt.elifs) - 1
-        curr_lbl = "if_elif_" + lid_if + "_" + if_ei
-        next_lbl = l_else
-        if if_ei + 1 < len(stmt.elifs) then
-          next_lbl = "if_elif_" + lid_if + "_" + (if_ei + 1)
+    cases = [[stmt.cond, stmt.then_body]]
+    if typeof(stmt.elifs) == "array" and len(stmt.elifs) > 0 then
+      for if_ei0 = 0 to len(stmt.elifs) - 1
+        eb0 = stmt.elifs[if_ei0]
+        if typeof(eb0) == "array" and len(eb0) >= 2 then
+          cases = cases + [eb0]
         end if
-        state.asm = a.mark(state.asm, curr_lbl)
-
-        eb = stmt.elifs[if_ei]
-        if typeof(eb) != "array" or len(eb) < 2 then
-          state.asm = a.jmp(state.asm, next_lbl)
-          continue
-        end if
-
-        state = exprmod.cg_emit_expr(state, eb[0])
-        l_elif_ok = "if_cond_ok_" + lid_if + "_" + if_ei
-        state = _emit_condition_nonvoid_guard(state, eb[0], l_elif_ok, next_lbl)
-        state = core.emit_jmp_if_false_rax(state, next_lbl)
-        state = scope.cg_scope_enter(state)
-        state = _emit_stmt_list(state, eb[1])
-        state = scope.cg_scope_leave(state)
-        state.asm = a.jmp(state.asm, l_end)
       end for
     end if
 
-    state.asm = a.mark(state.asm, l_else)
-    if typeof(stmt.else_body) == "array" and len(stmt.else_body) > 0 then
-      state = scope.cg_scope_enter(state)
-      state = _emit_stmt_list(state, stmt.else_body)
-      state = scope.cg_scope_leave(state)
+    else_body = []
+    if typeof(stmt.else_body) == "array" then
+      else_body = stmt.else_body
     end if
+
+    start_idx = 0
+    if len(cases) > 0 then
+      for if_ci = 0 to len(cases) - 1
+        cs0 = cases[if_ci]
+        if typeof(cs0) != "array" or len(cs0) < 2 then
+          break
+        end if
+        tv0 = _opt_try_truthy(state, cs0[0])
+        if typeof(tv0) == "bool" and tv0 == false then
+          start_idx = if_ci + 1
+          continue
+        end if
+        break
+      end for
+    end if
+
+    if start_idx >= len(cases) then
+      state = scope.cg_scope_enter(state)
+      state = _emit_stmt_list(state, else_body)
+      state = scope.cg_scope_leave(state, true)
+      return state
+    end if
+
+    lid_if = state.label_id
+    state.label_id = state.label_id + 1
+    l_end = "if_end_" + lid_if
+
+    for if_ci2 = start_idx to len(cases) - 1
+      cs = cases[if_ci2]
+      if typeof(cs) != "array" or len(cs) < 2 then
+        continue
+      end if
+
+      cond = cs[0]
+      body = cs[1]
+      tv = _opt_try_truthy(state, cond)
+      if typeof(tv) == "bool" and tv == false then
+        continue
+      end if
+
+      if typeof(tv) == "bool" and tv == true then
+        state = scope.cg_scope_enter(state)
+        state = _emit_stmt_list(state, body)
+        state = scope.cg_scope_leave(state, true)
+        state.asm = a.jmp(state.asm, l_end)
+        break
+      end if
+
+      next_lbl = "if_next_" + lid_if + "_" + (if_ci2 - start_idx)
+      state = exprmod.cg_emit_expr(state, cond)
+      l_cond_ok = "if_cond_ok_" + lid_if + "_" + (if_ci2 - start_idx)
+      state = _emit_condition_nonvoid_guard(state, cond, l_cond_ok, next_lbl)
+      state = core.emit_jmp_if_false_rax(state, next_lbl)
+      state = scope.cg_scope_enter(state)
+      state = _emit_stmt_list(state, body)
+      state = scope.cg_scope_leave(state, true)
+      state.asm = a.jmp(state.asm, l_end)
+      state.asm = a.mark(state.asm, next_lbl)
+    end for
+
+    state = scope.cg_scope_enter(state)
+    state = _emit_stmt_list(state, else_body)
+    state = scope.cg_scope_leave(state, true)
     state.asm = a.mark(state.asm, l_end)
     return state
   end if
@@ -584,7 +933,7 @@ function cg_emit_stmt(state, stmt)
         state = scope.cg_declare_binding(state, qn_c, "local", true, stmt.expr, void, stmt)
       end if
       state = exprmod.cg_emit_expr(state, stmt.expr)
-      state = scope.emit_store_var_scoped(state, qn_c)
+      state = scope.emit_store_var_scoped(state, qn_c, stmt)
       return state
     end if
 
@@ -616,7 +965,7 @@ function cg_emit_stmt(state, stmt)
       qn_a = _join_qname(state.current_qname_prefix, qn_a)
     end if
     state = exprmod.cg_emit_expr(state, stmt.expr)
-    state = scope.emit_store_var_scoped(state, qn_a)
+    state = scope.emit_store_var_scoped(state, qn_a, stmt)
     return state
   end if
 
@@ -692,29 +1041,22 @@ function cg_emit_stmt(state, stmt)
     l_oob = "seti_oob_" + lid_si
     l_bad_byte = "seti_bad_byte_" + lid_si
     l_done_si = "seti_done_" + lid_si
-    l_type_ok = "seti_type_ok_" + lid_si
-    l_idx_ok = "seti_ok_" + lid_si
-    l_store_bytes = "seti_store_bytes_" + lid_si
-
-    tmp_seti_off = core.alloc_expr_temps(state, 16)
-    tmp_seti_ok = true
-    if typeof(tmp_seti_off) != "int" or tmp_seti_off <= 0 then
-      tmp_seti_off = 0x190
-      tmp_seti_ok = false
-    end if
-    target_off = tmp_seti_off
-    index_off = tmp_seti_off + 8
 
     state = exprmod.cg_emit_expr(state, stmt.target)
-    state.asm = a.mov_rsp_disp32_rax(state.asm, target_off)
+    base_off = core.alloc_expr_temps(state, 8)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, base_off)
+
     state = exprmod.cg_emit_expr(state, stmt.index)
-    state.asm = a.mov_rsp_disp32_rax(state.asm, index_off)
+    idx_off = core.alloc_expr_temps(state, 8)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, idx_off)
+
     state = exprmod.cg_emit_expr(state, stmt.expr)
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
 
-    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", target_off)
-    state.asm = a.mov_rax_rsp_disp32(state.asm, index_off)
-    if tmp_seti_ok then state = core.free_expr_temps(state, 16) end if
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_off)
+    state.asm = a.mov_rax_rsp_disp32(state.asm, idx_off)
+
+    state = core.free_expr_temps(state, 16)
 
     state.asm = a.cmp_r64_imm(state.asm, "r10", t.enc_void())
     state.asm = a.jcc(state.asm, "e", l_rhs_void)
@@ -727,7 +1069,10 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.jcc(state.asm, "e", l_bad_target)
 
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+    l_type_ok = "seti_type_ok_" + lid_si
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+    state.asm = a.jcc(state.asm, "e", l_type_ok)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
     state.asm = a.jcc(state.asm, "e", l_type_ok)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
     state.asm = a.jcc(state.asm, "e", l_type_ok)
@@ -743,19 +1088,30 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
 
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    l_ok = "seti_ok_" + lid_si
     state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
-    state.asm = a.jcc(state.asm, "ge", l_idx_ok)
-    state.asm = a.add_r64_r64(state.asm, "rcx", "rdx")
-    state.asm = a.mark(state.asm, l_idx_ok)
+    state.asm = a.jcc(state.asm, "ge", l_ok)
+    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.mark(state.asm, l_ok)
     state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
     state.asm = a.jcc(state.asm, "l", l_oob)
     state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_oob)
 
+    l_store_bytes = "seti_store_bytes_" + lid_si
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
     state.asm = a.jcc(state.asm, "e", l_store_bytes)
 
+    l_store_array = "seti_store_array_" + lid_si
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+    state.asm = a.jcc(state.asm, "ne", l_store_array)
+    state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
+    state.asm = a.and_r64_imm(state.asm, "r8", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_store_array)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+    state.asm = a.mark(state.asm, l_store_array)
     state.asm = a.mov_mem_bis_r64(state.asm, "r11", "rcx", 8, 8, "r10")
     state.asm = a.jmp(state.asm, l_done_si)
 
@@ -764,19 +1120,18 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.and_r64_imm(state.asm, "r8", 7)
     state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_INT)
     state.asm = a.jcc(state.asm, "ne", l_bad_byte)
+
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
     state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
     state.asm = a.jcc(state.asm, "l", l_bad_byte)
     state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
     state.asm = a.jcc(state.asm, "g", l_bad_byte)
-    // Preserve low byte before reusing RAX for address arithmetic.
-    state.asm = a.mov_r8_r8(state.asm, "dl", "al")
-    // Use RAX as byte-store base to avoid extended-reg byte-store encoding pitfalls.
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-    state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
-    state.asm = a.add_r64_imm(state.asm, "rax", 8)
-    state.asm = a.mov_membase_disp_r8(state.asm, "rax", 0, "dl")
+
+    state.asm = a.mov_r64_r64(state.asm, "r8", "r11")
+    state.asm = a.add_r64_r64(state.asm, "r8", "rcx")
+    state.asm = a.add_r64_imm(state.asm, "r8", 8)
+    state.asm = a.mov_membase_disp_r8(state.asm, "r8", 0, "al")
     state.asm = a.jmp(state.asm, l_done_si)
 
     state.asm = a.mark(state.asm, l_rhs_void)
@@ -840,40 +1195,31 @@ function cg_emit_stmt(state, stmt)
     l_bool = "print_bool_" + lid_p
     l_enum = "print_enum_" + lid_p
     l_ptr = "print_ptr_" + lid_p
+    l_float = "print_float_" + lid_p
+    l_void = "print_void_" + lid_p
     l_uns = "print_uns_" + lid_p
     l_end = "print_end_" + lid_p
 
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
     state.asm = a.and_r64_imm(state.asm, "r10", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_VOID)
+    state.asm = a.jcc(state.asm, "e", l_void)
     state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
     state.asm = a.jcc(state.asm, "e", l_int)
     state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_BOOL)
     state.asm = a.jcc(state.asm, "e", l_bool)
     state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_ENUM)
     state.asm = a.jcc(state.asm, "e", l_enum)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_FLOAT)
+    state.asm = a.jcc(state.asm, "e", l_float)
     state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
     state.asm = a.jcc(state.asm, "e", l_ptr)
     state.asm = a.jmp(state.asm, l_uns)
 
-    state.asm = a.mark(state.asm, l_int)
-    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-    state.asm = a.call(state.asm, "fn_int_to_dec")
-    state.asm = a.mov_r32_r32(state.asm, "r8d", "edx")
-    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-    state = core.emit_writefile_ptr_len(state)
-    state = core.emit_writefile(state, "nl", 1)
-    state.asm = a.jmp(state.asm, l_end)
-
-    state.asm = a.mark(state.asm, l_bool)
-    state.asm = a.test_rax_imm32(state.asm, 8)
-    l_bfalse = "print_bfalse_" + lid_p
-    state.asm = a.jcc(state.asm, "z", l_bfalse)
-    state = core.emit_writefile(state, "true_nn", 4)
-    state = core.emit_writefile(state, "nl", 1)
-    state.asm = a.jmp(state.asm, l_end)
-    state.asm = a.mark(state.asm, l_bfalse)
-    state = core.emit_writefile(state, "false_nn", 5)
-    state = core.emit_writefile(state, "nl", 1)
+    state.asm = a.mark(state.asm, l_void)
+    state = core.emit_dbg_line(state, stmt)
+    state = exprmod._emit_make_error_const(state, c.ERR_PRINT_UNSUPPORTED, "Cannot print void")
+    state = exprmod._emit_auto_errprop(state)
     state.asm = a.jmp(state.asm, l_end)
 
     state.asm = a.mark(state.asm, l_enum)
@@ -887,19 +1233,28 @@ function cg_emit_stmt(state, stmt)
 
     state.asm = a.mark(state.asm, l_ptr)
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
-    l_pstr = "print_pstr_" + lid_p
-    l_parr = "print_parr_" + lid_p
-    l_pbytes = "print_pbytes_" + lid_p
-    l_pflt = "print_pflt_" + lid_p
+    l_pstr = "print_ptr_str_" + lid_p
+    l_parr = "print_ptr_arr_" + lid_p
+    l_pflt = "print_ptr_flt_" + lid_p
+    l_pbytes = "print_ptr_bytes_" + lid_p
+    l_pstt = "print_ptr_stt_" + lid_p
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
     state.asm = a.jcc(state.asm, "e", l_pstr)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
     state.asm = a.jcc(state.asm, "e", l_parr)
-    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
-    state.asm = a.jcc(state.asm, "e", l_pbytes)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+    state.asm = a.jcc(state.asm, "e", l_parr)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
     state.asm = a.jcc(state.asm, "e", l_pflt)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+    state.asm = a.jcc(state.asm, "e", l_pbytes)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCTTYPE)
+    state.asm = a.jcc(state.asm, "e", l_pstt)
     state.asm = a.jmp(state.asm, l_uns)
+
+    state.asm = a.mark(state.asm, l_pstt)
+    state.asm = a.lea_rax_rip(state.asm, "obj_type_struct")
+    state.asm = a.jmp(state.asm, l_pstr)
 
     state.asm = a.mark(state.asm, l_pstr)
     state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rax", 4)
@@ -908,18 +1263,8 @@ function cg_emit_stmt(state, stmt)
     state = core.emit_writefile(state, "nl", 1)
     state.asm = a.jmp(state.asm, l_end)
 
-    state.asm = a.mark(state.asm, l_parr)
-    state = core.emit_writefile(state, "array_nn", 7)
-    state = core.emit_writefile(state, "nl", 1)
-    state.asm = a.jmp(state.asm, l_end)
-
-    state.asm = a.mark(state.asm, l_pbytes)
-    state = core.emit_writefile(state, "uns_nn", 13)
-    state = core.emit_writefile(state, "nl", 1)
-    state.asm = a.jmp(state.asm, l_end)
-
     state.asm = a.mark(state.asm, l_pflt)
-    state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rax", 8)
+    state = core.emit_to_double_xmm(state, 0, l_uns)
     state.asm = a.mov_r32_imm32(state.asm, "edx", 15)
     state.asm = a.lea_rax_rip(state.asm, "floatbuf")
     state.asm = a.mov_r64_r64(state.asm, "r8", "rax")
@@ -928,38 +1273,195 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
     state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
     state.asm = a.call(state.asm, "fn_strlen")
-    state.asm = a.mov_r32_r32(state.asm, "r8d", "edx")
+    state.asm = a.mov_r8d_edx(state.asm)
     state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
     state = core.emit_writefile_ptr_len(state)
     state = core.emit_writefile(state, "nl", 1)
     state.asm = a.jmp(state.asm, l_end)
 
-    state.asm = a.mark(state.asm, l_uns)
-    state = core.emit_writefile(state, "uns_nn", 13)
+    state.asm = a.mark(state.asm, l_float)
+    state = core.emit_to_double_xmm(state, 0, l_uns)
+    state.asm = a.mov_r32_imm32(state.asm, "edx", 15)
+    state.asm = a.lea_rax_rip(state.asm, "floatbuf")
+    state.asm = a.mov_r64_r64(state.asm, "r8", "rax")
+    state.asm = a.mov_rax_rip_qword(state.asm, "iat__gcvt")
+    state.asm = a.call_rax(state.asm)
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.call(state.asm, "fn_strlen")
+    state.asm = a.mov_r8d_edx(state.asm)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
+    state = core.emit_writefile_ptr_len(state)
     state = core.emit_writefile(state, "nl", 1)
+    state.asm = a.jmp(state.asm, l_end)
+
+    state.asm = a.mark(state.asm, l_pbytes)
+    state.asm = a.lea_rax_rip(state.asm, "obj_bytes")
+    state.asm = a.jmp(state.asm, l_pstr)
+
+    state.asm = a.mark(state.asm, l_parr)
+    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
+    state = core.emit_writefile(state, "lbrack", 1)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r13d", "r14", 4)
+    state.asm = a.xor_r32_r32(state.asm, "r12d", "r12d")
+
+    lid_arr = state.label_id
+    state.label_id = state.label_id + 1
+    l_top = "arrprint_top_" + lid_arr
+    l_done = "arrprint_done_" + lid_arr
+    l_skip_comma = "arrprint_skipcomma_" + lid_arr
+    state.asm = a.mark(state.asm, l_top)
+    state.asm = a.cmp_r32_r32(state.asm, "r12d", "r13d")
+    state.asm = a.jcc(state.asm, "ge", l_done)
+    state.asm = a.mov_r64_r64(state.asm, "r11", "r12")
+    state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r14", "r11", 8, 8)
+
+    elem_id = state.label_id
+    state.label_id = state.label_id + 1
+    el_int = "arr_el_int_" + elem_id
+    el_bool = "arr_el_bool_" + elem_id
+    el_enum = "arr_el_enum_" + elem_id
+    el_ptr = "arr_el_ptr_" + elem_id
+    el_uns = "arr_el_uns_" + elem_id
+    el_end = "arr_el_end_" + elem_id
+
+    state.asm = a.mov_r10_rax(state.asm)
+    state.asm = a.and_r64_imm(state.asm, "r10", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "e", el_int)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_BOOL)
+    state.asm = a.jcc(state.asm, "e", el_bool)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_ENUM)
+    state.asm = a.jcc(state.asm, "e", el_enum)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "e", el_ptr)
+    state.asm = a.jmp(state.asm, el_uns)
+
+    state.asm = a.mark(state.asm, el_int)
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.call(state.asm, "fn_int_to_dec")
+    state.asm = a.mov_r8d_edx(state.asm)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state = core.emit_writefile_ptr_len(state)
+    state.asm = a.jmp(state.asm, el_end)
+
+    state.asm = a.mark(state.asm, el_bool)
+    state.asm = a.test_rax_imm32(state.asm, 8)
+    el_false = "arr_el_false_" + elem_id
+    state.asm = a.jcc(state.asm, "z", el_false)
+    state = core.emit_writefile(state, "true_nn", 4)
+    state.asm = a.jmp(state.asm, el_end)
+    state.asm = a.mark(state.asm, el_false)
+    state = core.emit_writefile(state, "false_nn", 5)
+    state.asm = a.jmp(state.asm, el_end)
+
+    state.asm = a.mark(state.asm, el_enum)
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.call(state.asm, "fn_value_to_string")
+    state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rax", 4)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "rax", 8)
+    state = core.emit_writefile_ptr_len(state)
+    state.asm = a.jmp(state.asm, el_end)
+
+    state.asm = a.mark(state.asm, el_ptr)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    l_el_str = "arr_el_str_" + elem_id
+    l_el_arr = "arr_el_arr_" + elem_id
+    l_el_bytes = "arr_el_bytes_" + elem_id
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
+    state.asm = a.jcc(state.asm, "e", l_el_str)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+    state.asm = a.jcc(state.asm, "e", l_el_arr)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+    state.asm = a.jcc(state.asm, "e", l_el_arr)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+    state.asm = a.jcc(state.asm, "e", l_el_bytes)
+    state.asm = a.jmp(state.asm, el_uns)
+
+    state.asm = a.mark(state.asm, l_el_str)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rax", 4)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "rax", 8)
+    state = core.emit_writefile_ptr_len(state)
+    state.asm = a.jmp(state.asm, el_end)
+
+    state.asm = a.mark(state.asm, l_el_arr)
+    state = core.emit_writefile(state, "array_nn", 7)
+    state.asm = a.jmp(state.asm, el_end)
+
+    state.asm = a.mark(state.asm, l_el_bytes)
+    state.asm = a.lea_rax_rip(state.asm, "obj_bytes")
+    state.asm = a.jmp(state.asm, l_el_str)
+
+    state.asm = a.mark(state.asm, el_uns)
+    state = core.emit_dbg_line(state, stmt)
+    state = exprmod._emit_make_error_const(state, c.ERR_PRINT_UNSUPPORTED, "Cannot print unsupported array element")
+    state = exprmod._emit_auto_errprop(state)
+    state.asm = a.jmp(state.asm, l_end)
+
+    state.asm = a.mark(state.asm, el_end)
+    state.asm = a.inc_r32(state.asm, "r12d")
+    state.asm = a.cmp_r32_r32(state.asm, "r12d", "r13d")
+    state.asm = a.jcc(state.asm, "e", l_skip_comma)
+    state = core.emit_writefile(state, "comma_sp", 2)
+    state.asm = a.mark(state.asm, l_skip_comma)
+    state.asm = a.jmp(state.asm, l_top)
+
+    state.asm = a.mark(state.asm, l_done)
+    state = core.emit_writefile(state, "rbrack", 1)
+    state = core.emit_writefile(state, "nl", 1)
+    state.asm = a.jmp(state.asm, l_end)
+
+    state.asm = a.mark(state.asm, l_uns)
+    state = core.emit_dbg_line(state, stmt)
+    state = exprmod._emit_make_error_const(state, c.ERR_PRINT_UNSUPPORTED, "Cannot print unsupported value")
+    state = exprmod._emit_auto_errprop(state)
+    state.asm = a.jmp(state.asm, l_end)
+
+    state.asm = a.mark(state.asm, l_int)
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.call(state.asm, "fn_int_to_dec")
+    state.asm = a.mov_r32_r32(state.asm, "r8d", "edx")
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state = core.emit_writefile_ptr_len(state)
+    state = core.emit_writefile(state, "nl", 1)
+    state.asm = a.jmp(state.asm, l_end)
+
+    state.asm = a.mark(state.asm, l_bool)
+    state.asm = a.test_rax_imm32(state.asm, 8)
+    l_bfalse = "print_bool_false_" + lid_p
+    state.asm = a.jcc(state.asm, "z", l_bfalse)
+    state = core.emit_writefile(state, "true_s", 5)
+    state.asm = a.jmp(state.asm, l_end)
+    state.asm = a.mark(state.asm, l_bfalse)
+    state = core.emit_writefile(state, "false_s", 6)
 
     state.asm = a.mark(state.asm, l_end)
     return state
   end if
 
   if k == "While" then
+    tv_w = _opt_try_truthy(state, stmt.cond)
+    if typeof(tv_w) == "bool" and tv_w == false then
+      return state
+    end if
+
     lid_w = state.label_id
     state.label_id = state.label_id + 1
     l_top = "while_top_" + lid_w
-    l_cont = "while_cont_" + lid_w
     l_end = "while_end_" + lid_w
 
     depth_w = scope.cg_scope_depth(state)
-    state.break_stack = state.break_stack + [_breakctx_make("loop", l_end, l_cont, depth_w, depth_w)]
+    state.break_stack = state.break_stack + [_breakctx_make("loop", l_end, l_top, depth_w, depth_w)]
     state.asm = a.mark(state.asm, l_top)
-    state = exprmod.cg_emit_expr(state, stmt.cond)
-    l_wcond_ok = "while_cond_ok_" + lid_w
-    state = _emit_condition_nonvoid_guard(state, stmt.cond, l_wcond_ok, l_end)
-    state = core.emit_jmp_if_false_rax(state, l_end)
+    if typeof(tv_w) != "bool" or tv_w != true then
+      state = exprmod.cg_emit_expr(state, stmt.cond)
+      l_wcond_ok = "while_cond_ok_" + lid_w
+      state = _emit_condition_nonvoid_guard(state, stmt.cond, l_wcond_ok, l_end)
+      state = core.emit_jmp_if_false_rax(state, l_end)
+    end if
     state = scope.cg_scope_enter(state)
     state = _emit_stmt_list(state, stmt.body)
-    state = scope.cg_scope_leave(state)
-    state.asm = a.mark(state.asm, l_cont)
+    state = scope.cg_scope_leave(state, true)
     state.asm = a.jmp(state.asm, l_top)
     state.asm = a.mark(state.asm, l_end)
     state = _breakstack_pop(state)
@@ -978,13 +1480,22 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.mark(state.asm, l_body)
     state = scope.cg_scope_enter(state)
     state = _emit_stmt_list(state, stmt.body)
-    state = scope.cg_scope_leave(state)
+    state = scope.cg_scope_leave(state, true)
     state.asm = a.mark(state.asm, l_cont)
-    state = exprmod.cg_emit_expr(state, stmt.cond)
-    l_dwcond_ok = "dowhile_cond_ok_" + lid_dw
-    state = _emit_condition_nonvoid_guard(state, stmt.cond, l_dwcond_ok, l_end)
-    state = core.emit_jmp_if_false_rax(state, l_end)
-    state.asm = a.jmp(state.asm, l_body)
+    tv_dw = _opt_try_truthy(state, stmt.cond)
+    if typeof(tv_dw) == "bool" and tv_dw == true then
+      state.asm = a.jmp(state.asm, l_body)
+    else
+      if typeof(tv_dw) == "bool" and tv_dw == false then
+        state.asm = a.jmp(state.asm, l_end)
+      else
+        state = exprmod.cg_emit_expr(state, stmt.cond)
+        l_dwcond_ok = "dowhile_cond_ok_" + lid_dw
+        state = _emit_condition_nonvoid_guard(state, stmt.cond, l_dwcond_ok, l_end)
+        state = core.emit_jmp_if_false_rax(state, l_end)
+        state.asm = a.jmp(state.asm, l_body)
+      end if
+    end if
     state.asm = a.mark(state.asm, l_end)
     state = _breakstack_pop(state)
     return state
@@ -997,13 +1508,42 @@ function cg_emit_stmt(state, stmt)
     if state.in_function == false then
       qv = _join_qname(state.current_qname_prefix, v)
     end if
-    state = scope.cg_scope_enter(state)
     bind_kind_for = "local"
     if state.in_function == false then bind_kind_for = "global" end if
+    unroll_vals = _for_unroll_values(state, stmt)
+    if typeof(unroll_vals) == "array" and len(unroll_vals) > 0 then
+      depth_for_outer = scope.cg_scope_depth(state)
+      state = scope.cg_scope_enter(state)
+      state = scope.declare_fresh_binding(state, qv, stmt, bind_kind_for)
+      for ui = 0 to len(unroll_vals) - 1
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_int(unroll_vals[ui]))
+        state = scope.emit_store_var_scoped(state, qv, stmt)
+        state = scope.cg_scope_enter(state)
+        state = _emit_stmt_list(state, stmt.body)
+        state = scope.cg_scope_leave(state, true)
+      end for
+      state = scope.cg_scope_leave(state, true)
+      return state
+    end if
+
+    state = scope.cg_scope_enter(state)
     // For-loop variable is a fresh declaration in loop scope (Python parity).
-    state = scope.cg_declare_binding(state, qv, bind_kind_for, false, 0, 0, stmt)
+    state = scope.declare_fresh_binding(state, qv, stmt, bind_kind_for)
+    fstate_names = _for_state_names(stmt)
+    end_name_f = ""
+    step_name_f = ""
+    if typeof(fstate_names) == "array" and len(fstate_names) >= 2 then
+      end_name_f = _coerce_name(fstate_names[0])
+      step_name_f = _coerce_name(fstate_names[1])
+    end if
+    if end_name_f != "" then
+      state = scope.declare_fresh_binding(state, end_name_f, stmt, bind_kind_for)
+    end if
+    if step_name_f != "" then
+      state = scope.declare_fresh_binding(state, step_name_f, stmt, bind_kind_for)
+    end if
     state = exprmod.cg_emit_expr(state, stmt.start)
-    state = scope.emit_store_var_scoped(state, qv)
+    state = scope.emit_store_var_scoped(state, qv, stmt)
 
     lid_f = state.label_id
     state.label_id = state.label_id + 1
@@ -1012,164 +1552,217 @@ function cg_emit_stmt(state, stmt)
     l_end_f = "for_end_" + lid_f
     l_step_pos_f = "for_step_pos_" + lid_f
     l_step_done_f = "for_step_done_" + lid_f
-    q_end_f = "__for_end_" + lid_f
-    q_step_f = "__for_step_" + lid_f
-    if state.in_function == false then
-      q_end_f = _join_qname(state.current_qname_prefix, q_end_f)
-      q_step_f = _join_qname(state.current_qname_prefix, q_step_f)
-    end if
-    state = scope.cg_declare_binding(state, q_end_f, bind_kind_for, false, 0, 0, stmt)
-    state = scope.cg_declare_binding(state, q_step_f, bind_kind_for, false, 0, 0, stmt)
 
     depth_for_outer = scope.cg_scope_depth(state) - 1
     depth_for_loop = scope.cg_scope_depth(state)
     state.break_stack = state.break_stack + [_breakctx_make("loop", l_end_f, l_cont_f, depth_for_outer, depth_for_loop)]
 
-    state = exprmod.cg_emit_expr(state, stmt.end_expr)
-    state = scope.emit_store_var_scoped(state, q_end_f)
+    end_ex_f = stmt.end_expr
+    state = exprmod.cg_emit_expr(state, end_ex_f)
+    state = scope.emit_store_var_scoped(state, end_name_f, stmt)
 
     // step = (start <= end) ? +1 : -1  (encoded int)
     state = scope.emit_load_var_scoped(state, qv)
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-    state = scope.emit_load_var_scoped(state, q_end_f)
+    state = scope.emit_load_var_scoped(state, end_name_f)
     state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
     state.asm = a.jcc(state.asm, "ge", l_step_pos_f)
     state.asm = a.mov_rax_imm64(state.asm, t.enc_int(-1))
-    state = scope.emit_store_var_scoped(state, q_step_f)
+    state = scope.emit_store_var_scoped(state, step_name_f, stmt)
     state.asm = a.jmp(state.asm, l_step_done_f)
     state.asm = a.mark(state.asm, l_step_pos_f)
     state.asm = a.mov_rax_imm64(state.asm, t.enc_int(1))
-    state = scope.emit_store_var_scoped(state, q_step_f)
+    state = scope.emit_store_var_scoped(state, step_name_f, stmt)
     state.asm = a.mark(state.asm, l_step_done_f)
 
     state.asm = a.mark(state.asm, l_top_f)
     state = scope.cg_scope_enter(state)
     state = _emit_stmt_list(state, stmt.body)
-    state = scope.cg_scope_leave(state)
+    state = scope.cg_scope_leave(state, true)
 
     state.asm = a.mark(state.asm, l_cont_f)
     state = scope.emit_load_var_scoped(state, qv)
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-    state = scope.emit_load_var_scoped(state, q_end_f)
+    state = scope.emit_load_var_scoped(state, end_name_f)
     state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
     state.asm = a.jcc(state.asm, "e", l_end_f)
 
     state = scope.emit_load_var_scoped(state, qv)
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-    state = scope.emit_load_var_scoped(state, q_step_f)
+    state = scope.emit_load_var_scoped(state, step_name_f)
     state.asm = a.add_r64_r64(state.asm, "rax", "r10")
     state.asm = a.sub_rax_imm8(state.asm, 1)
-    state = scope.emit_store_var_scoped(state, qv)
+    state = scope.emit_store_var_scoped(state, qv, stmt)
     state.asm = a.jmp(state.asm, l_top_f)
 
     state.asm = a.mark(state.asm, l_end_f)
     state = _breakstack_pop(state)
-    state = scope.cg_scope_leave(state)
+    state = scope.cg_scope_leave(state, true)
     return state
   end if
 
-  if k == "ForEach" then
+  if _is_foreach_stmt(stmt) then
     fid_fe = state.label_id
     state.label_id = state.label_id + 1
-    it_lbl = "__foreach_it_" + fid_fe
-    i_lbl = "__foreach_i_" + fid_fe
+    fe_names = _foreach_state_names(stmt)
+    it_name = fe_names[0]
+    i_name = fe_names[1]
+    len_name = fe_names[2]
+    top_ptr_name = fe_names[3]
+    base_ptr_name = fe_names[4]
 
-    state.data = d.data_add_u64(state.data, it_lbl, 0)
-    state.data = d.data_add_u32(state.data, i_lbl, 0)
-
-    state = exprmod.cg_emit_expr(state, stmt.iterable)
-    state.asm = a.mov_rip_qword_rax(state.asm, it_lbl)
-    state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
-    state.asm = a.mov_rip_dword_eax(state.asm, i_lbl)
-
-    l_top_fe = "foreach_top_" + fid_fe
+    l_setup_arr_fe = "foreach_setup_arr_" + fid_fe
+    l_setup_bytes_fe = "foreach_setup_bytes_" + fid_fe
+    l_setup_str_fe = "foreach_setup_str_" + fid_fe
+    l_top_arr_fe = "foreach_top_arr_" + fid_fe
+    l_top_bytes_fe = "foreach_top_bytes_" + fid_fe
+    l_top_str_fe = "foreach_top_str_" + fid_fe
     l_body_fe = "foreach_body_" + fid_fe
     l_cont_fe = "foreach_cont_" + fid_fe
     l_end_fe = "foreach_end_" + fid_fe
-    l_arr_fe = "foreach_is_arr_" + fid_fe
-    l_bytes_fe = "foreach_is_bytes_" + fid_fe
-    l_str_fe = "foreach_is_str_" + fid_fe
 
     vname_fe = _foreach_var_name(stmt)
-    state = scope.cg_scope_enter(state)
     bind_kind_fe = "local"
     if state.in_function == false then bind_kind_fe = "global" end if
-    state = scope.declare_fresh_binding(state, vname_fe, stmt, bind_kind_fe)
-    depth_fe_outer = scope.cg_scope_depth(state) - 1
+    depth_fe_outer = scope.cg_scope_depth(state)
+    state = scope.cg_scope_enter(state)
     depth_fe_loop = scope.cg_scope_depth(state)
+    state = scope.declare_fresh_binding(state, vname_fe, stmt, bind_kind_fe)
+    state = scope.declare_fresh_binding(state, it_name, stmt, bind_kind_fe)
+    state = scope.declare_fresh_binding(state, i_name, stmt, bind_kind_fe)
+    state = scope.declare_fresh_binding(state, len_name, stmt, bind_kind_fe)
+    state = scope.declare_fresh_binding(state, top_ptr_name, stmt, bind_kind_fe)
+    state = scope.declare_fresh_binding(state, base_ptr_name, stmt, bind_kind_fe)
     state.break_stack = state.break_stack + [_breakctx_make("loop", l_end_fe, l_cont_fe, depth_fe_outer, depth_fe_loop)]
 
-    state.asm = a.mark(state.asm, l_top_fe)
-    state.asm = a.mov_eax_rip_dword(state.asm, i_lbl)
-    state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
-    state.asm = a.mov_rax_rip_qword(state.asm, it_lbl)
+    state = exprmod.cg_emit_expr(state, stmt.iterable)
+    state = scope.emit_store_var_scoped(state, it_name, stmt)
+    state.asm = a.mov_rax_imm64(state.asm, 0)
+    state = scope.emit_store_var_scoped(state, i_name, stmt)
+    state = scope.emit_store_var_scoped(state, len_name, stmt)
+    state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
+    state = scope.emit_store_var_scoped(state, base_ptr_name, stmt)
+
+    state = scope.emit_load_var_scoped(state, it_name)
     state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 0)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
-    state.asm = a.jcc(state.asm, "e", l_arr_fe)
+    state.asm = a.jcc(state.asm, "e", l_setup_arr_fe)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+    state.asm = a.jcc(state.asm, "e", l_setup_arr_fe)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
-    state.asm = a.jcc(state.asm, "e", l_bytes_fe)
+    state.asm = a.jcc(state.asm, "e", l_setup_bytes_fe)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
-    state.asm = a.jcc(state.asm, "e", l_str_fe)
+    state.asm = a.jcc(state.asm, "e", l_setup_str_fe)
     state.asm = a.jmp(state.asm, l_end_fe)
 
-    state.asm = a.mark(state.asm, l_arr_fe)
+    state.asm = a.mark(state.asm, l_setup_arr_fe)
+    state = scope.emit_load_var_scoped(state, it_name)
+    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 4)
+    state.asm = a.mov_r32_r32(state.asm, "eax", "edx")
+    state = scope.emit_store_var_scoped(state, len_name, stmt)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r14", 8)
+    state = scope.emit_store_var_scoped(state, base_ptr_name, stmt)
+    state.asm = a.lea_rax_rip(state.asm, l_top_arr_fe)
+    state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
+    state.asm = a.jmp(state.asm, l_top_arr_fe)
+
+    state.asm = a.mark(state.asm, l_setup_bytes_fe)
+    state = scope.emit_load_var_scoped(state, it_name)
+    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 4)
+    state.asm = a.mov_r32_r32(state.asm, "eax", "edx")
+    state = scope.emit_store_var_scoped(state, len_name, stmt)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r14", 8)
+    state = scope.emit_store_var_scoped(state, base_ptr_name, stmt)
+    state.asm = a.lea_rax_rip(state.asm, l_top_bytes_fe)
+    state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
+    state.asm = a.jmp(state.asm, l_top_bytes_fe)
+
+    state.asm = a.mark(state.asm, l_setup_str_fe)
+    state = scope.emit_load_var_scoped(state, it_name)
+    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 4)
+    state.asm = a.mov_r32_r32(state.asm, "eax", "edx")
+    state = scope.emit_store_var_scoped(state, len_name, stmt)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r14", 8)
+    state = scope.emit_store_var_scoped(state, base_ptr_name, stmt)
+    state.asm = a.lea_rax_rip(state.asm, l_top_str_fe)
+    state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
+    state.asm = a.jmp(state.asm, l_top_str_fe)
+
+    state.asm = a.mark(state.asm, l_top_arr_fe)
+    state = scope.emit_load_var_scoped(state, i_name)
+    state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
+    state = scope.emit_load_var_scoped(state, len_name)
+    state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
     state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_end_fe)
+    state = scope.emit_load_var_scoped(state, base_ptr_name)
+    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r14", "rcx", 8, 8)
-    state = scope.emit_store_var_scoped(state, vname_fe)
+    state = scope.emit_store_var_scoped(state, vname_fe, stmt)
     state.asm = a.jmp(state.asm, l_body_fe)
 
-    state.asm = a.mark(state.asm, l_bytes_fe)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 4)
+    state.asm = a.mark(state.asm, l_top_bytes_fe)
+    state = scope.emit_load_var_scoped(state, i_name)
+    state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
+    state = scope.emit_load_var_scoped(state, len_name)
+    state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
     state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_end_fe)
+    state = scope.emit_load_var_scoped(state, base_ptr_name)
+    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r64_r64(state.asm, "rax", "r14")
     state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
-    state.asm = a.add_rax_imm8(state.asm, 8)
     state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
     state.asm = a.shl_rax_imm8(state.asm, 3)
     state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-    state = scope.emit_store_var_scoped(state, vname_fe)
+    state = scope.emit_store_var_scoped(state, vname_fe, stmt)
     state.asm = a.jmp(state.asm, l_body_fe)
 
-    state.asm = a.mark(state.asm, l_str_fe)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 4)
+    state.asm = a.mark(state.asm, l_top_str_fe)
+    state = scope.emit_load_var_scoped(state, i_name)
+    state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
+    state = scope.emit_load_var_scoped(state, len_name)
+    state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
     state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_end_fe)
+    state = scope.emit_load_var_scoped(state, base_ptr_name)
+    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r64_r64(state.asm, "rax", "r14")
     state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
-    state.asm = a.add_rax_imm8(state.asm, 8)
-    state.asm = a.mov_r8_membase_disp(state.asm, "dl", "rax", 0)
-    state.asm = a.mov_membase_disp_r8(state.asm, "rsp", 0x20, "dl")
+    state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
+    state.asm = a.mov_membase_disp_r8(state.asm, "rsp", 0x20, "al")
     state.asm = a.mov_rcx_imm32(state.asm, 10)
     state.asm = a.call(state.asm, "fn_alloc")
     state.asm = a.mov_r11_rax(state.asm)
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRING, false)
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 1, false)
-    state.asm = a.mov_r8_membase_disp(state.asm, "dl", "rsp", 0x20)
-    state.asm = a.mov_membase_disp_r8(state.asm, "r11", 8, "dl")
+    state.asm = a.mov_r8_membase_disp(state.asm, "al", "rsp", 0x20)
+    state.asm = a.mov_membase_disp_r8(state.asm, "r11", 8, "al")
     state.asm = a.mov_membase_disp_imm8(state.asm, "r11", 9, 0)
     state.asm = a.mov_rax_r11(state.asm)
-    state = scope.emit_store_var_scoped(state, vname_fe)
+    state = scope.emit_store_var_scoped(state, vname_fe, stmt)
 
     state.asm = a.mark(state.asm, l_body_fe)
     state = scope.cg_scope_enter(state)
     state = _emit_stmt_list(state, stmt.body)
-    state = scope.cg_scope_leave(state)
+    state = scope.cg_scope_leave(state, true)
 
     state.asm = a.mark(state.asm, l_cont_fe)
-    state.asm = a.mov_eax_rip_dword(state.asm, i_lbl)
+    state = scope.emit_load_var_scoped(state, i_name)
     state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
     state.asm = a.inc_r32(state.asm, "ecx")
     state.asm = a.mov_r32_r32(state.asm, "eax", "ecx")
-    state.asm = a.mov_rip_dword_eax(state.asm, i_lbl)
-    state.asm = a.jmp(state.asm, l_top_fe)
+    state = scope.emit_store_var_scoped(state, i_name, stmt)
+    state = scope.emit_load_var_scoped(state, top_ptr_name)
+    state.asm = a.jmp_r64(state.asm, "rax")
 
     state.asm = a.mark(state.asm, l_end_fe)
     state = _breakstack_pop(state)
-    state = scope.cg_scope_leave(state)
+    state = scope.cg_scope_leave(state, true)
     return state
   end if
 
@@ -1385,17 +1978,66 @@ end function
 
 function _opt_try_truthy(state, ex)
   r = exprmod.cg_expr_try_const_value(state, ex)
-  if r.ok == false then return 0 end if
+  if r.ok == false then return void end if
   return _truthy(r.value)
 end function
 
 function _is_foreach_stmt(st)
   if typeof(st) != "struct" then return false end if
-  return st.node_kind == "ForEach"
+  if typeof(st.node_kind) == "string" then
+    nk = st.node_kind
+    if nk == "ForEach" or nk == "ForEachArray" or nk == "ForEachString" then return true end if
+  end if
+  return false
 end function
 
 function _foreach_var_name(st)
   return _coerce_name(st.var)
+end function
+
+function _foreach_state_names(st)
+  fid = "n_" + _foreach_var_name(st)
+  if typeof(st) == "struct" then
+    p0 = 0
+    p_try = try(st._pos)
+    if typeof(p_try) == "int" then p0 = p_try end if
+    if p0 > 0 then
+      fid = "p" + p0 + "_" + _foreach_var_name(st)
+    end if
+  end if
+
+  names = [
+    "__foreach_it_" + fid,
+    "__foreach_i_" + fid,
+    "__foreach_len_" + fid,
+    "__foreach_top_ptr_" + fid,
+    "__foreach_base_ptr_" + fid,
+  ]
+  return names
+end function
+
+function _for_state_names(st)
+  fid = "n_" + _foreach_var_name(st)
+  if typeof(st) == "struct" then
+    p0 = 0
+    p_try = try(st._pos)
+    if typeof(p_try) == "int" then p0 = p_try end if
+    if p0 > 0 then
+      fid = "p" + p0 + "_" + _foreach_var_name(st)
+    end if
+  end if
+
+  return [
+    "__for_end_" + fid,
+    "__for_step_" + fid,
+  ]
+end function
+
+function _opt_try_const_int(state, ex)
+  r = exprmod.cg_expr_try_const_value(state, ex)
+  if r.ok == false then return void end if
+  if typeof(r.value) != "int" then return void end if
+  return r.value
 end function
 
 function _owner_for(st)
@@ -1406,10 +2048,23 @@ function _tag_ns(ns, name)
   return _join_qname(ns, name)
 end function
 
-function _pref_is_method_prefix(pref)
+function _pref_is_method_prefix(state, pref)
   if typeof(pref) != "string" then return false end if
   if pref == "" then return false end if
-  return s.contains(pref, ".")
+  qn0 = pref
+  if qn0[len(qn0) - 1] == "." then qn0 = s.substr(qn0, 0, len(qn0) - 1) end if
+  if qn0 == "" then return false end if
+  if s.contains(qn0, ".__static__") then return true end if
+  if typeof(state.struct_fields) == "array" and len(state.struct_fields) > 0 then
+    for i = 0 to len(state.struct_fields) - 1
+      sf = state.struct_fields[i]
+      sqn = ""
+      if typeof(sf) == "struct" then sqn = _coerce_name(sf.key) end if
+      if typeof(sf) == "array" and len(sf) >= 2 then sqn = _coerce_name(sf[0]) end if
+      if sqn == qn0 then return true end if
+    end for
+  end if
+  return false
 end function
 
 function _has_reserved_segment(state, name)
@@ -1452,21 +2107,179 @@ function _resolve_global_target(state, name)
   return _join_qname(state.current_file_prefix, name)
 end function
 
-function _scan_function_for_global_decls(fn_node)
-  vals_b = t.arr_chunk_new(32)
-  if typeof(fn_node) != "struct" or typeof(fn_node.body) != "array" then return t.arr_chunk_finish(vals_b) end if
-  if len(fn_node.body) > 0 then
-    for i = 0 to len(fn_node.body) - 1
-      st = fn_node.body[i]
-      if typeof(st) == "struct" and st.node_kind == "GlobalDecl" and typeof(st.names) == "array" then
-        for j = 0 to len(st.names) - 1
-          nm = _coerce_name(st.names[j])
-          if nm != "" then vals_b = t.arr_chunk_push(vals_b, nm) end if
-        end for
+function _qname_parent_prefix(qn)
+  if typeof(qn) != "string" then return "" end if
+  if qn == "" then return "" end if
+  dot = -1
+  for i = 0 to len(qn) - 1
+    if qn[i] == "." then dot = i end if
+  end for
+  if dot < 0 then return "" end if
+  return s.substr(qn, 0, dot + 1)
+end function
+
+function _resolve_global_target_scan(state, raw, qpref, fpref)
+  raw2 = _coerce_name(raw)
+  if raw2 == "" then return "" end if
+  if _has_dot_name(raw2) then return raw2 end if
+
+  cands_b = t.arr_chunk_new(4)
+  if typeof(qpref) == "string" and qpref != "" then
+    pref_q = qpref
+    if pref_q[len(pref_q) - 1] != "." then pref_q = pref_q + "." end if
+    cands_b = t.arr_chunk_push(cands_b, pref_q + raw2)
+  end if
+  if typeof(fpref) == "string" and fpref != "" then
+    pref_f = fpref
+    if pref_f[len(pref_f) - 1] != "." then pref_f = pref_f + "." end if
+    cands_b = t.arr_chunk_push(cands_b, pref_f + raw2)
+  end if
+  cands_b = t.arr_chunk_push(cands_b, raw2)
+  cands = t.arr_chunk_finish(cands_b)
+
+  if typeof(cands) == "array" and len(cands) > 0 then
+    for i = 0 to len(cands) - 1
+      cand = _coerce_name(cands[i])
+      if cand == "" then continue end if
+      b = scope.resolve_binding(state, cand)
+      if typeof(b) == "struct" and b.kind == "global" then
+        depth0 = 0
+        if typeof(b.depth) == "int" then depth0 = b.depth end if
+        if depth0 == 0 then return cand end if
       end if
     end for
   end if
-  return t.arr_chunk_finish(vals_b)
+
+  if typeof(qpref) == "string" and qpref != "" and _pref_is_method_prefix(state, qpref) == false then
+    pref_q2 = qpref
+    if pref_q2[len(pref_q2) - 1] != "." then pref_q2 = pref_q2 + "." end if
+    return pref_q2 + raw2
+  end if
+  if typeof(fpref) == "string" and fpref != "" then
+    pref_f2 = fpref
+    if pref_f2[len(pref_f2) - 1] != "." then pref_f2 = pref_f2 + "." end if
+    return pref_f2 + raw2
+  end if
+  return raw2
+end function
+
+function _scan_stmt_children(st)
+  kids = []
+  if typeof(st) != "struct" then return kids end if
+
+  body0 = try(st.body)
+  if typeof(body0) == "array" and len(body0) > 0 then
+    kids = kids + body0
+  end if
+  then0 = try(st.then_body)
+  if typeof(then0) == "array" and len(then0) > 0 then
+    kids = kids + then0
+  end if
+  else0 = try(st.else_body)
+  if typeof(else0) == "array" and len(else0) > 0 then
+    kids = kids + else0
+  end if
+  def0 = try(st.default_body)
+  if typeof(def0) == "array" and len(def0) > 0 then
+    kids = kids + def0
+  end if
+
+  cases0 = try(st.cases)
+  if typeof(cases0) == "array" and len(cases0) > 0 then
+    for ci = 0 to len(cases0) - 1
+      cs = cases0[ci]
+      cs_body = try(cs.body)
+      if typeof(cs) == "struct" and typeof(cs_body) == "array" and len(cs_body) > 0 then
+        kids = kids + cs_body
+      end if
+    end for
+  end if
+
+  elifs0 = try(st.elifs)
+  if typeof(elifs0) == "array" and len(elifs0) > 0 then
+    for ei = 0 to len(elifs0) - 1
+      eb = elifs0[ei]
+      if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" and len(eb[1]) > 0 then
+        kids = kids + eb[1]
+      end if
+    end for
+  end if
+
+  return kids
+end function
+
+function _scan_function_for_global_decls(state, fn_node)
+  if typeof(fn_node) != "struct" then return state end if
+
+  fn_qn = _coerce_name(fn_node.name)
+  qpref = _qname_parent_prefix(fn_qn)
+
+  fn_file = _st_file(fn_node)
+  if fn_file == "" then
+    p = fn_node._ml_parent_fn
+    if typeof(p) == "struct" then fn_file = _st_file(p) end if
+  end if
+  fpref = ""
+  if fn_file != "" then fpref = _strpair_get(state.file_prefix_map, fn_file) end if
+
+  declared0 = try(fn_node._ml_globals_declared)
+  if typeof(declared0) == "array" and len(declared0) > 0 then
+    for di = 0 to len(declared0) - 1
+      nm0 = _coerce_name(declared0[di])
+      if nm0 == "" then continue end if
+      tgt0 = _resolve_global_target_scan(state, nm0, qpref, fpref)
+      if tgt0 == "" then continue end if
+      state = scope.declare_global_binding_root(state, tgt0, fn_node, false, 0)
+    end for
+  end if
+
+  stack = []
+  body_fn = try(fn_node.body)
+  if typeof(body_fn) != "array" then return state end if
+  if typeof(body_fn) == "array" and len(body_fn) > 0 then stack = body_fn end if
+
+  while typeof(stack) == "array" and len(stack) > 0
+    top_i = len(stack) - 1
+    st = stack[top_i]
+    if top_i <= 0 then
+      stack = []
+    else
+      stack2 = slice(stack, 0, top_i)
+      if typeof(stack2) == "array" then
+        stack = stack2
+      else
+        stack = []
+      end if
+    end if
+    if typeof(st) != "struct" then continue end if
+
+    st_kind = _coerce_name(st.node_kind)
+    if st_kind == "GlobalDecl" then
+      names0 = try(st.names)
+      if typeof(names0) != "array" or len(names0) <= 0 then continue end if
+      for j = 0 to len(names0) - 1
+        nm = _coerce_name(names0[j])
+        if nm == "" then continue end if
+        tgt = _resolve_global_target_scan(state, nm, qpref, fpref)
+        if tgt == "" then continue end if
+        state = scope.declare_global_binding_root(state, tgt, st, false, 0)
+      end for
+      continue
+    end if
+
+    kids = _scan_stmt_children(st)
+    if typeof(kids) == "array" and len(kids) > 0 then
+      for ki = 0 to len(kids) - 1
+        child = kids[ki]
+        if typeof(child) == "struct" then
+          if typeof(stack) != "array" then stack = [] end if
+          stack = stack + [child]
+        end if
+      end for
+    end if
+  end while
+
+  return state
 end function
 
 function _walk_stmt_into(st, vals_b)
@@ -1633,35 +2446,22 @@ end function
 function _group_program_by_file(program)
   vals =[]
   if typeof(program) != "array" or len(program) <= 0 then return vals end if
-  files_b = t.arr_chunk_new(64)
-  groups = []
-  file_idx = t.fastmap_new(256)
-
+  cur_file = "<module:entry>"
+  cur_items = []
   for i = 0 to len(program) - 1
     st = program[i]
     fn = _st_file(st)
-    if fn == "" then fn = "<entry>" end if
-
-    hit = t.fastmap_get(file_idx, fn, -1)
-    if typeof(hit) != "int" then hit = -1 end if
-
-    if hit < 0 then
-      files_b = t.arr_chunk_push(files_b, fn)
-      groups = groups +[t.arr_chunk_new(64)]
-      hit = len(groups) - 1
-      file_idx = t.fastmap_set(file_idx, fn, hit)
+    if fn == "" then fn = "<module:entry>" end if
+    if len(cur_items) > 0 and fn != cur_file then
+      vals = vals +[[cur_file, cur_items]]
+      cur_items = []
     end if
-    gb = groups[hit]
-    gb = t.arr_chunk_push(gb, st)
-    groups[hit] = gb
+    cur_file = fn
+    cur_items = cur_items +[st]
   end for
-
-  files = t.arr_chunk_finish(files_b)
-  vals_b = t.arr_chunk_new(16)
-  for vi = 0 to len(files) - 1
-    vals_b = t.arr_chunk_push(vals_b, [files[vi], t.arr_chunk_finish(groups[vi])])
-  end for
-  vals = t.arr_chunk_finish(vals_b)
+  if len(cur_items) > 0 then
+    vals = vals +[[cur_file, cur_items]]
+  end if
   return vals
 end function
 
@@ -1703,7 +2503,91 @@ function _arr_union(a, b)
   return vals_out
 end function
 
+function inline _name_set_new(initial_cap)
+  return t.fastmap_new(initial_cap)
+end function
+
+function inline _name_set_size(setv)
+  if typeof(setv) == "struct" then return t.fastmap_size(setv) end if
+  if typeof(setv) == "array" then return len(setv) end if
+  return 0
+end function
+
+function _name_set_to_array(setv)
+  if typeof(setv) == "array" then return setv end if
+  out_b = t.arr_chunk_new(32)
+  if typeof(setv) == "struct" then
+    items = t.fastmap_items(setv)
+    if typeof(items) == "array" and len(items) > 0 then
+      for i = 0 to len(items) - 1
+        it = items[i]
+        key = ""
+        if typeof(it) == "array" and len(it) >= 1 and typeof(it[0]) == "string" then key = it[0] end if
+        if key != "" then out_b = t.arr_chunk_push(out_b, key) end if
+      end for
+    end if
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function inline _name_set_has(setv, value)
+  if typeof(value) != "string" or value == "" then return false end if
+  if typeof(setv) == "struct" then return t.fastmap_has(setv, value) end if
+  return _arr_has(setv, value)
+end function
+
+function _name_set_add(setv, value)
+  if typeof(value) != "string" or value == "" then
+    if typeof(setv) == "struct" or typeof(setv) == "array" then return setv end if
+    return []
+  end if
+  if typeof(setv) == "struct" then return t.fastmap_set(setv, value, true) end if
+  if typeof(setv) != "array" then setv = [] end if
+  return _arr_add_unique(setv, value)
+end function
+
+function _name_set_remove(setv, value)
+  if typeof(value) != "string" or value == "" then return setv end if
+  if typeof(setv) == "struct" then
+    items = t.fastmap_items(setv)
+    outv = t.fastmap_new((t.fastmap_size(setv) * 2) + 16)
+    if typeof(items) == "array" and len(items) > 0 then
+      for i = 0 to len(items) - 1
+        it = items[i]
+        key = ""
+        if typeof(it) == "array" and len(it) >= 1 and typeof(it[0]) == "string" then key = it[0] end if
+        if key != "" and key != value then outv = t.fastmap_set(outv, key, true) end if
+      end for
+    end if
+    return outv
+  end if
+  return _arr_remove_value(setv, value)
+end function
+
+function _name_set_union(a, b)
+  if typeof(a) != "struct" and typeof(b) != "struct" then return _arr_union(a, b) end if
+  outv = _name_set_new((_name_set_size(a) + _name_set_size(b)) * 2 + 16)
+  aa = _name_set_to_array(a)
+  if typeof(aa) == "array" and len(aa) > 0 then
+    for i = 0 to len(aa) - 1
+      outv = _name_set_add(outv, aa[i])
+    end for
+  end if
+  bb = _name_set_to_array(b)
+  if typeof(bb) == "array" and len(bb) > 0 then
+    for i = 0 to len(bb) - 1
+      outv = _name_set_add(outv, bb[i])
+    end for
+  end if
+  return outv
+end function
+
 function inline _map_int_get(arr, key, defaultv)
+  if typeof(arr) == "struct" then
+    v0 = t.fastmap_get(arr, key, defaultv)
+    if typeof(v0) == "int" then return v0 end if
+    return defaultv
+  end if
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -1720,6 +2604,7 @@ function inline _map_int_get(arr, key, defaultv)
 end function
 
 function _map_int_set(arr, key, value)
+  if typeof(arr) == "struct" then return t.fastmap_set(arr, key, value) end if
   if typeof(arr) != "array" then arr = [] end if
   if len(arr) > 0 then
     for i = 0 to len(arr) - 1
@@ -1733,7 +2618,31 @@ function _map_int_set(arr, key, value)
   return arr + [[key, value]]
 end function
 
+function _map_int_items(arr)
+  if typeof(arr) == "struct" then return t.fastmap_items(arr) end if
+  if typeof(arr) == "array" then return arr end if
+  return []
+end function
+
+function _string_gt(a, b)
+  if typeof(a) != "string" or typeof(b) != "string" then return false end if
+  ab = bytes(a)
+  bb = bytes(b)
+  an = len(ab)
+  bn = len(bb)
+  n = an
+  if bn < n then n = bn end if
+  for i = 0 to n - 1
+    av = ab[i]
+    bv = bb[i]
+    if av == bv then continue end if
+    return av > bv
+  end for
+  return an > bn
+end function
+
 function _sort_names(vals)
+  if typeof(vals) == "struct" then vals = _name_set_to_array(vals) end if
   if typeof(vals) != "array" or len(vals) <= 1 then return vals end if
   arr = []
   for i = 0 to len(vals) - 1
@@ -1747,7 +2656,7 @@ function _sort_names(vals)
     for j = 0 to n - 2 - i
       a = arr[j]
       b = arr[j + 1]
-      if a > b then
+      if _string_gt(a, b) then
         tmp = arr[j]
         arr[j] = arr[j + 1]
         arr[j + 1] = tmp
@@ -1757,13 +2666,658 @@ function _sort_names(vals)
   return arr
 end function
 
+function _id_label_pair_id(it)
+  if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "int" then
+    return it[0]
+  end if
+  if typeof(it) == "struct" and typeof(it.key) == "int" then
+    return it.key
+  end if
+  return -1
+end function
+
+function _sort_id_label_pairs(vals)
+  if typeof(vals) != "array" or len(vals) <= 1 then return vals end if
+  arr = []
+  for i = 0 to len(vals) - 1
+    arr = arr + [vals[i]]
+  end for
+  n = len(arr)
+  if n <= 1 then return arr end if
+  for i = 0 to n - 2
+    for j = 0 to n - 2 - i
+      a = arr[j]
+      b = arr[j + 1]
+      aid = _id_label_pair_id(a)
+      bid = _id_label_pair_id(b)
+      swap = false
+      if aid < 0 then
+        if bid >= 0 then swap = true end if
+      else
+        if bid >= 0 and aid > bid then swap = true end if
+      end if
+      if swap then
+        tmp = arr[j]
+        arr[j] = arr[j + 1]
+        arr[j + 1] = tmp
+      end if
+    end for
+  end for
+  return arr
+end function
+
+function _analysis_register_local_decl(state, decl_node, name)
+  nm = _coerce_name(name)
+  if nm == "" then return state end if
+  existing = scope.resolve_binding_for_write(state, nm)
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and state.current_qname_prefix == "std.string." then
+    ex_kind = ""
+    if typeof(existing) == "struct" and typeof(existing.kind) == "string" then ex_kind = existing.kind end if
+    print "[mem][cg][analysis] local_decl name=" + nm + " existing=" + ex_kind
+  end if
+  if typeof(existing) == "struct" then return state end if
+  state = scope.declare_local_binding(state, nm, decl_node, false, 0)
+  state = _analysis_mark_current_binding_boxed(state, nm)
+  b = scope.resolve_binding(state, nm)
+  if typeof(b) == "struct" then
+    state = scope.register_decl_site_binding(state, decl_node, nm, b)
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and state.current_qname_prefix == "std.string." then
+    fl = state.function_locals
+    flen = 0
+    if typeof(fl) == "array" then flen = len(fl) end if
+    print "[mem][cg][analysis] local_decl_after name=" + nm + " fn_locals=" + flen
+  end if
+  return state
+end function
+
+function _analysis_register_fresh_local_decl(state, decl_node, name)
+  nm = _coerce_name(name)
+  if nm == "" then return state end if
+  state = scope.declare_local_binding(state, nm, decl_node, false, 0)
+  state = _analysis_mark_current_binding_boxed(state, nm)
+  b = scope.resolve_binding(state, nm)
+  if typeof(b) == "struct" then
+    state = scope.register_decl_site_binding(state, decl_node, nm, b)
+  end if
+  return state
+end function
+
+function _analysis_mark_current_binding_boxed(state, name)
+  nm = _coerce_name(name)
+  if nm == "" then return state end if
+  if _arr_has(state.current_fn_boxed_names, nm) == false then return state end if
+  ss = state.scope_stack
+  if typeof(ss) != "array" or len(ss) <= 0 then return state end if
+  si = len(ss) - 1
+  fr = ss[si]
+  if typeof(fr) != "array" or len(fr) <= 0 then return state end if
+  jb = len(fr) - 1
+  while jb >= 0
+    bb = fr[jb]
+    if typeof(bb) == "struct" and bb.name == nm then
+      bb.boxed = true
+      fr[jb] = bb
+      ss[si] = fr
+      state.scope_stack = ss
+      sisb = state.scope_index_stack
+      if typeof(sisb) == "array" and si >= 0 and si < len(sisb) then
+        fmb = sisb[si]
+        fmb = t.fastmap_set(fmb, bb.name, bb)
+        sisb[si] = fmb
+        state.scope_index_stack = sisb
+      end if
+      break
+    end if
+    jb = jb - 1
+  end while
+  return state
+end function
+
+function _analysis_member_target(ex)
+  if typeof(ex) != "struct" then return 0 end if
+  t0 = try(ex.target)
+  if typeof(t0) == "struct" then return t0 end if
+  o0 = try(ex.obj)
+  if typeof(o0) == "struct" then return o0 end if
+  return 0
+end function
+
+function _analysis_call_callee(ex)
+  if typeof(ex) != "struct" then return 0 end if
+  c0 = try(ex.callee)
+  if typeof(c0) == "struct" then return c0 end if
+  f0 = try(ex.func)
+  if typeof(f0) == "struct" then return f0 end if
+  return 0
+end function
+
+function _analysis_call_args(ex)
+  if typeof(ex) != "struct" then return [] end if
+  aa = try(ex.args)
+  if typeof(aa) == "array" then return aa end if
+  return []
+end function
+
+function _analysis_for_end_expr(st)
+  if typeof(st) != "struct" then return 0 end if
+  e1 = try(st.end_expr)
+  if typeof(e1) == "struct" then return e1 end if
+  return 0
+end function
+
+function _analysis_builtin_has(name)
+  nm = _coerce_name(name)
+  if nm == "" then return false end if
+  if nm == "try" then return true end if
+  if nm == "array" then return true end if
+  if nm == "bytes" then return true end if
+  if nm == "byteBuffer" then return true end if
+  return exprmod._builtin_label(nm) != ""
+end function
+
+function _analysis_known_callable_name(state, name)
+  nm = _coerce_name(name)
+  if nm == "" then return false end if
+  if _analysis_builtin_has(nm) then return true end if
+  if typeof(_user_function_get_node(state, nm)) == "struct" then return true end if
+  if exprmod._state_struct_id_get(state, nm, 0) != 0 then return true end if
+  if typeof(exprmod._extern_sig_get(state, nm)) == "struct" then return true end if
+  return false
+end function
+
+function _analysis_is_type_query_name(name)
+  nm = _coerce_name(name)
+  return nm == "typeof" or nm == "typeName"
+end function
+
+function _analysis_scan_expr(state, ex, allow_func_ident)
+  if typeof(ex) != "struct" then return state end if
+  nk = _coerce_name(ex.node_kind)
+
+  if nk == "Var" then
+    nm0 = _coerce_name(try(ex.name))
+    if nm0 == "" then return state end if
+    nm1 = exprmod._apply_import_alias(state, nm0)
+    if nm1 == "" then nm1 = nm0 end if
+    nm2 = exprmod._qualify_identifier(state, nm1)
+    nm = nm1
+    if nm2 != "" then nm = nm2 end if
+
+    if allow_func_ident then
+      if _analysis_known_callable_name(state, nm0) then return state end if
+      if _analysis_known_callable_name(state, nm1) then return state end if
+      if _analysis_known_callable_name(state, nm) then return state end if
+    end if
+
+    b = scope.resolve_binding(state, nm)
+    if typeof(b) != "struct" and nm != nm0 then
+      b = scope.resolve_binding(state, nm0)
+    end if
+    if typeof(b) != "struct" then
+      state.diagnostics = state.diagnostics + ["Undefined variable '" + nm + "'"]
+    end if
+    return state
+  end if
+
+  if nk == "Call" then
+    cal = _analysis_call_callee(ex)
+    args = _analysis_call_args(ex)
+    cal_kind = ""
+    if typeof(cal) == "struct" then cal_kind = _coerce_name(cal.node_kind) end if
+
+    if cal_kind == "Var" then
+      raw_name = _coerce_name(try(cal.name))
+      cal_name = exprmod._apply_import_alias(state, raw_name)
+      if cal_name == "" then cal_name = raw_name end if
+      cal_q = exprmod._qualify_identifier(state, cal_name)
+      if cal_q == "" then cal_q = cal_name end if
+      if _analysis_known_callable_name(state, raw_name) or _analysis_known_callable_name(state, cal_name) or _analysis_known_callable_name(state, cal_q) then
+        allow_ident = _analysis_is_type_query_name(raw_name) or _analysis_is_type_query_name(cal_name) or _analysis_is_type_query_name(cal_q)
+        if len(args) > 0 then
+          for i = 0 to len(args) - 1
+            state = _analysis_scan_expr(state, args[i], allow_ident)
+          end for
+        end if
+        return state
+      end if
+    end if
+
+    if cal_kind == "Member" then
+      qn0 = exprmod._expr_to_qualname(state, cal)
+      qn1 = exprmod._apply_import_alias(state, qn0)
+      if qn1 == "" then qn1 = qn0 end if
+      qn2 = exprmod._qualify_identifier(state, qn1)
+      if qn2 == "" then qn2 = qn1 end if
+      if _analysis_known_callable_name(state, qn0) or _analysis_known_callable_name(state, qn1) or _analysis_known_callable_name(state, qn2) then
+        if len(args) > 0 then
+          for i = 0 to len(args) - 1
+            state = _analysis_scan_expr(state, args[i], false)
+          end for
+        end if
+        return state
+      end if
+    end if
+
+    state = _analysis_scan_expr(state, cal, false)
+    if len(args) > 0 then
+      for i = 0 to len(args) - 1
+        state = _analysis_scan_expr(state, args[i], false)
+      end for
+    end if
+    return state
+  end if
+
+  if nk == "Unary" then
+    return _analysis_scan_expr(state, try(ex.right), false)
+  end if
+
+  if nk == "Bin" then
+    state = _analysis_scan_expr(state, try(ex.left), false)
+    state = _analysis_scan_expr(state, try(ex.right), false)
+    return state
+  end if
+
+  if nk == "ArrayLit" then
+    items = try(ex.items)
+    if typeof(items) == "array" and len(items) > 0 then
+      for i = 0 to len(items) - 1
+        state = _analysis_scan_expr(state, items[i], false)
+      end for
+    end if
+    return state
+  end if
+
+  if nk == "Index" then
+    state = _analysis_scan_expr(state, try(ex.target), false)
+    state = _analysis_scan_expr(state, try(ex.index), false)
+    return state
+  end if
+
+  if nk == "StructInit" then
+    vals = try(ex.values)
+    if typeof(vals) == "array" and len(vals) > 0 then
+      for i = 0 to len(vals) - 1
+        state = _analysis_scan_expr(state, vals[i], false)
+      end for
+    end if
+    return state
+  end if
+
+  if nk == "Member" then
+    qraw = _member_chain_name(ex)
+    q1 = exprmod._apply_import_alias(state, qraw)
+    if q1 == "" then q1 = qraw end if
+    q2 = exprmod._qualify_identifier(state, q1)
+    if q2 == "" then q2 = q1 end if
+
+    if _analysis_known_callable_name(state, qraw) or _analysis_known_callable_name(state, q1) or _analysis_known_callable_name(state, q2) then
+      return state
+    end if
+
+    if typeof(scope.resolve_binding(state, q2)) == "struct" then return state end if
+    if q2 != q1 and typeof(scope.resolve_binding(state, q1)) == "struct" then return state end if
+    if q1 != qraw and typeof(scope.resolve_binding(state, qraw)) == "struct" then return state end if
+
+    mem = _coerce_name(try(ex.name))
+    tgt = _analysis_member_target(ex)
+    base0 = _member_chain_name(tgt)
+    if mem != "" and base0 != "" then
+      base1 = exprmod._apply_import_alias(state, base0)
+      if base1 == "" then base1 = base0 end if
+      base2 = exprmod._qualify_identifier(state, base1)
+      if base2 == "" then base2 = base1 end if
+
+      vars2 = _named_array_get(state.enum_variants, base2)
+      if typeof(vars2) == "array" then
+        if _arr_has(vars2, mem) then return state end if
+        state.diagnostics = state.diagnostics +["Enum " + base2 + " has no variant " + mem]
+        return state
+      end if
+
+      if base2 != base1 then
+        vars1 = _named_array_get(state.enum_variants, base1)
+        if typeof(vars1) == "array" then
+          if _arr_has(vars1, mem) then return state end if
+          state.diagnostics = state.diagnostics +["Enum " + base1 + " has no variant " + mem]
+          return state
+        end if
+      end if
+
+      if base1 != base0 then
+        vars0 = _named_array_get(state.enum_variants, base0)
+        if typeof(vars0) == "array" then
+          if _arr_has(vars0, mem) then return state end if
+          state.diagnostics = state.diagnostics +["Enum " + base0 + " has no variant " + mem]
+          return state
+        end if
+      end if
+    end if
+
+    return _analysis_scan_expr(state, tgt, false)
+  end if
+
+  return state
+end function
+
+function _analysis_scan_stmt(state, st)
+  if typeof(st) != "struct" then return state end if
+  k = _coerce_name(try(st.node_kind))
+
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and state.current_qname_prefix == "std.string." then
+    print "[mem][cg][analysis] scan_stmt type=" + typeof(st) + " kind=" + k
+  end if
+
+  if k == "GlobalDecl" then
+    if typeof(st.names) == "array" and len(st.names) > 0 then
+      gn = len(st.names)
+      for gi = 0 to gn - 1
+        if gi < 0 or gi >= gn then break end if
+        gnm = _coerce_name(st.names[gi])
+        if gnm == "" then continue end if
+        state = scope.declare_function_global(state, gnm, gnm)
+      end for
+    end if
+    return state
+  end if
+
+  if k == "ConstDecl" then
+    state = _analysis_scan_expr(state, try(st.expr), false)
+    state = _analysis_register_local_decl(state, st, st.name)
+    return state
+  end if
+
+  if k == "Assign" then
+    if _heap_cfg_get_bool(state, "cg_mem_probe", false) and state.current_qname_prefix == "std.string." then
+      print "[mem][cg][analysis] scan_assign name=" + _coerce_name(try(st.name))
+    end if
+    state = _analysis_scan_expr(state, try(st.expr), false)
+    state = _analysis_register_local_decl(state, st, st.name)
+    return state
+  end if
+
+  if k == "SetMember" then
+    obj_expr = try(st.obj)
+    if typeof(obj_expr) != "struct" then obj_expr = try(st.target) end if
+    state = _analysis_scan_expr(state, obj_expr, false)
+    state = _analysis_scan_expr(state, try(st.expr), false)
+    return state
+  end if
+
+  if k == "SetIndex" then
+    state = _analysis_scan_expr(state, try(st.target), false)
+    state = _analysis_scan_expr(state, try(st.index), false)
+    state = _analysis_scan_expr(state, try(st.expr), false)
+    return state
+  end if
+
+  if k == "Print" or k == "ExprStmt" or k == "Return" then
+    state = _analysis_scan_expr(state, try(st.expr), false)
+    return state
+  end if
+
+  if k == "If" then
+    state = _analysis_scan_expr(state, try(st.cond), false)
+    state = scope.cg_scope_enter(state)
+    state = _analysis_scan_block(state, st.then_body)
+    state = scope.cg_scope_leave(state, false)
+    if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
+      en = len(st.elifs)
+      for ei = 0 to en - 1
+        if ei < 0 or ei >= en then break end if
+        eb = st.elifs[ei]
+        if typeof(eb) != "array" or len(eb) < 2 or typeof(eb[1]) != "array" then continue end if
+        state = _analysis_scan_expr(state, eb[0], false)
+        state = scope.cg_scope_enter(state)
+        state = _analysis_scan_block(state, eb[1])
+        state = scope.cg_scope_leave(state, false)
+      end for
+    end if
+    if typeof(st.else_body) == "array" and len(st.else_body) > 0 then
+      state = scope.cg_scope_enter(state)
+      state = _analysis_scan_block(state, st.else_body)
+      state = scope.cg_scope_leave(state, false)
+    end if
+    return state
+  end if
+
+  if k == "While" then
+    state = _analysis_scan_expr(state, try(st.cond), false)
+    state = scope.cg_scope_enter(state)
+    state = _analysis_scan_block(state, st.body)
+    state = scope.cg_scope_leave(state, false)
+    return state
+  end if
+
+  if k == "DoWhile" then
+    state = scope.cg_scope_enter(state)
+    state = _analysis_scan_block(state, st.body)
+    state = scope.cg_scope_leave(state, false)
+    state = _analysis_scan_expr(state, try(st.cond), false)
+    return state
+  end if
+
+  if k == "For" then
+    state = _analysis_scan_expr(state, try(st.start), false)
+    state = _analysis_scan_expr(state, _analysis_for_end_expr(st), false)
+    state = scope.cg_scope_enter(state)
+    state = _analysis_register_fresh_local_decl(state, st, st.var)
+    hidden_for = _for_state_names(st)
+    if typeof(hidden_for) == "array" and len(hidden_for) > 0 then
+      for hi_for = 0 to len(hidden_for) - 1
+        state = _analysis_register_fresh_local_decl(state, st, hidden_for[hi_for])
+      end for
+    end if
+    state = _analysis_scan_block(state, st.body)
+    state = scope.cg_scope_leave(state, false)
+    return state
+  end if
+
+  if _is_foreach_stmt(st) then
+    state = _analysis_scan_expr(state, try(st.iterable), false)
+    state = scope.cg_scope_enter(state)
+    state = _analysis_register_fresh_local_decl(state, st, st.var)
+    hidden = _foreach_state_names(st)
+    if typeof(hidden) == "array" and len(hidden) > 0 then
+      for hi = 0 to len(hidden) - 1
+        state = _analysis_register_fresh_local_decl(state, st, hidden[hi])
+      end for
+    end if
+    state = _analysis_scan_block(state, st.body)
+    state = scope.cg_scope_leave(state, false)
+    return state
+  end if
+
+  if k == "Switch" then
+    state = _analysis_scan_expr(state, try(st.expr), false)
+    if typeof(st.cases) == "array" and len(st.cases) > 0 then
+      sn = len(st.cases)
+      for si = 0 to sn - 1
+        if si < 0 or si >= sn then break end if
+        cs = st.cases[si]
+        if typeof(cs) != "struct" then continue end if
+        ckind = _coerce_name(try(cs.kind))
+        if ckind == "values" then
+          vals = try(cs.values)
+          if typeof(vals) == "array" and len(vals) > 0 then
+            for vi = 0 to len(vals) - 1
+              vv = vals[vi]
+              if typeof(vv) == "array" and len(vv) >= 2 then
+                state = _analysis_scan_expr(state, vv[0], false)
+                state = _analysis_scan_expr(state, vv[1], false)
+              else
+                state = _analysis_scan_expr(state, vv, false)
+              end if
+            end for
+          end if
+        else
+          state = _analysis_scan_expr(state, try(cs.range_start), false)
+          state = _analysis_scan_expr(state, try(cs.range_end), false)
+        end if
+        state = scope.cg_scope_enter(state)
+        state = _analysis_scan_block(state, cs.body)
+        state = scope.cg_scope_leave(state, false)
+      end for
+    end if
+    if typeof(st.default_body) == "array" and len(st.default_body) > 0 then
+      state = scope.cg_scope_enter(state)
+      state = _analysis_scan_block(state, st.default_body)
+      state = scope.cg_scope_leave(state, false)
+    end if
+    return state
+  end if
+
+  if k == "FunctionDef" then
+    state = _analysis_register_local_decl(state, st, st.name)
+    return state
+  end if
+
+  return state
+end function
+
+function _analysis_scan_block(state, stmts)
+  if typeof(stmts) != "array" or len(stmts) <= 0 then return state end if
+  n = len(stmts)
+  for i = 0 to n - 1
+    if i < 0 or i >= n then break end if
+    state = _analysis_scan_stmt(state, stmts[i])
+  end for
+  return state
+end function
+
+function _analysis_prepare_function(state, fn_node)
+  boxed_names = fn_node._ml_boxed
+  if typeof(boxed_names) != "array" then boxed_names = [] end if
+  fn_qn_dbg = _coerce_name(fn_node.name)
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " enter"
+  end if
+
+  saved_stack = state.scope_stack
+  saved_declared = state.scope_declared
+  saved_idx_stack = state.scope_index_stack
+  saved_decl_idx_stack = state.scope_declared_index_stack
+  saved_in_fn = state.in_function
+  saved_analysis_mode = state.analysis_mode
+  saved_var_slots = state.var_slots
+  saved_boxed = state.current_fn_boxed_names
+  saved_qpref = state.current_qname_prefix
+  saved_file_pref = state.current_file_prefix
+  saved_qualify = state.qualify_cache
+  saved_func_globals = state.func_globals
+  saved_func_global_map = state.func_global_map
+  saved_func_global_map_index = state.func_global_map_index
+
+  state = scope.analysis_reset_function(state)
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " reset_done"
+  end if
+  state.analysis_mode = true
+  state.in_function = true
+  state.var_slots = 0
+  state.current_fn_boxed_names = boxed_names
+  state.qualify_cache = _prepare_qualify_cache(saved_qualify, 2048)
+  state.func_globals = []
+  state.func_global_map = []
+  state.func_global_map_index = t.fastmap_new(64)
+
+  base_globals = []
+  base_global_index = t.fastmap_new(128)
+  base_decl_index = t.fastmap_new(128)
+  if typeof(saved_stack) == "array" and len(saved_stack) > 0 then base_globals = saved_stack[0] end if
+  if typeof(saved_idx_stack) == "array" and len(saved_idx_stack) > 0 then base_global_index = saved_idx_stack[0] end if
+  if typeof(saved_decl_idx_stack) == "array" and len(saved_decl_idx_stack) > 0 then base_decl_index = saved_decl_idx_stack[0] end if
+  state.scope_stack = [base_globals, []]
+  state.scope_declared = [[], []]
+  state.scope_index_stack = [base_global_index, t.fastmap_new(128)]
+  state.scope_declared_index_stack = [base_decl_index, t.fastmap_new(128)]
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " scope_setup_done"
+  end if
+
+  fn_qn = _coerce_name(fn_node.name)
+  if fn_qn != "" and s.contains(fn_qn, ".") then
+    parts = s.split(fn_qn, ".")
+    qpref = ""
+    if len(parts) > 1 then
+      for pi = 0 to len(parts) - 2
+        segp = _coerce_name(parts[pi])
+        if segp == "" then continue end if
+        if qpref != "" then qpref = qpref + "." end if
+        qpref = qpref + segp
+      end for
+    end if
+    if qpref != "" then
+      state.current_qname_prefix = qpref + "."
+    else
+      state.current_qname_prefix = ""
+    end if
+  else
+    state.current_qname_prefix = ""
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " qprefix_done=" + state.current_qname_prefix
+  end if
+
+  fn_file = _st_file(fn_node)
+  if typeof(fn_file) == "string" and fn_file != "" then
+    state.current_file_prefix = _strpair_get(state.file_prefix_map, fn_file)
+  else
+    state.current_file_prefix = ""
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " fileprefix_done=" + state.current_file_prefix
+  end if
+
+  state = _closure_declare_capture_bindings(state, fn_node)
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " capture_bindings_done"
+  end if
+
+  if typeof(fn_node.params) == "array" and len(fn_node.params) > 0 then
+    pn_count = len(fn_node.params)
+    for i = 0 to pn_count - 1
+      if i < 0 or i >= pn_count then break end if
+      state = scope.bind_param(state, fn_node.params[i], 0, fn_node)
+      state = _analysis_mark_current_binding_boxed(state, fn_node.params[i])
+    end for
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " params_done"
+  end if
+
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " scan_block_begin"
+  end if
+  state = _analysis_scan_block(state, fn_node.body)
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and fn_qn_dbg == "std.string.isBlank" then
+    print "[dbg][analysis] " + fn_qn_dbg + " scan_block_done"
+  end if
+
+  state.scope_stack = saved_stack
+  state.scope_declared = saved_declared
+  state.scope_index_stack = saved_idx_stack
+  state.scope_declared_index_stack = saved_decl_idx_stack
+  state.in_function = saved_in_fn
+  state.analysis_mode = saved_analysis_mode
+  state.var_slots = saved_var_slots
+  state.current_fn_boxed_names = saved_boxed
+  state.current_qname_prefix = saved_qpref
+  state.current_file_prefix = saved_file_pref
+  state.qualify_cache = saved_qualify
+  state.func_globals = saved_func_globals
+  state.func_global_map = saved_func_global_map
+  state.func_global_map_index = saved_func_global_map_index
+  return state
+end function
+
 function _closure_expr_reads(ex, used)
-  if typeof(used) != "array" then used = [] end if
+  if typeof(used) != "array" and typeof(used) != "struct" then used = _name_set_new(64) end if
   if typeof(ex) != "struct" then return used end if
 
   k = ex.node_kind
   if k == "Var" and typeof(ex.name) == "string" then
-    return _arr_add_unique(used, ex.name)
+    return _name_set_add(used, ex.name)
   end if
 
   if k == "Unary" then
@@ -1821,8 +3375,8 @@ function _closure_expr_reads(ex, used)
 end function
 
 function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
-  if typeof(locals_set) != "array" then locals_set = [] end if
-  if typeof(globals_decl) != "array" then globals_decl = [] end if
+  if typeof(locals_set) != "array" and typeof(locals_set) != "struct" then locals_set = _name_set_new(64) end if
+  if typeof(globals_decl) != "array" and typeof(globals_decl) != "struct" then globals_decl = _name_set_new(32) end if
   if typeof(nested) != "array" then nested = [] end if
   if typeof(stmts) != "array" or len(stmts) <= 0 then return [locals_set, globals_decl, nested] end if
 
@@ -1839,7 +3393,7 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
       jn = len(st.names)
       while j < jn
         nm = _coerce_name(st.names[j])
-        if nm != "" then globals_decl = _arr_add_unique(globals_decl, nm) end if
+        if nm != "" then globals_decl = _name_set_add(globals_decl, nm) end if
         j = j + 1
       end while
       continue
@@ -1847,25 +3401,25 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
 
     if k == "Assign" then
       nm2 = _coerce_name(st.name)
-      if nm2 != "" and _arr_has(globals_decl, nm2) == false then
-        locals_set = _arr_add_unique(locals_set, nm2)
+      if nm2 != "" and _name_set_has(globals_decl, nm2) == false then
+        locals_set = _name_set_add(locals_set, nm2)
       end if
     end if
 
     if k == "For" then
       v = _coerce_name(st.var)
-      if v != "" then locals_set = _arr_add_unique(locals_set, v) end if
+      if v != "" then locals_set = _name_set_add(locals_set, v) end if
     end if
 
     if _is_foreach_stmt(st) then
       fv = _foreach_var_name(st)
-      if fv != "" then locals_set = _arr_add_unique(locals_set, fv) end if
+      if fv != "" then locals_set = _name_set_add(locals_set, fv) end if
     end if
 
     if k == "FunctionDef" then
       nested = _arr_add_unique(nested, st)
       fnn = _coerce_name(st.name)
-      if fnn != "" then locals_set = _arr_add_unique(locals_set, fnn) end if
+      if fnn != "" then locals_set = _name_set_add(locals_set, fnn) end if
       continue
     end if
 
@@ -1930,8 +3484,8 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
 end function
 
 function _closure_collect_locals_and_nested(fn_node)
-  locals_set = []
-  globals_decl = []
+  locals_set = _name_set_new(32)
+  globals_decl = _name_set_new(16)
   nested = []
   if typeof(fn_node) != "struct" then return [locals_set, globals_decl, nested] end if
 
@@ -1939,7 +3493,7 @@ function _closure_collect_locals_and_nested(fn_node)
     for i = 0 to len(fn_node.params) - 1
       if i < 0 or i >= len(fn_node.params) then break end if
       nm = _coerce_name(fn_node.params[i])
-      if nm != "" then locals_set = _arr_add_unique(locals_set, nm) end if
+      if nm != "" then locals_set = _name_set_add(locals_set, nm) end if
     end for
   end if
 
@@ -1949,7 +3503,7 @@ function _closure_collect_locals_and_nested(fn_node)
 end function
 
 function _closure_collect_uses(stmts)
-  used = []
+  used = _name_set_new(64)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return used end if
 
   i = 0
@@ -1983,7 +3537,7 @@ function _closure_collect_uses(stmts)
 
     if k == "If" then
       used = _closure_expr_reads(st.cond, used)
-      used = _arr_union(used, _closure_collect_uses(st.then_body))
+      used = _name_set_union(used, _closure_collect_uses(st.then_body))
       if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
         ei = 0
         en = len(st.elifs)
@@ -1993,23 +3547,23 @@ function _closure_collect_uses(stmts)
             used = _closure_expr_reads(eb[0], used)
           end if
           if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" then
-            used = _arr_union(used, _closure_collect_uses(eb[1]))
+            used = _name_set_union(used, _closure_collect_uses(eb[1]))
           end if
           ei = ei + 1
         end while
       end if
-      used = _arr_union(used, _closure_collect_uses(st.else_body))
+      used = _name_set_union(used, _closure_collect_uses(st.else_body))
       continue
     end if
 
     if k == "While" then
       used = _closure_expr_reads(st.cond, used)
-      used = _arr_union(used, _closure_collect_uses(st.body))
+      used = _name_set_union(used, _closure_collect_uses(st.body))
       continue
     end if
 
     if k == "DoWhile" then
-      used = _arr_union(used, _closure_collect_uses(st.body))
+      used = _name_set_union(used, _closure_collect_uses(st.body))
       used = _closure_expr_reads(st.cond, used)
       continue
     end if
@@ -2017,13 +3571,13 @@ function _closure_collect_uses(stmts)
     if k == "For" then
       used = _closure_expr_reads(st.start, used)
       used = _closure_expr_reads(st.end_expr, used)
-      used = _arr_union(used, _closure_collect_uses(st.body))
+      used = _name_set_union(used, _closure_collect_uses(st.body))
       continue
     end if
 
     if _is_foreach_stmt(st) then
       used = _closure_expr_reads(st.iterable, used)
-      used = _arr_union(used, _closure_collect_uses(st.body))
+      used = _name_set_union(used, _closure_collect_uses(st.body))
       continue
     end if
 
@@ -2049,11 +3603,11 @@ function _closure_collect_uses(stmts)
             used = _closure_expr_reads(cs.range_start, used)
             used = _closure_expr_reads(cs.range_end, used)
           end if
-          used = _arr_union(used, _closure_collect_uses(cs.body))
+          used = _name_set_union(used, _closure_collect_uses(cs.body))
           ci = ci + 1
         end while
       end if
-      used = _arr_union(used, _closure_collect_uses(st.default_body))
+      used = _name_set_union(used, _closure_collect_uses(st.default_body))
       continue
     end if
   end while
@@ -2062,7 +3616,7 @@ function _closure_collect_uses(stmts)
 end function
 
 function _closure_collect_writes(fn_node)
-  written = []
+  written = _name_set_new(64)
   stmts = fn_node
   if typeof(fn_node) == "struct" and typeof(fn_node.body) == "array" then
     stmts = fn_node.body
@@ -2079,29 +3633,29 @@ function _closure_collect_writes(fn_node)
     if k == "FunctionDef" then continue end if
 
     if k == "Assign" and typeof(st.name) == "string" then
-      written = _arr_add_unique(written, st.name)
+      written = _name_set_add(written, st.name)
       continue
     end if
 
     if k == "If" then
-      written = _arr_union(written, _closure_collect_writes(st.then_body))
+      written = _name_set_union(written, _closure_collect_writes(st.then_body))
       if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
         ei = 0
         en = len(st.elifs)
         while ei < en
           eb = st.elifs[ei]
           if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" then
-            written = _arr_union(written, _closure_collect_writes(eb[1]))
+            written = _name_set_union(written, _closure_collect_writes(eb[1]))
           end if
           ei = ei + 1
         end while
       end if
-      written = _arr_union(written, _closure_collect_writes(st.else_body))
+      written = _name_set_union(written, _closure_collect_writes(st.else_body))
       continue
     end if
 
     if k == "While" or k == "DoWhile" or k == "For" or _is_foreach_stmt(st) then
-      written = _arr_union(written, _closure_collect_writes(st.body))
+      written = _name_set_union(written, _closure_collect_writes(st.body))
       continue
     end if
 
@@ -2112,12 +3666,12 @@ function _closure_collect_writes(fn_node)
         while ci < cn
           cs = st.cases[ci]
           if typeof(cs) == "struct" then
-            written = _arr_union(written, _closure_collect_writes(cs.body))
+            written = _name_set_union(written, _closure_collect_writes(cs.body))
           end if
           ci = ci + 1
         end while
       end if
-      written = _arr_union(written, _closure_collect_writes(st.default_body))
+      written = _name_set_union(written, _closure_collect_writes(st.default_body))
       continue
     end if
   end while
@@ -2126,22 +3680,23 @@ function _closure_collect_writes(fn_node)
 end function
 
 function _note_reads(read_before, written_yet, names)
-  if typeof(read_before) != "array" then read_before = [] end if
-  if typeof(written_yet) != "array" then written_yet = [] end if
+  if typeof(read_before) != "array" and typeof(read_before) != "struct" then read_before = _name_set_new(64) end if
+  if typeof(written_yet) != "array" and typeof(written_yet) != "struct" then written_yet = _name_set_new(32) end if
+  if typeof(names) == "struct" then names = _name_set_to_array(names) end if
   if typeof(names) != "array" or len(names) <= 0 then return read_before end if
   for i = 0 to len(names) - 1
     if i < 0 or i >= len(names) then break end if
     nm = names[i]
     if typeof(nm) != "string" or nm == "" then continue end if
-    if _arr_has(written_yet, nm) then continue end if
-    read_before = _arr_add_unique(read_before, nm)
+    if _name_set_has(written_yet, nm) then continue end if
+    read_before = _name_set_add(read_before, nm)
   end for
   return read_before
 end function
 
 function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
-  if typeof(read_before) != "array" then read_before = [] end if
-  if typeof(written_yet) != "array" then written_yet = [] end if
+  if typeof(read_before) != "array" and typeof(read_before) != "struct" then read_before = _name_set_new(64) end if
+  if typeof(written_yet) != "array" and typeof(written_yet) != "struct" then written_yet = _name_set_new(32) end if
   if typeof(stmts) != "array" or len(stmts) <= 0 then return [read_before, written_yet] end if
 
   i = 0
@@ -2154,21 +3709,21 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     if k == "FunctionDef" then continue end if
 
     if k == "Assign" then
-      rr = _closure_expr_reads(st.expr, [])
+      rr = _closure_expr_reads(st.expr, _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr)
       nm = _coerce_name(st.name)
-      if nm != "" then written_yet = _arr_add_unique(written_yet, nm) end if
+      if nm != "" then written_yet = _name_set_add(written_yet, nm) end if
       continue
     end if
 
     if k == "Print" or k == "ExprStmt" or k == "Return" then
-      rr2 = _closure_expr_reads(st.expr, [])
+      rr2 = _closure_expr_reads(st.expr, _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr2)
       continue
     end if
 
     if k == "SetMember" then
-      rr3 = []
+      rr3 = _name_set_new(16)
       tgt = st.obj
       if typeof(tgt) != "struct" then tgt = st.target end if
       rr3 = _closure_expr_reads(tgt, rr3)
@@ -2178,7 +3733,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     end if
 
     if k == "SetIndex" then
-      rr4 = []
+      rr4 = _name_set_new(16)
       rr4 = _closure_expr_reads(st.target, rr4)
       rr4 = _closure_expr_reads(st.index, rr4)
       rr4 = _closure_expr_reads(st.expr, rr4)
@@ -2187,7 +3742,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     end if
 
     if k == "If" then
-      rc = _closure_expr_reads(st.cond, [])
+      rc = _closure_expr_reads(st.cond, _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rc)
       sub = _closure_collect_rbfw_walk(st.then_body, read_before, written_yet)
       read_before = sub[0]
@@ -2198,7 +3753,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
         while ei < en
           eb = st.elifs[ei]
           if typeof(eb) == "array" and len(eb) >= 1 then
-            rc2 = _closure_expr_reads(eb[0], [])
+            rc2 = _closure_expr_reads(eb[0], _name_set_new(16))
             read_before = _note_reads(read_before, written_yet, rc2)
           end if
           if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" then
@@ -2216,7 +3771,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     end if
 
     if k == "While" then
-      rc3 = _closure_expr_reads(st.cond, [])
+      rc3 = _closure_expr_reads(st.cond, _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rc3)
       sub4 = _closure_collect_rbfw_walk(st.body, read_before, written_yet)
       read_before = sub4[0]
@@ -2228,18 +3783,18 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
       sub5 = _closure_collect_rbfw_walk(st.body, read_before, written_yet)
       read_before = sub5[0]
       written_yet = sub5[1]
-      rc4 = _closure_expr_reads(st.cond, [])
+      rc4 = _closure_expr_reads(st.cond, _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rc4)
       continue
     end if
 
     if k == "For" then
-      rr5 = []
+      rr5 = _name_set_new(16)
       rr5 = _closure_expr_reads(st.start, rr5)
       rr5 = _closure_expr_reads(st.end_expr, rr5)
       read_before = _note_reads(read_before, written_yet, rr5)
       v = _coerce_name(st.var)
-      if v != "" then written_yet = _arr_add_unique(written_yet, v) end if
+      if v != "" then written_yet = _name_set_add(written_yet, v) end if
       sub6 = _closure_collect_rbfw_walk(st.body, read_before, written_yet)
       read_before = sub6[0]
       written_yet = sub6[1]
@@ -2247,10 +3802,10 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     end if
 
     if _is_foreach_stmt(st) then
-      rr6 = _closure_expr_reads(st.iterable, [])
+      rr6 = _closure_expr_reads(st.iterable, _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr6)
       fv = _foreach_var_name(st)
-      if fv != "" then written_yet = _arr_add_unique(written_yet, fv) end if
+      if fv != "" then written_yet = _name_set_add(written_yet, fv) end if
       sub7 = _closure_collect_rbfw_walk(st.body, read_before, written_yet)
       read_before = sub7[0]
       written_yet = sub7[1]
@@ -2258,7 +3813,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     end if
 
     if k == "Switch" then
-      rr7 = _closure_expr_reads(st.expr, [])
+      rr7 = _closure_expr_reads(st.expr, _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr7)
       if typeof(st.cases) == "array" and len(st.cases) > 0 then
         ci = 0
@@ -2273,12 +3828,12 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
             vi = 0
             vn = len(cs.values)
             while vi < vn
-              rr8 = _closure_expr_reads(cs.values[vi], [])
+              rr8 = _closure_expr_reads(cs.values[vi], _name_set_new(16))
               read_before = _note_reads(read_before, written_yet, rr8)
               vi = vi + 1
             end while
           else
-            rr9 = []
+            rr9 = _name_set_new(16)
             rr9 = _closure_expr_reads(cs.range_start, rr9)
             rr9 = _closure_expr_reads(cs.range_end, rr9)
             read_before = _note_reads(read_before, written_yet, rr9)
@@ -2300,15 +3855,16 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
 end function
 
 function _closure_collect_read_before_first_write(stmts, params_set)
-  written_yet = []
+  written_yet = _name_set_new(32)
+  if typeof(params_set) == "struct" then params_set = _name_set_to_array(params_set) end if
   if typeof(params_set) == "array" and len(params_set) > 0 then
     for i = 0 to len(params_set) - 1
       if i < 0 or i >= len(params_set) then break end if
       nm = _coerce_name(params_set[i])
-      if nm != "" then written_yet = _arr_add_unique(written_yet, nm) end if
+      if nm != "" then written_yet = _name_set_add(written_yet, nm) end if
     end for
   end if
-  res = _closure_collect_rbfw_walk(stmts, [], written_yet)
+  res = _closure_collect_rbfw_walk(stmts, _name_set_new(64), written_yet)
   return res[0]
 end function
 
@@ -2338,31 +3894,32 @@ function _closure_analyze_function_rec(state, fn_node, outer_scopes)
   uses = _closure_collect_uses(body_stmts)
   writes = _closure_collect_writes(body_stmts)
 
-  params_set = []
+  params_set = _name_set_new(16)
   if typeof(fn_node.params) == "array" and len(fn_node.params) > 0 then
     for pi = 0 to len(fn_node.params) - 1
       pn = _coerce_name(fn_node.params[pi])
-      if pn != "" then params_set = _arr_add_unique(params_set, pn) end if
+      if pn != "" then params_set = _name_set_add(params_set, pn) end if
     end for
   end if
   read_before_write = _closure_collect_read_before_first_write(body_stmts, params_set)
 
-  captures = []
-  capture_depth = []
+  captures = _name_set_new(16)
+  capture_depth = t.fastmap_new(16)
 
-  if len(writes) > 0 and len(outer_scopes) > 0 then
-    for i = 0 to len(writes) - 1
-      name = writes[i]
+  write_names = _name_set_to_array(writes)
+  if len(write_names) > 0 and len(outer_scopes) > 0 then
+    for i = 0 to len(write_names) - 1
+      name = write_names[i]
       if typeof(name) != "string" or name == "" then continue end if
-      if _arr_has(params_set, name) then continue end if
-      if _arr_has(globals_decl, name) then continue end if
+      if _name_set_has(params_set, name) then continue end if
+      if _name_set_has(globals_decl, name) then continue end if
       if _has_dot_name(name) then continue end if
-      if _arr_has(read_before_write, name) == false then continue end if
+      if _name_set_has(read_before_write, name) == false then continue end if
       for d = 0 to len(outer_scopes) - 1
         oscope = outer_scopes[d]
-        if _arr_has(oscope, name) then
-          locals_set = _arr_remove_value(locals_set, name)
-          captures = _arr_add_unique(captures, name)
+        if _name_set_has(oscope, name) then
+          locals_set = _name_set_remove(locals_set, name)
+          captures = _name_set_add(captures, name)
           capture_depth = _map_int_set(capture_depth, name, d + 1)
           break
         end if
@@ -2370,19 +3927,20 @@ function _closure_analyze_function_rec(state, fn_node, outer_scopes)
     end for
   end if
 
-  uw = _arr_union(uses, writes)
-  if len(uw) > 0 and len(outer_scopes) > 0 then
-    for i = 0 to len(uw) - 1
-      nm = uw[i]
+  uw = _name_set_union(uses, writes)
+  uw_names = _name_set_to_array(uw)
+  if len(uw_names) > 0 and len(outer_scopes) > 0 then
+    for i = 0 to len(uw_names) - 1
+      nm = uw_names[i]
       if typeof(nm) != "string" or nm == "" then continue end if
-      if _arr_has(locals_set, nm) then continue end if
-      if _arr_has(globals_decl, nm) then continue end if
+      if _name_set_has(locals_set, nm) then continue end if
+      if _name_set_has(globals_decl, nm) then continue end if
       if _has_dot_name(nm) then continue end if
-      if _arr_has(captures, nm) then continue end if
+      if _name_set_has(captures, nm) then continue end if
       for d2 = 0 to len(outer_scopes) - 1
         os2 = outer_scopes[d2]
-        if _arr_has(os2, nm) then
-          captures = _arr_add_unique(captures, nm)
+        if _name_set_has(os2, nm) then
+          captures = _name_set_add(captures, nm)
           capture_depth = _map_int_set(capture_depth, nm, d2 + 1)
           break
         end if
@@ -2390,9 +3948,9 @@ function _closure_analyze_function_rec(state, fn_node, outer_scopes)
     end for
   end if
 
-  fn_node._ml_locals = locals_set
-  fn_node._ml_globals_declared = globals_decl
-  fn_node._ml_captures = captures
+  fn_node._ml_locals = _sort_names(locals_set)
+  fn_node._ml_globals_declared = _sort_names(globals_decl)
+  fn_node._ml_captures = _sort_names(captures)
   fn_node._ml_capture_depth = capture_depth
   fn_node._ml_nested_functions = nested
 
@@ -2501,7 +4059,7 @@ function _closure_assign_env_layout(state, nested_fns)
       if typeof(fn) != "struct" then continue end if
       if typeof(fn._ml_boxed) != "array" then fn._ml_boxed = [] end if
       if typeof(fn._ml_env_slots) != "array" then fn._ml_env_slots = [] end if
-      if typeof(fn._ml_env_index) != "array" then fn._ml_env_index = [] end if
+      if typeof(fn._ml_env_index) != "array" and typeof(fn._ml_env_index) != "struct" then fn._ml_env_index = [] end if
     end for
   end if
 
@@ -2543,7 +4101,7 @@ function _closure_assign_env_layout(state, nested_fns)
       end if
       slots = _sort_names(slots)
       fn2._ml_env_slots = slots
-      env_index = []
+      env_index = t.fastmap_new((len(slots) * 2) + 16)
       if len(slots) > 0 then
         for si = 0 to len(slots) - 1
           env_index = _map_int_set(env_index, slots[si], si)
@@ -2559,7 +4117,7 @@ function _closure_assign_env_layout(state, nested_fns)
       if typeof(nf2) != "struct" then continue end if
       caps2 = nf2._ml_captures
       cdepth2 = nf2._ml_capture_depth
-      cap_idx = []
+      cap_idx = t.fastmap_new(16)
       if typeof(caps2) == "array" and len(caps2) > 0 then
         for ci2 = 0 to len(caps2) - 1
           nm = _as_name(caps2[ci2])
@@ -2593,9 +4151,10 @@ function _closure_assign_env_layout(state, nested_fns)
       nf3 = nested_fns[i]
       if typeof(nf3) != "struct" then continue end if
       cdepth3 = nf3._ml_capture_depth
-      if typeof(cdepth3) != "array" or len(cdepth3) <= 0 then continue end if
-      for ci3 = 0 to len(cdepth3) - 1
-        it = cdepth3[ci3]
+      cdepth_items = _map_int_items(cdepth3)
+      if typeof(cdepth_items) != "array" or len(cdepth_items) <= 0 then continue end if
+      for ci3 = 0 to len(cdepth_items) - 1
+        it = cdepth_items[ci3]
         depth3 = 0
         if typeof(it) == "struct" and typeof(it.value) == "int" then
           depth3 = it.value
@@ -2875,6 +4434,7 @@ function _stmt_uses_this(st)
 end function
 
 function inline _named_array_get(arr, key)
+  if typeof(arr) == "struct" then return t.fastmap_get(arr, key, 0) end if
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -2889,6 +4449,7 @@ function inline _named_array_get(arr, key)
 end function
 
 function _named_array_set(arr, key, values)
+  if typeof(arr) == "struct" then return t.fastmap_set(arr, key, values) end if
   if typeof(arr) != "array" then arr =[] end if
   if len(arr) > 0 then
     for i = 0 to len(arr) - 1
@@ -2907,6 +4468,11 @@ function _named_array_set(arr, key, values)
 end function
 
 function inline _named_int_get(arr, key, defaultv)
+  if typeof(arr) == "struct" then
+    v0 = t.fastmap_get(arr, key, defaultv)
+    if typeof(v0) == "int" then return v0 end if
+    return defaultv
+  end if
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
   for i = 0 to len(arr) - 1
     it = arr[i]
@@ -2923,6 +4489,7 @@ function inline _named_int_get(arr, key, defaultv)
 end function
 
 function _named_int_set(arr, key, value)
+  if typeof(arr) == "struct" then return t.fastmap_set(arr, key, value) end if
   if typeof(arr) != "array" then arr =[] end if
   if len(arr) > 0 then
     for i = 0 to len(arr) - 1
@@ -3741,6 +5308,8 @@ function _builtin_specs()
     ["hex", 1, 1, "fn_hex"],
     ["fromHex", 1, 1, "fn_fromHex"],
     ["slice", 3, 3, "fn_slice"],
+    ["copyBytes", 5, 5, "fn_builtin_copyBytes"],
+    ["fillBytes", 4, 4, "fn_builtin_fillBytes"],
     ["gc_collect", 0, 0, "fn_builtin_gc_collect"],
     ["gc_set_limit", 1, 1, "fn_builtin_gc_set_limit"],
     ["heap_count", 0, 0, "fn_heap_count"],
@@ -3875,11 +5444,12 @@ function emit_program(state, program)
   state.extern_structs = []
   state.value_enum_values = []
   state.user_function_index = t.fastmap_new(256)
-  state.qualify_cache = t.fastmap_new(4096)
+  state.function_codegen_name_map = t.fastmap_new(512)
+  state.qualify_cache = _prepare_qualify_cache(state.qualify_cache, 4096)
   nsid = _next_struct_id(state)
   neid = _next_enum_id(state)
-  decl_file_prefixes = []
-  decl_seen_nonpackage = []
+  decl_file_prefixes = t.fastmap_new(64)
+  decl_seen_nonpackage = t.fastmap_new(64)
   next_sid = nsid
   next_eid = neid
 
@@ -3906,6 +5476,32 @@ function emit_program(state, program)
   state.nested_user_functions = []
   // Closure analysis metadata (captures/env layout) for nested functions.
   state = _closure_analyze_program(state, program)
+  if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
+    for ufi = 0 to len(state.user_functions) - 1
+      uf_it = state.user_functions[ufi]
+      if typeof(uf_it) != "array" or len(uf_it) != 2 then continue end if
+      if typeof(uf_it[0]) != "string" or typeof(uf_it[1]) != "struct" then continue end if
+      uf_node = uf_it[1]
+      state = _set_fn_codegen_name(state, uf_node, uf_it[0])
+    end for
+  end if
+  if typeof(state.nested_user_functions) == "array" and len(state.nested_user_functions) > 0 then
+    nested_counter = 1
+    for nfi = 0 to len(state.nested_user_functions) - 1
+      nf = state.nested_user_functions[nfi]
+      if typeof(nf) != "struct" then continue end if
+      parent = nf._ml_parent_fn
+      parent_code = "toplevel"
+      if typeof(parent) == "struct" then
+        parent_code = _fn_codegen_name(state, parent)
+        if parent_code == "" then parent_code = _coerce_name(parent.name) end if
+      end if
+      base = _coerce_name(nf.name)
+      if base == "" then base = "fn" end if
+      state = _set_fn_codegen_name(state, nf, parent_code + "__" + base + "__n" + nested_counter)
+      nested_counter = nested_counter + 1
+    end for
+  end if
   state = _closure_assign_env_layout(state, state.nested_user_functions)
   state = _mem_probe(state, "closure_done")
   state.typename_struct_by_id = []
@@ -3918,42 +5514,58 @@ function emit_program(state, program)
   state.builtin_global_labels = []
   state.extern_global_labels = []
   state.extern_stub_labels = []
-  state.callprof_entries = []
-  state.callprof_index = []
-  state.callprof_name_labels = []
-  state.callprof_n = 0
-
-  if state.call_profile then
-    cp_entries_b = t.arr_chunk_new(64)
-    if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
-      for cpi = 0 to len(state.user_functions) - 1
-        cp_it = state.user_functions[cpi]
-        if typeof(cp_it) != "array" or len(cp_it) != 2 then continue end if
-        cp_name = _coerce_name(cp_it[0])
-        if cp_name == "" then continue end if
-        cp_entries_b = t.arr_chunk_push(cp_entries_b, [cp_name, cp_name])
-      end for
-    end if
-    cp_entries = t.arr_chunk_finish(cp_entries_b)
-
-    state.callprof_entries = cp_entries
-    state.callprof_n = len(cp_entries)
-
-    if state.callprof_n > 0 then
-      cp_name_labels_b = t.arr_chunk_new(64)
-      state.data = d.data_add_bytes(state.data, "callprof_counts", bytes(8 * state.callprof_n, 0))
-      for cpi = 0 to state.callprof_n - 1
-        cp_lbl = "callprof_name_" + cpi
-        cp_disp = cp_entries[cpi][1]
-        state.rdata = d.rdata_add_obj_string(state.rdata, cp_lbl, cp_disp)
-        cp_name_labels_b = t.arr_chunk_push(cp_name_labels_b, cp_lbl)
-        cp_code = cp_entries[cpi][0]
-        state.callprof_index = _named_int_set(state.callprof_index, cp_code, cpi)
-      end for
-      state.callprof_name_labels = t.arr_chunk_finish(cp_name_labels_b)
-    end if
+  // Match Python codegen: reserve global callable/type slots before static object
+  // materialization so label order stays stable when externs are present.
+  if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
+    for i = 0 to len(state.user_functions) - 1
+      it = state.user_functions[i]
+      if typeof(it) != "array" or len(it) != 2 then continue end if
+      fn_qn = _coerce_name(it[0])
+      fn_node = it[1]
+      if fn_qn == "" then continue end if
+      r0 = _ensure_global_binding_label(state, fn_qn, fn_node)
+      state = r0[0]
+      lbl0 = r0[1]
+      if lbl0 != "" then
+        state.function_global_labels = _strpair_set(state.function_global_labels, fn_qn, lbl0)
+      end if
+    end for
   end if
 
+  if typeof(state.struct_fields) == "array" and len(state.struct_fields) > 0 then
+    for si = 0 to len(state.struct_fields) - 1
+      sf = state.struct_fields[si]
+      sqn = ""
+      if typeof(sf) == "struct" then sqn = _coerce_name(sf.key) end if
+      if typeof(sf) == "array" and len(sf) >= 2 then sqn = _coerce_name(sf[0]) end if
+      if sqn == "" then continue end if
+      if _arr_has(state.reserved_identifiers, sqn) then continue end if
+      r1 = _ensure_global_binding_label(state, sqn, 0)
+      state = r1[0]
+      lbl1 = r1[1]
+      if lbl1 != "" then
+        state.struct_global_labels = _strpair_set(state.struct_global_labels, sqn, lbl1)
+      end if
+    end for
+  end if
+
+  if typeof(state.builtin_specs) == "array" and len(state.builtin_specs) > 0 then
+    for bi = 0 to len(state.builtin_specs) - 1
+      sp = state.builtin_specs[bi]
+      if typeof(sp) != "array" or len(sp) < 4 then continue end if
+      bname = _coerce_name(sp[0])
+      if bname == "" then continue end if
+      if _arr_has(state.reserved_identifiers, bname) then continue end if
+      bx = scope.resolve_binding(state, bname)
+      if typeof(bx) == "struct" then continue end if
+      r2 = _ensure_global_binding_label(state, bname, 0)
+      state = r2[0]
+      lbl2 = r2[1]
+      if lbl2 != "" then
+        state.builtin_global_labels = _strpair_set(state.builtin_global_labels, bname, lbl2)
+      end if
+    end for
+  end if
   // Materialize boxed concrete type-name strings for typeName(x).
   typename_struct_by_id_b = t.arr_chunk_new(64)
   if typeof(state.struct_ids) == "array" and len(state.struct_ids) > 0 then
@@ -3977,7 +5589,7 @@ function emit_program(state, program)
       state.typename_struct_by_qname = _strpair_set(state.typename_struct_by_qname, sqn_t, lbl_t)
     end for
   end if
-  state.typename_struct_by_id = t.arr_chunk_finish(typename_struct_by_id_b)
+  state.typename_struct_by_id = _sort_id_label_pairs(t.arr_chunk_finish(typename_struct_by_id_b))
 
   typename_enum_by_id_b = t.arr_chunk_new(64)
   if typeof(state.enum_ids) == "array" and len(state.enum_ids) > 0 then
@@ -4001,7 +5613,164 @@ function emit_program(state, program)
       state.typename_enum_by_qname = _strpair_set(state.typename_enum_by_qname, eqn_t, lbl_e)
     end for
   end if
-  state.typename_enum_by_id = t.arr_chunk_finish(typename_enum_by_id_b)
+  state.typename_enum_by_id = _sort_id_label_pairs(t.arr_chunk_finish(typename_enum_by_id_b))
+  // Materialize immutable first-class callable/type objects in .rdata.
+  state.function_static_obj_labels = []
+  if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
+    for i = 0 to len(state.user_functions) - 1
+      it = state.user_functions[i]
+      if typeof(it) != "array" or len(it) != 2 then continue end if
+      fn_qn = _coerce_name(it[0])
+      fn_node = it[1]
+      if fn_qn == "" then continue end if
+      arity = 0
+      if typeof(fn_node) == "struct" and typeof(fn_node.params) == "array" then arity = len(fn_node.params) end if
+      obj_lbl = "obj_fn_static_" + len(state.rdata.labels)
+      state.rdata = d.rdata_pad_align(state.rdata, 8)
+      state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_FUNCTION) + t.u32(arity) + bytes(8, 0))
+      off = _rdata_label_offset(state.rdata, obj_lbl)
+      if off >= 0 then
+        state.rdata = d.rdata_add_abs64_patch(state.rdata, off + 8, "fn_user_" + fn_qn)
+        state.function_static_obj_labels = _strpair_set(state.function_static_obj_labels, fn_qn, obj_lbl)
+      end if
+    end for
+  end if
+
+  state.struct_static_obj_labels = []
+  if typeof(state.struct_fields) == "array" and len(state.struct_fields) > 0 then
+    for si = 0 to len(state.struct_fields) - 1
+      sf = state.struct_fields[si]
+      sqn = ""
+      flds = []
+      if typeof(sf) == "struct" then
+        sqn = _coerce_name(sf.key)
+        if typeof(sf.values) == "array" then flds = sf.values end if
+      else
+        if typeof(sf) == "array" and len(sf) >= 2 then
+          sqn = _coerce_name(sf[0])
+          if typeof(sf[1]) == "array" then flds = sf[1] end if
+        end if
+      end if
+      if sqn == "" then continue end if
+      sid = _named_int_get(state.struct_ids, sqn, 0)
+      obj_lbl = "obj_structtype_static_" + len(state.rdata.labels)
+      state.rdata = d.rdata_pad_align(state.rdata, 8)
+      state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_STRUCTTYPE) + t.u32(len(flds)) + t.u32(sid) + t.u32(0))
+      state.struct_static_obj_labels = _strpair_set(state.struct_static_obj_labels, sqn, obj_lbl)
+    end for
+  end if
+
+  state.builtin_static_obj_labels = []
+  if typeof(state.builtin_specs) == "array" and len(state.builtin_specs) > 0 then
+    for bi = 0 to len(state.builtin_specs) - 1
+      sp = state.builtin_specs[bi]
+      if typeof(sp) != "array" or len(sp) < 4 then continue end if
+      bname = _coerce_name(sp[0])
+      if bname == "" then continue end if
+      min_a = sp[1]
+      max_a = sp[2]
+      blbl = _coerce_name(sp[3])
+      if blbl == "" then continue end if
+      obj_lbl = "obj_builtin_static_" + len(state.rdata.labels)
+      state.rdata = d.rdata_pad_align(state.rdata, 8)
+      state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_BUILTIN) + t.u32(min_a) + t.u32(max_a) + t.u32(0) + bytes(8, 0))
+      off = _rdata_label_offset(state.rdata, obj_lbl)
+      if off >= 0 then
+        state.rdata = d.rdata_add_abs64_patch(state.rdata, off + 16, blbl)
+        state.builtin_static_obj_labels = _strpair_set(state.builtin_static_obj_labels, bname, obj_lbl)
+        state.used_helpers = add(state.used_helpers, blbl)
+      end if
+    end for
+  end if
+  state.extern_global_labels = []
+  state.extern_stub_labels = []
+  if typeof(state.extern_sigs) == "array" and len(state.extern_sigs) > 0 then
+    for ei = 0 to len(state.extern_sigs) - 1
+      sig = state.extern_sigs[ei]
+      if typeof(sig) != "struct" then continue end if
+      qn = _coerce_name(sig.qname)
+      if qn == "" then qn = _coerce_name(sig.name) end if
+      if qn == "" then continue end if
+      ex = scope.resolve_binding(state, qn)
+      if typeof(ex) == "struct" then continue end if
+      r3 = _ensure_global_binding_label(state, qn, 0)
+      state = r3[0]
+      lbl3 = r3[1]
+      if lbl3 != "" then
+        state.extern_global_labels = _strpair_set(state.extern_global_labels, qn, lbl3)
+        state.extern_stub_labels = _strpair_set(state.extern_stub_labels, qn, "fn_extern_" + lbl3)
+      end if
+    end for
+  end if
+  state.extern_static_obj_labels = []
+  if typeof(state.extern_sigs) == "array" and len(state.extern_sigs) > 0 then
+    for ei = 0 to len(state.extern_sigs) - 1
+      sig = state.extern_sigs[ei]
+      if typeof(sig) != "struct" then continue end if
+      qn = _coerce_name(sig.qname)
+      if qn == "" then qn = _coerce_name(sig.name) end if
+      if qn == "" then continue end if
+      stub_lbl = _strpair_get(state.extern_stub_labels, qn)
+      if stub_lbl == "" then continue end if
+      arity = 0
+      if typeof(sig.params) == "array" then arity = len(sig.params) end if
+      obj_lbl = "obj_extern_static_" + len(state.rdata.labels)
+      state.rdata = d.rdata_pad_align(state.rdata, 8)
+      state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_BUILTIN) + t.u32(arity) + t.u32(arity) + t.u32(0) + bytes(8, 0))
+      off = _rdata_label_offset(state.rdata, obj_lbl)
+      if off >= 0 then
+        state.rdata = d.rdata_add_abs64_patch(state.rdata, off + 16, stub_lbl)
+        state.extern_static_obj_labels = _strpair_set(state.extern_static_obj_labels, qn, obj_lbl)
+      end if
+    end for
+  end if
+  state.callprof_entries = []
+  state.callprof_index = []
+  state.callprof_name_labels = []
+  state.callprof_n = 0
+
+  if state.call_profile then
+    cp_entries_b = t.arr_chunk_new(64)
+    cp_user_names = _user_function_keys_sorted(state)
+    if len(cp_user_names) > 0 then
+      for cpi = 0 to len(cp_user_names) - 1
+        cp_name = cp_user_names[cpi]
+        cp_fn = _user_function_get_node(state, cp_name)
+        cp_code = _fn_codegen_name(state, cp_fn)
+        if cp_code == "" then cp_code = cp_name end if
+        cp_entries_b = t.arr_chunk_push(cp_entries_b, [cp_code, cp_name])
+      end for
+    end if
+    cp_nested_names = _nested_function_codegen_names_sorted(state)
+    if len(cp_nested_names) > 0 then
+      for cpi2 = 0 to len(cp_nested_names) - 1
+        cp_code2 = cp_nested_names[cpi2]
+        cp_fn2 = _nested_function_get_by_codegen_name(state, cp_code2)
+        cp_disp2 = ""
+        if typeof(cp_fn2) == "struct" then cp_disp2 = _coerce_name(cp_fn2.name) end if
+        if cp_disp2 == "" then cp_disp2 = cp_code2 end if
+        cp_entries_b = t.arr_chunk_push(cp_entries_b, [cp_code2, cp_disp2])
+      end for
+    end if
+    cp_entries = t.arr_chunk_finish(cp_entries_b)
+
+    state.callprof_entries = cp_entries
+    state.callprof_n = len(cp_entries)
+
+    if state.callprof_n > 0 then
+      cp_name_labels_b = t.arr_chunk_new(64)
+      state.data = d.data_add_bytes(state.data, "callprof_counts", bytes(8 * state.callprof_n, 0))
+      for cpi = 0 to state.callprof_n - 1
+        cp_lbl = "callprof_name_" + cpi
+        cp_disp = cp_entries[cpi][1]
+        state.rdata = d.rdata_add_obj_string(state.rdata, cp_lbl, cp_disp)
+        cp_name_labels_b = t.arr_chunk_push(cp_name_labels_b, cp_lbl)
+        cp_code = cp_entries[cpi][0]
+        state.callprof_index = _named_int_set(state.callprof_index, cp_code, cpi)
+      end for
+      state.callprof_name_labels = t.arr_chunk_finish(cp_name_labels_b)
+    end if
+  end if
 
   // Hoist function identifiers as first-class callable globals.
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
@@ -4028,6 +5797,7 @@ function emit_program(state, program)
       if typeof(sf) == "struct" then sqn = _coerce_name(sf.key) end if
       if typeof(sf) == "array" and len(sf) >= 2 then sqn = _coerce_name(sf[0]) end if
       if sqn == "" then continue end if
+      if _arr_has(state.reserved_identifiers, sqn) then continue end if
       r1 = _ensure_global_binding_label(state, sqn, 0)
       state = r1[0]
       lbl1 = r1[1]
@@ -4044,6 +5814,7 @@ function emit_program(state, program)
       if typeof(sp) != "array" or len(sp) < 4 then continue end if
       bname = _coerce_name(sp[0])
       if bname == "" then continue end if
+      if _arr_has(state.reserved_identifiers, bname) then continue end if
       bx = scope.resolve_binding(state, bname)
       if typeof(bx) == "struct" then continue end if
       r2 = _ensure_global_binding_label(state, bname, 0)
@@ -4055,42 +5826,119 @@ function emit_program(state, program)
     end for
   end if
 
-  // Hoist extern identifiers as stub-callable OBJ_BUILTIN globals.
-  if typeof(state.extern_sigs) == "array" and len(state.extern_sigs) > 0 then
-    for ei = 0 to len(state.extern_sigs) - 1
-      sig = state.extern_sigs[ei]
-      if typeof(sig) != "struct" then continue end if
-      qn = _coerce_name(sig.qname)
-      if qn == "" then qn = _coerce_name(sig.name) end if
-      if qn == "" then continue end if
-      ex = scope.resolve_binding(state, qn)
-      if typeof(ex) == "struct" then continue end if
-      r3 = _ensure_global_binding_label(state, qn, 0)
-      state = r3[0]
-      lbl3 = r3[1]
-      if lbl3 != "" then
-        state.extern_global_labels = _strpair_set(state.extern_global_labels, qn, lbl3)
-        state.extern_stub_labels = _strpair_set(state.extern_stub_labels, qn, "fn_extern_" + lbl3)
-      end if
-    end for
-  end if
   state = _mem_probe(state, "pre_flatten")
 
   program = _flatten_runtime(state, program)
   state = _mem_probe(state, "flatten_done")
 
-  state = _check_program_semantics(state, program)
-  state = _mem_probe(state, "semantic_done")
+  // Track owning file for flattened top-level globals.
+  state._global_owner_file = t.fastmap_new(256)
+  state._module_init_status_labels = t.fastmap_new(64)
+  state._module_init_active = false
+  state._module_init_active_file = ""
+  if typeof(program) == "array" and len(program) > 0 then
+    for pgi = 0 to len(program) - 1
+      pst = program[pgi]
+      if typeof(pst) != "struct" then continue end if
+      pst_file = _st_file(pst)
+      if pst_file == "" then continue end if
+      if pst.node_kind != "Assign" and pst.node_kind != "ConstDecl" then continue end if
+      pst_name = _coerce_name(pst.name)
+      if pst_name == "" then continue end if
+      state._global_owner_file = _strpair_set(state._global_owner_file, pst_name, pst_file)
+    end for
+  end if
+  state = _mem_probe(state, "owner_map_done")
 
+  // Match Python codegen: reserve only globals referenced by `global ...`
+  // declarations inside functions before module-init flags are allocated.
+  if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
+    for sfi = 0 to len(state.user_functions) - 1
+      uf_scan = state.user_functions[sfi]
+      if typeof(uf_scan) != "array" or len(uf_scan) != 2 then continue end if
+      if typeof(uf_scan[1]) != "struct" then continue end if
+      state = _scan_function_for_global_decls(state, uf_scan[1])
+    end for
+  end if
+  if typeof(state.nested_user_functions) == "array" and len(state.nested_user_functions) > 0 then
+    for sni = 0 to len(state.nested_user_functions) - 1
+      nf_scan = state.nested_user_functions[sni]
+      if typeof(nf_scan) != "struct" then continue end if
+      state = _scan_function_for_global_decls(state, nf_scan)
+    end for
+  end if
+  state = _mem_probe(state, "func_globals_bound")
+
+  if _heap_cfg_get_bool(state, "cg_semantic_pass", false) then
+    state = _check_program_semantics(state, program)
+    state = _mem_probe(state, "semantic_done")
+  end if
+
+  module_init_recs_b = t.arr_chunk_new(64)
+  cur_mod_file = ""
+  cur_mod_items_b = t.arr_chunk_new(64)
+  cur_mod_count = 0
+  mod_index = 0
+  if typeof(program) == "array" and len(program) > 0 then
+    for pmi = 0 to len(program) - 1
+      pst2 = program[pmi]
+      mod_file = _st_file(pst2)
+      if mod_file == "" then mod_file = "<module:entry>" end if
+      if cur_mod_count <= 0 then cur_mod_file = mod_file end if
+      if cur_mod_count > 0 and mod_file != cur_mod_file then
+        mod_index = mod_index + 1
+        mstmts = t.arr_chunk_finish(cur_mod_items_b)
+        fn_lbl = "modinit_" + mod_index
+        flag_lbl = "modinit_done_" + mod_index
+        status_lbl = "modinit_status_" + mod_index
+        state.data = d.data_add_u64(state.data, flag_lbl, 0)
+        state.data = d.data_add_u64(state.data, status_lbl, 0)
+        state._module_init_status_labels = _strpair_set(state._module_init_status_labels, cur_mod_file, status_lbl)
+        module_init_recs_b = t.arr_chunk_push(module_init_recs_b, [cur_mod_file, mstmts, fn_lbl, flag_lbl, status_lbl])
+        cur_mod_file = mod_file
+        cur_mod_items_b = t.arr_chunk_new(64)
+        cur_mod_count = 0
+      end if
+      cur_mod_items_b = t.arr_chunk_push(cur_mod_items_b, pst2)
+      cur_mod_count = cur_mod_count + 1
+    end for
+  end if
+  if cur_mod_count > 0 then
+    mod_index = mod_index + 1
+    mstmts2 = t.arr_chunk_finish(cur_mod_items_b)
+    fn_lbl2 = "modinit_" + mod_index
+    flag_lbl2 = "modinit_done_" + mod_index
+    status_lbl2 = "modinit_status_" + mod_index
+    state.data = d.data_add_u64(state.data, flag_lbl2, 0)
+    state.data = d.data_add_u64(state.data, status_lbl2, 0)
+    state._module_init_status_labels = _strpair_set(state._module_init_status_labels, cur_mod_file, status_lbl2)
+    module_init_recs_b = t.arr_chunk_push(module_init_recs_b, [cur_mod_file, mstmts2, fn_lbl2, flag_lbl2, status_lbl2])
+  end if
+  module_init_recs = t.arr_chunk_finish(module_init_recs_b)
+  state = _mem_probe(state, "module_init_recs_done")
+
+  max_call_args_main = max_calls_stmts(state, program)
+  if typeof(max_call_args_main) != "int" or max_call_args_main < 0 then max_call_args_main = 0 end if
+  program = []
+  out_stack_args = max_call_args_main - 4
+  if out_stack_args < 0 then out_stack_args = 0 end if
+  out_reserve = out_stack_args * 8
+  if out_reserve < 8 then out_reserve = 8 end if
+  state.call_temp_base = t.align_up(0x20 + out_reserve, 16)
+  call_temp_bytes = max_call_args_main * 8
+  if call_temp_bytes < 0x40 then call_temp_bytes = 0x40 end if
+  call_temp_bytes = t.align_up(call_temp_bytes, 16)
+  state.expr_temp_base = state.call_temp_base + call_temp_bytes
+  state.expr_temp_top = 0
+  frame_end = state.expr_temp_base + state.expr_temp_max
   // Entry RSP is 8 mod 16 on Windows process start.
-  // Keep pre-call alignment at 16-byte by reserving a frame that's 8 mod 16.
-  main_frame = 0x608
-  main_root_rec_off = main_frame - 0x20
-  main_root_base = 0x40
-  main_root_top = main_root_rec_off
+  main_frame = t.align_to_mod(frame_end + 0x20, 16, 8)
   state.asm = a.sub_rsp_imm32(state.asm, main_frame)
-  state = mem.emit_gc_clear_root_slots(state, main_root_base, main_root_top)
-  state = mem.emit_gc_push_root_frame(state, main_root_rec_off, main_root_base, main_root_top)
+
+  if state.is_windows_subsystem then
+    state.asm = a.mov_rax_rip_qword(state.asm, "iat_FreeConsole")
+    state.asm = a.call_rax(state.asm)
+  end if
 
   // stdout handle in rbx
   state.asm = a.mov_rcx_imm32(state.asm, 0xFFFFFFF5)
@@ -4099,24 +5947,17 @@ function emit_program(state, program)
   state.asm = a.mov_r64_r64(state.asm, "rbx", "rax")
 
   // UTF-8 console mode
-  state.asm = a.mov_rcx_imm32(state.asm, 65001)
-  state.asm = a.mov_rax_rip_qword(state.asm, "iat_SetConsoleOutputCP")
-  state.asm = a.call_rax(state.asm)
-
-  // Heap / GC init
-  heap_reserve = _heap_cfg_get_int(state, "reserve_bytes", 0x02000000)
-  state = mem.emit_heap_init(state, heap_reserve)
-  disable_periodic = _heap_cfg_get_bool(state, "gc_disable_periodic", false)
-  state = mem.emit_gc_init_globals(state, disable_periodic)
-  gc_limit = _heap_cfg_get_int(state, "gc_bytes_limit", 0)
-  if gc_limit > 0 then
-    state.asm = a.mov_rax_imm64(state.asm, gc_limit)
-    state.asm = a.mov_rip_qword_rax(state.asm, "gc_bytes_limit")
-    state.asm = a.mov_rax_imm64(state.asm, 0)
-    state.asm = a.mov_rip_qword_rax(state.asm, "gc_bytes_since")
+  if state.is_windows_subsystem == false then
+    state.asm = a.mov_rcx_imm32(state.asm, 65001)
+    state.asm = a.mov_rax_rip_qword(state.asm, "iat_SetConsoleOutputCP")
+    state.asm = a.call_rax(state.asm)
   end if
 
-  // Initialize first-class function values (OBJ_FUNCTION).
+  // Heap / GC init
+  state = mem.emit_heap_init(state, 0)
+  state.asm = a.call(state.asm, "fn_cpu_init")
+
+  // Point global callable/type slots at immutable .rdata objects.
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
     for i = 0 to len(state.user_functions) - 1
       itf = state.user_functions[i]
@@ -4126,21 +5967,14 @@ function emit_program(state, program)
       if fn_qn == "" or typeof(fn_node) != "struct" then continue end if
       lblf = _strpair_get(state.function_global_labels, fn_qn)
       if lblf == "" then continue end if
-      ar = 0
-      if typeof(fn_node.params) == "array" then ar = len(fn_node.params) end if
-      state.asm = a.mov_rcx_imm32(state.asm, 24)
-      state.asm = a.call(state.asm, "fn_alloc")
-      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_FUNCTION, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, ar, false)
-      state.asm = a.lea_rax_rip(state.asm, "fn_user_" + fn_qn)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 16, t.enc_void(), true)
-      state.asm = a.mov_rip_qword_r11(state.asm, lblf)
+      objf = _strpair_get(state.function_static_obj_labels, fn_qn)
+      if objf == "" then continue end if
+      state.asm = a.lea_rax_rip(state.asm, objf)
+      state.asm = a.mov_rip_qword_rax(state.asm, lblf)
     end for
   end if
 
-  // Initialize first-class struct type values (OBJ_STRUCTTYPE).
+  // Point struct globals at immutable .rdata objects.
   if typeof(state.struct_fields) == "array" and len(state.struct_fields) > 0 then
     for si = 0 to len(state.struct_fields) - 1
       sf = state.struct_fields[si]
@@ -4158,45 +5992,32 @@ function emit_program(state, program)
       if sqn == "" then continue end if
       lbls = _strpair_get(state.struct_global_labels, sqn)
       if lbls == "" then continue end if
-      sid = _named_int_get(state.struct_ids, sqn, 0)
-      state.asm = a.mov_rcx_imm32(state.asm, 16)
-      state.asm = a.call(state.asm, "fn_alloc")
-      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCTTYPE, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, len(flds), false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, sid, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
-      state.asm = a.mov_rip_qword_r11(state.asm, lbls)
+      objs = _strpair_get(state.struct_static_obj_labels, sqn)
+      if objs == "" then continue end if
+      state.asm = a.lea_rax_rip(state.asm, objs)
+      state.asm = a.mov_rip_qword_rax(state.asm, lbls)
     end for
   end if
 
-  // Initialize first-class builtin values (OBJ_BUILTIN).
+  // Point builtin globals at immutable .rdata objects.
   if typeof(state.builtin_specs) == "array" and len(state.builtin_specs) > 0 then
     for bi = 0 to len(state.builtin_specs) - 1
       sp = state.builtin_specs[bi]
       if typeof(sp) != "array" or len(sp) < 4 then continue end if
       bname = _coerce_name(sp[0])
-      bmin = sp[1]
-      bmax = sp[2]
       blbl = _coerce_name(sp[3])
       if bname == "" or blbl == "" then continue end if
       gbl = _strpair_get(state.builtin_global_labels, bname)
       if gbl == "" then continue end if
+      objb = _strpair_get(state.builtin_static_obj_labels, bname)
+      if objb == "" then continue end if
       state.used_helpers = add(state.used_helpers, blbl)
-      state.asm = a.mov_rcx_imm32(state.asm, 24)
-      state.asm = a.call(state.asm, "fn_alloc")
-      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_BUILTIN, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, bmin, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, bmax, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
-      state.asm = a.lea_rax_rip(state.asm, blbl)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
-      state.asm = a.mov_rip_qword_r11(state.asm, gbl)
+      state.asm = a.lea_rax_rip(state.asm, objb)
+      state.asm = a.mov_rip_qword_rax(state.asm, gbl)
     end for
   end if
 
-  // Initialize first-class extern values (OBJ_BUILTIN stubs).
+  // Point extern globals at immutable .rdata objects.
   if typeof(state.extern_sigs) == "array" and len(state.extern_sigs) > 0 then
     for ei = 0 to len(state.extern_sigs) - 1
       sig = state.extern_sigs[ei]
@@ -4207,45 +6028,71 @@ function emit_program(state, program)
       gbl2 = _strpair_get(state.extern_global_labels, qn)
       stub_lbl = _strpair_get(state.extern_stub_labels, qn)
       if gbl2 == "" or stub_lbl == "" then continue end if
+      obja = _strpair_get(state.extern_static_obj_labels, qn)
+      if obja == "" then continue end if
+      state.asm = a.lea_rax_rip(state.asm, obja)
+      state.asm = a.mov_rip_qword_rax(state.asm, gbl2)
+    end for
+  end if
+  state = _mem_probe(state, "static_globals_done")
 
-      arity = 0
-      if typeof(sig.params) == "array" and len(sig.params) > 0 then
-        for pi = 0 to len(sig.params) - 1
-          pp = sig.params[pi]
-          is_out = false
-          if typeof(pp) == "struct" and typeof(pp.is_out) == "bool" and pp.is_out then
-            is_out = true
+  // Emit per-file module init blocks inline inside the entry frame.
+  state = core.push_cold_block_scope(state)
+  if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
+    for mri = 0 to len(module_init_recs) - 1
+      mr = module_init_recs[mri]
+      if typeof(mr) != "array" or len(mr) < 5 then continue end if
+      mfile2 = _coerce_name(mr[0])
+      mstmts2 = mr[1]
+      fn_lbl2 = _coerce_name(mr[2])
+      flag_lbl2 = _coerce_name(mr[3])
+      status_lbl2 = _coerce_name(mr[4])
+      done_lbl2 = fn_lbl2 + "_done"
+      if _heap_cfg_get_bool(state, "cg_mem_probe", false) then
+        stmt_count2 = 0
+        if typeof(mstmts2) == "array" then stmt_count2 = len(mstmts2) end if
+        print "[mem][cg] modinit_begin idx=" + mri + " file=" + mfile2 + " stmts=" + stmt_count2
+      end if
+      state.asm = a.mov_rax_rip_qword(state.asm, flag_lbl2)
+      state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+      state.asm = a.jcc(state.asm, "ne", done_lbl2)
+      state.asm = a.mov_r64_imm64(state.asm, "rax", 1)
+      state.asm = a.mov_rip_qword_rax(state.asm, flag_lbl2)
+      state.asm = a.mov_r64_imm64(state.asm, "rax", 1)
+      state.asm = a.mov_rip_qword_rax(state.asm, status_lbl2)
+      prev_active = state._module_init_active
+      prev_file = state._module_init_active_file
+      state._module_init_active = true
+      state._module_init_active_file = mfile2
+      if typeof(mstmts2) == "array" and len(mstmts2) > 0 then
+        for msi = 0 to len(mstmts2) - 1
+          if _heap_cfg_get_bool(state, "cg_mem_probe", false) and mri == 6 and ((msi % 50) == 0 or msi >= 600) then
+            st_kind2 = "<non-struct>"
+            if typeof(mstmts2[msi]) == "struct" then st_kind2 = _coerce_name(mstmts2[msi].node_kind) end if
+            print "[mem][cg] modinit_stmt idx=" + mri + " stmt=" + msi + " kind=" + st_kind2
           end if
-          if is_out then continue end if
-          arity = arity + 1
+          state = cg_emit_stmt(state, mstmts2[msi])
         end for
       end if
-
-      state.asm = a.mov_rcx_imm32(state.asm, 24)
-      state.asm = a.call(state.asm, "fn_alloc")
-      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_BUILTIN, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, arity, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, arity, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
-      state.asm = a.lea_rax_rip(state.asm, stub_lbl)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
-      state.asm = a.mov_rip_qword_r11(state.asm, gbl2)
+      state._module_init_active = prev_active
+      state._module_init_active_file = prev_file
+      state.asm = a.mov_r64_imm64(state.asm, "rax", 2)
+      state.asm = a.mov_rip_qword_rax(state.asm, status_lbl2)
+      state.asm = a.mark(state.asm, done_lbl2)
+      mr[1] = []
+      module_init_recs[mri] = mr
+      if _heap_cfg_get_bool(state, "cg_mem_probe", false) then
+        print "[mem][cg] modinit_done idx=" + mri + " file=" + mfile2
+      end if
     end for
   end if
-
-  // Emit top-level runtime statements
-  if typeof(program) == "array" and len(program) > 0 then
-    rt_prog_items = program
-    rt_prog_count = len(rt_prog_items)
-    for rt_prog_idx = 0 to rt_prog_count - 1
-      if rt_prog_idx < 0 or rt_prog_idx >= rt_prog_count then break end if
-      state = cg_emit_stmt(state, rt_prog_items[rt_prog_idx])
-    end for
-  end if
+  module_init_recs = []
   state = _mem_probe(state, "top_level_done")
-  gc_collect()
-  state = _mem_probe(state, "post_top_level_gc")
+  state = _maybe_phase_gc(state, "post_top_level_phase_gc", 256 << 20)
+  if _heap_cfg_get_bool(state, "cg_collect_after_top_level", false) then
+    gc_collect()
+    state = _mem_probe(state, "post_top_level_gc")
+  end if
 
   // Call main(args) if present (top-level only)
   main_name = ""
@@ -4264,24 +6111,7 @@ function emit_program(state, program)
     state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
     state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
     state.asm = a.call(state.asm, "fn_user_" + main_name)
-
-    // Unhandled error from main(args): print + exit(1)
-    lid_main_err = state.label_id
-    state.label_id = state.label_id + 1
-    l_main_noerr = "main_noerr_" + lid_main_err
-    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-    state.asm = a.and_r64_imm(state.asm, "r11", 7)
-    state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_PTR)
-    state.asm = a.jcc(state.asm, "ne", l_main_noerr)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
-    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCT)
-    state.asm = a.jcc(state.asm, "ne", l_main_noerr)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 8)
-    state.asm = a.cmp_r32_imm(state.asm, "edx", c.ERROR_STRUCT_ID)
-    state.asm = a.jcc(state.asm, "ne", l_main_noerr)
-    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-    state.asm = a.call(state.asm, "fn_unhandled_error_exit")
-    state.asm = a.mark(state.asm, l_main_noerr)
+    state = exprmod._emit_auto_errprop(state)
 
     lidm = state.label_id
     state.label_id = state.label_id + 1
@@ -4315,14 +6145,17 @@ function emit_program(state, program)
   state.asm = a.xor_ecx_ecx(state.asm)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_ExitProcess")
   state.asm = a.call_rax(state.asm)
+  state = core.emit_deferred_cold_blocks(state)
+  core.pop_cold_block_scope(state)
 
-  // Emit all user function bodies (dynamic queue so nested functions discovered
-  // during emission are emitted in the same pass).
-  uf_i = 0
+  // Emit user function bodies in the same sorted order as the Python compiler.
+  uf_names = _user_function_keys_sorted(state)
   state = _mem_probe(state, "user_fn_emit_start")
-  while typeof(state.user_functions) == "array" and uf_i < len(state.user_functions)
-    if uf_i < 0 or uf_i >= len(state.user_functions) then break end if
+  uf_total = len(uf_names)
+  uf_i = 0
+  while uf_i < uf_total
     if _heap_cfg_get_bool(state, "cg_mem_probe", false) and (uf_i % 100) == 0 then
+      uf_name_dbg = uf_names[uf_i]
       asmsz = 0
       if typeof(state.asm) == "struct" and typeof(state.asm.size) == "int" then asmsz = state.asm.size end if
       dlen = 0
@@ -4356,18 +6189,47 @@ function emit_program(state, program)
         pcn = _chunked_len(state.asm.patches_chunks, state.asm.patches_tail)
         ccn = _chunked_len(state.asm.calls_chunks, state.asm.calls_tail)
       end if
-      print "[mem][cg] user_fn_idx=" + uf_i + " total=" + len(state.user_functions) + " asm_size=" + asmsz + " labels=" + lbln + " patches=" + pcn + " calls=" + ccn + " diags=" + dlen + " scopes=" + sn + "/" + sdn + " globals=" + gn + " fn_locals=" + fln + " rdata=" + rused + "/" + rcap + " data=" + dused + "/" + dcap + " used=" + heap_bytes_used() + " committed=" + heap_bytes_committed() + " reserved=" + heap_bytes_reserved()
+      print "[mem][cg] user_fn_idx=" + uf_i + " total=" + uf_total + " name=" + uf_name_dbg + " asm_size=" + asmsz + " labels=" + lbln + " patches=" + pcn + " calls=" + ccn + " diags=" + dlen + " scopes=" + sn + "/" + sdn + " globals=" + gn + " fn_locals=" + fln + " rdata=" + rused + "/" + rcap + " data=" + dused + "/" + dcap + " used=" + heap_bytes_used() + " committed=" + heap_bytes_committed() + " reserved=" + heap_bytes_reserved()
     end if
-    it2 = state.user_functions[uf_i]
-    if typeof(it2) == "array" and len(it2) == 2 and typeof(it2[1]) == "struct" then
-      state = emit_user_function(state, it2[1])
+    uf_name = uf_names[uf_i]
+    uf_node = _user_function_get_node(state, uf_name)
+    if typeof(uf_node) == "struct" then
+      state = emit_user_function(state, uf_node)
+      uf_node = _release_emitted_fn_node(uf_node)
+      state = _set_user_function(state, uf_name, uf_node)
     end if
     uf_i = uf_i + 1
-    if (uf_i % 8) == 0 then
+    if (uf_i % 16) == 0 then
+      state = _maybe_phase_gc(state, "mid_user_fn_phase_gc", 512 << 20)
+    end if
+    if _heap_cfg_get_bool(state, "cg_collect_during_codegen", false) and (uf_i % 8) == 0 then
       gc_collect()
     end if
   end while
+  nested_names = _nested_function_codegen_names_sorted(state)
+  if len(nested_names) > 0 then
+    for nfi = 0 to len(nested_names) - 1
+      nf = _nested_function_get_by_codegen_name(state, nested_names[nfi])
+      if typeof(nf) == "struct" then
+        state = emit_user_function(state, nf)
+        nf = _release_emitted_fn_node(nf)
+        state = _forget_nested_function_by_codegen_name(state, nested_names[nfi])
+      end if
+      if ((nfi + 1) % 16) == 0 then
+        state = _maybe_phase_gc(state, "mid_nested_fn_phase_gc", 512 << 20)
+      end if
+    end for
+  end if
   state = _mem_probe(state, "user_fn_emit_done")
+  state.user_functions = []
+  state.nested_user_functions = []
+  state.user_function_index = t.fastmap_new(16)
+  state.function_codegen_name_map = t.fastmap_new(16)
+  state._global_owner_file = t.fastmap_new(16)
+  state._module_init_status_labels = t.fastmap_new(16)
+  uf_names = []
+  nested_names = []
+  state = _maybe_phase_gc(state, "post_user_fn_phase_gc", 256 << 20)
 
   // Emit extern stub bodies (extern callable values).
   state = exprmod.emit_extern_stubs(state)
@@ -4380,19 +6242,78 @@ end function
 function emit_user_function(state, fn_node)
   if typeof(fn_node) != "struct" then return state end if
   qn = _coerce_name(fn_node.name)
-  if qn == "" then return state end if
+  code_name = _fn_codegen_name(state, fn_node)
+  if code_name == "" then return state end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) then
+    print "[mem][cg] emit_user_function_start name=" + code_name
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and s.startsWith(code_name, "std.string.") then
+    print "[dbg][fn] start " + code_name
+  end if
 
-  fn_lbl = "fn_user_" + qn
-  ret_lbl = "fn_ret_" + qn
-  frame = 0x600
+  fn_lbl = "fn_user_" + code_name
+  ret_lbl = "fn_ret_" + code_name
+  max_call_args = max_calls_stmts(state, fn_node.body)
+  if typeof(max_call_args) != "int" or max_call_args < 0 then max_call_args = 0 end if
+
+  old_decl_site = state.decl_site_bindings
+  old_fn_locals = state.function_locals
+  old_fn_local_ids = state.function_local_ids
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.isBlank" then
+    print "[dbg][stage] " + code_name + " analysis_prepare_begin"
+  end if
+  state = _analysis_prepare_function(state, fn_node)
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.isBlank" then
+    print "[dbg][stage] " + code_name + " analysis_prepare_done"
+  end if
+  n_locals = 0
+  if typeof(state.function_locals) == "array" then n_locals = len(state.function_locals) end if
+
+  out_stack_args = max_call_args - 4
+  if out_stack_args < 0 then out_stack_args = 0 end if
+  out_scratch = 8
+  out_stack_bytes = out_stack_args * 8
+  out_overlap = out_scratch
+  if out_stack_bytes > out_overlap then out_overlap = out_stack_bytes end if
+  dbg_save_size = 24
+  dbg_save_base = 0x20 + out_overlap
+  out_reserve = out_overlap + dbg_save_size
+  local_base = t.align_up(0x20 + out_reserve, 16)
+  env_root_off = local_base
+  locals_base = local_base + 8
+  local_bytes = n_locals * 8
+  params_base = locals_base + local_bytes
+  call_temp_base = params_base
+  if typeof(fn_node.params) == "array" then call_temp_base = params_base + len(fn_node.params) * 8 end if
+  call_temp_bytes = max_call_args * 8
+  if call_temp_bytes < 0x40 then call_temp_bytes = 0x40 end if
+  call_temp_bytes = t.align_up(call_temp_bytes, 16)
+  expr_temp_base = call_temp_base + call_temp_bytes
+  frame_end = expr_temp_base + state.expr_temp_max
+  frame = t.align_up(frame_end + 0x20, 16)
   root_rec_off = frame - 0x20
-  root_base = 0x40
-  root_top = root_rec_off
-  dbg_save_base = frame - 0x50
-  env_root_off = frame - 0x58
+  root_base = local_base
+  root_top = expr_temp_base
   dbg_save_script = dbg_save_base + 0
   dbg_save_func = dbg_save_base + 8
   dbg_save_line = dbg_save_base + 16
+  state = scope.analysis_layout_function_locals(state, locals_base)
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.isBlank" then
+    print "[dbg][stage] " + code_name + " analysis_layout_done"
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.join" then
+    print "[dbg][join][layout] begin"
+    if typeof(state.function_locals) == "array" and len(state.function_locals) > 0 then
+      for ji = 0 to len(state.function_locals) - 1
+        jb = state.function_locals[ji]
+        if typeof(jb) != "struct" then continue end if
+        print "[dbg][join][local] i=" + ji + " name=" + _coerce_name(jb.name) + " kind=" + _coerce_name(jb.kind) + " off=" + jb.offset + " key=" + scope._decl_key(jb.decl_node, jb.name)
+      end for
+    end if
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
+    print "[mem][cg] fn_stage name=" + code_name + " stage=analysis_layout_done"
+  end if
 
   old_in = state.in_function
   old_pref = state.current_qname_prefix
@@ -4400,14 +6321,21 @@ function emit_user_function(state, fn_node)
   old_var_slots = state.var_slots
   old_ret = state.func_ret_label
   old_frame = state.func_frame_size
+  old_call_temp_base = state.call_temp_base
   old_expr_base = state.expr_temp_base
   old_expr_top = state.expr_temp_top
+  old_root_rec_off = state._current_root_rec_off
+  old_root_static_qwords = state._current_root_static_qwords
   old_boxed_names = state.current_fn_boxed_names
   old_env_index = state.current_fn_env_index
   old_env_root = state.current_env_root_off
   old_func_globals = state.func_globals
   old_func_global_map = state.func_global_map
   old_func_global_map_index = state.func_global_map_index
+  saved_emit_stack = state.scope_stack
+  saved_emit_declared = state.scope_declared
+  saved_emit_idx_stack = state.scope_index_stack
+  saved_emit_decl_idx_stack = state.scope_declared_index_stack
 
   boxed_names = fn_node._ml_boxed
   if typeof(boxed_names) != "array" then boxed_names = [] end if
@@ -4428,16 +6356,28 @@ function emit_user_function(state, fn_node)
   state.func_frame_size = frame
   state.var_slots = 0
   // Isolate expression-temp arena per function; do not leak allocator state across functions.
-  state.expr_temp_base = 0
+  state.call_temp_base = call_temp_base
+  state.expr_temp_base = expr_temp_base
   state.expr_temp_top = 0
+  state._current_root_rec_off = root_rec_off
+  state._current_root_static_qwords = (root_top - root_base) / 8
   state.current_fn_boxed_names = boxed_names
   state.current_fn_env_index = env_index
   state.current_env_root_off = env_root_off
-  state.qualify_cache = t.fastmap_new(2048)
+  state.qualify_cache = _prepare_qualify_cache(state.qualify_cache, 2048)
   state.func_globals = []
   state.func_global_map = []
   state.func_global_map_index = t.fastmap_new(64)
-  state = scope.cg_scope_enter(state)
+  base_globals_emit = []
+  base_global_index_emit = t.fastmap_new(128)
+  base_decl_index_emit = t.fastmap_new(128)
+  if typeof(saved_emit_stack) == "array" and len(saved_emit_stack) > 0 then base_globals_emit = saved_emit_stack[0] end if
+  if typeof(saved_emit_idx_stack) == "array" and len(saved_emit_idx_stack) > 0 then base_global_index_emit = saved_emit_idx_stack[0] end if
+  if typeof(saved_emit_decl_idx_stack) == "array" and len(saved_emit_decl_idx_stack) > 0 then base_decl_index_emit = saved_emit_decl_idx_stack[0] end if
+  state.scope_stack = [base_globals_emit, []]
+  state.scope_declared = [[], []]
+  state.scope_index_stack = [base_global_index_emit, t.fastmap_new(128)]
+  state.scope_declared_index_stack = [base_decl_index_emit, t.fastmap_new(128)]
 
   state.asm = a.mark(state.asm, fn_lbl)
   state.asm = a.push_rbx(state.asm)
@@ -4446,16 +6386,9 @@ function emit_user_function(state, fn_node)
   state.asm = a.push_r14(state.asm)
   state.asm = a.push_r15(state.asm)
   state.asm = a.sub_rsp_imm32(state.asm, frame)
-  state = mem.emit_gc_clear_root_slots(state, root_base, root_top)
-  state = mem.emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
-  // Incoming closure environment is passed in r10.
-  state.asm = a.mov_r64_r64(state.asm, "r14", "r10")
-  // Keep incoming env in a rooted stack slot so helper calls cannot lose it.
-  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-  state.asm = a.mov_rsp_disp32_rax(state.asm, env_root_off)
 
   if state.call_profile then
-    cp_idx = _named_int_get(state.callprof_index, qn, -1)
+    cp_idx = _named_int_get(state.callprof_index, code_name, -1)
     if cp_idx >= 0 then
       state.asm = a.lea_r11_rip(state.asm, "callprof_counts")
       state.asm = a.inc_membase_disp_qword(state.asm, "r11", cp_idx * 8)
@@ -4473,7 +6406,7 @@ function emit_user_function(state, fn_node)
   dbg_file = _st_file(fn_node)
   dbg_script = ""
   if typeof(dbg_file) == "string" and dbg_file != "" then
-    dbg_script = core._pretty_script(dbg_file)
+    dbg_script = core._pretty_script(state, dbg_file)
   end if
   if typeof(dbg_script) != "string" or dbg_script == "" then
     if typeof(state.filename) == "string" and state.filename != "" then
@@ -4483,6 +6416,7 @@ function emit_user_function(state, fn_node)
     end if
   end if
   dbg_func = qn
+  if typeof(dbg_func) != "string" or dbg_func == "" then dbg_func = code_name end if
   if typeof(dbg_func) != "string" or dbg_func == "" then dbg_func = "<function>" end if
 
   dbg_lid = state.label_id
@@ -4497,6 +6431,17 @@ function emit_user_function(state, fn_node)
   state.rdata = d.rdata_add_obj_string(state.rdata, lbl_fn, dbg_func)
   state.asm = a.lea_rax_rip(state.asm, lbl_fn)
   state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_func")
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
+    print "[mem][cg] fn_stage name=" + code_name + " stage=dbg_labels_done"
+  end if
+
+  state = mem.emit_gc_clear_root_slots(state, root_base, root_top)
+  state = mem.emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
+  // Incoming closure environment is passed in r10.
+  state.asm = a.mov_r64_r64(state.asm, "r14", "r10")
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
+    print "[mem][cg] fn_stage name=" + code_name + " stage=prologue_done"
+  end if
 
   // Declare capture bindings in function scope before body emission.
   state = _closure_declare_capture_bindings(state, fn_node)
@@ -4505,7 +6450,7 @@ function emit_user_function(state, fn_node)
   if typeof(fn_node.params) == "array" and len(fn_node.params) > 0 then
     for i = 0 to len(fn_node.params) - 1
       pn = _coerce_name(fn_node.params[i])
-      poff = 0x40 + i * 8
+      poff = params_base + i * 8
       if i == 0 then
         state.asm = a.mov_r64_r64(state.asm, "rax", "rcx")
       else
@@ -4553,44 +6498,109 @@ function emit_user_function(state, fn_node)
             end while
           end if
         end if
+      end if
+    end for
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
+    print "[mem][cg] fn_stage name=" + code_name + " stage=params_done"
+  end if
 
-        // Box parameter value now so captured reads/writes go through shared cell.
-        state.asm = a.mov_r64_membase_disp(state.asm, "r12", "rsp", poff)
+  // Materialize current environment frame (owner env) when needed.
+  has_parent_env = false
+  if len(caps_list) > 0 then has_parent_env = true end if
+  if env_hop_flag then has_parent_env = true end if
+  if need_env then
+    env_n = len(env_slots)
+    param_off = t.fastmap_new((env_n * 2) + 16)
+    if typeof(fn_node.params) == "array" and len(fn_node.params) > 0 then
+      for epi0 = 0 to len(fn_node.params) - 1
+        epn0 = _coerce_name(fn_node.params[epi0])
+        if epn0 == "" then continue end if
+        param_off = _map_int_set(param_off, epn0, params_base + epi0 * 8)
+      end for
+    end if
+
+    local_off = t.fastmap_new((env_n * 2) + 16)
+    local_count = t.fastmap_new((env_n * 2) + 16)
+    if typeof(state.function_locals) == "array" and len(state.function_locals) > 0 then
+      for lfi = 0 to len(state.function_locals) - 1
+        lf = state.function_locals[lfi]
+        if typeof(lf) != "struct" then continue end if
+        lnm = _coerce_name(lf.name)
+        if lnm == "" then continue end if
+        if typeof(lf.offset) != "int" then continue end if
+        lcnt = _map_int_get(local_count, lnm, 0)
+        local_count = _map_int_set(local_count, lnm, lcnt + 1)
+        if _map_int_get(local_off, lnm, -1) < 0 then
+          local_off = _map_int_set(local_off, lnm, lf.offset)
+        end if
+      end for
+    end if
+
+    slot_off = t.fastmap_new((env_n * 2) + 16)
+    if env_n > 0 then
+      for esi0 = 0 to env_n - 1
+        snm = _coerce_name(env_slots[esi0])
+        if snm == "" then continue end if
+        poff0 = _map_int_get(param_off, snm, -1)
+        lcnt0 = _map_int_get(local_count, snm, 0)
+        if (poff0 >= 0 and lcnt0 > 0) or lcnt0 > 1 then
+          state.diagnostics = state.diagnostics + ["Shadowing of captured variable '" + snm + "' is not supported yet"]
+          continue
+        end if
+        if poff0 >= 0 then
+          slot_off = _map_int_set(slot_off, snm, poff0)
+        else
+          if lcnt0 == 1 then
+            slot_off = _map_int_set(slot_off, snm, _map_int_get(local_off, snm, -1))
+          else
+            state.diagnostics = state.diagnostics + ["Internal compiler error: captured name '" + snm + "' has no slot"]
+          end if
+        end if
+      end for
+    end if
+
+    if env_n > 0 then
+      for esi1 = 0 to env_n - 1
+        snm2 = _coerce_name(env_slots[esi1])
+        soff = _map_int_get(slot_off, snm2, -1)
+        if soff < 0 then continue end if
+        state.asm = a.mov_r64_membase_disp(state.asm, "r12", "rsp", soff)
         state.asm = a.mov_rcx_imm32(state.asm, 16)
         state.asm = a.call(state.asm, "fn_alloc")
         state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
         state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_BOX, false)
         state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 0, false)
         state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "r12")
-        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", poff, "r11")
-      end if
-    end for
-  end if
-
-  // Materialize current environment frame (owner env) when needed.
-  if need_env then
-    env_n = len(env_slots)
-    state.asm = a.mov_rcx_imm32(state.asm, 16 + env_n * 8)
-    state.asm = a.call(state.asm, "fn_alloc")
-    state.asm = a.mov_r64_r64(state.asm, "r15", "rax")
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r15", 0, c.OBJ_ENV, false)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r15", 4, env_n, false)
-    state.asm = a.mov_membase_disp_r64(state.asm, "r15", 8, "r14")
-    if env_n > 0 then
-      for esi = 0 to env_n - 1
-        state.asm = a.mov_membase_disp_imm32(state.asm, "r15", 16 + esi * 8, t.enc_void(), true)
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", soff, "r11")
       end for
     end if
 
-    // Seed env slots from already-boxed parameters.
-    if typeof(fn_node.params) == "array" and len(fn_node.params) > 0 then
-      for epi = 0 to len(fn_node.params) - 1
-        epn = _coerce_name(fn_node.params[epi])
-        eidx = _map_int_get(env_index, epn, -1)
-        if eidx < 0 then continue end if
-        eoff = 0x40 + epi * 8
-        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", eoff)
-        state.asm = a.mov_membase_disp_r64(state.asm, "r15", 16 + eidx * 8, "r10")
+    slot_base = 8
+    env_obj_type = c.OBJ_ENV_LOCAL
+    env_size = 8 + env_n * 8
+    if has_parent_env then
+      slot_base = 16
+      env_obj_type = c.OBJ_ENV
+      env_size = 16 + env_n * 8
+    end if
+
+    state.asm = a.mov_rcx_imm32(state.asm, env_size)
+    state.asm = a.call(state.asm, "fn_alloc")
+    state.asm = a.mov_r64_r64(state.asm, "r15", "rax")
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r15", 0, env_obj_type, false)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r15", 4, env_n, false)
+    if has_parent_env then
+      state.asm = a.mov_membase_disp_r64(state.asm, "r15", 8, "r14")
+    end if
+
+    if env_n > 0 then
+      for esi2 = 0 to env_n - 1
+        snm3 = _coerce_name(env_slots[esi2])
+        soff2 = _map_int_get(slot_off, snm3, -1)
+        if soff2 < 0 then continue end if
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", soff2)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r15", slot_base + esi2 * 8, "r10")
       end for
     end if
 
@@ -4600,6 +6610,9 @@ function emit_user_function(state, fn_node)
     state.asm = a.mov_r64_imm64(state.asm, "r15", t.enc_void())
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
     state.asm = a.mov_rsp_disp32_rax(state.asm, env_root_off)
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
+    print "[mem][cg] fn_stage name=" + code_name + " stage=env_done"
   end if
 
   if s.contains(qn, ".") then
@@ -4631,11 +6644,32 @@ function emit_user_function(state, fn_node)
     state.current_file_prefix = ""
   end if
 
+  state = core.push_cold_block_scope(state)
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
+    print "[mem][cg] fn_stage name=" + code_name + " stage=body_enter"
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.isBlank" then
+    print "[dbg][stage] " + code_name + " body_enter"
+  end if
   if typeof(fn_node.body) == "array" and len(fn_node.body) > 0 then
     uf_body_items = fn_node.body
     uf_body_count = len(uf_body_items)
     for uf_body_idx = 0 to uf_body_count - 1
       if uf_body_idx < 0 or uf_body_idx >= uf_body_count then break end if
+      if _heap_cfg_get_bool(state, "cg_mem_probe", false) then
+        st_kind_dbg = ""
+        if typeof(uf_body_items[uf_body_idx]) == "struct" and typeof(uf_body_items[uf_body_idx].node_kind) == "string" then
+          st_kind_dbg = uf_body_items[uf_body_idx].node_kind
+        end if
+        print "[mem][cg] body_stmt name=" + code_name + " idx=" + uf_body_idx + " kind=" + st_kind_dbg
+      end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.isBlank" then
+        st_kind_dbg2 = ""
+        if typeof(uf_body_items[uf_body_idx]) == "struct" and typeof(uf_body_items[uf_body_idx].node_kind) == "string" then
+          st_kind_dbg2 = uf_body_items[uf_body_idx].node_kind
+        end if
+        print "[dbg][stage] " + code_name + " body_stmt idx=" + uf_body_idx + " kind=" + st_kind_dbg2
+      end if
       state = cg_emit_stmt(state, uf_body_items[uf_body_idx])
     end for
   end if
@@ -4643,6 +6677,8 @@ function emit_user_function(state, fn_node)
   // implicit return void
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   state.asm = a.jmp(state.asm, ret_lbl)
+  state = core.emit_deferred_cold_blocks(state)
+  core.pop_cold_block_scope(state)
 
   state.asm = a.mark(state.asm, ret_lbl)
   state = mem.emit_gc_pop_root_frame(state, root_rec_off)
@@ -4660,22 +6696,38 @@ function emit_user_function(state, fn_node)
   state.asm = a.pop_rbx(state.asm)
   state.asm = a.ret(state.asm)
 
-  state = scope.cg_scope_leave(state)
+  state.scope_stack = saved_emit_stack
+  state.scope_declared = saved_emit_declared
+  state.scope_index_stack = saved_emit_idx_stack
+  state.scope_declared_index_stack = saved_emit_decl_idx_stack
   state.in_function = old_in
   state.current_qname_prefix = old_pref
   state.current_file_prefix = old_file_pref
   state.var_slots = old_var_slots
   state.func_ret_label = old_ret
   state.func_frame_size = old_frame
+  state.call_temp_base = old_call_temp_base
   state.expr_temp_base = old_expr_base
   state.expr_temp_top = old_expr_top
+  state._current_root_rec_off = old_root_rec_off
+  state._current_root_static_qwords = old_root_static_qwords
   state.current_fn_boxed_names = old_boxed_names
   state.current_fn_env_index = old_env_index
   state.current_env_root_off = old_env_root
   state.func_globals = old_func_globals
   state.func_global_map = old_func_global_map
   state.func_global_map_index = old_func_global_map_index
-  if qn == "" then return state end if
+  state.decl_site_bindings = old_decl_site
+  state.function_locals = old_fn_locals
+  state.function_local_ids = old_fn_local_ids
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) then
+    print "[mem][cg] emit_user_function_done name=" + code_name
+  end if
+  if _heap_cfg_get_bool(state, "cg_mem_probe", false) and s.startsWith(code_name, "std.string.") then
+    print "[dbg][fn] done " + code_name
+  end if
+  state.qualify_cache = _prepare_qualify_cache(state.qualify_cache, 512)
+  if code_name == "" then return state end if
   return state
 end function
 
@@ -4751,35 +6803,196 @@ function note_reads(state, names)
   return state
 end function
 
-function max_calls_expr(ex)
-  if typeof(ex) != "struct" then return 0 end if
-  c = 0
-  if ex.node_kind == "Call" then c = 1 end if
-  if typeof(ex.func) == "struct" then c = c + max_calls_expr(ex.func) end if
-  if typeof(ex.left) == "struct" then c = c + max_calls_expr(ex.left) end if
-  if typeof(ex.right) == "struct" then c = c + max_calls_expr(ex.right) end if
-  if typeof(ex.target) == "struct" then c = c + max_calls_expr(ex.target) end if
-  if typeof(ex.args) == "array" and len(ex.args) > 0 then
-    for i = 0 to len(ex.args) - 1
-      c = c + max_calls_expr(ex.args[i])
-    end for
-  end if
-  return c
+function _struct_methods_any_has(state, mname)
+  if mname == "" then return false end if
+  items = state.struct_methods
+  if typeof(items) == "struct" then items = t.fastmap_items(items) end if
+  if typeof(items) != "array" or len(items) <= 0 then return false end if
+  for i = 0 to len(items) - 1
+    entry = items[i]
+    mdict = 0
+    if typeof(entry) == "struct" then mdict = entry.values end if
+    if typeof(entry) == "array" and len(entry) >= 2 then mdict = entry[1] end if
+    if _strpair_get(mdict, mname) != "" then return true end if
+  end for
+  return false
 end function
 
-function max_calls_stmts(stmts)
+function inline _max_calls_int(a, b)
+  if a > b then return a end if
+  return b
+end function
+
+function max_calls_expr(state, ex)
+  if typeof(ex) != "struct" then return 0 end if
+  nk = _coerce_name(ex.node_kind)
+  m = 0
+  if nk == "Call" then
+    args = _analysis_call_args(ex)
+    cal = _analysis_call_callee(ex)
+    call_arity = len(args)
+    if typeof(cal) == "struct" and _coerce_name(cal.node_kind) == "Member" then
+      mname = _coerce_name(try(cal.name))
+      if _struct_methods_any_has(state, mname) then
+        call_arity = call_arity + 1
+      end if
+    end if
+    m = _max_calls_int(m, call_arity)
+    m = _max_calls_int(m, max_calls_expr(state, cal))
+    if len(args) > 0 then
+      for each aa in args
+        if typeof(aa) == "struct" then
+          m = _max_calls_int(m, max_calls_expr(state, aa))
+        end if
+      end for
+    end if
+    return m
+  end if
+  if nk == "Unary" then return max_calls_expr(state, try(ex.right)) end if
+  if nk == "Bin" then return _max_calls_int(max_calls_expr(state, try(ex.left)), max_calls_expr(state, try(ex.right))) end if
+  if nk == "ArrayLit" then
+    items_mc = try(ex.items)
+    if typeof(items_mc) == "array" and len(items_mc) > 0 then
+      for each it in items_mc
+        m = _max_calls_int(m, max_calls_expr(state, it))
+      end for
+    end if
+    return m
+  end if
+  if nk == "Index" then return _max_calls_int(max_calls_expr(state, try(ex.target)), max_calls_expr(state, try(ex.index))) end if
+  if nk == "Member" then
+    return max_calls_expr(state, _analysis_member_target(ex))
+  end if
+  if nk == "StructInit" then
+    vals_mc = try(ex.values)
+    if typeof(vals_mc) == "array" and len(vals_mc) > 0 then
+      for each vv in vals_mc
+        m = _max_calls_int(m, max_calls_expr(state, vv))
+      end for
+    end if
+    return m
+  end if
+  return 0
+end function
+
+function max_calls_stmts(state, stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return 0 end if
-  c = 0
+  m = 0
   for i = 0 to len(stmts) - 1
+    if i < 0 or i >= len(stmts) then break end if
     st = stmts[i]
     if typeof(st) != "struct" then continue end if
-    if typeof(st.expr) == "struct" then c = c + max_calls_expr(st.expr) end if
-    if typeof(st.cond) == "struct" then c = c + max_calls_expr(st.cond) end if
-    if typeof(st.body) == "array" then c = c + max_calls_stmts(st.body) end if
-    if typeof(st.then_body) == "array" then c = c + max_calls_stmts(st.then_body) end if
-    if typeof(st.else_body) == "array" then c = c + max_calls_stmts(st.else_body) end if
+    nk = _coerce_name(st.node_kind)
+    if nk == "Assign" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
+    if nk == "ConstDecl" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
+    if nk == "Print" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
+    if nk == "ExprStmt" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
+    if nk == "SetMember" then
+      obj_expr = 0
+      obj_try = try(st.obj)
+      tgt_try = try(st.target)
+      if typeof(obj_try) == "struct" then obj_expr = obj_try end if
+      if typeof(obj_expr) != "struct" and typeof(tgt_try) == "struct" then obj_expr = tgt_try end if
+      m = _max_calls_int(m, max_calls_expr(state, obj_expr))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
+    if nk == "SetIndex" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.target)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.index)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
+    if nk == "If" then
+      then_body_mc = try(st.then_body)
+      elifs_mc = try(st.elifs)
+      else_body_mc = try(st.else_body)
+      m = _max_calls_int(m, max_calls_expr(state, try(st.cond)))
+      m = _max_calls_int(m, max_calls_stmts(state, then_body_mc))
+      if typeof(elifs_mc) == "array" and len(elifs_mc) > 0 then
+        for ei = 0 to len(elifs_mc) - 1
+          if ei < 0 or ei >= len(elifs_mc) then break end if
+          eb = elifs_mc[ei]
+          if typeof(eb) == "array" and len(eb) >= 2 then
+            m = _max_calls_int(m, max_calls_expr(state, eb[0]))
+            m = _max_calls_int(m, max_calls_stmts(state, eb[1]))
+          end if
+        end for
+      end if
+      m = _max_calls_int(m, max_calls_stmts(state, else_body_mc))
+      continue
+    end if
+    if nk == "While" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.cond)))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
+      continue
+    end if
+    if nk == "DoWhile" then
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.cond)))
+      continue
+    end if
+    if nk == "For" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.start)))
+      m = _max_calls_int(m, max_calls_expr(state, _analysis_for_end_expr(st)))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
+      continue
+    end if
+    if nk == "ForEach" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.iterable)))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
+      continue
+    end if
+    if nk == "Switch" then
+      cases_mc = try(st.cases)
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      if typeof(cases_mc) == "array" and len(cases_mc) > 0 then
+        for ci = 0 to len(cases_mc) - 1
+          if ci < 0 or ci >= len(cases_mc) then break end if
+          cs = cases_mc[ci]
+          if typeof(cs) != "struct" then continue end if
+          if _coerce_name(try(cs.kind)) == "values" then
+            vals = try(cs.values)
+            if typeof(vals) == "array" and len(vals) > 0 then
+              for vi = 0 to len(vals) - 1
+                if vi < 0 or vi >= len(vals) then break end if
+                vv = vals[vi]
+                if typeof(vv) == "array" and len(vv) >= 2 then
+                  m = _max_calls_int(m, max_calls_expr(state, vv[0]))
+                  m = _max_calls_int(m, max_calls_expr(state, vv[1]))
+                else
+                  m = _max_calls_int(m, max_calls_expr(state, vv))
+                end if
+              end for
+            end if
+          else
+            m = _max_calls_int(m, max_calls_expr(state, try(cs.range_start)))
+            m = _max_calls_int(m, max_calls_expr(state, try(cs.range_end)))
+          end if
+          m = _max_calls_int(m, max_calls_stmts(state, cs.body))
+        end for
+      end if
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.default_body)))
+      continue
+    end if
+    if nk == "Return" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
   end for
-  return c
+  return m
 end function
 
 function stmt_list(state, stmts)

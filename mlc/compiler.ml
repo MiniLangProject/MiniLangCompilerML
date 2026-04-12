@@ -8,6 +8,8 @@ import mlc.pe as pe
 import mlc.tools as t
 import mlc.asm as a
 
+extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
+
 struct FrontDiag
   kind,
   filename,
@@ -68,6 +70,7 @@ struct LoadProgramResult
   source,
   program,
   aliases,
+  sources,
 end struct
 
 struct StrIntPair
@@ -91,9 +94,25 @@ struct ExternSig
 end struct
 
 _mem_probe_enabled = false
+_dump_labels_path = ""
 _path_norm_cache = []
 _front_visited_set = []
 _front_resolve_cache = []
+_pe_state_keepalive = 0
+
+function _build_line_starts(source)
+  if typeof(source) != "string" then return [0] end if
+  starts_b = t.arr_chunk_new(128)
+  starts_b = t.arr_chunk_push(starts_b, 0)
+  if len(source) > 0 then
+    for i = 0 to len(source) - 1
+      if source[i] == "\n" then
+        starts_b = t.arr_chunk_push(starts_b, i + 1)
+      end if
+    end for
+  end if
+  return t.arr_chunk_finish(starts_b)
+end function
 
 function _usage()
   print "MiniLang self-hosted compiler (bootstrap frontend)"
@@ -104,6 +123,18 @@ function _usage()
   print "  --self-frontcheck-keep-going"
   print "Debug:"
   print "  --mem-probe"
+end function
+
+function _get_flag_value(args, flag)
+  i = 0
+  while i < len(args)
+    if args[i] == flag then
+      if i + 1 < len(args) then return args[i + 1] end if
+      return ""
+    end if
+    i = i + 1
+  end while
+  return ""
 end function
 
 function inline _startsWith(text, pref)
@@ -223,6 +254,18 @@ end function
 
 function _path_norm(p)
   return s.toLowerAscii(_path_canon(p))
+end function
+
+function _path_abspath(p)
+  if typeof(p) != "string" or p == "" then return "" end if
+  buf = bytes(8192, 0)
+  n = GetFullPathNameW(p, 4096, buf, 0)
+  if typeof(n) != "int" or n <= 0 then
+    return p
+  end if
+  abs_p = decode16Z(buf)
+  if typeof(abs_p) != "string" or abs_p == "" then return p end if
+  return abs_p
 end function
 
 function _path_norm_cached(p)
@@ -833,7 +876,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
   imports = splitp[0]
   part_for_codegen = splitp[1]
   source_text = ""
-  if _path_eq(path, entry_path) and typeof(parsed.source) == "string" then source_text = parsed.source end if
+  if typeof(parsed.source) == "string" then source_text = parsed.source end if
   parsed_modules = _parsed_module_set(parsed_modules, path, source_text, part_for_codegen)
   // Drop full AST early: below we only need import nodes.
   parsed.program = []
@@ -985,10 +1028,13 @@ function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
   _front_visited_set = t.fastmap_new(4096)
   _front_resolve_cache = t.fastmap_new(2048)
 
+  entry_abs = _path_abspath(entry)
+  if entry_abs == "" then entry_abs = entry end if
+
   dirs_seen = t.fastmap_new(128)
   dirs_chunks = []
   dirs_tail = []
-  d0 = _dirname(entry)
+  d0 = _dirname(entry_abs)
   nd0 = _path_norm_cached(d0)
   dirs_seen = t.fastmap_set(dirs_seen, nd0, 1)
   appd0 = t.arr_chunked_push(dirs_chunks, dirs_tail, d0, 8)
@@ -996,7 +1042,8 @@ function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
   dirs_tail = appd0[1]
   if len(include_dirs) > 0 then
     for i = 0 to len(include_dirs) - 1
-      di = include_dirs[i]
+      di = _path_abspath(include_dirs[i])
+      if di == "" then di = include_dirs[i] end if
       ndi = _path_norm_cached(di)
       if t.fastmap_has(dirs_seen, ndi) == false then
         dirs_seen = t.fastmap_set(dirs_seen, ndi, 1)
@@ -1008,8 +1055,8 @@ function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
   end if
   dirs = t.arr_chunked_finish(dirs_chunks, dirs_tail)
   res = _module_visit(
-    entry,
-    entry,
+    entry_abs,
+    entry_abs,
     dirs,
     0,
     t.arr_chunk_new(256),
@@ -1020,7 +1067,7 @@ function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
     keep_going,
     max_errors
   )
-  return FrontCheckResult(res.diagnostics, _visited_finish(res.visited, entry), res.modules, _alias_to_array(res.aliases), res.parsed_modules)
+  return FrontCheckResult(res.diagnostics, _visited_finish(res.visited, entry_abs), res.modules, _alias_to_array(res.aliases), res.parsed_modules)
 end function
 
 function _print_diag(d)
@@ -1189,6 +1236,22 @@ function _cfg_set(cfg, key, value)
   return cfg + [[key, value]]
 end function
 
+function _cfg_get_int(cfg, key, defaultv)
+  if typeof(cfg) != "array" or len(cfg) <= 0 then return defaultv end if
+  for i = 0 to len(cfg) - 1
+    it = cfg[i]
+    if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "string" and it[0] == key then
+      if typeof(it[1]) == "int" then return it[1] end if
+      return defaultv
+    end if
+    if typeof(it) == "struct" and typeof(it.key) == "string" and it.key == key then
+      if typeof(it.value) == "int" then return it.value end if
+      return defaultv
+    end if
+  end for
+  return defaultv
+end function
+
 function _collect_runtime_config(args)
   cfg = []
   i = 0
@@ -1252,6 +1315,87 @@ end function
 function _stmt_is_import(st)
   if typeof(st) != "struct" then return false end if
   return st.node_kind == "Import"
+end function
+
+function _compact_codegen_state_for_pe(st)
+  if typeof(st) != "struct" then return st end if
+  st.source = ""
+  st.filename = ""
+  st.import_aliases = []
+  st.extern_sigs = []
+  st.extern_structs = []
+  st.heap_config = []
+  st.break_stack = []
+  st.struct_fields = []
+  st.struct_ids = []
+  st.enum_variants = []
+  st.enum_ids = []
+  st.value_enum_values = []
+  st.reserved_identifiers = []
+  st.used_helpers = []
+  st.scope_stack = []
+  st.scope_declared = []
+  st.global_slots = []
+  st.globals = []
+  st.func_globals = []
+  st.func_global_map = []
+  st.function_locals = []
+  st.current_qname_prefix = ""
+  st.current_file_prefix = ""
+  st.file_prefix_map = []
+  st.typename_struct_by_id = []
+  st.typename_struct_by_qname = []
+  st.typename_enum_by_id = []
+  st.typename_enum_by_qname = []
+  st.user_functions = []
+  st.nested_user_functions = []
+  st.struct_methods = []
+  st.struct_static_methods = []
+  st.function_global_labels = []
+  st.struct_global_labels = []
+  st.builtin_specs = []
+  st.builtin_global_labels = []
+  st.extern_global_labels = []
+  st.extern_stub_labels = []
+  st.function_static_obj_labels = []
+  st.struct_static_obj_labels = []
+  st.builtin_static_obj_labels = []
+  st.extern_static_obj_labels = []
+  st.diagnostics = []
+  st.dbg_line_starts = []
+  st.current_fn_boxed_names = []
+  st.current_fn_env_index = []
+  st.scope_index_stack = []
+  st.scope_declared_index_stack = []
+  st.func_global_map_index = []
+  st.user_function_index = []
+  st.function_codegen_name_map = []
+  st.qualify_cache = []
+  st.struct_fields_index = []
+  st.struct_ids_index = []
+  st.enum_variants_index = []
+  st.enum_ids_index = []
+  st.struct_methods_index = []
+  st.struct_static_methods_index = []
+  st.extern_sig_index = []
+  st.import_alias_index = []
+  st._expr_temp_reg_order = []
+  st._expr_temp_reg_live = []
+  st._expr_temp_reg_live_by_reg = []
+  st._expr_temp_reg_reserved = []
+  st._cold_block_stack = []
+  st._inline_param_stack = []
+  st._inline_call_stack = []
+  st._global_owner_file = []
+  st._module_init_status_labels = []
+  st.ext_widebuf_labels = []
+  st.decl_site_bindings = []
+  st.function_local_ids = []
+  st._module_init_active = false
+  st._module_init_active_file = ""
+  st._global_owner_file = ""
+  st._module_init_status_labels = []
+  return st
 end function
 
 function _filter_non_import_stmts(program)
@@ -1546,31 +1690,29 @@ function _heap_probe(tag)
 end function
 
 function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
+  entry_abs = _path_abspath(entry)
+  if entry_abs == "" then entry_abs = entry end if
   _heap_probe("load:start")
-  check = _run_frontcheck(entry, include_dirs, keep_going, max_errors)
+  check = _run_frontcheck(entry_abs, include_dirs, keep_going, max_errors)
   _heap_probe("load:frontcheck_done")
   diags = check.diagnostics
   if len(diags) > 0 then
-    return LoadProgramResult(diags, "",[], check.aliases)
+    return LoadProgramResult(diags, "",[], check.aliases, [])
   end if
 
   merged_b = t.arr_chunk_new(2048)
   entry_source = ""
+  source_pairs_b = t.arr_chunk_new(128)
   visited = check.visited
   parsed_modules = check.parsed_modules
   if typeof(parsed_modules) != "array" and typeof(parsed_modules) != "struct" then parsed_modules = [] end if
   if typeof(visited) != "array" or len(visited) <= 0 then
-    visited =[entry]
+    visited =[entry_abs]
   end if
   mod_count = len(visited)
-  gc_stride = 128
-  if mod_count > 0 and mod_count <= 96 then
-    gc_stride = 32
-  else
-    if mod_count > 96 and mod_count <= 256 then
-      gc_stride = 64
-    end if
-  end if
+  // Building the merged AST already keeps a very large live object graph.
+  // For big projects, forced mid-load collections mostly add mark-stack pressure.
+  gc_stride = 0
   probe_stride = 128
 
   for i = 0 to len(visited) - 1
@@ -1578,11 +1720,15 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
     parsed = _parsed_module_get(parsed_modules, path)
     if typeof(parsed) != "struct" then
       diags = _add_diag(diags, "CompileError", path, 0, "internal frontend cache miss for: " + path)
-      return LoadProgramResult(diags, "", t.arr_chunk_finish(merged_b), check.aliases)
+      return LoadProgramResult(diags, "", t.arr_chunk_finish(merged_b), check.aliases, t.arr_chunk_finish(source_pairs_b))
     end if
 
-    if _path_eq(path, entry) and typeof(parsed.source) == "string" then
+    if _path_eq(path, entry_abs) and typeof(parsed.source) == "string" then
       entry_source = parsed.source
+    else
+      if typeof(parsed.source) == "string" and parsed.source != "" then
+        source_pairs_b = t.arr_chunk_push(source_pairs_b, StrPair(path, _build_line_starts(parsed.source)))
+      end if
     end if
 
     part = parsed.program
@@ -1592,33 +1738,47 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
       end for
     end if
     parsed.program = []
-    if _path_eq(path, entry) == false then parsed.source = "" end if
+    if _path_eq(path, entry_abs) == false then parsed.source = "" end if
     if gc_stride > 0 and i > 0 and (i % gc_stride) == 0 then gc_collect() end if
     if probe_stride > 0 and (i % probe_stride) == 0 then _heap_probe("load:file_" + i) end if
   end for
 
-  if entry_source == "" and fs.exists(entry) then
-    src = fs.readAllText(entry)
+  if entry_source == "" and fs.exists(entry_abs) then
+    src = fs.readAllText(entry_abs)
     if typeof(src) == "string" then
       entry_source = frontend.normalize_code_for_tokenizer(src)
     end if
   end if
 
   merged = t.arr_chunk_finish(merged_b)
+  source_pairs = t.arr_chunk_finish(source_pairs_b)
+  aliases = check.aliases
   visited = []
-  gc_collect()
+  parsed_modules = []
+  check.parsed_modules = []
+  check.visited = []
+  check = 0
   _heap_probe("load:done")
-  return LoadProgramResult(diags, entry_source, merged, check.aliases)
+  return LoadProgramResult(diags, entry_source, merged, aliases, source_pairs)
 end function
 
 function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  global _dump_labels_path
+  global _pe_state_keepalive
+  compiler_gc_limit = _cfg_get_int(runtime_config, "compiler_gc_limit_bytes", 0)
+  if compiler_gc_limit <= 0 then
+    compiler_gc_limit = _cfg_get_int(runtime_config, "commit_bytes", 64 << 20)
+    if compiler_gc_limit < (64 << 20) then compiler_gc_limit = 64 << 20 end if
+    if compiler_gc_limit > (256 << 20) then compiler_gc_limit = 256 << 20 end if
+  end if
+  gc_set_limit(compiler_gc_limit)
   _heap_probe("compile:start")
   if _mem_probe_enabled then
     runtime_config = _cfg_set(runtime_config, "cg_mem_probe", true)
   end if
-  print "[phase] load_program"
-  load = _load_program_for_codegen(input_ml, include_dirs, keep_going, max_errors)
-  print "[phase] load_program_done"
+  input_abs = _path_abspath(input_ml)
+  if input_abs == "" then input_abs = input_ml end if
+  load = _load_program_for_codegen(input_abs, include_dirs, keep_going, max_errors)
   _heap_probe("compile:load_program_done")
   if len(load.diagnostics) > 0 then
     for i = 0 to len(load.diagnostics) - 1
@@ -1632,26 +1792,28 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
 
   extern_sigs = collect_extern_sigs(load.program)
   _heap_probe("compile:extern_sigs_done")
-  cg = codegen.newCodegen(load.source, input_ml, load.aliases, extern_sigs, [])
+  cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
   if typeof(cg) == "struct" and typeof(cg.state) == "struct" then
+    cg.state.dbg_line_starts = load.sources
     cg.state.heap_config = runtime_config
     cg.state.call_profile = call_profile
     cg.state.trace_calls = trace_calls
     cg.state.is_windows_subsystem = (subsystem == 2)
   end if
-  print "[phase] codegen_emit"
   cg = codegen.emit_program(cg, load.program)
-  print "[phase] codegen_emit_done"
   _heap_probe("compile:codegen_done")
+  st = cg.state
+  _pe_state_keepalive = st
   load.program = []
   load.source = ""
-  gc_collect()
+  load.aliases = []
+  load.sources = []
+  load.diagnostics = []
+  if _mem_probe_enabled then
+    gc_collect()
+    st = _pe_state_keepalive
+  end if
   _heap_probe("compile:post_load_release")
-  st = cg.state
-  cg = 0
-  gc_collect()
-  _heap_probe("compile:post_cg_release")
-
   if typeof(st) != "struct" then
     print "CompileError: codegen returned invalid state"
     return 2
@@ -1664,6 +1826,28 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     end for
     return 2
   end if
+  asm_labels = []
+  patches = []
+  if typeof(st.asm) == "struct" then
+    asm_labels = a.get_labels(st.asm)
+    patches = a.get_patches(st.asm)
+    st.asm.labels = []
+    st.asm.labels_chunks = []
+    st.asm.labels_tail = []
+    st.asm.patches_chunks = []
+    st.asm.patches_tail = []
+    st.asm.calls_chunks = []
+    st.asm.calls_tail = []
+    st.asm.before_call_live_temps = []
+    st.asm.peephole_last_jump = []
+  end if
+  st = _compact_codegen_state_for_pe(st)
+  _pe_state_keepalive = st
+  st = _pe_state_keepalive
+  load = 0
+  cg = 0
+  gc_collect()
+  st = _pe_state_keepalive
   if typeof(st.asm) == "struct" then
     st.asm = a.materialize(st.asm)
   end if
@@ -1710,7 +1894,9 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     st.data.data = data_buf
     st.data.used = len(data_buf)
   end if
-  gc_collect()
+  if _mem_probe_enabled then
+    gc_collect()
+  end if
   _heap_probe("compile:buffers_compacted")
 
   p = pe.newPEBuilder()
@@ -1732,9 +1918,9 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   end if
 
   p = pe.layout(p)
-  print "[phase] pe_layout_done"
 
   imports = _imports_to_pe_imports(st.imports)
+  st.imports = []
   if len(p.sections) <= 4 then
     print "CompileError: internal section layout error (.idata missing)"
     return 2
@@ -1748,7 +1934,6 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   p.import_size = idr.idata_total_size
 
   p = pe.layout(p)
-  print "[phase] pe_import_done"
   _heap_probe("compile:pe_ready")
 
   text_rva = p.sections[0].virt_addr
@@ -1759,18 +1944,20 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
 
   labels_chunks = []
   labels_tail = []
-  asm_labels = a.get_labels(st.asm)
   if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
     for i = 0 to len(asm_labels) - 1
       lb = asm_labels[i]
       if typeof(lb) == "struct" and typeof(lb.name) == "string" and typeof(lb.pos) == "int" then
+        if _mem_probe_enabled then
+          print "[dbg][label] " + lb.name + " " + lb.pos
+        end if
         app_lb = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb.name, text_rva + lb.pos), 1024)
         labels_chunks = app_lb[0]
         labels_tail = app_lb[1]
       end if
     end for
   end if
-  if typeof(st.rdata.labels) == "array" and len(st.rdata.labels) > 0 then
+  if typeof(st.rdata) == "struct" and typeof(st.rdata.labels) == "array" and len(st.rdata.labels) > 0 then
     for i = 0 to len(st.rdata.labels) - 1
       lb2 = st.rdata.labels[i]
       if typeof(lb2) == "struct" and typeof(lb2.name) == "string" and typeof(lb2.offset) == "int" then
@@ -1780,7 +1967,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
       end if
     end for
   end if
-  if typeof(st.data.labels) == "array" and len(st.data.labels) > 0 then
+  if typeof(st.data) == "struct" and typeof(st.data.labels) == "array" and len(st.data.labels) > 0 then
     for i = 0 to len(st.data.labels) - 1
       lb3 = st.data.labels[i]
       if typeof(lb3) == "struct" and typeof(lb3.name) == "string" and typeof(lb3.offset) == "int" then
@@ -1790,7 +1977,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
       end if
     end for
   end if
-  if typeof(st.bss.labels) == "array" and len(st.bss.labels) > 0 then
+  if typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" and len(st.bss.labels) > 0 then
     for i = 0 to len(st.bss.labels) - 1
       lb4 = st.bss.labels[i]
       if typeof(lb4) == "struct" and typeof(lb4.name) == "string" and typeof(lb4.offset) == "int" then
@@ -1805,9 +1992,11 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
       it = idr.iat_symbols[i]
       if typeof(it) != "struct" then continue end if
       if typeof(it.func) != "string" or typeof(it.rva) != "int" then continue end if
-      app_lb5 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + it.func, it.rva), 1024)
-      labels_chunks = app_lb5[0]
-      labels_tail = app_lb5[1]
+      if _label_get_chunked(labels_chunks, labels_tail, "iat_" + it.func, -1) < 0 then
+        app_lb5 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + it.func, it.rva), 1024)
+        labels_chunks = app_lb5[0]
+        labels_tail = app_lb5[1]
+      end if
       if typeof(it.dll) == "string" then
         app_lb6 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + _dll_base(it.dll) + "_" + it.func, it.rva), 1024)
         labels_chunks = app_lb6[0]
@@ -1815,6 +2004,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
       end if
     end for
   end if
+  imports = []
   labels = t.arr_chunked_finish(labels_chunks, labels_tail)
   label_map = t.fastmap_new((len(labels) * 2) + 64)
   if typeof(labels) == "array" and len(labels) > 0 then
@@ -1826,8 +2016,35 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     end for
   end if
 
+  if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
+    dump = ""
+    dump = dump + "[section] .text raw=" + len(text_buf) + "\n"
+    dump = dump + "[section] .rdata raw=" + len(rdata_buf) + "\n"
+    dump = dump + "[section] .data raw=" + len(data_buf) + "\n"
+    if typeof(st.emitted_helpers) == "array" and len(st.emitted_helpers) > 0 then
+      for hi = 0 to len(st.emitted_helpers) - 1
+        h = st.emitted_helpers[hi]
+        if typeof(h) == "string" then
+          dump = dump + "[helper] " + hi + " " + h + "\n"
+        end if
+      end for
+    end if
+    if typeof(labels) == "array" and len(labels) > 0 then
+      for li = 0 to len(labels) - 1
+        lbi = labels[li]
+        if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
+          dump = dump + "[label] " + lbi.key + " " + lbi.value + "\n"
+        end if
+      end for
+    end if
+    wrdump = fs.writeAllText(_dump_labels_path, dump)
+    if typeof(wrdump) == "error" then
+      print "CompileError: writeAllText failed for label dump: " + _dump_labels_path
+      return 2
+    end if
+  end if
+
   buf = text_buf
-  patches = a.get_patches(st.asm)
   if typeof(patches) == "array" and len(patches) > 0 then
     for i = 0 to len(patches) - 1
       pt = patches[i]
@@ -1864,12 +2081,98 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     end for
   end if
 
+  patch_sets = [[rdata_buf, st.rdata.patches], [data_buf, st.data.patches]]
+  for psi = 0 to len(patch_sets) - 1
+    pack = patch_sets[psi]
+    if typeof(pack) != "array" or len(pack) < 2 then continue end if
+    blob = pack[0]
+    dpatches = pack[1]
+    if typeof(blob) != "bytes" then continue end if
+    if typeof(dpatches) != "array" or len(dpatches) <= 0 then
+      if psi == 0 then
+        rdata_buf = blob
+      else
+        data_buf = blob
+      end if
+      continue
+    end if
+
+    for j = 0 to len(dpatches) - 1
+      pt2 = dpatches[j]
+      if typeof(pt2) != "struct" then continue end if
+      if typeof(pt2.target) != "string" or typeof(pt2.offset) != "int" then continue end if
+
+      trg2 = t.fastmap_get(label_map, pt2.target, -1)
+      if typeof(trg2) != "int" then trg2 = -1 end if
+      if trg2 < 0 then
+        trg2 = _label_get(labels, pt2.target, -1)
+      end if
+      if trg2 < 0 then
+        print "CompileError: unknown data patch target: " + pt2.target
+        return 2
+      end if
+      if pt2.kind != "abs64" then
+        print "CompileError: unknown data patch kind: " + pt2.kind
+        return 2
+      end if
+      if pt2.offset < 0 or pt2.offset + 7 >= len(blob) then
+        print "CompileError: invalid data patch position for: " + pt2.target
+        return 2
+      end if
+
+      target_va = p.image_base + trg2
+      b8 = t.u64(target_va)
+      for bi = 0 to 7
+        blob[pt2.offset + bi] = b8[bi]
+      end for
+    end for
+
+    if psi == 0 then
+      rdata_buf = blob
+    else
+      data_buf = blob
+    end if
+  end for
+
+  if typeof(st.asm) == "struct" then
+    st.asm.buf = buf
+  end if
+  if typeof(st.rdata) == "struct" then
+    st.rdata.data = rdata_buf
+  end if
+  if typeof(st.data) == "struct" then
+    st.data.data = data_buf
+  end if
+  asm_labels = []
+  patches = []
+  labels = []
+  label_map = t.fastmap_new(16)
+  if typeof(st.rdata) == "struct" then
+    st.rdata.labels = []
+    st.rdata.patches = []
+  end if
+  if typeof(st.data) == "struct" then
+    st.data.labels = []
+    st.data.patches = []
+  end if
+  if typeof(st.bss) == "struct" then
+    st.bss.labels = []
+  end if
+  if typeof(idr) == "struct" then
+    idr.iat_symbols = []
+  end if
+
   tx = p.sections[0]
-  tx.data = buf
+  tx.data = st.asm.buf
   p.sections[0] = tx
+  rd = p.sections[1]
+  rd.data = st.rdata.data
+  p.sections[1] = rd
+  dt = p.sections[2]
+  dt.data = st.data.data
+  p.sections[2] = dt
 
   exe = pe.build(p)
-  print "[phase] pe_build_done"
   _heap_probe("compile:pe_built")
   wr = fs.writeAllBytes(output_exe, exe)
   if typeof(wr) == "error" then
@@ -1878,6 +2181,8 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     print "CompileError: " + msg
     return 2
   end if
+
+  _pe_state_keepalive = 0
 
   print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler)"
   return 0
@@ -1889,7 +2194,9 @@ end function
 
 function run_cli(args)
   global _mem_probe_enabled
+  global _dump_labels_path
   _mem_probe_enabled = _has_flag(args, "--mem-probe")
+  _dump_labels_path = _get_flag_value(args, "--dump-labels")
   if len(args) < 2 then
     _usage()
     return 1

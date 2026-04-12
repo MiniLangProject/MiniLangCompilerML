@@ -117,8 +117,8 @@ end function
 
 function _section_name_bytes(name)
   nm = bytes(name)
-  if len(nm) > 8 then
-    return slice(nm, 0, 8)
+  if len(nm) >= 8 then
+    return nm
   end if
   return _bytes_ljust(nm, 8)
 end function
@@ -292,6 +292,10 @@ function build(pe)
     opt = opt + t.u32(rva)
     opt = opt + t.u32(sz)
   end for
+
+  if len(opt) != 0xF0 then
+    return error(1, "Optional header size mismatch")
+  end if
 
   // section headers
   sh = bytes(0)

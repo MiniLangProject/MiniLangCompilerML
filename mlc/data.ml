@@ -19,9 +19,16 @@ struct PoolEntry
   length,
 end struct
 
+struct DataPatch
+  offset,
+  target,
+  kind,
+end struct
+
 struct DataBuilder
   data,
   labels,
+  patches,
   used,
 end struct
 
@@ -33,6 +40,7 @@ end struct
 struct RDataBuilder
   data,
   labels,
+  patches,
   pool_raw,
   pool_obj_string,
   pool_obj_float,
@@ -111,7 +119,7 @@ function _find_pool_entry(pool, key)
 end function
 
 function newDataBuilder()
-  return DataBuilder(bytes(16384, 0), [], 0)
+  return DataBuilder(bytes(16384, 0), [], [], 0)
 end function
 
 function newBssBuilder()
@@ -119,7 +127,7 @@ function newBssBuilder()
 end function
 
 function newRDataBuilder()
-  return RDataBuilder(bytes(16384, 0), [], t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
+  return RDataBuilder(bytes(16384, 0), [], [], t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
 end function
 
 function _buf_used(db)
@@ -181,6 +189,11 @@ function data_add_bytes(db, name, b)
   return db
 end function
 
+function data_add_abs64_patch(db, offset, target)
+  db.patches = db.patches +[DataPatch(offset, target, "abs64")]
+  return db
+end function
+
 function bss_pad_align(bb, align)
   if align <= 0 then return bb end if
   pad = (-bb.size) % align
@@ -239,6 +252,18 @@ end function
 
 function rdata_add_bytes(rb, name, raw)
   return _rdata_intern_raw(rb, name, raw)
+end function
+
+function rdata_add_bytes_unique(rb, name, raw)
+  off = _buf_used(rb)
+  rb = _buf_append(rb, raw)
+  rb.labels = _upsert_range_label(rb.labels, name, off, len(raw))
+  return rb
+end function
+
+function rdata_add_abs64_patch(rb, offset, target)
+  rb.patches = rb.patches +[DataPatch(offset, target, "abs64")]
+  return rb
 end function
 
 function _float_to_f64le(value)

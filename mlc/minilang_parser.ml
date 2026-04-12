@@ -14,6 +14,16 @@ struct Token
   pos,
 end struct
 
+struct ParserChunkTail
+  data,
+  used,
+  cap,
+end struct
+
+struct ParserChunkVoidSentinel
+  tag,
+end struct
+
 // expression AST (initial self-hosting port)
 struct Num
   node_kind,
@@ -400,17 +410,139 @@ function _unknownChar(code, pos)
 end function
 
 const TOKEN_CHUNK_CAP = 256
+_parser_chunk_void_sentinel = ParserChunkVoidSentinel(0x50A9)
+
+function _parser_chunk_wrap_value(value)
+  if typeof(value) == "void" then
+    return _parser_chunk_void_sentinel
+  end if
+  return value
+end function
+
+function _parser_chunk_unwrap_value(value)
+  if typeof(value) == "struct" and value == _parser_chunk_void_sentinel then
+    return
+  end if
+  if typeof(value) == "void" then
+    return
+  end if
+  return value
+end function
+
+function _parser_chunk_tail_new(cap)
+  ccap = cap
+  if typeof(ccap) != "int" or ccap <= 0 then ccap = 64 end if
+  return ParserChunkTail(array(ccap, 0), 0, ccap)
+end function
+
+function _parser_chunk_tail_from_array(arr, cap)
+  t = _parser_chunk_tail_new(cap)
+  if typeof(arr) != "array" or len(arr) <= 0 then return t end if
+  copy_n = len(arr)
+  if copy_n > t.cap then copy_n = t.cap end if
+  for i = 0 to copy_n - 1
+    t.data[i] = _parser_chunk_wrap_value(arr[i])
+  end for
+  t.used = copy_n
+  return t
+end function
+
+function _parser_chunk_tail_len(tail)
+  if typeof(tail) == "array" then return len(tail) end if
+  if typeof(tail) != "struct" then return 0 end if
+  if typeof(tail.used) != "int" or tail.used <= 0 then return 0 end if
+  n = tail.used
+  if typeof(tail.cap) == "int" and tail.cap >= 0 and n > tail.cap then n = tail.cap end if
+  if typeof(tail.data) == "array" and n > len(tail.data) then n = len(tail.data) end if
+  if n < 0 then n = 0 end if
+  return n
+end function
+
+function _parser_chunk_tail_to_array(tail)
+  if typeof(tail) == "array" then return tail end if
+  if typeof(tail) != "struct" or typeof(tail.data) != "array" then return [] end if
+  n = _parser_chunk_tail_len(tail)
+  if n <= 0 then return [] end if
+  has_void = false
+  for i = 0 to n - 1
+    cell = tail.data[i]
+    if typeof(cell) == "struct" and cell == _parser_chunk_void_sentinel then
+      has_void = true
+      break
+    end if
+    if typeof(cell) == "void" then
+      has_void = true
+      break
+    end if
+  end for
+  if has_void == false then
+    outv = array(n, 0)
+    for i = 0 to n - 1
+      outv[i] = tail.data[i]
+    end for
+    return outv
+  end if
+  parts = []
+  blk = []
+  blk_cap = 256
+  for i = 0 to n - 1
+    blk = blk + [_parser_chunk_unwrap_value(tail.data[i])]
+    if len(blk) >= blk_cap then
+      parts = parts + [blk]
+      blk = []
+    end if
+  end for
+  if len(blk) > 0 then
+    parts = parts + [blk]
+  end if
+  return _chunked_merge_balanced(parts)
+end function
 
 function _chunked_push(chunks, tail, value, cap)
-  return t.arr_chunked_push(chunks, tail, value, cap)
+  if typeof(chunks) != "array" then chunks = [] end if
+  ccap = cap
+  if typeof(ccap) != "int" or ccap <= 0 then ccap = 64 end if
+  t = tail
+  if typeof(t) == "array" then t = _parser_chunk_tail_from_array(t, ccap) end if
+  if typeof(t) != "struct" or typeof(t.data) != "array" then t = _parser_chunk_tail_new(ccap) end if
+  if typeof(t.cap) != "int" or t.cap <= 0 then t.cap = ccap end if
+  if typeof(t.used) != "int" or t.used < 0 then t.used = 0 end if
+  if t.cap != ccap then
+    if t.used > 0 then
+      chunks = chunks + [_parser_chunk_tail_to_array(t)]
+    end if
+    t = _parser_chunk_tail_new(ccap)
+  end if
+  if t.used >= ccap then
+    chunks = chunks + [_parser_chunk_tail_to_array(t)]
+    t = _parser_chunk_tail_new(ccap)
+  end if
+  t.data[t.used] = _parser_chunk_wrap_value(value)
+  t.used = t.used + 1
+  return [chunks, t]
 end function
 
 function _chunked_merge_balanced(chunks)
-  return t.arr_merge_chunks_balanced(chunks)
+  if typeof(chunks) != "array" then return [] end if
+  if len(chunks) <= 0 then return [] end if
+  outv = []
+  for i = 0 to len(chunks) - 1
+    if typeof(chunks[i]) == "array" then
+      outv = outv + chunks[i]
+    else
+      outv = outv + [chunks[i]]
+    end if
+  end for
+  return outv
 end function
 
 function _chunked_finish(chunks, tail)
-  return t.arr_chunked_finish(chunks, tail)
+  if typeof(chunks) != "array" then chunks = [] end if
+  tail_arr = _parser_chunk_tail_to_array(tail)
+  if typeof(tail_arr) == "array" and len(tail_arr) > 0 then
+    chunks = chunks + [tail_arr]
+  end if
+  return _chunked_merge_balanced(chunks)
 end function
 
 function _token_push(chunks, tail, kind, value, pos)
@@ -840,6 +972,15 @@ function _decode_string_raw(raw, pos)
   return decoded
 end function
 
+function _decode_string_token(tok)
+  if tok.kind != "STRING" then
+    _set_error("Expect STRING literal", tok.pos)
+    return
+  end if
+  raw = _substr(tok.value, 1, len(tok.value) - 2)
+  return _decode_string_raw(raw, tok.pos)
+end function
+
 function _parse_base_int(raw, start_index, base)
   v = 0
   for i = start_index to len(raw) - 1
@@ -979,18 +1120,19 @@ function _parse_postfix()
   expr = _parse_primary()
   if _has_error() then return end if
   while true
-    if _peek().kind == "LPAREN" then
+    tok = _peek()
+    if tok.kind == "LPAREN" then
       sp = expr._pos
-      if typeof(sp) != "int" then sp = _peek().pos end if
+      if typeof(sp) != "int" then sp = tok.pos end if
       _advance()
       args = _parse_expr_list("RPAREN")
       if _has_error() then return end if
       expr = Call("Call", expr, args, sp, _filename)
       continue
     end if
-    if _peek().kind == "LBRACK" then
+    if tok.kind == "LBRACK" then
       sp = expr._pos
-      if typeof(sp) != "int" then sp = _peek().pos end if
+      if typeof(sp) != "int" then sp = tok.pos end if
       _advance()
       _skip_newlines()
       idx = _parse_expr(0)
@@ -1001,9 +1143,9 @@ function _parse_postfix()
       expr = Index("Index", expr, idx, sp, _filename)
       continue
     end if
-    if _peek().kind == "DOT" then
+    if tok.kind == "DOT" then
       sp = expr._pos
-      if typeof(sp) != "int" then sp = _peek().pos end if
+      if typeof(sp) != "int" then sp = tok.pos end if
       _advance()
       nm = _expect_kind("IDENT")
       if _has_error() then return end if
@@ -1272,22 +1414,57 @@ function _parse_namespace_def(start_pos)
     t = _peek()
     if t.kind == "KW" and t.value == "import" then
       _set_error("'import' is not allowed inside a namespace", t.pos)
+      if _collect_errors then
+        _record_error(_last_error)
+        _clear_error()
+        _sync_stmt([], "namespace")
+        if len(_errors) >= _max_errors then
+          break
+        end if
+        _skip_stmt_seps()
+        continue
+      end if
       break
     end if
 
     if t.kind == "KW" and(t.value == "function" or t.value == "struct" or t.value == "enum" or t.value == "namespace" or t.value == "extern" or t.value == "const") then
-      st = _parse_stmt()
-      if _has_error() then break end if
-      app = _chunked_push(body_chunks, body_tail, st, 32)
-      body_chunks = app[0]
-      body_tail = app[1]
+      if _collect_errors then
+        st = _parse_stmt_recover([], "namespace")
+        if st != 0 then
+          app = _chunked_push(body_chunks, body_tail, st, 32)
+          body_chunks = app[0]
+          body_tail = app[1]
+        else
+          if len(_errors) >= _max_errors then
+            break
+          end if
+        end if
+      else
+        st = _parse_stmt()
+        if _has_error() then break end if
+        app = _chunked_push(body_chunks, body_tail, st, 32)
+        body_chunks = app[0]
+        body_tail = app[1]
+      end if
       _skip_stmt_seps()
       continue
     end if
 
     if t.kind == "IDENT" then
-      st = _parse_stmt()
-      if _has_error() then break end if
+      st = 0
+      if _collect_errors then
+        st = _parse_stmt_recover([], "namespace")
+        if st == 0 then
+          if len(_errors) >= _max_errors then
+            break
+          end if
+          _skip_stmt_seps()
+          continue
+        end if
+      else
+        st = _parse_stmt()
+        if _has_error() then break end if
+      end if
       if st.node_kind == "Assign" then
         app2 = _chunked_push(body_chunks, body_tail, st, 32)
         body_chunks = app2[0]
@@ -1296,10 +1473,30 @@ function _parse_namespace_def(start_pos)
         continue
       end if
       _set_error("Inside a namespace, only declarations/globals are allowed (e.g. 'x = ...')", t.pos)
+      if _collect_errors then
+        _record_error(_last_error)
+        _clear_error()
+        _sync_stmt([], "namespace")
+        if len(_errors) >= _max_errors then
+          break
+        end if
+        _skip_stmt_seps()
+        continue
+      end if
       break
     end if
 
     _set_error("Inside a namespace, only declarations are allowed", t.pos)
+    if _collect_errors then
+      _record_error(_last_error)
+      _clear_error()
+      _sync_stmt([], "namespace")
+      if len(_errors) >= _max_errors then
+        break
+      end if
+      _skip_stmt_seps()
+      continue
+    end if
     break
   end while
   _ns_depth = _ns_depth - 1
@@ -1482,8 +1679,7 @@ function _parse_stmt()
     path = ""
     if _peek().kind == "STRING" then
       st = _advance()
-      raw = _substr(st.value, 1, len(st.value) - 2)
-      path = _decode_string_raw(raw, st.pos)
+      path = _decode_string_token(st)
       if _has_error() then return end if
     else
       module_name = _parse_dotted_name()
@@ -1638,8 +1834,7 @@ function _parse_stmt()
 
     dll_tok = _expect_kind("STRING")
     if _has_error() then return end if
-    dll_raw = _substr(dll_tok.value, 1, len(dll_tok.value) - 2)
-    dll = _decode_string_raw(dll_raw, dll_tok.pos)
+    dll = _decode_string_token(dll_tok)
     if _has_error() then return end if
 
     sym_name = 0
@@ -1647,8 +1842,7 @@ function _parse_stmt()
       _advance()
       st = _expect_kind("STRING")
       if _has_error() then return end if
-      sr = _substr(st.value, 1, len(st.value) - 2)
-      sym_name = _decode_string_raw(sr, st.pos)
+      sym_name = _decode_string_token(st)
       if _has_error() then return end if
     end if
 

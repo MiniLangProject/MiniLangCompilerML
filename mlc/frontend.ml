@@ -62,6 +62,43 @@ function _append_piece(chunks, tail, piece, last_nonspace)
   return [chunks, tail, last_nonspace]
 end function
 
+function _normalize_frontend_error(err, fallback_path)
+  if typeof(err) != "struct" then
+    return err
+  end if
+  if typeof(err.message) != "string" then
+    return err
+  end if
+  fn = ""
+  if typeof(err.filename) == "string" then
+    fn = err.filename
+  end if
+  if fn != "" then
+    return err
+  end if
+  p = 0
+  if typeof(err.pos) == "int" then
+    p = err.pos
+  end if
+  return parser.newParseError(err.message, p, fallback_path)
+end function
+
+function _normalize_frontend_errors(errors, fallback_path)
+  if typeof(errors) != "array" or len(errors) <= 0 then
+    return []
+  end if
+
+  chunks = []
+  tail = []
+  for i = 0 to len(errors) - 1
+    err = _normalize_frontend_error(errors[i], fallback_path)
+    app = t.arr_chunked_push(chunks, tail, err, 32)
+    chunks = app[0]
+    tail = app[1]
+  end for
+  return t.arr_chunked_finish(chunks, tail)
+end function
+
 function normalize_code_for_tokenizer(src)
   if typeof(src) != "string" then
     return ""
@@ -179,18 +216,15 @@ function parse_program(path)
   code = normalize_code_for_tokenizer(r)
   prog = parser.parse_program(code, path)
   if typeof(prog) == "struct" and typeof(prog.message) == "string" then
-    return FrontendParseResult(code,[], [prog])
+    return FrontendParseResult(code,[], [_normalize_frontend_error(prog, path)])
   end if
   return FrontendParseResult(code, prog,[])
 end function
 
 function load_minilang_frontend(path)
-  // MiniLang self-hosted frontend is linked statically as package import.
-  // Keep the function for API compatibility with the Python compiler layout.
-  if fs.exists(path) then
-    return true
-  end if
-  return false
+  // The self-hosted port links the parser statically, so we return the
+  // equivalent "loaded successfully" result instead of probing the filesystem.
+  return true
 end function
 
 function parse_program_keepgoing(path, max_errors)
@@ -201,7 +235,7 @@ function parse_program_keepgoing(path, max_errors)
   code = normalize_code_for_tokenizer(r)
   keep = parser.parse_program_keepgoing(code, path, max_errors)
   if typeof(keep) == "struct" then
-    return FrontendParseResult(code, keep.program, keep.errors)
+    return FrontendParseResult(code, keep.program, _normalize_frontend_errors(keep.errors, path))
   end if
   return FrontendParseResult(code,[], [parser.newParseError("keepgoing parser returned invalid result", 0, path)])
 end function
