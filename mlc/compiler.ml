@@ -9,6 +9,7 @@ import mlc.tools as t
 import mlc.asm as a
 
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
+extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
 
 struct FrontDiag
   kind,
@@ -71,6 +72,8 @@ struct LoadProgramResult
   program,
   aliases,
   sources,
+  visited,
+  parsed_modules,
 end struct
 
 struct StrIntPair
@@ -91,6 +94,50 @@ struct ExternSig
   symbol_name,
   params,
   ret_ty,
+end struct
+
+struct MloLabel
+  name,
+  offset,
+end struct
+
+struct MloPatch
+  offset,
+  target,
+  kind,
+end struct
+
+struct MloImportDll
+  dll,
+  funcs,
+end struct
+
+struct MloObject
+  kind,
+  module_file,
+  entry_label,
+  text,
+  rdata,
+  data,
+  bss_size,
+  asm_labels,
+  asm_patches,
+  rdata_labels,
+  rdata_patches,
+  data_labels,
+  data_patches,
+  bss_labels,
+  imports,
+end struct
+
+struct ObjBuf
+  parts,
+  total,
+end struct
+
+struct ObjReader
+  buf,
+  pos,
 end struct
 
 _mem_probe_enabled = false
@@ -315,6 +362,202 @@ function inline _dirname(path)
     i = i - 1
   end while
   return "."
+end function
+
+function inline _path_join(a, b)
+  if typeof(a) != "string" or a == "" or a == "." then return b end if
+  if typeof(b) != "string" or b == "" then return a end if
+  last = a[len(a) - 1]
+  if last == "\\" or last == "/" then
+    return a + b
+  end if
+  return a + "\\" + b
+end function
+
+function inline _basename(path)
+  if typeof(path) != "string" or path == "" then return "" end if
+  i = len(path) - 1
+  while i >= 0
+    ch = path[i]
+    if ch == "\\" or ch == "/" then
+      if i + 1 >= len(path) then return "" end if
+      return s.substr(path, i + 1, len(path) - i - 1)
+    end if
+    i = i - 1
+  end while
+  return path
+end function
+
+function inline _file_stem(path)
+  base = _basename(path)
+  if base == "" then return "module" end if
+  i = len(base) - 1
+  while i >= 0
+    if base[i] == "." then
+      if i <= 0 then return base end if
+      return s.substr(base, 0, i)
+    end if
+    i = i - 1
+  end while
+  return base
+end function
+
+function _sanitize_fs_component(text)
+  if typeof(text) != "string" or text == "" then return "module" end if
+  safe = ""
+  for i = 0 to len(text) - 1
+    ch = text[i]
+    cb = bytes(ch)
+    cc = 0
+    if len(cb) > 0 then cc = cb[0] end if
+    keep = false
+    if (cc >= 97 and cc <= 122) or (cc >= 65 and cc <= 90) then keep = true end if
+    if cc >= 48 and cc <= 57 then keep = true end if
+    if ch == "_" or ch == "-" or ch == "." then keep = true end if
+    if keep then
+      safe = safe + ch
+    else
+      safe = safe + "_"
+    end if
+  end for
+  if safe == "" then return "module" end if
+  return safe
+end function
+
+function _ensure_dir_recursive(path)
+  if typeof(path) != "string" or path == "" or path == "." then return true end if
+  if fs.exists(path) then
+    return fs.isDir(path)
+  end if
+
+  parent = _dirname(path)
+  if parent != "" and parent != "." and parent != path then
+    if _ensure_dir_recursive(parent) == false then return false end if
+  end if
+
+  ok = CreateDirectoryW(path, 0)
+  if ok == true then return true end if
+  return fs.isDir(path)
+end function
+
+function _tmp_obj_dir(output_exe)
+  out_dir = _dirname(output_exe)
+  if out_dir == "" then out_dir = "." end if
+  tmp_root = _path_join(out_dir, "tmp")
+  stem = _sanitize_fs_component(_file_stem(output_exe))
+  return _path_join(tmp_root, stem)
+end function
+
+function _tmp_obj_path(tmp_dir, index, module_path, kind)
+  stem = "module"
+  if kind == "support" then
+    stem = "support"
+  else
+    stem = _sanitize_fs_component(_file_stem(module_path))
+  end if
+  return _path_join(tmp_dir, index + "_" + stem + ".mlo")
+end function
+
+function _section_has_payload(blob, labels, patches, size_hint)
+  if typeof(blob) == "bytes" and len(blob) > 0 then return true end if
+  if typeof(labels) == "array" and len(labels) > 0 then return true end if
+  if typeof(patches) == "array" and len(patches) > 0 then return true end if
+  if typeof(size_hint) == "int" and size_hint > 0 then return true end if
+  return false
+end function
+
+function _append_zero_pad(parts_b, pad_bytes)
+  if typeof(pad_bytes) != "int" or pad_bytes <= 0 then return parts_b end if
+  return t.arr_chunk_push(parts_b, bytes(pad_bytes, 0))
+end function
+
+function _u32le_at(buf, off)
+  if typeof(buf) != "bytes" then return 0 end if
+  if typeof(off) != "int" or off < 0 or off + 3 >= len(buf) then return 0 end if
+  return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24)
+end function
+
+function _objbuf_new()
+  return ObjBuf(t.arr_chunk_new(64), 0)
+end function
+
+function _objbuf_push(ob, b)
+  if typeof(b) != "bytes" or len(b) <= 0 then return ob end if
+  ob.parts = t.arr_chunk_push(ob.parts, b)
+  ob.total = ob.total + len(b)
+  return ob
+end function
+
+function _objbuf_u32(ob, value)
+  return _objbuf_push(ob, t.u32(value))
+end function
+
+function _objbuf_bytes(ob, b)
+  if typeof(b) != "bytes" then b = bytes(0) end if
+  ob = _objbuf_u32(ob, len(b))
+  return _objbuf_push(ob, b)
+end function
+
+function _objbuf_string(ob, text)
+  raw = bytes("")
+  if typeof(text) == "string" then raw = bytes(text) end if
+  return _objbuf_bytes(ob, raw)
+end function
+
+function _objbuf_finish(ob)
+  buf = bytes(ob.total, 0)
+  parts = t.arr_chunk_finish(ob.parts)
+  off = 0
+  if typeof(parts) == "array" and len(parts) > 0 then
+    for i = 0 to len(parts) - 1
+      part = parts[i]
+      if typeof(part) != "bytes" then continue end if
+      copyBytes(buf, off, part, 0, len(part))
+      off = off + len(part)
+    end for
+  end if
+  return buf
+end function
+
+function _objreader_new(buf)
+  return ObjReader(buf, 0)
+end function
+
+function _objreader_read_u32(rd)
+  if typeof(rd) != "struct" or typeof(rd.buf) != "bytes" then
+    return error(1, "invalid object reader")
+  end if
+  if rd.pos < 0 or rd.pos + 4 > len(rd.buf) then
+    return error(1, "truncated object file")
+  end if
+  v = _u32le_at(rd.buf, rd.pos)
+  rd.pos = rd.pos + 4
+  return [rd, v]
+end function
+
+function _objreader_read_bytes(rd)
+  rlen = _objreader_read_u32(rd)
+  if typeof(rlen) == "error" then return rlen end if
+  rd = rlen[0]
+  n = rlen[1]
+  if typeof(n) != "int" or n < 0 then return error(1, "invalid object blob length") end if
+  if rd.pos < 0 or rd.pos + n > len(rd.buf) then
+    return error(1, "truncated object blob at pos=" + rd.pos + " len=" + n + " total=" + len(rd.buf))
+  end if
+  blob = bytes(n, 0)
+  if n > 0 then
+    copyBytes(blob, 0, rd.buf, rd.pos, n)
+  end if
+  rd.pos = rd.pos + n
+  return [rd, blob]
+end function
+
+function _objreader_read_string(rd)
+  rb = _objreader_read_bytes(rd)
+  if typeof(rb) == "error" then return rb end if
+  rd = rb[0]
+  raw = rb[1]
+  return [rd, decode(raw)]
 end function
 
 function inline _node_pos(st)
@@ -1484,11 +1727,16 @@ function _imports_to_pe_imports(imports)
   if typeof(imports) != "array" or len(imports) <= 0 then return t.arr_chunked_finish(vals_chunks, vals_tail) end if
   for i = 0 to len(imports) - 1
     it = imports[i]
-    if typeof(it) != "struct" then continue end if
     dll = ""
     funcs = []
-    if typeof(it.key) == "string" then dll = it.key end if
-    if typeof(it.values) == "array" then funcs = it.values end if
+    if typeof(it) == "array" and len(it) >= 2 then
+      dll = _coerce_name(it[0])
+      if typeof(it[1]) == "array" then funcs = it[1] end if
+    else
+      if typeof(it) != "struct" then continue end if
+      if typeof(it.key) == "string" then dll = it.key end if
+      if typeof(it.values) == "array" then funcs = it.values end if
+    end if
     if dll == "" then continue end if
     appv = t.arr_chunked_push(vals_chunks, vals_tail, pe.ImportDll(dll, funcs), 16)
     vals_chunks = appv[0]
@@ -1526,15 +1774,1219 @@ end function
 function _coerce_name(v)
   if typeof(v) == "string" then return v end if
   if typeof(v) == "struct" then
-    if typeof(v.name) == "string" then return v.name end if
-    if typeof(v.value) == "string" then return v.value end if
+    nm = try(v.name)
+    if typeof(nm) == "string" then return nm end if
+    vv = try(v.value)
+    if typeof(vv) == "string" then return vv end if
+    key = try(v.key)
+    if typeof(key) == "string" then return key end if
+    nk = try(v.node_kind)
+    if typeof(nk) == "string" then
+      fn = try(v._filename)
+      pos = try(v._pos)
+      if typeof(fn) == "string" and fn != "" and typeof(pos) == "int" then
+        return nk + "@" + fn + ":" + pos
+      end if
+      return nk
+    end if
+    kind = try(v.kind)
+    if typeof(kind) == "string" then return kind end if
+    return "struct"
   end if
-  return "" + v
+  if typeof(v) == "array" then return "array:" + len(v) end if
+  if typeof(v) == "void" then return "void" end if
+  return typeof(v)
 end function
 
 function _st_file(st)
   if typeof(st) == "struct" and typeof(st._filename) == "string" then return st._filename end if
   return ""
+end function
+
+function _mlo_import_get_funcs(imports, dll)
+  if typeof(imports) != "array" or len(imports) <= 0 then return [] end if
+  for i = 0 to len(imports) - 1
+    it = imports[i]
+    if typeof(it) != "array" or len(it) < 2 then continue end if
+    if _coerce_name(it[0]) != dll then continue end if
+    if typeof(it[1]) == "array" then return it[1] end if
+    return []
+  end for
+  return []
+end function
+
+function _mlo_import_set_funcs(imports, dll, funcs)
+  if typeof(imports) != "array" then imports = [] end if
+  if len(imports) > 0 then
+    for i = 0 to len(imports) - 1
+      it = imports[i]
+      if typeof(it) != "array" or len(it) < 2 then continue end if
+      if _coerce_name(it[0]) == dll then
+        imports[i] = [dll, funcs]
+        return imports
+      end if
+    end for
+  end if
+  return imports + [[dll, funcs]]
+end function
+
+function _mlo_merge_imports(dst, src)
+  if typeof(src) != "array" or len(src) <= 0 then return dst end if
+  merged = dst
+  if typeof(merged) != "array" then merged = [] end if
+  for i = 0 to len(src) - 1
+    it = src[i]
+    if typeof(it) != "array" or len(it) < 2 then continue end if
+    dll = _coerce_name(it[0])
+    funcs = []
+    if typeof(it[1]) == "array" then funcs = it[1] end if
+    if dll == "" then continue end if
+    cur = _mlo_import_get_funcs(merged, dll)
+    if typeof(funcs) == "array" and len(funcs) > 0 then
+      for fi = 0 to len(funcs) - 1
+        fn = _coerce_name(funcs[fi])
+        if fn == "" then continue end if
+        if _array_contains(cur, fn) == false then
+          cur = cur + [fn]
+        end if
+      end for
+    end if
+    merged = _mlo_import_set_funcs(merged, dll, cur)
+  end for
+  return merged
+end function
+
+function _mlo_labels_from_arr(arr)
+  out_b = t.arr_chunk_new(64)
+  if typeof(arr) == "array" and len(arr) > 0 then
+    for i = 0 to len(arr) - 1
+      it = arr[i]
+      if typeof(it) != "struct" then continue end if
+      nm = _coerce_name(it.name)
+      off = 0
+      if typeof(it.offset) == "int" then off = it.offset end if
+      if nm == "" then continue end if
+      out_b = t.arr_chunk_push(out_b, MloLabel(nm, off))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_labels_from_asm_labels(arr)
+  out_b = t.arr_chunk_new(64)
+  if typeof(arr) == "array" and len(arr) > 0 then
+    for i = 0 to len(arr) - 1
+      it = arr[i]
+      if typeof(it) != "struct" then continue end if
+      nm = _coerce_name(it.name)
+      off = 0
+      if typeof(it.pos) == "int" then off = it.pos end if
+      if nm == "" then continue end if
+      out_b = t.arr_chunk_push(out_b, MloLabel(nm, off))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_patches_from_asm(arr)
+  out_b = t.arr_chunk_new(64)
+  if typeof(arr) == "array" and len(arr) > 0 then
+    for i = 0 to len(arr) - 1
+      it = arr[i]
+      if typeof(it) != "struct" then continue end if
+      pos = 0
+      if typeof(it.pos) == "int" then pos = it.pos end if
+      trg = _coerce_name(it.target)
+      kind = _coerce_name(it.kind)
+      if trg == "" or kind == "" then continue end if
+      out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_patches_from_data(arr)
+  out_b = t.arr_chunk_new(64)
+  if typeof(arr) == "array" and len(arr) > 0 then
+    for i = 0 to len(arr) - 1
+      it = arr[i]
+      if typeof(it) != "struct" then continue end if
+      pos = 0
+      if typeof(it.offset) == "int" then pos = it.offset end if
+      trg = _coerce_name(it.target)
+      kind = _coerce_name(it.kind)
+      if trg == "" or kind == "" then continue end if
+      out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_imports_from_state(imports)
+  out_b = t.arr_chunk_new(16)
+  if typeof(imports) == "array" and len(imports) > 0 then
+    for i = 0 to len(imports) - 1
+      it = imports[i]
+      if typeof(it) != "struct" then continue end if
+      dll = ""
+      funcs = []
+      if typeof(it.key) == "string" then dll = it.key end if
+      if typeof(it.values) == "array" then funcs = it.values end if
+      if dll == "" then continue end if
+      out_b = t.arr_chunk_push(out_b, [dll, funcs])
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _slice_used_bytes(buf, used)
+  if typeof(buf) != "bytes" then return bytes(0) end if
+  n = len(buf)
+  if typeof(used) == "int" and used >= 0 and used <= n then
+    n = used
+  end if
+  if n == len(buf) then return buf end if
+  compact = bytes(n, 0)
+  if n > 0 then copyBytes(compact, 0, buf, 0, n) end if
+  return compact
+end function
+
+function _mlo_from_state(kind, module_file, entry_label, st)
+  asm_labels = []
+  asm_patches = []
+  text_buf = bytes(0)
+  if typeof(st.asm) == "struct" then
+    asm_labels = a.get_labels(st.asm)
+    asm_patches = a.get_patches(st.asm)
+    st.asm = a.materialize(st.asm)
+    if typeof(st.asm.buf) == "bytes" then
+      text_buf = _slice_used_bytes(st.asm.buf, st.asm.size)
+    end if
+  end if
+
+  rdata_buf = bytes(0)
+  if typeof(st.rdata) == "struct" then
+    rdata_buf = _slice_used_bytes(st.rdata.data, st.rdata.used)
+  end if
+
+  data_buf = bytes(0)
+  if typeof(st.data) == "struct" then
+    data_buf = _slice_used_bytes(st.data.data, st.data.used)
+  end if
+
+  bss_size = 0
+  bss_labels = []
+  if typeof(st.bss) == "struct" then
+    if typeof(st.bss.size) == "int" then bss_size = st.bss.size end if
+    bss_labels = _mlo_labels_from_arr(st.bss.labels)
+  end if
+
+  rdata_labels = []
+  rdata_patches = []
+  if typeof(st.rdata) == "struct" then
+    rdata_labels = _mlo_labels_from_arr(st.rdata.labels)
+    rdata_patches = _mlo_patches_from_data(st.rdata.patches)
+  end if
+
+  data_labels = []
+  data_patches = []
+  if typeof(st.data) == "struct" then
+    data_labels = _mlo_labels_from_arr(st.data.labels)
+    data_patches = _mlo_patches_from_data(st.data.patches)
+  end if
+
+  return MloObject(
+    kind,
+    module_file,
+    entry_label,
+    text_buf,
+    rdata_buf,
+    data_buf,
+    bss_size,
+    _mlo_labels_from_asm_labels(asm_labels),
+    _mlo_patches_from_asm(asm_patches),
+    rdata_labels,
+    rdata_patches,
+    data_labels,
+    data_patches,
+    bss_labels,
+    _mlo_imports_from_state(st.imports)
+  )
+end function
+
+function _mlo_labels_after(labels, prefix_off)
+  out_b = t.arr_chunk_new(64)
+  if typeof(labels) == "array" and len(labels) > 0 then
+    for i = 0 to len(labels) - 1
+      lb = labels[i]
+      if typeof(lb) != "struct" then continue end if
+      if typeof(lb.offset) != "int" or lb.offset < prefix_off then continue end if
+      out_b = t.arr_chunk_push(out_b, MloLabel(_coerce_name(lb.name), lb.offset - prefix_off))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_patches_after(patches, prefix_off)
+  out_b = t.arr_chunk_new(64)
+  if typeof(patches) == "array" and len(patches) > 0 then
+    for i = 0 to len(patches) - 1
+      pt = patches[i]
+      if typeof(pt) != "struct" then continue end if
+      if typeof(pt.offset) != "int" or pt.offset < prefix_off then continue end if
+      out_b = t.arr_chunk_push(out_b, MloPatch(pt.offset - prefix_off, _coerce_name(pt.target), _coerce_name(pt.kind)))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
+  obj = _mlo_from_state(kind, module_file, entry_label, st)
+  if typeof(base_state) != "struct" then return obj end if
+
+  rdata_prefix = 0
+  if typeof(base_state.rdata) == "struct" and typeof(base_state.rdata.used) == "int" then
+    rdata_prefix = base_state.rdata.used
+  end if
+  if rdata_prefix > 0 and len(obj.rdata) >= rdata_prefix then
+    obj.rdata = slice(obj.rdata, rdata_prefix, len(obj.rdata) - rdata_prefix)
+    obj.rdata_labels = _mlo_labels_after(obj.rdata_labels, rdata_prefix)
+    obj.rdata_patches = _mlo_patches_after(obj.rdata_patches, rdata_prefix)
+  end if
+
+  data_prefix = 0
+  if typeof(base_state.data) == "struct" and typeof(base_state.data.used) == "int" then
+    data_prefix = base_state.data.used
+  end if
+  if data_prefix > 0 and len(obj.data) >= data_prefix then
+    obj.data = slice(obj.data, data_prefix, len(obj.data) - data_prefix)
+    obj.data_labels = _mlo_labels_after(obj.data_labels, data_prefix)
+    obj.data_patches = _mlo_patches_after(obj.data_patches, data_prefix)
+  end if
+
+  bss_prefix = 0
+  if typeof(base_state.bss) == "struct" and typeof(base_state.bss.size) == "int" then
+    bss_prefix = base_state.bss.size
+  end if
+  if obj.bss_size >= bss_prefix then
+    obj.bss_size = obj.bss_size - bss_prefix
+    obj.bss_labels = _mlo_labels_after(obj.bss_labels, bss_prefix)
+  end if
+
+  return obj
+end function
+
+function _mlo_preserve_module_label(name)
+  if typeof(name) != "string" or name == "" then return false end if
+  if _startsWith(name, "fn_user_") then return true end if
+  if _startsWith(name, "modinit_") then return true end if
+  return false
+end function
+
+function _mlo_label_map_add(mapv, old_name, new_name)
+  if old_name == new_name or old_name == "" or new_name == "" then return mapv end if
+  return t.fastmap_set(mapv, old_name, new_name)
+end function
+
+function _mlo_rename_labels(labels, prefix, preserve_public, label_map)
+  renamed = labels
+  if typeof(renamed) != "array" or len(renamed) <= 0 then return [renamed, label_map] end if
+  for i = 0 to len(renamed) - 1
+    lb = renamed[i]
+    if typeof(lb) != "struct" then continue end if
+    nm = _coerce_name(lb.name)
+    if nm == "" then continue end if
+    if preserve_public and _mlo_preserve_module_label(nm) then continue end if
+    new_nm = prefix + "__" + nm
+    label_map = _mlo_label_map_add(label_map, nm, new_nm)
+    renamed[i] = MloLabel(new_nm, lb.offset)
+  end for
+  return [renamed, label_map]
+end function
+
+function _mlo_rename_patches(patches, label_map)
+  renamed = patches
+  if typeof(renamed) != "array" or len(renamed) <= 0 then return renamed end if
+  for i = 0 to len(renamed) - 1
+    pt = renamed[i]
+    if typeof(pt) != "struct" then continue end if
+    trg = _coerce_name(pt.target)
+    if trg == "" then continue end if
+    new_trg = t.fastmap_get(label_map, trg, trg)
+    renamed[i] = MloPatch(pt.offset, new_trg, pt.kind)
+  end for
+  return renamed
+end function
+
+function _mlo_namespace_object(obj, prefix, preserve_public)
+  if typeof(obj) != "struct" then return obj end if
+  if typeof(prefix) != "string" or prefix == "" then return obj end if
+  label_map = t.fastmap_new(256)
+
+  rr = _mlo_rename_labels(obj.asm_labels, prefix, preserve_public, label_map)
+  obj.asm_labels = rr[0]
+  label_map = rr[1]
+
+  rr = _mlo_rename_labels(obj.rdata_labels, prefix, false, label_map)
+  obj.rdata_labels = rr[0]
+  label_map = rr[1]
+
+  rr = _mlo_rename_labels(obj.data_labels, prefix, false, label_map)
+  obj.data_labels = rr[0]
+  label_map = rr[1]
+
+  rr = _mlo_rename_labels(obj.bss_labels, prefix, false, label_map)
+  obj.bss_labels = rr[0]
+  label_map = rr[1]
+
+  obj.asm_patches = _mlo_rename_patches(obj.asm_patches, label_map)
+  obj.rdata_patches = _mlo_rename_patches(obj.rdata_patches, label_map)
+  obj.data_patches = _mlo_rename_patches(obj.data_patches, label_map)
+  obj.entry_label = t.fastmap_get(label_map, obj.entry_label, obj.entry_label)
+  return obj
+end function
+
+function _mlo_write_labels(ob, labels)
+  count = 0
+  if typeof(labels) == "array" then count = len(labels) end if
+  ob = _objbuf_u32(ob, count)
+  if count > 0 then
+    for i = 0 to count - 1
+      lb = labels[i]
+      if typeof(lb) != "struct" then
+        ob = _objbuf_string(ob, "")
+        ob = _objbuf_u32(ob, 0)
+        continue
+      end if
+      ob = _objbuf_string(ob, _coerce_name(lb.name))
+      ob = _objbuf_u32(ob, lb.offset)
+    end for
+  end if
+  return ob
+end function
+
+function _mlo_bp_push(bp, b)
+  if typeof(b) != "bytes" or len(b) <= 0 then return bp end if
+  return t.byte_pages_append(bp, b)
+end function
+
+function _mlo_bp_u32(bp, value)
+  return _mlo_bp_push(bp, t.u32(value))
+end function
+
+function _mlo_bp_bytes(bp, b)
+  raw = b
+  if typeof(raw) != "bytes" then raw = bytes(0) end if
+  bp = _mlo_bp_u32(bp, len(raw))
+  return _mlo_bp_push(bp, raw)
+end function
+
+function _mlo_bp_string(bp, text)
+  raw = bytes("")
+  if typeof(text) == "string" then raw = bytes(text) end if
+  return _mlo_bp_bytes(bp, raw)
+end function
+
+function _mlo_bp_write_labels(bp, labels)
+  count = 0
+  if typeof(labels) == "array" then count = len(labels) end if
+  bp = _mlo_bp_u32(bp, count)
+  if count > 0 then
+    for i = 0 to count - 1
+      lb = labels[i]
+      if typeof(lb) != "struct" then
+        bp = _mlo_bp_string(bp, "")
+        bp = _mlo_bp_u32(bp, 0)
+        continue
+      end if
+      bp = _mlo_bp_string(bp, _coerce_name(lb.name))
+      bp = _mlo_bp_u32(bp, lb.offset)
+    end for
+  end if
+  return bp
+end function
+
+function _mlo_bp_write_patches(bp, patches)
+  count = 0
+  if typeof(patches) == "array" then count = len(patches) end if
+  bp = _mlo_bp_u32(bp, count)
+  if count > 0 then
+    for i = 0 to count - 1
+      pt = patches[i]
+      if typeof(pt) != "struct" then
+        bp = _mlo_bp_u32(bp, 0)
+        bp = _mlo_bp_string(bp, "")
+        bp = _mlo_bp_string(bp, "")
+        continue
+      end if
+      bp = _mlo_bp_u32(bp, pt.offset)
+      bp = _mlo_bp_string(bp, _coerce_name(pt.target))
+      bp = _mlo_bp_string(bp, _coerce_name(pt.kind))
+    end for
+  end if
+  return bp
+end function
+
+function _mlo_bp_write_imports(bp, imports)
+  count = 0
+  if typeof(imports) == "array" then count = len(imports) end if
+  bp = _mlo_bp_u32(bp, count)
+  if count > 0 then
+    for i = 0 to count - 1
+      it = imports[i]
+      dll = ""
+      funcs = []
+      if typeof(it) == "array" and len(it) >= 2 then
+        dll = _coerce_name(it[0])
+        if typeof(it[1]) == "array" then funcs = it[1] end if
+      end if
+      bp = _mlo_bp_string(bp, dll)
+      fcount = 0
+      if typeof(funcs) == "array" then fcount = len(funcs) end if
+      bp = _mlo_bp_u32(bp, fcount)
+      if fcount > 0 then
+        for fi = 0 to fcount - 1
+          bp = _mlo_bp_string(bp, _coerce_name(funcs[fi]))
+        end for
+      end if
+    end for
+  end if
+  return bp
+end function
+
+function _mlo_write_patches(ob, patches)
+  count = 0
+  if typeof(patches) == "array" then count = len(patches) end if
+  ob = _objbuf_u32(ob, count)
+  if count > 0 then
+    for i = 0 to count - 1
+      pt = patches[i]
+      if typeof(pt) != "struct" then
+        ob = _objbuf_u32(ob, 0)
+        ob = _objbuf_string(ob, "")
+        ob = _objbuf_string(ob, "")
+        continue
+      end if
+      ob = _objbuf_u32(ob, pt.offset)
+      ob = _objbuf_string(ob, _coerce_name(pt.target))
+      ob = _objbuf_string(ob, _coerce_name(pt.kind))
+    end for
+  end if
+  return ob
+end function
+
+function _mlo_write_imports(ob, imports)
+  count = 0
+  if typeof(imports) == "array" then count = len(imports) end if
+  ob = _objbuf_u32(ob, count)
+  if count > 0 then
+    for i = 0 to count - 1
+      it = imports[i]
+      dll = ""
+      funcs = []
+      if typeof(it) == "array" and len(it) >= 2 then
+        dll = _coerce_name(it[0])
+        if typeof(it[1]) == "array" then funcs = it[1] end if
+      end if
+      ob = _objbuf_string(ob, dll)
+      fcount = 0
+      if typeof(funcs) == "array" then fcount = len(funcs) end if
+      ob = _objbuf_u32(ob, fcount)
+      if fcount > 0 then
+        for fi = 0 to fcount - 1
+          ob = _objbuf_string(ob, _coerce_name(funcs[fi]))
+        end for
+      end if
+    end for
+  end if
+  return ob
+end function
+
+function _write_mlo_file(path, obj)
+  bp = t.byte_pages_new()
+  bp = _mlo_bp_string(bp, "MLO1")
+  bp = _mlo_bp_u32(bp, 1)
+  bp = _mlo_bp_string(bp, obj.kind)
+  bp = _mlo_bp_string(bp, obj.module_file)
+  bp = _mlo_bp_string(bp, obj.entry_label)
+  bp = _mlo_bp_bytes(bp, obj.text)
+  bp = _mlo_bp_bytes(bp, obj.rdata)
+  bp = _mlo_bp_bytes(bp, obj.data)
+  bp = _mlo_bp_u32(bp, obj.bss_size)
+  bp = _mlo_bp_write_labels(bp, obj.asm_labels)
+  bp = _mlo_bp_write_patches(bp, obj.asm_patches)
+  bp = _mlo_bp_write_labels(bp, obj.rdata_labels)
+  bp = _mlo_bp_write_patches(bp, obj.rdata_patches)
+  bp = _mlo_bp_write_labels(bp, obj.data_labels)
+  bp = _mlo_bp_write_patches(bp, obj.data_patches)
+  bp = _mlo_bp_write_labels(bp, obj.bss_labels)
+  bp = _mlo_bp_write_imports(bp, obj.imports)
+  return fs.writeAllBytes(path, t.byte_pages_to_bytes(bp))
+end function
+
+function _mlo_read_labels(rd)
+  rc = _objreader_read_u32(rd)
+  if typeof(rc) == "error" then return rc end if
+  rd = rc[0]
+  count = rc[1]
+  out_b = t.arr_chunk_new(64)
+  if count > 0 then
+    for i = 0 to count - 1
+      rn = _objreader_read_string(rd)
+      if typeof(rn) == "error" then return rn end if
+      rd = rn[0]
+      name = rn[1]
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return ro end if
+      rd = ro[0]
+      off = ro[1]
+      out_b = t.arr_chunk_push(out_b, MloLabel(name, off))
+    end for
+  end if
+  return [rd, t.arr_chunk_finish(out_b)]
+end function
+
+function _mlo_read_patches(rd)
+  rc = _objreader_read_u32(rd)
+  if typeof(rc) == "error" then return rc end if
+  rd = rc[0]
+  count = rc[1]
+  out_b = t.arr_chunk_new(64)
+  if count > 0 then
+    for i = 0 to count - 1
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return ro end if
+      rd = ro[0]
+      off = ro[1]
+      rt = _objreader_read_string(rd)
+      if typeof(rt) == "error" then return rt end if
+      rd = rt[0]
+      trg = rt[1]
+      rk = _objreader_read_string(rd)
+      if typeof(rk) == "error" then return rk end if
+      rd = rk[0]
+      kind = rk[1]
+      out_b = t.arr_chunk_push(out_b, MloPatch(off, trg, kind))
+    end for
+  end if
+  return [rd, t.arr_chunk_finish(out_b)]
+end function
+
+function _mlo_read_imports(rd)
+  rc = _objreader_read_u32(rd)
+  if typeof(rc) == "error" then return rc end if
+  rd = rc[0]
+  count = rc[1]
+  out_b = t.arr_chunk_new(16)
+  if count > 0 then
+    for i = 0 to count - 1
+      rdll = _objreader_read_string(rd)
+      if typeof(rdll) == "error" then return rdll end if
+      rd = rdll[0]
+      dll = rdll[1]
+      rf = _objreader_read_u32(rd)
+      if typeof(rf) == "error" then return rf end if
+      rd = rf[0]
+      fcount = rf[1]
+      funcs_b = t.arr_chunk_new(8)
+      if fcount > 0 then
+        for fi = 0 to fcount - 1
+          rs = _objreader_read_string(rd)
+          if typeof(rs) == "error" then return rs end if
+          rd = rs[0]
+          funcs_b = t.arr_chunk_push(funcs_b, rs[1])
+        end for
+      end if
+      out_b = t.arr_chunk_push(out_b, [dll, t.arr_chunk_finish(funcs_b)])
+    end for
+  end if
+  return [rd, t.arr_chunk_finish(out_b)]
+end function
+
+function _read_mlo_file(path)
+  raw = fs.readAllBytes(path)
+  if typeof(raw) == "error" then return raw end if
+  rd = _objreader_new(raw)
+  rmagic = _objreader_read_string(rd)
+  if typeof(rmagic) == "error" then return rmagic end if
+  rd = rmagic[0]
+  magic = rmagic[1]
+  if magic != "MLO1" then return error(1, "invalid MiniLang object magic") end if
+  rver = _objreader_read_u32(rd)
+  if typeof(rver) == "error" then return rver end if
+  rd = rver[0]
+  if rver[1] != 1 then return error(1, "unsupported MiniLang object version") end if
+
+  rk = _objreader_read_string(rd)
+  if typeof(rk) == "error" then return rk end if
+  rd = rk[0]
+  kind = rk[1]
+
+  rm = _objreader_read_string(rd)
+  if typeof(rm) == "error" then return rm end if
+  rd = rm[0]
+  module_file = rm[1]
+
+  re = _objreader_read_string(rd)
+  if typeof(re) == "error" then return re end if
+  rd = re[0]
+  entry_label = re[1]
+
+  rt = _objreader_read_bytes(rd)
+  if typeof(rt) == "error" then return rt end if
+  rd = rt[0]
+  text = rt[1]
+
+  rr = _objreader_read_bytes(rd)
+  if typeof(rr) == "error" then return rr end if
+  rd = rr[0]
+  rdata = rr[1]
+
+  rdv = _objreader_read_bytes(rd)
+  if typeof(rdv) == "error" then return rdv end if
+  rd = rdv[0]
+  data = rdv[1]
+
+  rb = _objreader_read_u32(rd)
+  if typeof(rb) == "error" then return rb end if
+  rd = rb[0]
+  bss_size = rb[1]
+
+  r1 = _mlo_read_labels(rd)
+  if typeof(r1) == "error" then return r1 end if
+  rd = r1[0]
+  asm_labels = r1[1]
+
+  r2 = _mlo_read_patches(rd)
+  if typeof(r2) == "error" then return r2 end if
+  rd = r2[0]
+  asm_patches = r2[1]
+
+  r3 = _mlo_read_labels(rd)
+  if typeof(r3) == "error" then return r3 end if
+  rd = r3[0]
+  rdata_labels = r3[1]
+
+  r4 = _mlo_read_patches(rd)
+  if typeof(r4) == "error" then return r4 end if
+  rd = r4[0]
+  rdata_patches = r4[1]
+
+  r5 = _mlo_read_labels(rd)
+  if typeof(r5) == "error" then return r5 end if
+  rd = r5[0]
+  data_labels = r5[1]
+
+  r6 = _mlo_read_patches(rd)
+  if typeof(r6) == "error" then return r6 end if
+  rd = r6[0]
+  data_patches = r6[1]
+
+  r7 = _mlo_read_labels(rd)
+  if typeof(r7) == "error" then return r7 end if
+  rd = r7[0]
+  bss_labels = r7[1]
+
+  r8 = _mlo_read_imports(rd)
+  if typeof(r8) == "error" then return r8 end if
+  rd = r8[0]
+  imports = r8[1]
+
+  return MloObject(kind, module_file, entry_label, text, rdata, data, bss_size, asm_labels, asm_patches, rdata_labels, rdata_patches, data_labels, data_patches, bss_labels, imports)
+end function
+
+function _debug_validate_patch_names(label, patches)
+  if typeof(patches) != "array" or len(patches) <= 0 then return end if
+  for i = 0 to len(patches) - 1
+    pt = patches[i]
+    if typeof(pt) != "struct" then
+      print "[dbg][mlo] non-struct patch in " + label + " at " + i + " type=" + typeof(pt)
+      return
+    end if
+    if typeof(pt.target) != "string" or typeof(pt.kind) != "string" then
+      print "[dbg][mlo] bad patch in " + label + " at " + i + " target_type=" + typeof(pt.target) + " target_name=" + _coerce_name(pt.target) + " kind_type=" + typeof(pt.kind) + " kind_name=" + _coerce_name(pt.kind)
+      return
+    end if
+  end for
+end function
+
+function _label_lookup_fallback(labels, name, defaultv)
+  if typeof(name) != "string" or name == "" then return defaultv end if
+  if typeof(labels) != "array" or len(labels) <= 0 then return defaultv end if
+  for i = 0 to len(labels) - 1
+    it = labels[i]
+    if typeof(it) == "struct" then
+      nm = try(it.name)
+      off = try(it.offset)
+      if typeof(nm) == "string" and typeof(off) == "int" then
+        if nm == name then return off end if
+      end if
+      key = try(it.key)
+      value = try(it.value)
+      if typeof(key) == "string" and typeof(value) == "int" then
+        if key == name then return value end if
+      end if
+    else
+      if typeof(it) == "array" and len(it) >= 2 then
+        if _coerce_name(it[0]) == name and typeof(it[1]) == "int" then
+          return it[1]
+        end if
+      end if
+    end if
+  end for
+  return defaultv
+end function
+
+function _link_rec_labels_lookup(recs, text_rva, rdata_rva, data_rva, bss_rva, name, defaultv)
+  if typeof(name) != "string" or name == "" then return defaultv end if
+  if typeof(recs) != "array" or len(recs) <= 0 then return defaultv end if
+  for i = 0 to len(recs) - 1
+    rec = recs[i]
+    if typeof(rec) != "array" or len(rec) < 5 then continue end if
+    obj_path = _coerce_name(rec[0])
+    text_off = rec[1]
+    rdata_off = rec[2]
+    data_off = rec[3]
+    bss_off = rec[4]
+
+    ro = _read_mlo_file(obj_path)
+    if typeof(ro) == "error" then continue end if
+    asm_labels = ro.asm_labels
+    rdata_labels = ro.rdata_labels
+    data_labels = ro.data_labels
+    bss_labels = ro.bss_labels
+
+    if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
+      for li = 0 to len(asm_labels) - 1
+        lb = asm_labels[li]
+        if typeof(lb) != "struct" then continue end if
+        if _coerce_name(lb.name) == name and typeof(lb.offset) == "int" then
+          return text_rva + text_off + lb.offset
+        end if
+      end for
+    end if
+
+    if typeof(rdata_labels) == "array" and len(rdata_labels) > 0 then
+      for li = 0 to len(rdata_labels) - 1
+        lb = rdata_labels[li]
+        if typeof(lb) != "struct" then continue end if
+        if _coerce_name(lb.name) == name and typeof(lb.offset) == "int" then
+          return rdata_rva + rdata_off + lb.offset
+        end if
+      end for
+    end if
+
+    if typeof(data_labels) == "array" and len(data_labels) > 0 then
+      for li = 0 to len(data_labels) - 1
+        lb = data_labels[li]
+        if typeof(lb) != "struct" then continue end if
+        if _coerce_name(lb.name) == name and typeof(lb.offset) == "int" then
+          return data_rva + data_off + lb.offset
+        end if
+      end for
+    end if
+
+    if typeof(bss_labels) == "array" and len(bss_labels) > 0 then
+      for li = 0 to len(bss_labels) - 1
+        lb = bss_labels[li]
+        if typeof(lb) != "struct" then continue end if
+        if _coerce_name(lb.name) == name and typeof(lb.offset) == "int" then
+          return bss_rva + bss_off + lb.offset
+        end if
+      end for
+    end if
+  end for
+  return defaultv
+end function
+
+function _patch_triplets_for_link(patches, default_kind)
+  out_b = t.arr_chunk_new(64)
+  if typeof(patches) == "array" and len(patches) > 0 then
+    for i = 0 to len(patches) - 1
+      pt = patches[i]
+      if typeof(pt) != "struct" then continue end if
+      off = 0
+      roff = try(pt.offset)
+      if typeof(roff) == "int" then off = roff end if
+      trg = _coerce_name(try(pt.target))
+      if typeof(trg) != "string" or trg == "" then continue end if
+      kind = _coerce_name(try(pt.kind))
+      if typeof(kind) != "string" or kind == "" or kind == "unknown" then
+        kind = default_kind
+      end if
+      out_b = t.arr_chunk_push(out_b, [off, trg, kind])
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_skip_labels(rd)
+  rc = _objreader_read_u32(rd)
+  if typeof(rc) == "error" then return rc end if
+  rd = rc[0]
+  count = rc[1]
+  if count > 0 then
+    for i = 0 to count - 1
+      rn = _objreader_read_string(rd)
+      if typeof(rn) == "error" then return rn end if
+      rd = rn[0]
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return ro end if
+      rd = ro[0]
+    end for
+  end if
+  return rd
+end function
+
+function _mlo_read_patch_triplets(rd, default_kind)
+  rc = _objreader_read_u32(rd)
+  if typeof(rc) == "error" then return rc end if
+  rd = rc[0]
+  count = rc[1]
+  out_b = t.arr_chunk_new(64)
+  if count > 0 then
+    for i = 0 to count - 1
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return ro end if
+      rd = ro[0]
+      off = ro[1]
+      rt = _objreader_read_string(rd)
+      if typeof(rt) == "error" then return rt end if
+      rd = rt[0]
+      trg = rt[1]
+      rk = _objreader_read_string(rd)
+      if typeof(rk) == "error" then return rk end if
+      rd = rk[0]
+      kind = rk[1]
+      if typeof(kind) != "string" or kind == "" or kind == "unknown" then
+        kind = default_kind
+      end if
+      out_b = t.arr_chunk_push(out_b, [off, trg, kind])
+    end for
+  end if
+  return [rd, t.arr_chunk_finish(out_b)]
+end function
+
+function _read_mlo_patch_triplets(path)
+  raw = fs.readAllBytes(path)
+  if typeof(raw) == "error" then return raw end if
+  rd = _objreader_new(raw)
+
+  rmagic = _objreader_read_string(rd)
+  if typeof(rmagic) == "error" then return rmagic end if
+  rd = rmagic[0]
+  if rmagic[1] != "MLO1" then return error(1, "invalid MiniLang object magic") end if
+
+  rver = _objreader_read_u32(rd)
+  if typeof(rver) == "error" then return rver end if
+  rd = rver[0]
+  if rver[1] != 1 then return error(1, "unsupported MiniLang object version") end if
+
+  for i = 0 to 2
+    rs = _objreader_read_string(rd)
+    if typeof(rs) == "error" then return rs end if
+    rd = rs[0]
+  end for
+  for i = 0 to 2
+    rb = _objreader_read_bytes(rd)
+    if typeof(rb) == "error" then return rb end if
+    rd = rb[0]
+  end for
+  rbss = _objreader_read_u32(rd)
+  if typeof(rbss) == "error" then return rbss end if
+  rd = rbss[0]
+
+  r1 = _mlo_skip_labels(rd)
+  if typeof(r1) == "error" then return r1 end if
+  rd = r1
+
+  r2 = _mlo_read_patch_triplets(rd, "rel32")
+  if typeof(r2) == "error" then return r2 end if
+  rd = r2[0]
+  asm_patches = r2[1]
+
+  r3 = _mlo_skip_labels(rd)
+  if typeof(r3) == "error" then return r3 end if
+  rd = r3
+
+  r4 = _mlo_read_patch_triplets(rd, "abs64")
+  if typeof(r4) == "error" then return r4 end if
+  rd = r4[0]
+  rdata_patches = r4[1]
+
+  r5 = _mlo_skip_labels(rd)
+  if typeof(r5) == "error" then return r5 end if
+  rd = r5
+
+  r6 = _mlo_read_patch_triplets(rd, "abs64")
+  if typeof(r6) == "error" then return r6 end if
+  data_patches = r6[1]
+
+  return [asm_patches, rdata_patches, data_patches]
+end function
+
+function _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target)
+  trg = t.fastmap_get(label_map, target, -1)
+  if typeof(trg) != "int" or trg < 0 then
+    trg = _label_lookup_fallback(labels, target, -1)
+    if typeof(trg) == "int" and trg >= 0 then
+      label_map = t.fastmap_set(label_map, target, trg)
+    end if
+  end if
+  if typeof(trg) != "int" or trg < 0 then
+    trg = _link_rec_labels_lookup(link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target, -1)
+    if typeof(trg) == "int" and trg >= 0 then
+      label_map = t.fastmap_set(label_map, target, trg)
+    end if
+  end if
+  return [label_map, trg]
+end function
+
+function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, image_base, buf, rdata_buf, data_buf, patch_index)
+  raw = fs.readAllBytes(src_patch)
+  if typeof(raw) == "error" then
+    msg = "failed to read MiniLang object file during patching"
+    if typeof(raw.message) == "string" then msg = raw.message end if
+    print "CompileError: " + msg + " (" + src_patch + ")"
+    return [2, label_map, patch_index]
+  end if
+
+  rd = _objreader_new(raw)
+  rmagic = _objreader_read_string(rd)
+  if typeof(rmagic) == "error" then return [2, label_map, patch_index] end if
+  rd = rmagic[0]
+  if rmagic[1] != "MLO1" then
+    print "CompileError: invalid MiniLang object magic (" + src_patch + ")"
+    return [2, label_map, patch_index]
+  end if
+  rver = _objreader_read_u32(rd)
+  if typeof(rver) == "error" then return [2, label_map, patch_index] end if
+  rd = rver[0]
+  if rver[1] != 1 then
+    print "CompileError: unsupported MiniLang object version (" + src_patch + ")"
+    return [2, label_map, patch_index]
+  end if
+
+  for i = 0 to 2
+    rs = _objreader_read_string(rd)
+    if typeof(rs) == "error" then return [2, label_map, patch_index] end if
+    rd = rs[0]
+  end for
+  for i = 0 to 2
+    rb = _objreader_read_bytes(rd)
+    if typeof(rb) == "error" then return [2, label_map, patch_index] end if
+    rd = rb[0]
+  end for
+  rbss = _objreader_read_u32(rd)
+  if typeof(rbss) == "error" then return [2, label_map, patch_index] end if
+  rd = rbss[0]
+
+  rskip1 = _mlo_skip_labels(rd)
+  if typeof(rskip1) == "error" then return [2, label_map, patch_index] end if
+  rd = rskip1
+  rct = _objreader_read_u32(rd)
+  if typeof(rct) == "error" then return [2, label_map, patch_index] end if
+  rd = rct[0]
+  text_patch_count = rct[1]
+  if text_patch_count > 0 then
+    for i = 0 to text_patch_count - 1
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return [2, label_map, patch_index] end if
+      rd = ro[0]
+      pt_off = ro[1]
+      rt = _objreader_read_string(rd)
+      if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+      rd = rt[0]
+      pt_target = rt[1]
+      rk = _objreader_read_string(rd)
+      if typeof(rk) == "error" then return [2, label_map, patch_index] end if
+      rd = rk[0]
+
+      rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
+      label_map = rr[0]
+      trg = rr[1]
+      if typeof(trg) != "int" or trg < 0 then
+        print "CompileError: unknown patch target: " + pt_target
+        return [2, label_map, patch_index]
+      end if
+      abs_off = obj_text_off + pt_off
+      if abs_off < 0 or abs_off + 3 >= len(buf) then
+        print "CompileError: invalid patch position for: " + pt_target
+        return [2, label_map, patch_index]
+      end if
+      src_next = text_rva + abs_off + 4
+      disp = trg - src_next
+      b4 = t.u32(disp)
+      buf[abs_off] = b4[0]
+      buf[abs_off + 1] = b4[1]
+      buf[abs_off + 2] = b4[2]
+      buf[abs_off + 3] = b4[3]
+      patch_index = patch_index + 1
+    end for
+  end if
+
+  rskip2 = _mlo_skip_labels(rd)
+  if typeof(rskip2) == "error" then return [2, label_map, patch_index] end if
+  rd = rskip2
+  rcr = _objreader_read_u32(rd)
+  if typeof(rcr) == "error" then return [2, label_map, patch_index] end if
+  rd = rcr[0]
+  rdata_patch_count = rcr[1]
+  if rdata_patch_count > 0 then
+    for i = 0 to rdata_patch_count - 1
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return [2, label_map, patch_index] end if
+      rd = ro[0]
+      pt_off = ro[1]
+      rt = _objreader_read_string(rd)
+      if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+      rd = rt[0]
+      pt_target = rt[1]
+      rk = _objreader_read_string(rd)
+      if typeof(rk) == "error" then return [2, label_map, patch_index] end if
+      rd = rk[0]
+
+      rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
+      label_map = rr[0]
+      trg = rr[1]
+      if typeof(trg) != "int" or trg < 0 then
+        print "CompileError: unknown data patch target: " + pt_target
+        return [2, label_map, patch_index]
+      end if
+      abs_off = obj_rdata_off + pt_off
+      if abs_off < 0 or abs_off + 7 >= len(rdata_buf) then
+        print "CompileError: invalid data patch position for: " + pt_target
+        return [2, label_map, patch_index]
+      end if
+      target_va = image_base + trg
+      b8 = t.u64(target_va)
+      for bi = 0 to 7
+        rdata_buf[abs_off + bi] = b8[bi]
+      end for
+    end for
+  end if
+
+  rskip3 = _mlo_skip_labels(rd)
+  if typeof(rskip3) == "error" then return [2, label_map, patch_index] end if
+  rd = rskip3
+  rcd = _objreader_read_u32(rd)
+  if typeof(rcd) == "error" then return [2, label_map, patch_index] end if
+  rd = rcd[0]
+  data_patch_count = rcd[1]
+  if data_patch_count > 0 then
+    for i = 0 to data_patch_count - 1
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return [2, label_map, patch_index] end if
+      rd = ro[0]
+      pt_off = ro[1]
+      rt = _objreader_read_string(rd)
+      if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+      rd = rt[0]
+      pt_target = rt[1]
+      rk = _objreader_read_string(rd)
+      if typeof(rk) == "error" then return [2, label_map, patch_index] end if
+      rd = rk[0]
+
+      rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
+      label_map = rr[0]
+      trg = rr[1]
+      if typeof(trg) != "int" or trg < 0 then
+        print "CompileError: unknown data patch target: " + pt_target
+        return [2, label_map, patch_index]
+      end if
+      abs_off = obj_data_off + pt_off
+      if abs_off < 0 or abs_off + 7 >= len(data_buf) then
+        print "CompileError: invalid data patch position for: " + pt_target
+        return [2, label_map, patch_index]
+      end if
+      target_va = image_base + trg
+      b8 = t.u64(target_va)
+      for bi = 0 to 7
+        data_buf[abs_off + bi] = b8[bi]
+      end for
+    end for
+  end if
+
+  return [0, label_map, patch_index]
+end function
+
+function _concat_bytes_parts(parts_builder)
+  parts = t.arr_chunk_finish(parts_builder)
+  total = 0
+  if typeof(parts) == "array" and len(parts) > 0 then
+    for i = 0 to len(parts) - 1
+      if typeof(parts[i]) == "bytes" then total = total + len(parts[i]) end if
+    end for
+  end if
+  buf = bytes(total, 0)
+  off = 0
+  if typeof(parts) == "array" and len(parts) > 0 then
+    for i = 0 to len(parts) - 1
+      part = parts[i]
+      if typeof(part) != "bytes" then continue end if
+      copyBytes(buf, off, part, 0, len(part))
+      off = off + len(part)
+    end for
+  end if
+  return buf
+end function
+
+function _module_init_rec_for_file(module_init_recs, module_file)
+  if typeof(module_init_recs) != "array" or len(module_init_recs) <= 0 then return 0 end if
+  for i = 0 to len(module_init_recs) - 1
+    it = module_init_recs[i]
+    if typeof(it) != "array" or len(it) < 5 then continue end if
+    if _path_eq(_coerce_name(it[0]), module_file) then return it end if
+  end for
+  return 0
+end function
+
+function _find_main_name(state)
+  if typeof(state.user_functions) != "array" or len(state.user_functions) <= 0 then return "" end if
+  for i = 0 to len(state.user_functions) - 1
+    it = state.user_functions[i]
+    if typeof(it) == "array" and len(it) == 2 and _coerce_name(it[0]) == "main" then
+      return "main"
+    end if
+  end for
+  return ""
+end function
+
+function _merge_string_arrays(dst, src)
+  merged = dst
+  if typeof(merged) != "array" then merged = [] end if
+  if typeof(src) != "array" or len(src) <= 0 then return merged end if
+  for i = 0 to len(src) - 1
+    v = _coerce_name(src[i])
+    if v == "" then continue end if
+    if _array_contains(merged, v) == false then
+      merged = merged + [v]
+    end if
+  end for
+  return merged
+end function
+
+function _is_internal_helper_label_local(lbl)
+  if typeof(lbl) != "string" then return false end if
+  if _startsWith(lbl, "fn_") == false then return false end if
+  if _startsWith(lbl, "fn_user_") then return false end if
+  if _startsWith(lbl, "fn_extern_") then return false end if
+  return true
+end function
+
+function _collect_internal_helper_targets(dst, patches)
+  merged = dst
+  if typeof(merged) != "array" then merged = [] end if
+  if typeof(patches) != "array" or len(patches) <= 0 then return merged end if
+  for i = 0 to len(patches) - 1
+    pt = patches[i]
+    if typeof(pt) != "struct" then continue end if
+    trg = _coerce_name(pt.target)
+    if _is_internal_helper_label_local(trg) == false then continue end if
+    if _array_contains(merged, trg) then continue end if
+    merged = merged + [trg]
+  end for
+  return merged
 end function
 
 function _extern_symbol_default(qname)
@@ -1697,7 +3149,7 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   _heap_probe("load:frontcheck_done")
   diags = check.diagnostics
   if len(diags) > 0 then
-    return LoadProgramResult(diags, "",[], check.aliases, [])
+    return LoadProgramResult(diags, "", [], check.aliases, [], check.visited, check.parsed_modules)
   end if
 
   merged_b = t.arr_chunk_new(2048)
@@ -1707,12 +3159,8 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   parsed_modules = check.parsed_modules
   if typeof(parsed_modules) != "array" and typeof(parsed_modules) != "struct" then parsed_modules = [] end if
   if typeof(visited) != "array" or len(visited) <= 0 then
-    visited =[entry_abs]
+    visited = [entry_abs]
   end if
-  mod_count = len(visited)
-  // Building the merged AST already keeps a very large live object graph.
-  // For big projects, forced mid-load collections mostly add mark-stack pressure.
-  gc_stride = 0
   probe_stride = 128
 
   for i = 0 to len(visited) - 1
@@ -1720,7 +3168,7 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
     parsed = _parsed_module_get(parsed_modules, path)
     if typeof(parsed) != "struct" then
       diags = _add_diag(diags, "CompileError", path, 0, "internal frontend cache miss for: " + path)
-      return LoadProgramResult(diags, "", t.arr_chunk_finish(merged_b), check.aliases, t.arr_chunk_finish(source_pairs_b))
+      return LoadProgramResult(diags, "", t.arr_chunk_finish(merged_b), check.aliases, t.arr_chunk_finish(source_pairs_b), visited, parsed_modules)
     end if
 
     if _path_eq(path, entry_abs) and typeof(parsed.source) == "string" then
@@ -1737,9 +3185,10 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
         merged_b = t.arr_chunk_push(merged_b, part[pi])
       end for
     end if
-    parsed.program = []
-    if _path_eq(path, entry_abs) == false then parsed.source = "" end if
-    if gc_stride > 0 and i > 0 and (i % gc_stride) == 0 then gc_collect() end if
+    if _path_eq(path, entry_abs) == false then
+      parsed.source = ""
+      parsed_modules = _parsed_module_set(parsed_modules, path, "", parsed.program)
+    end if
     if probe_stride > 0 and (i % probe_stride) == 0 then _heap_probe("load:file_" + i) end if
   end for
 
@@ -1753,18 +3202,332 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   merged = t.arr_chunk_finish(merged_b)
   source_pairs = t.arr_chunk_finish(source_pairs_b)
   aliases = check.aliases
-  visited = []
-  parsed_modules = []
-  check.parsed_modules = []
-  check.visited = []
-  check = 0
   _heap_probe("load:done")
-  return LoadProgramResult(diags, entry_source, merged, aliases, source_pairs)
+  return LoadProgramResult(diags, entry_source, merged, aliases, source_pairs, visited, parsed_modules)
+end function
+
+function _link_mlo_files(obj_paths, output_exe, subsystem)
+  global _dump_labels_path
+  text_parts_b = t.arr_chunk_new(64)
+  rdata_parts_b = t.arr_chunk_new(64)
+  data_parts_b = t.arr_chunk_new(64)
+  link_patch_recs_b = t.arr_chunk_new(64)
+  text_labels_b = t.arr_chunk_new(4096)
+  rdata_labels_b = t.arr_chunk_new(4096)
+  data_labels_b = t.arr_chunk_new(4096)
+  bss_labels_b = t.arr_chunk_new(4096)
+  imports = []
+  entry_label = ""
+  text_off = 0
+  rdata_off = 0
+  data_off = 0
+  bss_off = 0
+
+  if typeof(obj_paths) != "array" or len(obj_paths) <= 0 then
+    print "CompileError: no MiniLang object files to link"
+    return 2
+  end if
+
+  for oi = 0 to len(obj_paths) - 1
+    obj_path = obj_paths[oi]
+    ro = _read_mlo_file(obj_path)
+    if typeof(ro) == "error" then
+      msg = "failed to read MiniLang object file"
+      if typeof(ro.message) == "string" then msg = ro.message end if
+      print "CompileError: " + msg + " (" + obj_path + ")"
+      return 2
+    end if
+    obj = ro
+    _debug_validate_patch_names("obj_text " + obj_path, obj.asm_patches)
+    _debug_validate_patch_names("obj_rdata " + obj_path, obj.rdata_patches)
+    _debug_validate_patch_names("obj_data " + obj_path, obj.data_patches)
+
+    if entry_label == "" and typeof(obj.entry_label) == "string" and obj.entry_label != "" then
+      entry_label = obj.entry_label
+    end if
+
+    text_obj_off = text_off
+    if _section_has_payload(obj.text, obj.asm_labels, obj.asm_patches, 0) then
+      text_pad = t.align_up(text_off, 16) - text_off
+      text_parts_b = _append_zero_pad(text_parts_b, text_pad)
+      text_obj_off = text_off + text_pad
+      text_off = text_obj_off
+    end if
+
+    rdata_obj_off = rdata_off
+    if _section_has_payload(obj.rdata, obj.rdata_labels, obj.rdata_patches, 0) then
+      rdata_pad = t.align_up(rdata_off, 8) - rdata_off
+      rdata_parts_b = _append_zero_pad(rdata_parts_b, rdata_pad)
+      rdata_obj_off = rdata_off + rdata_pad
+      rdata_off = rdata_obj_off
+    end if
+
+    data_obj_off = data_off
+    if _section_has_payload(obj.data, obj.data_labels, obj.data_patches, 0) then
+      data_pad = t.align_up(data_off, 8) - data_off
+      data_parts_b = _append_zero_pad(data_parts_b, data_pad)
+      data_obj_off = data_off + data_pad
+      data_off = data_obj_off
+    end if
+
+    bss_obj_off = bss_off
+    if _section_has_payload(bytes(0), obj.bss_labels, [], obj.bss_size) then
+      bss_pad = t.align_up(bss_off, 8) - bss_off
+      bss_obj_off = bss_off + bss_pad
+      bss_off = bss_obj_off
+    end if
+
+    text_parts_b = t.arr_chunk_push(text_parts_b, obj.text)
+    rdata_parts_b = t.arr_chunk_push(rdata_parts_b, obj.rdata)
+    data_parts_b = t.arr_chunk_push(data_parts_b, obj.data)
+
+    if typeof(obj.asm_labels) == "array" and len(obj.asm_labels) > 0 then
+      for li = 0 to len(obj.asm_labels) - 1
+        lb = obj.asm_labels[li]
+        if typeof(lb) != "struct" then continue end if
+        text_labels_b = t.arr_chunk_push(text_labels_b, MloLabel(_coerce_name(lb.name), text_obj_off + lb.offset))
+      end for
+    end if
+    if typeof(obj.rdata_labels) == "array" and len(obj.rdata_labels) > 0 then
+      for li = 0 to len(obj.rdata_labels) - 1
+        lb = obj.rdata_labels[li]
+        if typeof(lb) != "struct" then continue end if
+        rdata_labels_b = t.arr_chunk_push(rdata_labels_b, MloLabel(_coerce_name(lb.name), rdata_obj_off + lb.offset))
+      end for
+    end if
+    if typeof(obj.data_labels) == "array" and len(obj.data_labels) > 0 then
+      for li = 0 to len(obj.data_labels) - 1
+        lb = obj.data_labels[li]
+        if typeof(lb) != "struct" then continue end if
+        data_labels_b = t.arr_chunk_push(data_labels_b, MloLabel(_coerce_name(lb.name), data_obj_off + lb.offset))
+      end for
+    end if
+    if typeof(obj.bss_labels) == "array" and len(obj.bss_labels) > 0 then
+      for li = 0 to len(obj.bss_labels) - 1
+        lb = obj.bss_labels[li]
+        if typeof(lb) != "struct" then continue end if
+        bss_labels_b = t.arr_chunk_push(bss_labels_b, MloLabel(_coerce_name(lb.name), bss_obj_off + lb.offset))
+      end for
+    end if
+
+    link_patch_recs_b = t.arr_chunk_push(link_patch_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
+
+    imports = _mlo_merge_imports(imports, obj.imports)
+    text_off = text_obj_off + len(obj.text)
+    rdata_off = rdata_obj_off + len(obj.rdata)
+    data_off = data_obj_off + len(obj.data)
+    bss_off = bss_obj_off + obj.bss_size
+
+    if (oi % 32) == 0 then
+      _heap_probe("link:obj_" + oi)
+    end if
+  end for
+
+  text_buf = _concat_bytes_parts(text_parts_b)
+  rdata_buf = _concat_bytes_parts(rdata_parts_b)
+  data_buf = _concat_bytes_parts(data_parts_b)
+  link_patch_recs = t.arr_chunk_finish(link_patch_recs_b)
+
+  p = pe.newPEBuilder()
+  p.subsystem = subsystem
+  p = pe.add_section(p, ".text", text_buf, 0x60000020)
+  p = pe.add_section(p, ".rdata", rdata_buf, 0x40000040)
+  p = pe.add_section(p, ".data", data_buf, 0xC0000040)
+  p = pe.add_section(p, ".bss", bytes(0), 0xC0000080)
+  p = pe.add_section(p, ".idata", bytes(0), 0xC0000040)
+
+  if len(p.sections) > 3 then
+    bs = p.sections[3]
+    bs.virt_size = bss_off
+    p.sections[3] = bs
+  end if
+
+  p = pe.layout(p)
+  pe_imports = _imports_to_pe_imports(imports)
+  if len(p.sections) <= 4 then
+    print "CompileError: internal section layout error (.idata missing)"
+    return 2
+  end if
+
+  idsec = p.sections[4]
+  idr = pe.build_idata(pe_imports, idsec.virt_addr)
+  idsec.data = idr.data
+  p.sections[4] = idsec
+  p.import_rva = idr.import_dir_rva
+  p.import_size = idr.idata_total_size
+
+  p = pe.layout(p)
+  _heap_probe("link:pe_ready")
+
+  text_rva = p.sections[0].virt_addr
+  rdata_rva = p.sections[1].virt_addr
+  data_rva = p.sections[2].virt_addr
+  bss_rva = p.sections[3].virt_addr
+
+  text_labels = t.arr_chunk_finish(text_labels_b)
+  rdata_labels = t.arr_chunk_finish(rdata_labels_b)
+  data_labels = t.arr_chunk_finish(data_labels_b)
+  bss_labels = t.arr_chunk_finish(bss_labels_b)
+
+  label_count = len(text_labels) + len(rdata_labels) + len(data_labels) + len(bss_labels)
+  if typeof(idr.iat_symbols) == "array" then label_count = label_count + (len(idr.iat_symbols) * 2) end if
+  label_map = t.fastmap_new((label_count * 2) + 64)
+  labels_dump_b = t.arr_chunk_new(512)
+
+  if len(text_labels) > 0 then
+    for li = 0 to len(text_labels) - 1
+      lb = text_labels[li]
+      if typeof(lb) != "struct" then continue end if
+      final_v = text_rva + lb.offset
+      label_map = t.fastmap_set(label_map, _coerce_name(lb.name), final_v)
+      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(_coerce_name(lb.name), final_v))
+    end for
+  end if
+  if len(rdata_labels) > 0 then
+    for li = 0 to len(rdata_labels) - 1
+      lb = rdata_labels[li]
+      if typeof(lb) != "struct" then continue end if
+      final_v = rdata_rva + lb.offset
+      label_map = t.fastmap_set(label_map, _coerce_name(lb.name), final_v)
+      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(_coerce_name(lb.name), final_v))
+    end for
+  end if
+  if len(data_labels) > 0 then
+    for li = 0 to len(data_labels) - 1
+      lb = data_labels[li]
+      if typeof(lb) != "struct" then continue end if
+      final_v = data_rva + lb.offset
+      label_map = t.fastmap_set(label_map, _coerce_name(lb.name), final_v)
+      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(_coerce_name(lb.name), final_v))
+    end for
+  end if
+  if len(bss_labels) > 0 then
+    for li = 0 to len(bss_labels) - 1
+      lb = bss_labels[li]
+      if typeof(lb) != "struct" then continue end if
+      final_v = bss_rva + lb.offset
+      label_map = t.fastmap_set(label_map, _coerce_name(lb.name), final_v)
+      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(_coerce_name(lb.name), final_v))
+    end for
+  end if
+  if typeof(idr.iat_symbols) == "array" and len(idr.iat_symbols) > 0 then
+    for i = 0 to len(idr.iat_symbols) - 1
+      it = idr.iat_symbols[i]
+      if typeof(it) != "struct" then continue end if
+      if typeof(it.func) != "string" or typeof(it.rva) != "int" then continue end if
+      nm1 = "iat_" + it.func
+      label_map = t.fastmap_set(label_map, nm1, it.rva)
+      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(nm1, it.rva))
+      if typeof(it.dll) == "string" then
+        nm2 = "iat_" + _dll_base(it.dll) + "_" + it.func
+        label_map = t.fastmap_set(label_map, nm2, it.rva)
+        labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(nm2, it.rva))
+      end if
+    end for
+  end if
+  labels = t.arr_chunk_finish(labels_dump_b)
+
+  entry_rva = t.fastmap_get(label_map, entry_label, -1)
+  if typeof(entry_rva) != "int" or entry_rva < 0 then
+    entry_rva = _label_lookup_fallback(labels, entry_label, -1)
+    if typeof(entry_rva) == "int" and entry_rva >= 0 then
+      label_map = t.fastmap_set(label_map, entry_label, entry_rva)
+    end if
+  end if
+  if typeof(entry_rva) != "int" or entry_rva < 0 then
+    entry_rva = _link_rec_labels_lookup(link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, entry_label, -1)
+    if typeof(entry_rva) == "int" and entry_rva >= 0 then
+      label_map = t.fastmap_set(label_map, entry_label, entry_rva)
+    end if
+  end if
+  if typeof(entry_rva) != "int" or entry_rva < 0 then
+    entry_rva = t.fastmap_get(label_map, "__ml_entry", -1)
+    if typeof(entry_rva) != "int" or entry_rva < 0 then
+      entry_rva = _label_lookup_fallback(labels, "__ml_entry", -1)
+      if typeof(entry_rva) == "int" and entry_rva >= 0 then
+        label_map = t.fastmap_set(label_map, "__ml_entry", entry_rva)
+      end if
+    end if
+  end if
+  if typeof(entry_rva) != "int" or entry_rva < 0 then
+    entry_rva = _link_rec_labels_lookup(link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, "__ml_entry", -1)
+    if typeof(entry_rva) == "int" and entry_rva >= 0 then
+      label_map = t.fastmap_set(label_map, "__ml_entry", entry_rva)
+    end if
+  end if
+  if typeof(entry_rva) != "int" or entry_rva < 0 then
+    print "CompileError: missing program entry label in linked objects"
+    return 2
+  end if
+  p.entry_rva = entry_rva
+
+  if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
+    dump = ""
+    dump = dump + "[section] .text raw=" + len(text_buf) + "\n"
+    dump = dump + "[section] .rdata raw=" + len(rdata_buf) + "\n"
+    dump = dump + "[section] .data raw=" + len(data_buf) + "\n"
+    if typeof(labels) == "array" and len(labels) > 0 then
+      for li = 0 to len(labels) - 1
+        lbi = labels[li]
+        if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
+          dump = dump + "[label] " + lbi.key + " " + lbi.value + "\n"
+        end if
+      end for
+    end if
+    wrdump = fs.writeAllText(_dump_labels_path, dump)
+    if typeof(wrdump) == "error" then
+      print "CompileError: writeAllText failed for label dump: " + _dump_labels_path
+      return 2
+    end if
+  end if
+
+  buf = text_buf
+  if typeof(link_patch_recs) == "array" and len(link_patch_recs) > 0 then
+    patch_index = 0
+    for ri = 0 to len(link_patch_recs) - 1
+      rec = link_patch_recs[ri]
+      if typeof(rec) != "array" or len(rec) < 5 then continue end if
+      src_patch = _coerce_name(rec[0])
+      obj_text_off = rec[1]
+      obj_rdata_off = rec[2]
+      obj_data_off = rec[3]
+      apr = _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, buf, rdata_buf, data_buf, patch_index)
+      if typeof(apr) != "array" or len(apr) < 3 then
+        print "CompileError: internal patch application failed"
+        return 2
+      end if
+      if apr[0] != 0 then return apr[0] end if
+      label_map = apr[1]
+      patch_index = apr[2]
+    end for
+  end if
+
+  tx = p.sections[0]
+  tx.data = buf
+  p.sections[0] = tx
+  rd = p.sections[1]
+  rd.data = rdata_buf
+  p.sections[1] = rd
+  dt = p.sections[2]
+  dt.data = data_buf
+  p.sections[2] = dt
+
+  exe = pe.build(p)
+  _heap_probe("link:pe_built")
+  wr = fs.writeAllBytes(output_exe, exe)
+  if typeof(wr) == "error" then
+    msg = "writeAllBytes failed"
+    if typeof(wr.message) == "string" then msg = wr.message end if
+    print "CompileError: " + msg
+    return 2
+  end if
+
+  print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler)"
+  return 0
 end function
 
 function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
-  global _pe_state_keepalive
   compiler_gc_limit = _cfg_get_int(runtime_config, "compiler_gc_limit_bytes", 0)
   if compiler_gc_limit <= 0 then
     compiler_gc_limit = _cfg_get_int(runtime_config, "commit_bytes", 64 << 20)
@@ -1793,29 +3556,31 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   extern_sigs = collect_extern_sigs(load.program)
   _heap_probe("compile:extern_sigs_done")
   cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
-  if typeof(cg) == "struct" and typeof(cg.state) == "struct" then
-    cg.state.dbg_line_starts = load.sources
-    cg.state.heap_config = runtime_config
-    cg.state.call_profile = call_profile
-    cg.state.trace_calls = trace_calls
-    cg.state.is_windows_subsystem = (subsystem == 2)
+  if typeof(cg) != "struct" or typeof(cg.state) != "struct" then
+    print "CompileError: failed to initialize code generator"
+    return 2
   end if
-  cg = codegen.emit_program(cg, load.program)
-  _heap_probe("compile:codegen_done")
+
+  cg.state.dbg_line_starts = load.sources
+  cg.state.heap_config = runtime_config
+  cg.state.call_profile = call_profile
+  cg.state.trace_calls = trace_calls
+  cg.state.is_windows_subsystem = (subsystem == 2)
+  cg = codegen.enable_call_profile_metadata(cg)
+
+  prep = codegen.prepare_program_for_objects(cg, load.program)
+  if typeof(prep) != "array" or len(prep) < 3 then
+    print "CompileError: failed to prepare object-code pipeline"
+    return 2
+  end if
+  cg = prep[0]
+  module_init_recs = prep[1]
+  max_call_args_main = prep[2]
+  _heap_probe("compile:plan_done")
+
   st = cg.state
-  _pe_state_keepalive = st
-  load.program = []
-  load.source = ""
-  load.aliases = []
-  load.sources = []
-  load.diagnostics = []
-  if _mem_probe_enabled then
-    gc_collect()
-    st = _pe_state_keepalive
-  end if
-  _heap_probe("compile:post_load_release")
   if typeof(st) != "struct" then
-    print "CompileError: codegen returned invalid state"
+    print "CompileError: invalid codegen state after planning"
     return 2
   end if
   if typeof(st.diagnostics) == "array" and len(st.diagnostics) > 0 then
@@ -1826,366 +3591,144 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     end for
     return 2
   end if
-  asm_labels = []
-  patches = []
-  if typeof(st.asm) == "struct" then
-    asm_labels = a.get_labels(st.asm)
-    patches = a.get_patches(st.asm)
-    st.asm.labels = []
-    st.asm.labels_chunks = []
-    st.asm.labels_tail = []
-    st.asm.patches_chunks = []
-    st.asm.patches_tail = []
-    st.asm.calls_chunks = []
-    st.asm.calls_tail = []
-    st.asm.before_call_live_temps = []
-    st.asm.peephole_last_jump = []
+
+  tmp_dir = _tmp_obj_dir(output_exe)
+  if _ensure_dir_recursive(tmp_dir) == false then
+    print "CompileError: failed to create object tmp dir: " + tmp_dir
+    return 2
   end if
-  st = _compact_codegen_state_for_pe(st)
-  _pe_state_keepalive = st
-  st = _pe_state_keepalive
-  load = 0
-  cg = 0
+
+  main_name = _find_main_name(st)
+  helper_union = []
+  if typeof(st.used_helpers) == "array" then helper_union = st.used_helpers end if
+  module_obj_paths_b = t.arr_chunk_new(128)
+  support_path = _tmp_obj_path(tmp_dir, "000", input_abs, "support")
+
+  visited = load.visited
+  if typeof(visited) != "array" or len(visited) <= 0 then
+    visited = [input_abs]
+  end if
+
+  load.program = []
   gc_collect()
-  st = _pe_state_keepalive
-  if typeof(st.asm) == "struct" then
-    st.asm = a.materialize(st.asm)
-  end if
-  if typeof(st.asm) != "struct" or typeof(st.asm.buf) != "bytes" or len(st.asm.buf) <= 0 then
-    print "CompileError: native backend emitted empty .text section (compiler port incomplete for this input)."
-    return 2
-  end if
+  _heap_probe("compile:post_plan_gc")
 
-  text_buf = st.asm.buf
-  if typeof(st.asm.size) == "int" and st.asm.size >= 0 and st.asm.size <= len(text_buf) then
-    text_buf = slice(text_buf, 0, st.asm.size)
-  end if
-  if typeof(text_buf) != "bytes" or len(text_buf) <= 0 then
-    print "CompileError: native backend emitted empty code buffer."
-    return 2
-  end if
-
-  rdata_buf = st.rdata.data
-  if typeof(st.rdata.used) == "int" and st.rdata.used >= 0 and st.rdata.used <= len(rdata_buf) then
-    rdata_buf = slice(rdata_buf, 0, st.rdata.used)
-  end if
-
-  data_buf = st.data.data
-  if typeof(st.data.used) == "int" and st.data.used >= 0 and st.data.used <= len(data_buf) then
-    data_buf = slice(data_buf, 0, st.data.used)
-  end if
-
-  // Replace oversized backing buffers with compact slices before PE assembly.
-  if typeof(st.asm) == "struct" then
-    st.asm.buf = text_buf
-    st.asm.size = len(text_buf)
-    if typeof(st.asm.chunk_pages) == "array" then st.asm.chunk_pages = [] end if
-    if typeof(st.asm.chunk_tail) == "array" or typeof(st.asm.chunk_tail) == "struct" then st.asm.chunk_tail = [] end if
-    // Keep labels/patches until relocation patching is done below.
-    if typeof(st.asm.calls_chunks) == "array" then st.asm.calls_chunks = [] end if
-    if typeof(st.asm.calls_tail) == "array" or typeof(st.asm.calls_tail) == "struct" then st.asm.calls_tail = [] end if
-    st.asm.buf_valid = true
-  end if
-  if typeof(st.rdata) == "struct" then
-    st.rdata.data = rdata_buf
-    st.rdata.used = len(rdata_buf)
-  end if
-  if typeof(st.data) == "struct" then
-    st.data.data = data_buf
-    st.data.used = len(data_buf)
-  end if
-  if _mem_probe_enabled then
-    gc_collect()
-  end if
-  _heap_probe("compile:buffers_compacted")
-
-  p = pe.newPEBuilder()
-  p.subsystem = subsystem
-  p = pe.add_section(p, ".text", text_buf, 0x60000020)
-  p = pe.add_section(p, ".rdata", rdata_buf, 0x40000040)
-  p = pe.add_section(p, ".data", data_buf, 0xC0000040)
-  p = pe.add_section(p, ".bss", bytes(0), 0xC0000080)
-  p = pe.add_section(p, ".idata", bytes(0), 0xC0000040)
-
-  if len(p.sections) > 3 then
-    bs = p.sections[3]
-    if typeof(st.bss) == "struct" and typeof(st.bss.size) == "int" then
-      bs.virt_size = st.bss.size
-    else
-      bs.virt_size = 0
-    end if
-    p.sections[3] = bs
-  end if
-
-  p = pe.layout(p)
-
-  imports = _imports_to_pe_imports(st.imports)
-  st.imports = []
-  if len(p.sections) <= 4 then
-    print "CompileError: internal section layout error (.idata missing)"
-    return 2
-  end if
-
-  idsec = p.sections[4]
-  idr = pe.build_idata(imports, idsec.virt_addr)
-  idsec.data = idr.data
-  p.sections[4] = idsec
-  p.import_rva = idr.import_dir_rva
-  p.import_size = idr.idata_total_size
-
-  p = pe.layout(p)
-  _heap_probe("compile:pe_ready")
-
-  text_rva = p.sections[0].virt_addr
-  rdata_rva = p.sections[1].virt_addr
-  data_rva = p.sections[2].virt_addr
-  bss_rva = p.sections[3].virt_addr
-  p.entry_rva = text_rva
-
-  labels_chunks = []
-  labels_tail = []
-  if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
-    for i = 0 to len(asm_labels) - 1
-      lb = asm_labels[i]
-      if typeof(lb) == "struct" and typeof(lb.name) == "string" and typeof(lb.pos) == "int" then
-        if _mem_probe_enabled then
-          print "[dbg][label] " + lb.name + " " + lb.pos
-        end if
-        app_lb = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb.name, text_rva + lb.pos), 1024)
-        labels_chunks = app_lb[0]
-        labels_tail = app_lb[1]
-      end if
-    end for
-  end if
-  if typeof(st.rdata) == "struct" and typeof(st.rdata.labels) == "array" and len(st.rdata.labels) > 0 then
-    for i = 0 to len(st.rdata.labels) - 1
-      lb2 = st.rdata.labels[i]
-      if typeof(lb2) == "struct" and typeof(lb2.name) == "string" and typeof(lb2.offset) == "int" then
-        app_lb2 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb2.name, rdata_rva + lb2.offset), 1024)
-        labels_chunks = app_lb2[0]
-        labels_tail = app_lb2[1]
-      end if
-    end for
-  end if
-  if typeof(st.data) == "struct" and typeof(st.data.labels) == "array" and len(st.data.labels) > 0 then
-    for i = 0 to len(st.data.labels) - 1
-      lb3 = st.data.labels[i]
-      if typeof(lb3) == "struct" and typeof(lb3.name) == "string" and typeof(lb3.offset) == "int" then
-        app_lb3 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb3.name, data_rva + lb3.offset), 1024)
-        labels_chunks = app_lb3[0]
-        labels_tail = app_lb3[1]
-      end if
-    end for
-  end if
-  if typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" and len(st.bss.labels) > 0 then
-    for i = 0 to len(st.bss.labels) - 1
-      lb4 = st.bss.labels[i]
-      if typeof(lb4) == "struct" and typeof(lb4.name) == "string" and typeof(lb4.offset) == "int" then
-        app_lb4 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb4.name, bss_rva + lb4.offset), 1024)
-        labels_chunks = app_lb4[0]
-        labels_tail = app_lb4[1]
-      end if
-    end for
-  end if
-  if typeof(idr.iat_symbols) == "array" and len(idr.iat_symbols) > 0 then
-    for i = 0 to len(idr.iat_symbols) - 1
-      it = idr.iat_symbols[i]
-      if typeof(it) != "struct" then continue end if
-      if typeof(it.func) != "string" or typeof(it.rva) != "int" then continue end if
-      if _label_get_chunked(labels_chunks, labels_tail, "iat_" + it.func, -1) < 0 then
-        app_lb5 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + it.func, it.rva), 1024)
-        labels_chunks = app_lb5[0]
-        labels_tail = app_lb5[1]
-      end if
-      if typeof(it.dll) == "string" then
-        app_lb6 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + _dll_base(it.dll) + "_" + it.func, it.rva), 1024)
-        labels_chunks = app_lb6[0]
-        labels_tail = app_lb6[1]
-      end if
-    end for
-  end if
-  imports = []
-  labels = t.arr_chunked_finish(labels_chunks, labels_tail)
-  label_map = t.fastmap_new((len(labels) * 2) + 64)
-  if typeof(labels) == "array" and len(labels) > 0 then
-    for li = 0 to len(labels) - 1
-      lbi = labels[li]
-      if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
-        label_map = t.fastmap_set(label_map, lbi.key, lbi.value)
-      end if
-    end for
-  end if
-
-  if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
-    dump = ""
-    dump = dump + "[section] .text raw=" + len(text_buf) + "\n"
-    dump = dump + "[section] .rdata raw=" + len(rdata_buf) + "\n"
-    dump = dump + "[section] .data raw=" + len(data_buf) + "\n"
-    if typeof(st.emitted_helpers) == "array" and len(st.emitted_helpers) > 0 then
-      for hi = 0 to len(st.emitted_helpers) - 1
-        h = st.emitted_helpers[hi]
-        if typeof(h) == "string" then
-          dump = dump + "[helper] " + hi + " " + h + "\n"
-        end if
-      end for
-    end if
-    if typeof(labels) == "array" and len(labels) > 0 then
-      for li = 0 to len(labels) - 1
-        lbi = labels[li]
-        if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
-          dump = dump + "[label] " + lbi.key + " " + lbi.value + "\n"
-        end if
-      end for
-    end if
-    wrdump = fs.writeAllText(_dump_labels_path, dump)
-    if typeof(wrdump) == "error" then
-      print "CompileError: writeAllText failed for label dump: " + _dump_labels_path
+  for mi = 0 to len(visited) - 1
+    module_file = visited[mi]
+    mod_cg = codegen.clone_for_object(cg, false)
+    if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
+      print "CompileError: failed to clone module codegen state"
       return 2
     end if
-  end if
+    mod_cg.state.label_id = cg.state.label_id
 
-  buf = text_buf
-  if typeof(patches) == "array" and len(patches) > 0 then
-    for i = 0 to len(patches) - 1
-      pt = patches[i]
-      if typeof(pt) != "struct" then continue end if
-      if typeof(pt.target) != "string" or typeof(pt.pos) != "int" then continue end if
+    mrec = _module_init_rec_for_file(module_init_recs, module_file)
+    entry_label = ""
+    if typeof(mrec) == "array" and len(mrec) >= 5 then
+      entry_label = _coerce_name(mrec[2])
+      mod_cg = codegen.emit_module_init_object(mod_cg, mrec)
+    end if
+    mod_cg = codegen.emit_module_functions(mod_cg, module_file)
 
-      trg = t.fastmap_get(label_map, pt.target, -1)
-      if typeof(trg) != "int" then trg = -1 end if
-      if trg < 0 then
-        // Safety fallback: tolerate non-fastmap label containers during transition.
-        trg = _label_get(labels, pt.target, -1)
-      end if
-      if trg < 0 then
-        print "CompileError: unknown patch target: " + pt.target
-        return 2
-      end if
-      if pt.pos < 0 or pt.pos + 3 >= len(buf) then
-        print "CompileError: invalid patch position for: " + pt.target
-        return 2
-      end if
-
-      if pt.kind != "rip32" and pt.kind != "rel32" then
-        print "CompileError: unknown patch kind: " + pt.kind
-        return 2
-      end if
-
-      src_next = text_rva + pt.pos + 4
-      disp = trg - src_next
-      b4 = t.u32(disp)
-      buf[pt.pos] = b4[0]
-      buf[pt.pos + 1] = b4[1]
-      buf[pt.pos + 2] = b4[2]
-      buf[pt.pos + 3] = b4[3]
-    end for
-  end if
-
-  patch_sets = [[rdata_buf, st.rdata.patches], [data_buf, st.data.patches]]
-  for psi = 0 to len(patch_sets) - 1
-    pack = patch_sets[psi]
-    if typeof(pack) != "array" or len(pack) < 2 then continue end if
-    blob = pack[0]
-    dpatches = pack[1]
-    if typeof(blob) != "bytes" then continue end if
-    if typeof(dpatches) != "array" or len(dpatches) <= 0 then
-      if psi == 0 then
-        rdata_buf = blob
-      else
-        data_buf = blob
-      end if
-      continue
+    mst = mod_cg.state
+    if typeof(mst) != "struct" then
+      print "CompileError: invalid module codegen state for " + module_file
+      return 2
+    end if
+    if typeof(mst.diagnostics) == "array" and len(mst.diagnostics) > 0 then
+      for di = 0 to len(mst.diagnostics) - 1
+        msg = mst.diagnostics[di]
+        if typeof(msg) != "string" then msg = "" + msg end if
+        print "CompileError: " + msg
+      end for
+      return 2
     end if
 
-    for j = 0 to len(dpatches) - 1
-      pt2 = dpatches[j]
-      if typeof(pt2) != "struct" then continue end if
-      if typeof(pt2.target) != "string" or typeof(pt2.offset) != "int" then continue end if
+    helper_union = _merge_string_arrays(helper_union, mst.used_helpers)
+    mod_obj = _mlo_from_state("module", module_file, entry_label, mst)
+    mod_obj = _mlo_namespace_object(mod_obj, "objm_" + mi, true)
+    helper_union = _collect_internal_helper_targets(helper_union, mod_obj.asm_patches)
+    helper_union = _collect_internal_helper_targets(helper_union, mod_obj.rdata_patches)
+    helper_union = _collect_internal_helper_targets(helper_union, mod_obj.data_patches)
+    mod_path = _tmp_obj_path(tmp_dir, "" + (mi + 1), module_file, "module")
+    wr_mod = _write_mlo_file(mod_path, mod_obj)
+    if typeof(wr_mod) == "error" then
+      msg = "writeAllBytes failed"
+      if typeof(wr_mod.message) == "string" then msg = wr_mod.message end if
+      print "CompileError: " + msg + " (" + mod_path + ")"
+      return 2
+    end if
+    module_obj_paths_b = t.arr_chunk_push(module_obj_paths_b, mod_path)
 
-      trg2 = t.fastmap_get(label_map, pt2.target, -1)
-      if typeof(trg2) != "int" then trg2 = -1 end if
-      if trg2 < 0 then
-        trg2 = _label_get(labels, pt2.target, -1)
-      end if
-      if trg2 < 0 then
-        print "CompileError: unknown data patch target: " + pt2.target
-        return 2
-      end if
-      if pt2.kind != "abs64" then
-        print "CompileError: unknown data patch kind: " + pt2.kind
-        return 2
-      end if
-      if pt2.offset < 0 or pt2.offset + 7 >= len(blob) then
-        print "CompileError: invalid data patch position for: " + pt2.target
-        return 2
-      end if
-
-      target_va = p.image_base + trg2
-      b8 = t.u64(target_va)
-      for bi = 0 to 7
-        blob[pt2.offset + bi] = b8[bi]
+    cg.state.label_id = mst.label_id
+    if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
+      for ri = 0 to len(module_init_recs) - 1
+        r = module_init_recs[ri]
+        if typeof(r) != "array" or len(r) < 5 then continue end if
+        if _path_eq(_coerce_name(r[0]), module_file) then
+          r[1] = []
+          module_init_recs[ri] = r
+        end if
       end for
-    end for
-
-    if psi == 0 then
-      rdata_buf = blob
-    else
-      data_buf = blob
+    end if
+    if typeof(load.parsed_modules) == "struct" or typeof(load.parsed_modules) == "array" then
+      pm = _parsed_module_get(load.parsed_modules, module_file)
+      if typeof(pm) == "struct" then
+        load.parsed_modules = _parsed_module_set(load.parsed_modules, module_file, "", [])
+      end if
+    end if
+    if ((mi + 1) % 8) == 0 then
+      gc_collect()
+      _heap_probe("compile:module_" + (mi + 1))
     end if
   end for
 
-  if typeof(st.asm) == "struct" then
-    st.asm.buf = buf
-  end if
-  if typeof(st.rdata) == "struct" then
-    st.rdata.data = rdata_buf
-  end if
-  if typeof(st.data) == "struct" then
-    st.data.data = data_buf
-  end if
-  asm_labels = []
-  patches = []
-  labels = []
-  label_map = t.fastmap_new(16)
-  if typeof(st.rdata) == "struct" then
-    st.rdata.labels = []
-    st.rdata.patches = []
-  end if
-  if typeof(st.data) == "struct" then
-    st.data.labels = []
-    st.data.patches = []
-  end if
-  if typeof(st.bss) == "struct" then
-    st.bss.labels = []
-  end if
-  if typeof(idr) == "struct" then
-    idr.iat_symbols = []
-  end if
+  cg.state.used_helpers = helper_union
+  cg = codegen.emit_entry_object(cg, module_init_recs, max_call_args_main, main_name)
+  cg = codegen.emit_extern_stubs(cg)
+  cg = codegen.emit_used_helpers(cg)
+  _heap_probe("compile:support_done")
 
-  tx = p.sections[0]
-  tx.data = st.asm.buf
-  p.sections[0] = tx
-  rd = p.sections[1]
-  rd.data = st.rdata.data
-  p.sections[1] = rd
-  dt = p.sections[2]
-  dt.data = st.data.data
-  p.sections[2] = dt
-
-  exe = pe.build(p)
-  _heap_probe("compile:pe_built")
-  wr = fs.writeAllBytes(output_exe, exe)
-  if typeof(wr) == "error" then
-    msg = "writeAllBytes failed"
-    if typeof(wr.message) == "string" then msg = wr.message end if
-    print "CompileError: " + msg
+  st = cg.state
+  if typeof(st) != "struct" then
+    print "CompileError: invalid support codegen state"
+    return 2
+  end if
+  if typeof(st.diagnostics) == "array" and len(st.diagnostics) > 0 then
+    for di = 0 to len(st.diagnostics) - 1
+      msg = st.diagnostics[di]
+      if typeof(msg) != "string" then msg = "" + msg end if
+      print "CompileError: " + msg
+    end for
     return 2
   end if
 
-  _pe_state_keepalive = 0
+  support_obj = _mlo_from_state("support", input_abs, "__ml_entry", st)
+  wr_sup = _write_mlo_file(support_path, support_obj)
+  if typeof(wr_sup) == "error" then
+    msg = "writeAllBytes failed"
+    if typeof(wr_sup.message) == "string" then msg = wr_sup.message end if
+    print "CompileError: " + msg + " (" + support_path + ")"
+    return 2
+  end if
 
-  print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler)"
-  return 0
+  obj_paths = [support_path]
+  module_obj_paths = t.arr_chunk_finish(module_obj_paths_b)
+  if typeof(module_obj_paths) == "array" and len(module_obj_paths) > 0 then
+    obj_paths = obj_paths + module_obj_paths
+  end if
+
+  load.source = ""
+  load.aliases = []
+  load.sources = []
+  load.visited = []
+  load.parsed_modules = []
+  load.diagnostics = []
+  module_init_recs = []
+  gc_collect()
+  _heap_probe("compile:pre_link_gc")
+
+  return _link_mlo_files(obj_paths, output_exe, subsystem)
 end function
 
 function compile_to_exe(input_ml, output_exe)
