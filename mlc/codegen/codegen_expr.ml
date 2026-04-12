@@ -37,8 +37,10 @@ end function
 function inline _coerce_name(v)
   if typeof(v) == "string" then return v end if
   if typeof(v) == "struct" then
-    if typeof(v.name) == "string" then return v.name end if
-    if typeof(v.value) == "string" then return v.value end if
+    nm = try(v.name)
+    if typeof(nm) == "string" then return nm end if
+    vv = try(v.value)
+    if typeof(vv) == "string" then return vv end if
   end if
   return "" + v
 end function
@@ -3964,7 +3966,10 @@ function cg_emit_expr(state, expr)
       end if
     end if
     if skip_sid != 0 then direct_struct_constructor = true end if
-    if compiletime_member_callable or direct_struct_constructor then skip_call_args_eval = true end if
+    // Generic indirect calls materialize [callee, arg0, ...] in one dedicated temp area later.
+    // If we pre-evaluate args into a temporary buffer here and release it before callee eval,
+    // the callee expression can reuse the same expr-temp slots and corrupt the saved args.
+    if compiletime_member_callable or direct_struct_constructor or generic_nonmember_candidate or direct_user_global then skip_call_args_eval = true end if
 
     // Evaluate args left-to-right into a nested-safe temp area first.
     // Nested calls inside argument expressions can use rsp+0x20 too, so we
@@ -4964,12 +4969,16 @@ function cg_emit_expr(state, expr)
         if typeof(b_dg) != "struct" or b_dg.kind == "global" then
           fn = _user_function_get(state, dg_name)
           if typeof(fn) == "struct" then
-            obj_lbl_dg = _strpair_get(state.function_static_obj_labels, dg_name)
-            if obj_lbl_dg != "" then
-              direct_guard_obj_lbl = obj_lbl_dg
-              direct_guard_call_lbl = "fn_user_" + dg_name
-              direct_guard_builtin_nargs = false
+            expected_args_dg = 0
+            if typeof(fn.params) == "array" then expected_args_dg = len(fn.params) end if
+            if nargs != expected_args_dg then
+              state.diagnostics = state.diagnostics + ["Function " + dg_name + " expects " + expected_args_dg + " args, got " + nargs]
+              state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+              return state
             end if
+            // User-function guarded devirtualization is temporarily disabled in the
+            // selfhost object pipeline. Cross-module direct rel32 calls are not yet
+            // reliable here, while the generic function-object dispatch is correct.
           else
             sp_code = ""
             sp_min = 0
@@ -5035,11 +5044,7 @@ function cg_emit_expr(state, expr)
               state = cg_emit_expr(state, arg_nm)
             end if
           else
-            if argi_nm < 4 then
-              state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x20 + argi_nm * 8)
-            else
-              state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + argi_nm * 8)
-            end if
+            state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + argi_nm * 8)
           end if
           state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_nm + (argi_nm + 1) * 8, "rax")
         end for
@@ -5377,21 +5382,13 @@ function cg_emit_expr(state, expr)
       return state
     end if
 
-    // Preserve evaluated args across callee evaluation.
-    if nargs > 0 then
-      for pi2 = 0 to nargs - 1
-        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + pi2 * 8)
-        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x300 + pi2 * 8, "rax")
-      end for
-    end if
-
     state = cg_emit_expr(state, cal)
     state.asm = a.mov_rsp_disp32_rax(state.asm, 0x2F0)
 
-    if nargs >= 1 then state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 0x300 + 0 * 8) end if
-    if nargs >= 2 then state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", 0x300 + 1 * 8) end if
-    if nargs >= 3 then state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", 0x300 + 2 * 8) end if
-    if nargs >= 4 then state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", 0x300 + 3 * 8) end if
+    if nargs >= 1 then state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", call_args_base + 0 * 8) end if
+    if nargs >= 2 then state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", call_args_base + 1 * 8) end if
+    if nargs >= 3 then state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", call_args_base + 2 * 8) end if
+    if nargs >= 4 then state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", call_args_base + 3 * 8) end if
     ic_stack_save_off = 0
     ic_stack_save_count = 0
     ic_stack_save_alloc = false
@@ -5411,7 +5408,7 @@ function cg_emit_expr(state, expr)
     end if
     if nargs > 4 then
       for si2 = 4 to nargs - 1
-        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x300 + si2 * 8)
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + si2 * 8)
         state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20 + (si2 - 4) * 8, "rax")
       end for
     end if

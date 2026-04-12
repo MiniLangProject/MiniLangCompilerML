@@ -64,7 +64,39 @@ function _fm_hash_any(key)
     if typeof(key) == "string" then
       txt = key
     else
-      txt = "" + key
+      if typeof(key) == "struct" then
+        node_kind = try(key.node_kind)
+        if typeof(node_kind) == "string" then txt = node_kind end if
+        kind = try(key.kind)
+        if txt == "" and typeof(kind) == "string" then txt = kind end if
+        name = try(key.name)
+        if typeof(name) == "string" and name != "" then
+          if txt != "" then txt = txt + ":" end if
+          txt = txt + name
+        end if
+        key_name = try(key.key)
+        if txt == "" and typeof(key_name) == "string" then txt = key_name end if
+        filename = try(key._filename)
+        if typeof(filename) == "string" and filename != "" then
+          if txt != "" then txt = txt + "@" end if
+          txt = txt + filename
+          pos = try(key._pos)
+          if typeof(pos) == "int" then txt = txt + ":" + pos end if
+        end if
+        value = try(key.value)
+        if txt == "" and typeof(value) == "string" then txt = value end if
+        if txt == "" then txt = "struct" end if
+      else
+        if typeof(key) == "array" then
+          txt = "array:" + len(key)
+        else
+          if typeof(key) == "void" then
+            txt = "void"
+          else
+            txt = typeof(key)
+          end if
+        end if
+      end if
     end if
     bs = bytes(txt)
   end if
@@ -632,26 +664,31 @@ end function
 
 function arr_merge_chunks_balanced(chunks)
   if typeof(chunks) != "array" or len(chunks) <= 0 then return [] end if
-  curr = chunks
-  while len(curr) > 1
-    next_n = len(curr) >> 1
-    if (len(curr) & 1) == 1 then next_n = next_n + 1 end if
-    next = _arr_fill(next_n, [])
-    ni = 0
-    i = 0
-    while i < len(curr)
-      if i + 1 < len(curr) then
-        next[ni] = curr[i] + curr[i + 1]
-        i = i + 2
-      else
-        next[ni] = curr[i]
-        i = i + 1
-      end if
-      ni = ni + 1
-    end while
-    curr = next
-  end while
-  return curr[0]
+  total = 0
+  for i = 0 to len(chunks) - 1
+    part = chunks[i]
+    if typeof(part) == "array" then
+      total = total + len(part)
+    else
+      total = total + 1
+    end if
+  end for
+  if total <= 0 then return [] end if
+  outv = _arr_fill(total, 0)
+  oi = 0
+  for i = 0 to len(chunks) - 1
+    part = chunks[i]
+    if typeof(part) == "array" then
+      for pi = 0 to len(part) - 1
+        outv[oi] = part[pi]
+        oi = oi + 1
+      end for
+    else
+      outv[oi] = part
+      oi = oi + 1
+    end if
+  end for
+  return outv
 end function
 
 function arr_chunked_finish(chunks, tail)
