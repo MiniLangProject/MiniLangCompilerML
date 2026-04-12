@@ -6,6 +6,7 @@ const TAG_INT = 1
 const TAG_BOOL = 2
 const TAG_VOID = 3
 const TAG_ENUM = 4
+const TAG_FLOAT = 5
 
 // heap object ids
 const OBJ_FREE = 0
@@ -19,13 +20,19 @@ const OBJ_BUILTIN = 7
 const OBJ_ENV = 8
 const OBJ_BOX = 9
 const OBJ_BYTES = 10
+const OBJ_CLOSURE = 11
+const OBJ_ENV_LOCAL = 12
+const OBJ_ARRAY_IMM = 13
 
 // gc header
-const GC_HEADER_SIZE = 24
-const GC_OFF_BLOCK_SIZE = -24
-const GC_OFF_MARK = -16
-const GC_OFF_REFCOUNT = -16
-const GC_OFF_NEXT_FREE = -8
+const GC_HEADER_SIZE = 8
+const GC_OFF_BLOCK_SIZE = -8
+const GC_OFF_MARK = 0
+const GC_OFF_REFCOUNT = GC_OFF_MARK
+const GC_OFF_NEXT_FREE = 8
+const GC_BLOCK_FREE_BIT = 0x1
+const GC_BLOCK_FLAGS_MASK = 0x7
+const GC_BLOCK_SIZE_MASK = ~GC_BLOCK_FLAGS_MASK
 
 // runtime buffers
 const WIDEBUF_SIZE = 8096

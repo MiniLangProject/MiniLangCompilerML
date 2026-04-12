@@ -79,6 +79,27 @@ function inline _frame_last_binding(frame, name)
   return 0
 end function
 
+function inline _heap_cfg_get_any(state, key)
+  cfg = try(state.heap_cfg)
+  if typeof(cfg) != "array" or len(cfg) <= 0 then return 0 end if
+  for i = 0 to len(cfg) - 1
+    it = cfg[i]
+    if typeof(it) == "struct" and typeof(it.key) == "string" and it.key == key then
+      return it.value
+    end if
+    if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "string" and it[0] == key then
+      return it[1]
+    end if
+  end for
+  return 0
+end function
+
+function inline _heap_cfg_get_bool(state, key, defaultv)
+  v = _heap_cfg_get_any(state, key)
+  if typeof(v) == "bool" then return v end if
+  return defaultv
+end function
+
 function _drop_last_frame(arr)
   if typeof(arr) != "array" then return [[]] end if
   n = len(arr)
@@ -150,6 +171,37 @@ function inline _name_has_dot(name)
   return false
 end function
 
+function inline _decl_node_key(node)
+  if typeof(node) == "void" then return "void" end if
+  if typeof(node) == "string" then return node end if
+  if typeof(node) == "int" then return "" + node end if
+  if typeof(node) == "bool" then
+    if node then return "true" end if
+    return "false"
+  end if
+  if typeof(node) == "struct" then
+    k = ""
+    if typeof(node.node_kind) == "string" then k = node.node_kind end if
+    if k == "" and typeof(node.kind) == "string" then k = node.kind end if
+    file_s = ""
+    if typeof(node._filename) == "string" then file_s = node._filename end if
+    if file_s == "" and typeof(node.filename) == "string" then file_s = node.filename end if
+    pos_s = ""
+    if typeof(node._pos) == "int" then pos_s = "" + node._pos end if
+    if pos_s == "" and typeof(node.pos) == "int" then pos_s = "" + node.pos end if
+    if pos_s != "" then
+      if file_s == "" then file_s = "?" end if
+      if k == "" then k = "struct" end if
+      return file_s + ":" + pos_s + ":" + k
+    end if
+    if k == "" and typeof(node.name) == "string" then k = node.name end if
+    if k == "" and typeof(node.value) == "string" then k = node.value end if
+    if k == "" then k = "" + node end if
+    return k
+  end if
+  return "" + node
+end function
+
 function inline _func_global_lookup(arr, name)
   if typeof(arr) == "struct" then
     v0 = t.fastmap_get(arr, name, "")
@@ -178,11 +230,51 @@ function _has_data_label(labels, name)
   return false
 end function
 
+function _emit_make_error_const(state, code, message)
+  err_code = 0
+  if typeof(code) == "int" then err_code = code end if
+  msg = "" + message
+
+  lbl = "objstr_" + len(state.rdata.labels)
+  state.rdata = d.rdata_add_obj_string(state.rdata, lbl, msg)
+
+  state.asm = a.mov_rcx_imm32(state.asm, 48)
+  state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
+
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_int(err_code))
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
+
+  state.asm = a.lea_rax_rip(state.asm, lbl)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
+
+  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
+
+  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+
+  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+
+  state.asm = a.mov_rax_r11(state.asm)
+  return state
+end function
+
+function new_label_id(state)
+  state.label_id = state.label_id + 1
+  return state.label_id
+end function
+
 function cg_scope_setup(state)
   state.scope_stack =[[]]
   state.scope_declared =[[]]
   state.scope_index_stack = [t.fastmap_new(128)]
   state.scope_declared_index_stack = [t.fastmap_new(128)]
+  state.decl_site_bindings = t.fastmap_new(128)
   state.binding_id = 0
   state.global_slots =[]
   state.globals =[]
@@ -190,6 +282,7 @@ function cg_scope_setup(state)
   state.func_global_map =[]
   state.func_global_map_index = t.fastmap_new(64)
   state.function_locals =[]
+  state.function_local_ids = t.fastmap_new(64)
   state.current_qname_prefix = ""
   state.current_file_prefix = ""
   state.current_fn_boxed_names = []
@@ -221,9 +314,18 @@ function cg_scope_enter(state)
   return state
 end function
 
-function cg_scope_leave(state)
+function cg_scope_leave(state, emit_cleanup)
   if typeof(state.scope_stack) != "array" or len(state.scope_stack) <= 1 then return state end if
   if typeof(state.scope_declared) != "array" or len(state.scope_declared) <= 1 then return state end if
+
+  cleanup = true
+  if typeof(emit_cleanup) == "bool" then cleanup = emit_cleanup end if
+  if cleanup then
+    bindings = state.scope_declared[len(state.scope_declared) - 1]
+    if typeof(bindings) == "array" and len(bindings) > 0 then
+      state = emit_cleanup_bindings(state, bindings)
+    end if
+  end if
 
   state.scope_stack = _drop_last_frame(state.scope_stack)
   state.scope_declared = _drop_last_frame(state.scope_declared)
@@ -312,6 +414,16 @@ function _declare_in_current_scope(state, b)
     sds[didx] = fmd
     state.scope_declared_index_stack = sds
   end if
+
+  if b.kind == "local" and state.in_function then
+    if typeof(state.function_local_ids) != "struct" then
+      state.function_local_ids = t.fastmap_new(64)
+    end if
+    if t.fastmap_has(state.function_local_ids, b.id) == false then
+      state.function_local_ids = t.fastmap_set(state.function_local_ids, b.id, 1)
+      state.function_locals = state.function_locals +[b]
+    end if
+  end if
   return state
 end function
 
@@ -361,9 +473,13 @@ function cg_declare_binding(state, name, kind, is_const, const_expr, const_value
   end if
 
   if kind == "local" and state.in_function then
-    if typeof(state.var_slots) != "int" then state.var_slots = 0 end if
-    state.var_slots = state.var_slots + 8
-    b.offset = 0x100 + state.var_slots
+    if state.analysis_mode == true and _heap_cfg_get_bool(state, "cg_mem_probe", false) then
+      if name == "n" or name == "m" or name == "i0" or name == "last" or name == "b0" or name == "i" or name == "shift" or name == "j" or name == "lastByte" or name == "tail" then
+        print "[mem][cg][scope] declare_local name=" + name + " depth=" + depth + " qpref=" + state.current_qname_prefix
+      end if
+    end if
+    // Match the Python compiler: local bindings stay offset-less until the
+    // function layout pass assigns compact contiguous stack slots.
   end if
 
   if is_const then
@@ -375,9 +491,16 @@ function cg_declare_binding(state, name, kind, is_const, const_expr, const_value
   state = _declare_in_current_scope(state, b)
   if kind == "global" and typeof(b.label) == "string" and b.label != "" then
     state.global_slots = _append_unique(state.global_slots, b.label)
+    state.globals = _append_unique(state.globals, b)
   end if
   if kind == "local" and state.in_function then
-    state.function_locals = state.function_locals +[b]
+    if typeof(state.function_local_ids) != "struct" then
+      state.function_local_ids = t.fastmap_new(64)
+    end if
+    if t.fastmap_has(state.function_local_ids, bid) == false then
+      state.function_local_ids = t.fastmap_set(state.function_local_ids, bid, 1)
+      state.function_locals = state.function_locals +[b]
+    end if
   end if
   return state
 end function
@@ -507,7 +630,7 @@ function push_scope(state)
 end function
 
 function pop_scope(state, emit_cleanup)
-  return cg_scope_leave(state)
+  return cg_scope_leave(state, emit_cleanup)
 end function
 
 function _next_binding_id(state)
@@ -515,7 +638,7 @@ function _next_binding_id(state)
 end function
 
 function _decl_key(node, name)
-  return [_coerce_name(name), 0]
+  return _coerce_name(name) + "|" + _decl_node_key(node)
 end function
 
 function resolve_binding(state, name)
@@ -547,6 +670,7 @@ end function
 function declare_global_binding_root(state, name, decl_node, is_const, const_expr)
   nm = _coerce_name(name)
   if nm == "" then return state end if
+  if _check_reserved_ident(state, nm, decl_node) == false then return state end if
 
   if typeof(state.scope_stack) != "array" or len(state.scope_stack) <= 0 then
     state.scope_stack =[[]]
@@ -569,10 +693,6 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   end if
   if typeof(existing) == "struct" and existing.kind == "global" then
     return state
-  end if
-
-  if typeof(decl_node) == "struct" then
-    if _check_reserved_ident(state, nm, decl_node) == false then return state end if
   end if
 
   bid = cg_next_binding_id(state)
@@ -634,6 +754,7 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
     state.scope_declared_index_stack = sds
   end if
   state.global_slots = _append_unique(state.global_slots, b.label)
+  state.globals = _append_unique(state.globals, b)
   return state
 end function
 
@@ -644,7 +765,30 @@ end function
 
 function declare_fresh_binding(state, name, decl_node, kind)
   nm = _coerce_name(name)
-  return cg_declare_binding(state, nm, kind, false, 0, 0, decl_node)
+  if nm == "" then return state end if
+  if _check_reserved_ident(state, nm, decl_node) == false then return state end if
+
+  if typeof(state.decl_site_bindings) != "struct" then
+    state.decl_site_bindings = t.fastmap_new(128)
+  end if
+  key = _decl_key(decl_node, nm)
+  pre = t.fastmap_get(state.decl_site_bindings, key, 0)
+  if typeof(pre) == "struct" then
+    state = _declare_in_current_scope(state, pre)
+    return state
+  end if
+
+  if kind == "global" then
+    return declare_global_binding(state, nm, decl_node, false, 0)
+  end if
+  if kind == "local" then
+    return declare_local_binding(state, nm, decl_node, false, 0)
+  end if
+
+  if state.in_function then
+    return declare_local_binding(state, nm, decl_node, false, 0)
+  end if
+  return declare_global_binding(state, nm, decl_node, false, 0)
 end function
 
 function bind_param(state, name, offset, decl_node)
@@ -680,32 +824,132 @@ function bind_param(state, name, offset, decl_node)
 end function
 
 function register_decl_site_binding(state, node, name, binding)
+  if typeof(state.decl_site_bindings) != "struct" then
+    state.decl_site_bindings = t.fastmap_new(128)
+  end if
+  key = _decl_key(node, name)
+  state.decl_site_bindings = t.fastmap_set(state.decl_site_bindings, key, binding)
   return state
 end function
 
 function ensure_binding_for_write(state, name, decl_node)
   nm = _coerce_name(name)
+  if nm == "" then return state end if
+  if _check_reserved_ident(state, nm, decl_node) == false then return state end if
+
+  if state.in_function then
+    mapped = _func_global_lookup(state.func_global_map_index, nm)
+    if mapped == "" then
+      mapped = _func_global_lookup(state.func_global_map, nm)
+    end if
+    if mapped != "" then
+      b = resolve_binding(state, mapped)
+      if typeof(b) != "struct" or b.kind != "global" or b.depth != 0 then
+        state = declare_global_binding_root(state, mapped, decl_node, false, 0)
+      end if
+      return state
+    end if
+  end if
+
   b = resolve_binding_for_write(state, nm)
   if typeof(b) == "struct" then return state end if
-  return declare_local_binding(state, nm, decl_node, false, 0)
+
+  if typeof(state.decl_site_bindings) != "struct" then
+    state.decl_site_bindings = t.fastmap_new(128)
+  end if
+  key = _decl_key(decl_node, nm)
+  pre = t.fastmap_get(state.decl_site_bindings, key, 0)
+  if typeof(pre) == "struct" then
+    state = _declare_in_current_scope(state, pre)
+    return state
+  end if
+
+  if state.in_function then
+    return declare_local_binding(state, nm, decl_node, false, 0)
+  end if
+  return declare_global_binding(state, nm, decl_node, false, 0)
 end function
 
 function emit_cleanup_bindings(state, bindings)
+  if typeof(bindings) != "array" or len(bindings) <= 0 then return state end if
+  voidv = t.enc_void()
+  for i = 0 to len(bindings) - 1
+    b = bindings[i]
+    if typeof(b) != "struct" then continue end if
+    if b.kind == "param" then continue end if
+    if b.kind == "local" then
+      if typeof(b.offset) != "int" then continue end if
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", b.offset, voidv, true)
+      continue
+    end if
+    if b.kind == "global" then
+      if typeof(b.label) != "string" or b.label == "" then continue end if
+      state.asm = a.mov_r64_imm64(state.asm, "r11", voidv)
+      state.asm = a.mov_rip_qword_r11(state.asm, b.label)
+    end if
+  end for
   return state
 end function
 
 function emit_cleanup_to_depth(state, target_depth)
+  if typeof(target_depth) != "int" then target_depth = 0 end if
+  if target_depth < 0 then target_depth = 0 end if
+  cur = cg_scope_depth(state)
+  if target_depth >= cur then return state end if
+  d = cur
+  while d > target_depth
+    if typeof(state.scope_declared) == "array" and d >= 0 and d < len(state.scope_declared) then
+      bindings = state.scope_declared[d]
+      if typeof(bindings) == "array" and len(bindings) > 0 then
+        state = emit_cleanup_bindings(state, bindings)
+      end if
+    end if
+    d = d - 1
+  end while
   return state
 end function
 
-function _emit_module_init_dependency_error(state, global_name)
-  state.diagnostics = state.diagnostics +["Module init dependency cycle for global: " + global_name]
+function _emit_module_init_dependency_error(state, target_name, target_file, target_state, node)
+  state_txt = "not initialized"
+  if target_state == 1 then state_txt = "initializing" end if
+  cur_file = state._module_init_active_file
+  cur_disp = "<entry>"
+  if typeof(cur_file) == "string" and cur_file != "" then cur_disp = cur_file end if
+  tgt_disp = "<unknown>"
+  if typeof(target_file) == "string" and target_file != "" then tgt_disp = target_file end if
+  msg = "Cyclic/invalid module initialization dependency while reading '" + target_name + "': module '" + tgt_disp + "' is " + state_txt + " (from '" + cur_disp + "')"
+  state = _emit_make_error_const(state, c.ERR_MODULE_INIT_CYCLE, msg)
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.call(state.asm, "fn_unhandled_error_exit")
   return state
 end function
 
-function _maybe_emit_module_init_guard_for_global_read(state, binding)
-  // Full dependency-state guard is not fully ported yet.
-  // Keep hook for API parity and future runtime checks.
+function _maybe_emit_module_init_guard_for_global_read(state, binding, target_name, node)
+  if typeof(state._module_init_active) != "bool" or state._module_init_active == false then return state end if
+  owner_map = state._global_owner_file
+  tgt_file = _func_global_lookup(owner_map, target_name)
+  if tgt_file == "" then return state end if
+  cur_file = state._module_init_active_file
+  if typeof(cur_file) == "string" and cur_file == tgt_file then return state end if
+  status_map = state._module_init_status_labels
+  status_lbl = _func_global_lookup(status_map, tgt_file)
+  if status_lbl == "" then return state end if
+
+  lid = new_label_id(state)
+  ok_lbl = "lbl_modinit_read_ok_" + lid
+  state.asm = a.mov_rax_rip_qword(state.asm, status_lbl)
+  state.asm = a.cmp_rax_imm8(state.asm, 2)
+  state.asm = a.jcc(state.asm, "e", ok_lbl)
+  st_init_lbl = "lbl_modinit_read_initializing_" + new_label_id(state)
+  st_after_lbl = "lbl_modinit_read_state_after_" + new_label_id(state)
+  state.asm = a.cmp_rax_imm8(state.asm, 1)
+  state.asm = a.jcc(state.asm, "e", st_init_lbl)
+  state = _emit_module_init_dependency_error(state, target_name, tgt_file, 0, node)
+  state.asm = a.jmp(state.asm, st_after_lbl)
+  state.asm = a.mark(state.asm, st_init_lbl)
+  state = _emit_module_init_dependency_error(state, target_name, tgt_file, 1, node)
+  state.asm = a.mark(state.asm, st_after_lbl)
+  state.asm = a.mark(state.asm, ok_lbl)
   return state
 end function
 
@@ -715,7 +959,10 @@ function emit_load_var_scoped(state, name)
   mapped = ""
 
   if state.in_function then
-    mapped = _func_global_lookup(state.func_global_map, nm)
+    mapped = _func_global_lookup(state.func_global_map_index, nm)
+    if mapped == "" then
+      mapped = _func_global_lookup(state.func_global_map, nm)
+    end if
     if mapped != "" then target = mapped end if
   end if
 
@@ -757,7 +1004,7 @@ function emit_load_var_scoped(state, name)
     end if
   end if
 
-  if b.kind == "capture" then
+  if b.kind == "capture" or (typeof(b.capture_index) == "int" and b.capture_index >= 0) then
     depth = 0
     if typeof(b.capture_depth) == "int" then depth = b.capture_depth end if
     idx = -1
@@ -772,7 +1019,18 @@ function emit_load_var_scoped(state, name)
         state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r11", 8)
       end for
     end if
+    lidc = state.label_id
+    state.label_id = state.label_id + 1
+    l_cap_full = "cap_load_full_" + lidc
+    l_cap_done = "cap_load_done_" + lidc
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_ENV_LOCAL)
+    state.asm = a.jcc(state.asm, "ne", l_cap_full)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r11", 8 + idx * 8)
+    state.asm = a.jmp(state.asm, l_cap_done)
+    state.asm = a.mark(state.asm, l_cap_full)
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r11", 16 + idx * 8)
+    state.asm = a.mark(state.asm, l_cap_done)
     state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", 8)
     return state
   end if
@@ -781,29 +1039,8 @@ function emit_load_var_scoped(state, name)
     off = 0
     if typeof(b.offset) == "int" then off = b.offset end if
     state.asm = a.mov_rax_rsp_disp32(state.asm, off)
-    env_idx_probe_load = _map_int_get(state.current_fn_env_index, nm, -1)
-    use_boxed_slot_load = b.boxed
-    if use_boxed_slot_load == false and env_idx_probe_load >= 0 then
-      // Captured owner slots must behave as boxed even if metadata on the binding was missed.
-      use_boxed_slot_load = true
-    end if
-    if use_boxed_slot_load then
-      lidb = state.label_id
-      state.label_id = state.label_id + 1
-      l_boxed = "load_boxed_ok_" + lidb
-      l_done = "load_boxed_done_" + lidb
-      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
-      state.asm = a.and_r64_imm(state.asm, "r10", 7)
-      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
-      state.asm = a.jcc(state.asm, "ne", l_done)
-      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
-      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BOX)
-      state.asm = a.jcc(state.asm, "e", l_boxed)
-      state.asm = a.jmp(state.asm, l_done)
-      state.asm = a.mark(state.asm, l_boxed)
-      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", 8)
-      state.asm = a.mark(state.asm, l_done)
+    if b.boxed then
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rax", 8)
     end if
     return state
   end if
@@ -813,7 +1050,7 @@ function emit_load_var_scoped(state, name)
       state.diagnostics = state.diagnostics + ["Internal error: missing global label for '" + nm + "'"]
       return state
     end if
-    state = _maybe_emit_module_init_guard_for_global_read(state, b)
+    state = _maybe_emit_module_init_guard_for_global_read(state, b, nm, 0)
     state.asm = a.mov_rax_rip_qword(state.asm, b.label)
     return state
   end if
@@ -822,27 +1059,31 @@ function emit_load_var_scoped(state, name)
   return state
 end function
 
-function emit_store_var_scoped(state, name)
+function emit_store_var_scoped(state, name, node)
   nm = _coerce_name(name)
   target = nm
   mapped = ""
   if state.in_function then
-    mapped = _func_global_lookup(state.func_global_map, nm)
+    mapped = _func_global_lookup(state.func_global_map_index, nm)
+    if mapped == "" then
+      mapped = _func_global_lookup(state.func_global_map, nm)
+    end if
     if mapped != "" then target = mapped end if
   end if
 
+  state = ensure_binding_for_write(state, target, node)
   b = resolve_binding_for_write(state, target)
 
   if typeof(b) != "struct" and mapped != "" then
-    state = declare_global_binding_root(state, mapped, 0, false, 0)
+    state = declare_global_binding_root(state, mapped, node, false, 0)
     b = resolve_binding_for_write(state, mapped)
   end if
 
   if typeof(b) != "struct" then
     if state.in_function then
-      state = declare_local_binding(state, nm, 0, false, 0)
+      state = declare_local_binding(state, nm, node, false, 0)
     else
-      state = declare_global_binding_root(state, nm, 0, false, 0)
+      state = declare_global_binding(state, nm, node, false, 0)
     end if
     b = resolve_binding_for_write(state, nm)
   end if
@@ -852,12 +1093,15 @@ function emit_store_var_scoped(state, name)
     return state
   end if
 
-  if b.is_const and b.const_initialized then
-    state.diagnostics = state.diagnostics + ["Cannot assign to const '" + nm + "'"]
-    return state
+  if b.is_const then
+    if b.const_initialized then
+      state.diagnostics = state.diagnostics + ["Cannot assign to const '" + nm + "'"]
+      return state
+    end if
+    b.const_initialized = true
   end if
 
-  if b.kind == "capture" then
+  if b.kind == "capture" or (typeof(b.capture_index) == "int" and b.capture_index >= 0) then
     depth = 0
     if typeof(b.capture_depth) == "int" then depth = b.capture_depth end if
     idx = -1
@@ -872,7 +1116,18 @@ function emit_store_var_scoped(state, name)
         state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r11", 8)
       end for
     end if
+    lids = state.label_id
+    state.label_id = state.label_id + 1
+    l_cap_full_store = "cap_store_full_" + lids
+    l_cap_done_store = "cap_store_done_" + lids
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_ENV_LOCAL)
+    state.asm = a.jcc(state.asm, "ne", l_cap_full_store)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r11", 8 + idx * 8)
+    state.asm = a.jmp(state.asm, l_cap_done_store)
+    state.asm = a.mark(state.asm, l_cap_full_store)
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r11", 16 + idx * 8)
+    state.asm = a.mark(state.asm, l_cap_done_store)
     state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
     return state
   end if
@@ -880,65 +1135,9 @@ function emit_store_var_scoped(state, name)
   if b.kind == "param" or b.kind == "local" then
     off = 0
     if typeof(b.offset) == "int" then off = b.offset end if
-    env_idx_probe_store = _map_int_get(state.current_fn_env_index, nm, -1)
-    use_boxed_slot_store = b.boxed
-    if use_boxed_slot_store == false and env_idx_probe_store >= 0 then
-      // Captured owner slots must behave as boxed even if metadata on the binding was missed.
-      use_boxed_slot_store = true
-    end if
-    if use_boxed_slot_store then
-      lidb = state.label_id
-      state.label_id = state.label_id + 1
-      l_need_box = "store_box_need_" + lidb
-      l_store_box = "store_box_write_" + lidb
-      l_skip_env = "store_box_skipenv_" + lidb
-
-      // Preserve assigned value across potential allocation call.
-      state.asm = a.mov_r64_r64(state.asm, "r12", "rax")
-
-      // r11 = slot content; if it is not an OBJ_BOX, allocate box lazily.
+    if b.boxed then
       state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", off)
-      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-      state.asm = a.and_rax_imm8(state.asm, 7)
-      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
-      state.asm = a.jcc(state.asm, "ne", l_need_box)
-      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
-      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BOX)
-      state.asm = a.jcc(state.asm, "e", l_store_box)
-
-      state.asm = a.mark(state.asm, l_need_box)
-      state.asm = a.mov_rcx_imm32(state.asm, 16)
-      state.asm = a.call(state.asm, "fn_alloc")
-      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_BOX, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 0, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, t.enc_void(), true)
-      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", off, "r11")
-
-      env_idx = env_idx_probe_store
-      if env_idx >= 0 then
-        env_root_store = state.current_env_root_off
-        if typeof(env_root_store) == "int" and env_root_store > 0 then
-          state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", env_root_store)
-        else
-          state.asm = a.mov_r64_r64(state.asm, "r10", "r15")
-        end if
-        state.asm = a.mov_membase_disp_r64(state.asm, "r10", 16 + env_idx * 8, "r11")
-      end if
-
-      state.asm = a.mark(state.asm, l_store_box)
-      env_idx2 = env_idx_probe_store
-      if env_idx2 >= 0 then
-        env_root_store2 = state.current_env_root_off
-        if typeof(env_root_store2) == "int" and env_root_store2 > 0 then
-          state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", env_root_store2)
-        else
-          state.asm = a.mov_r64_r64(state.asm, "r10", "r15")
-        end if
-        state.asm = a.mov_membase_disp_r64(state.asm, "r10", 16 + env_idx2 * 8, "r11")
-      end if
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "r12")
-      state.asm = a.mov_r64_r64(state.asm, "rax", "r12")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
       return state
     end if
     state.asm = a.mov_rsp_disp32_rax(state.asm, off)
@@ -978,15 +1177,18 @@ function emit_store_existing_global(state, binding)
 end function
 
 function analysis_reset_function(state)
+  state.decl_site_bindings = t.fastmap_new(128)
   state.function_locals =[]
+  state.function_local_ids = t.fastmap_new(64)
   state.func_globals =[]
   state.func_global_map =[]
   state.func_global_map_index = t.fastmap_new(64)
   return state
 end function
 
-function analysis_layout_function_locals(state)
+function analysis_layout_function_locals(state, base_offset)
   off = 0
+  if typeof(base_offset) != "int" then base_offset = 0 end if
   fl = state.function_locals
   if typeof(fl) != "array" then return state end if
   if len(fl) <= 0 then return state end if
@@ -995,7 +1197,7 @@ function analysis_layout_function_locals(state)
     if typeof(b) != "struct" then continue end if
     if b.kind != "local" then continue end if
     if typeof(b.offset) != "int" or b.offset == 0 then
-      b.offset = off
+      b.offset = base_offset + off
       off = off + 8
       fl[i] = b
     end if
@@ -1007,11 +1209,33 @@ end function
 function declare_function_global(state, local_name, qualified_name)
   ln = _coerce_name(local_name)
   qn = _coerce_name(qualified_name)
+  if ln == "" then return state end if
+  if state.in_function == false then
+    state.diagnostics = state.diagnostics + ["'global' is only allowed inside functions"]
+    return state
+  end if
+  if _check_reserved_ident(state, ln, 0) == false then return state end if
+  if qn == "" then qn = ln end if
+  if _check_reserved_ident(state, qn, 0) == false then return state end if
+
+  existing = resolve_binding(state, ln)
+  if typeof(existing) == "struct" then
+    if existing.kind == "local" or existing.kind == "param" or existing.kind == "capture" or (typeof(existing.capture_index) == "int" and existing.capture_index >= 0) then
+      state.diagnostics = state.diagnostics + ["global '" + ln + "' conflicts with an existing local/param binding"]
+      return state
+    end if
+  end if
+
+  b = resolve_binding(state, qn)
+  if typeof(b) != "struct" or b.kind != "global" or b.depth != 0 then
+    state = declare_global_binding_root(state, qn, 0, false, 0)
+  end if
+
   state.func_globals = _append_unique(state.func_globals, ln)
-  state.func_global_map = _append_unique(state.func_global_map, [ln, qn])
   if typeof(state.func_global_map_index) != "struct" then
     state.func_global_map_index = t.fastmap_new(64)
   end if
   state.func_global_map_index = t.fastmap_set(state.func_global_map_index, ln, qn)
+  state.func_global_map = _append_unique(state.func_global_map, [ln, qn])
   return state
 end function

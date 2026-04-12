@@ -95,6 +95,18 @@ function fastmap_new(initial_cap)
   return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), _arr_fill(cap, 0), cap, 0)
 end function
 
+function fastmap_clear(mapv)
+  m = mapv
+  if _fm_is_valid(m) == false then return fastmap_new(64) end if
+  if typeof(m.used) == "array" and len(m.used) > 0 then
+    for i = 0 to len(m.used) - 1
+      m.used[i] = 0
+    end for
+  end if
+  m.size = 0
+  return m
+end function
+
 function _fm_probe_slot(mapv, key)
   if _fm_is_valid(mapv) == false then return [-1, false] end if
   mask = mapv.cap - 1
@@ -235,6 +247,113 @@ end function
 function enc_enum(enum_id, variant_id)
   payload = ((variant_id & 0xFFFF) << 16) | (enum_id & 0xFFFF)
   return (payload << 3) | c.TAG_ENUM
+end function
+
+function inline _f32_is_nan(v)
+  return typeof(v) == "float" and v != v
+end function
+
+function inline _f32_is_inf(v)
+  if typeof(v) != "float" then return false end if
+  if v != v then return false end if
+  d = v - v
+  return d != d
+end function
+
+function try_enc_float_immediate(x)
+  // Encode x as a tagged float32 immediate only when the value round-trips
+  // exactly. Otherwise the compiler should fall back to a boxed double.
+  v = x
+  if typeof(v) == "int" then
+    v = v + 0.0
+  end if
+  if typeof(v) != "float" then
+    return
+  end if
+
+  if _f32_is_nan(v) then
+    return
+  end if
+
+  sign = 0
+  ax = v
+  if ax < 0.0 then
+    sign = 1
+    ax = 0.0 - ax
+  else
+    if ax == 0.0 then
+      sx = "" + v
+      if typeof(sx) == "string" and len(sx) > 0 and sx[0] == "-" then
+        sign = 1
+      end if
+    end if
+  end if
+
+  if _f32_is_inf(v) then
+    return ((((sign << 31) | (0xFF << 23)) << 3) | c.TAG_FLOAT)
+  end if
+
+  if ax == 0.0 then
+    return ((((sign << 31)) << 3) | c.TAG_FLOAT)
+  end if
+
+  e = 0
+  y = ax
+  while y >= 2.0
+    y = y / 2.0
+    e = e + 1
+    if e > 127 then
+      return
+    end if
+  end while
+  while y < 1.0
+    y = y * 2.0
+    e = e - 1
+  end while
+
+  if e >= -126 then
+    frac = y - 1.0
+    mant = 0
+    bit = 1 << 22
+    i = 0
+    while i < 23
+      frac = frac * 2.0
+      if frac >= 1.0 then
+        mant = mant | bit
+        frac = frac - 1.0
+      end if
+      bit = bit >> 1
+      i = i + 1
+    end while
+    if frac != 0.0 then return end if
+
+    exp_field = e + 127
+    if exp_field <= 0 or exp_field >= 255 then return end if
+    return ((((sign << 31) | (exp_field << 23) | mant) << 3) | c.TAG_FLOAT)
+  end if
+
+  scaled = ax
+  i = 0
+  while i < 149
+    scaled = scaled * 2.0
+    i = i + 1
+  end while
+
+  mant = 0
+  bit = 1 << 22
+  p = 4194304.0
+  i = 0
+  while i < 23
+    if scaled >= p then
+      mant = mant | bit
+      scaled = scaled - p
+    end if
+    bit = bit >> 1
+    p = p / 2.0
+    i = i + 1
+  end while
+  if scaled != 0.0 then return end if
+  return ((((sign << 31) | mant) << 3) | c.TAG_FLOAT)
 end function
 
 function _arr_fill(n, fill)

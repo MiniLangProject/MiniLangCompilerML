@@ -15,7 +15,7 @@ struct Diagnostic
 end struct
 
 struct MultiCompileError
-  diagnostics,
+  diags,
 end struct
 
 function newCompileError(message, pos, filename)

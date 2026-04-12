@@ -169,50 +169,96 @@ end function
 
 function _has_any_global_prefix(state, base)
   if typeof(base) != "string" or base == "" then return false end if
+  if typeof(state.qualify_cache) == "struct" then
+    hit_cached = t.fastmap_get(state.qualify_cache, "@pref|" + base, -1)
+    if typeof(hit_cached) == "int" then
+      if hit_cached != 0 then return true end if
+      return false
+    end if
+  end if
   pref = base + "."
+  found = false
 
   uf = state.user_functions
   if typeof(uf) == "array" and len(uf) > 0 then
     for i = 0 to len(uf) - 1
       it = uf[i]
       if typeof(it) == "array" and len(it) >= 1 and typeof(it[0]) == "string" then
-        if s.startsWith(it[0], pref) then return true end if
+        if s.startsWith(it[0], pref) then
+          found = true
+          break
+        end if
       end if
       if typeof(it) == "struct" and typeof(it.key) == "string" then
-        if s.startsWith(it.key, pref) then return true end if
+        if s.startsWith(it.key, pref) then
+          found = true
+          break
+        end if
       end if
     end for
   end if
 
-  eids = state.enum_ids
-  if typeof(eids) == "array" and len(eids) > 0 then
-    for i = 0 to len(eids) - 1
-      it2 = eids[i]
-      if typeof(it2) == "struct" and typeof(it2.key) == "string" then
-        if s.startsWith(it2.key, pref) then return true end if
-      end if
-    end for
+  if found == false then
+    eids = state.enum_ids
+    if typeof(eids) == "array" and len(eids) > 0 then
+      for i = 0 to len(eids) - 1
+        it2 = eids[i]
+        if typeof(it2) == "struct" and typeof(it2.key) == "string" then
+          if s.startsWith(it2.key, pref) then
+            found = true
+            break
+          end if
+        end if
+      end for
+    end if
   end if
 
-  sids = state.struct_ids
-  if typeof(sids) == "array" and len(sids) > 0 then
-    for i = 0 to len(sids) - 1
-      it3 = sids[i]
-      if typeof(it3) == "struct" and typeof(it3.key) == "string" then
-        if s.startsWith(it3.key, pref) then return true end if
-      end if
-    end for
+  if found == false then
+    sids = state.struct_ids
+    if typeof(sids) == "array" and len(sids) > 0 then
+      for i = 0 to len(sids) - 1
+        it3 = sids[i]
+        if typeof(it3) == "struct" and typeof(it3.key) == "string" then
+          if s.startsWith(it3.key, pref) then
+            found = true
+            break
+          end if
+        end if
+      end for
+    end if
   end if
 
-  gls = state.globals
-  if typeof(gls) == "array" and len(gls) > 0 then
-    for i = 0 to len(gls) - 1
-      g = gls[i]
-      if typeof(g) == "struct" and typeof(g.name) == "string" then
-        if s.startsWith(g.name, pref) then return true end if
-      end if
-    end for
+  if found == false then
+    gls = state.globals
+    if typeof(gls) == "array" and len(gls) > 0 then
+      for i = 0 to len(gls) - 1
+        g = gls[i]
+        if typeof(g) == "struct" and typeof(g.name) == "string" then
+          if s.startsWith(g.name, pref) then
+            found = true
+            break
+          end if
+        end if
+      end for
+    end if
   end if
+
+  if typeof(state.qualify_cache) == "struct" then
+    if found then
+      state.qualify_cache = t.fastmap_set(state.qualify_cache, "@pref|" + base, 1)
+    else
+      state.qualify_cache = t.fastmap_set(state.qualify_cache, "@pref|" + base, 0)
+    end if
+  end if
+  return found
+end function
+
+function inline _compile_symbol_has(state, key)
+  if typeof(key) != "string" or key == "" then return false end if
+  if typeof(_user_function_get(state, key)) == "struct" then return true end if
+  if typeof(_extern_sig_get(state, key)) == "struct" then return true end if
+  if typeof(_state_struct_fields_get(state, key)) == "array" then return true end if
+  if _state_enum_id_get(state, key, -1) >= 0 then return true end if
   return false
 end function
 
@@ -387,19 +433,17 @@ function _qualify_identifier(state, name)
     end for
   end if
 
-  pools = [state.user_functions, state.extern_sigs, state.struct_fields, state.enum_ids]
   if len(cands) > 0 then
     for ci = 0 to len(cands) - 1
       cand = cands[ci]
-      for pi = 0 to len(pools) - 1
-        if _pool_has_key(pools[pi], cand) then
-          state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, cand)
-          return cand
-        end if
-      end for
+      if _compile_symbol_has(state, cand) then
+        state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, cand)
+        return cand
+      end if
     end for
   end if
 
+  pools = [state.user_functions, state.extern_sigs, state.struct_fields, state.enum_ids]
   if pkg_pref != "" then
     suffix = "." + n1
     hits = []
@@ -419,6 +463,8 @@ end function
 
 function _expr_to_qualname(state, expr)
   if typeof(expr) != "struct" then return "" end if
+  qn0 = _qname_of(state, expr)
+  if typeof(qn0) == "string" and qn0 != "" then return qn0 end if
   if expr.node_kind == "Var" and typeof(expr.name) == "string" then
     nm = expr.name
     if s.contains(nm, ".") then return _qualify_identifier(state, _apply_import_alias(state, nm)) end if
@@ -669,6 +715,71 @@ function cg_expr_try_const_value(state, expr)
   return ConstEvalResult(false, 0)
 end function
 
+function _opt_try_const_immediate_encoded(state, expr)
+  cv = cg_expr_try_const_value(state, expr)
+  if cv.ok == false then return 0 end if
+  if typeof(cv.value) == "bool" then return t.enc_bool(cv.value) end if
+  if typeof(cv.value) == "int" then return t.enc_int(cv.value) end if
+  if typeof(cv.value) == "float" then
+    enc = t.try_enc_float_immediate(cv.value)
+    if typeof(enc) == "int" then return enc end if
+  end if
+  return 0
+end function
+
+function _opt_try_pure_const_array_len(state, expr)
+  if typeof(expr) != "struct" then return -1 end if
+  if expr.node_kind != "ArrayLit" then return -1 end if
+  if typeof(expr.items) != "array" then return 0 end if
+  for i = 0 to len(expr.items) - 1
+    if cg_expr_try_const_value(state, expr.items[i]).ok == false then
+      return -1
+    end if
+  end for
+  return len(expr.items)
+end function
+
+function _opt_try_known_type_label(state, expr, detailed)
+  cv = cg_expr_try_const_value(state, expr)
+  if cv.ok then
+    if typeof(cv.value) == "bool" then return "obj_type_bool" end if
+    if typeof(cv.value) == "int" then return "obj_type_int" end if
+    if typeof(cv.value) == "float" then return "obj_type_float" end if
+    if typeof(cv.value) == "string" then return "obj_type_string" end if
+  end if
+
+  if _opt_try_pure_const_array_len(state, expr) >= 0 then
+    return "obj_type_array"
+  end if
+
+  if typeof(expr) == "struct" and expr.node_kind == "VoidLit" then
+    return "obj_type_void"
+  end if
+  return ""
+end function
+
+function _qname_parts_any(expr)
+  if typeof(expr) != "struct" then return 0 end if
+  if expr.node_kind == "Var" then
+    nm = _coerce_name(expr.name)
+    if nm == "" then return 0 end if
+    return s.split(nm, ".")
+  end if
+  if expr.node_kind == "Member" then
+    tgt2 = expr.target
+    if typeof(tgt2) != "struct" and typeof(expr.obj) == "struct" then
+      tgt2 = expr.obj
+    end if
+    base2 = _qname_parts_any(tgt2)
+    if typeof(base2) != "array" or len(base2) <= 0 then return 0 end if
+    nm2 = _coerce_name(expr.name)
+    if nm2 == "" then nm2 = _coerce_name(expr.field) end if
+    if nm2 == "" then return 0 end if
+    return base2 +[nm2]
+  end if
+  return 0
+end function
+
 function cg_emit_expr(state, expr)
   if typeof(expr) != "struct" then
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -688,9 +799,14 @@ function cg_emit_expr(state, expr)
       return state
     end if
     if typeof(expr.value) == "float" then
-      lbl_num = "flt_" + len(state.rdata.labels)
-      state.rdata = d.rdata_add_obj_float(state.rdata, lbl_num, expr.value)
-      state.asm = a.lea_rax_rip(state.asm, lbl_num)
+      enc_num = t.try_enc_float_immediate(expr.value)
+      if typeof(enc_num) == "int" then
+        state.asm = a.mov_rax_imm64(state.asm, enc_num)
+      else
+        lbl_num = "flt_" + len(state.rdata.labels)
+        state.rdata = d.rdata_add_obj_float(state.rdata, lbl_num, expr.value)
+        state.asm = a.lea_rax_rip(state.asm, lbl_num)
+      end if
       return state
     end if
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -777,14 +893,20 @@ function cg_emit_expr(state, expr)
       state.asm = a.jcc(state.asm, "ne", l_false_s)
 
       state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      l_struct_inst_s = "is_type_struct_inst_" + fid_s
+      l_struct_sid_s = "is_type_struct_sid_" + fid_s
       state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCT)
-      state.asm = a.jcc(state.asm, "e", l_typeok_s)
+      state.asm = a.jcc(state.asm, "e", l_struct_inst_s)
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCTTYPE)
       state.asm = a.jcc(state.asm, "ne", l_false_s)
-
-      state.asm = a.mark(state.asm, l_typeok_s)
       state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 8)
+      state.asm = a.jmp(state.asm, l_struct_sid_s)
+
+      state.asm = a.mark(state.asm, l_struct_inst_s)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+
+      state.asm = a.mark(state.asm, l_struct_sid_s)
       state.asm = a.cmp_r32_imm(state.asm, "edx", sid)
       state.asm = a.jcc(state.asm, "e", l_true_s)
       state.asm = a.jmp(state.asm, l_false_s)
@@ -921,7 +1043,16 @@ function cg_emit_expr(state, expr)
 
   if k == "Member" then
     mname = _coerce_name(expr.name)
-    base_q = _expr_to_qualname(state, expr.target)
+    if mname == "" then mname = _coerce_name(expr.field) end if
+    tgt_m = expr.target
+    if typeof(tgt_m) != "struct" and typeof(expr.obj) == "struct" then tgt_m = expr.obj end if
+
+    qmem0 = _qname_of(state, expr)
+    if qmem0 != "" then
+      return scope.emit_load_var_scoped(state, qmem0)
+    end if
+
+    base_q = _expr_to_qualname(state, tgt_m)
     if base_q != "" and mname != "" then
       base_q_m = _qualify_identifier(state, base_q)
       if base_q_m == "" then base_q_m = base_q end if
@@ -990,7 +1121,11 @@ function cg_emit_expr(state, expr)
     end if
 
     // Runtime member read on struct instance.
-    tgt = expr.target
+    tgt = tgt_m
+    if typeof(tgt) != "struct" then
+      tgt = expr.target
+      if typeof(tgt) != "struct" and typeof(expr.obj) == "struct" then tgt = expr.obj end if
+    end if
     state = cg_emit_expr(state, tgt)
 
     fid_m = _next_lid(state)
@@ -1011,11 +1146,11 @@ function cg_emit_expr(state, expr)
     state.asm = a.jcc(state.asm, "ne", l_fail_m)
 
     // edx = struct_id, dispatch -> ecx field index
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 8)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
     state = _emit_struct_field_index_dispatch(state, mname, "edx", "ecx", l_ok_m, l_fail_m, "memb_" + fid_m)
 
     state.asm = a.mark(state.asm, l_ok_m)
-    state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r11", "rcx", 8, 16)
+    state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r11", "rcx", 8, 8)
     state.asm = a.jmp(state.asm, l_done_m)
 
     state.asm = a.mark(state.asm, l_fail_m)
@@ -1025,6 +1160,7 @@ function cg_emit_expr(state, expr)
     state.asm = a.and_r64_imm(state.asm, "r10", 7)
     state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_VOID)
     state.asm = a.jcc(state.asm, "ne", l_not_void)
+    state = core.emit_dbg_line(state, expr)
     state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot access member '" + mname + "' on void")
     state = _emit_auto_errprop(state)
     state.asm = a.jmp(state.asm, l_done_m)
@@ -1038,6 +1174,7 @@ function cg_emit_expr(state, expr)
     state.asm = a.and_r64_imm(state.asm, "r10", 7)
     state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
     state.asm = a.jcc(state.asm, "e", l_is_ptr)
+    state = core.emit_dbg_line(state, expr)
     state = _emit_make_error_const(state, c.ERR_MEMBER_TARGET_TYPE, "Cannot access member '" + mname + "' on non-struct value")
     state = _emit_auto_errprop(state)
     state.asm = a.jmp(state.asm, l_done_m)
@@ -1046,11 +1183,13 @@ function cg_emit_expr(state, expr)
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCT)
     state.asm = a.jcc(state.asm, "e", l_is_struct)
+    state = core.emit_dbg_line(state, expr)
     state = _emit_make_error_const(state, c.ERR_MEMBER_TARGET_TYPE, "Cannot access member '" + mname + "' on non-struct value")
     state = _emit_auto_errprop(state)
     state.asm = a.jmp(state.asm, l_done_m)
 
     state.asm = a.mark(state.asm, l_is_struct)
+    state = core.emit_dbg_line(state, expr)
     state = _emit_make_error_const(state, c.ERR_MEMBER_NOT_FOUND, "Struct has no member '" + mname + "'")
     state = _emit_auto_errprop(state)
 
@@ -1059,99 +1198,129 @@ function cg_emit_expr(state, expr)
   end if
 
   if k == "Index" then
-    tmp_idx_off = core.alloc_expr_temps(state, 16)
-    tmp_idx_ok = true
-    if typeof(tmp_idx_off) != "int" or tmp_idx_off <= 0 then
-      tmp_idx_off = 0x180
-      tmp_idx_ok = false
-    end if
-    tmp_tgt_off = tmp_idx_off
-    tmp_sub_off = tmp_idx_off + 8
-
-    state = cg_emit_expr(state, expr.target)
-    state.asm = a.mov_rsp_disp32_rax(state.asm, tmp_tgt_off)
-    state = cg_emit_expr(state, expr.index)
-    state.asm = a.mov_rsp_disp32_rax(state.asm, tmp_sub_off)
-
-    state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_tgt_off)  // target
-    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_sub_off)  // index
-
     lid_ix = _next_lid(state)
+    l_arr = "idx_arr_" + lid_ix
+    l_bytes = "idx_bytes_" + lid_ix
+    l_str = "idx_str_" + lid_ix
     l_bad_target = "idx_bad_target_" + lid_ix
-    l_bad_target_void = "idx_bad_target_void_" + lid_ix
-    l_bad_index = "idx_bad_index_" + lid_ix
-    l_bad_void = "idx_bad_void_" + lid_ix
     l_oob = "idx_oob_" + lid_ix
-    l_isarr = "idx_isarr_" + lid_ix
-    l_isbytes = "idx_isbytes_" + lid_ix
-    l_isstr = "idx_isstr_" + lid_ix
     l_done = "idx_done_" + lid_ix
 
-    // strict void index check
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-    state.asm = a.and_rax_imm8(state.asm, 7)
-    state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
-    state.asm = a.jcc(state.asm, "e", l_bad_void)
+    state = cg_emit_expr(state, expr.target)
 
-    // strict index type check
-    state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
-    state.asm = a.jcc(state.asm, "ne", l_bad_index)
+    vid = _next_lid(state)
+    l_nvoid = "idx_nvoid_" + vid
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state.asm = a.and_r64_imm(state.asm, "r10", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_VOID)
+    state.asm = a.jcc(state.asm, "ne", l_nvoid)
+    state = core.emit_dbg_line(state, expr)
+    state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot index void")
+    state = _emit_auto_errprop(state)
+    state.asm = a.jmp(state.asm, l_done)
+    state.asm = a.mark(state.asm, l_nvoid)
 
-    // target must be ptr and non-null
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-    state.asm = a.and_rax_imm8(state.asm, 7)
-    state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
-    state.asm = a.jcc(state.asm, "e", l_bad_target_void)
+    base_off = core.alloc_expr_temps(state, 8)
+    need_top = 0
+    if typeof(base_off) == "int" and base_off > 0 then
+      if typeof(state.expr_temp_base) == "int" then
+        need_top = base_off - state.expr_temp_base + 8
+      else
+        need_top = base_off + 8
+      end if
+      if typeof(state.expr_temp_top) != "int" or state.expr_temp_top < need_top then
+        state.expr_temp_top = need_top
+        state = core._sync_expr_temp_root_count(state)
+      end if
+    end if
+    state.asm = a.mov_rsp_disp32_rax(state.asm, base_off)
 
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-    state.asm = a.and_rax_imm8(state.asm, 7)
-    state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
-    state.asm = a.jcc(state.asm, "ne", l_bad_target)
-    state.asm = a.test_r64_r64(state.asm, "r10", "r10")
-    state.asm = a.jcc(state.asm, "e", l_bad_target)
+    state = cg_emit_expr(state, expr.index)
 
-    // rcx = decoded index
-    state.asm = a.mov_r64_r64(state.asm, "rcx", "r11")
+    if typeof(need_top) == "int" and need_top > 0 then
+      if typeof(state.expr_temp_top) != "int" or state.expr_temp_top < need_top then
+        state.expr_temp_top = need_top
+        state = core._sync_expr_temp_root_count(state)
+      end if
+    end if
+
+    vid2 = _next_lid(state)
+    l_iok = "idx_iok_" + vid2
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state.asm = a.and_r64_imm(state.asm, "r10", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_VOID)
+    state.asm = a.jcc(state.asm, "ne", l_iok)
+    state = core.emit_dbg_line(state, expr)
+    state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot use void as index")
+    state = _emit_auto_errprop(state)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", base_off, t.enc_void(), true)
+    state.asm = a.jmp(state.asm, l_done)
+    state.asm = a.mark(state.asm, l_iok)
+
+    vid3 = _next_lid(state)
+    l_int_idx = "idx_intidx_" + vid3
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state.asm = a.and_r64_imm(state.asm, "r10", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "e", l_int_idx)
+    state = core.emit_dbg_line(state, expr)
+    state = _emit_make_error_const(state, c.ERR_INDEX_TYPE, "Index must be an int")
+    state = _emit_auto_errprop(state)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", base_off, t.enc_void(), true)
+    state.asm = a.jmp(state.asm, l_done)
+    state.asm = a.mark(state.asm, l_int_idx)
+
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
     state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
 
-    // dispatch by object type
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r10", 0)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_off)
+
+    state = core.free_expr_temps(state, 8)
+
+    state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
+    state.asm = a.and_r64_imm(state.asm, "r10", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_bad_target)
+    state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+    state.asm = a.jcc(state.asm, "e", l_bad_target)
+
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
-    state.asm = a.jcc(state.asm, "e", l_isarr)
+    state.asm = a.jcc(state.asm, "e", l_arr)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+    state.asm = a.jcc(state.asm, "e", l_arr)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
-    state.asm = a.jcc(state.asm, "e", l_isstr)
+    state.asm = a.jcc(state.asm, "e", l_str)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
-    state.asm = a.jcc(state.asm, "e", l_isbytes)
+    state.asm = a.jcc(state.asm, "e", l_bytes)
     state.asm = a.jmp(state.asm, l_bad_target)
 
-    state.asm = a.mark(state.asm, l_isarr)
-    state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r10", 4)
-    lid_neg_a = _next_lid(state)
-    l_nonneg_a = "idx_nonneg_a_" + lid_neg_a
-    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
-    state.asm = a.jcc(state.asm, "ge", l_nonneg_a)
-    state.asm = a.add_r64_r64(state.asm, "rcx", "r8")
-    state.asm = a.mark(state.asm, l_nonneg_a)
-    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
+    state.asm = a.mark(state.asm, l_arr)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    l_a_ok = "idx_a_ok_" + lid_ix
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.jcc(state.asm, "ge", l_a_ok)
+    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.mark(state.asm, l_a_ok)
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
     state.asm = a.jcc(state.asm, "l", l_oob)
-    state.asm = a.cmp_r32_r32(state.asm, "ecx", "r8d")
+    state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_oob)
-    state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r10", "rcx", 8, 8)
+    state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r11", "rcx", 8, 8)
     state.asm = a.jmp(state.asm, l_done)
 
-    state.asm = a.mark(state.asm, l_isbytes)
-    state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r10", 4)
-    lid_neg_b = _next_lid(state)
-    l_nonneg_b = "idx_nonneg_b_" + lid_neg_b
-    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
-    state.asm = a.jcc(state.asm, "ge", l_nonneg_b)
-    state.asm = a.add_r64_r64(state.asm, "rcx", "r8")
-    state.asm = a.mark(state.asm, l_nonneg_b)
-    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
+    state.asm = a.mark(state.asm, l_bytes)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    l_b_ok = "idx_b_ok_" + lid_ix
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.jcc(state.asm, "ge", l_b_ok)
+    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.mark(state.asm, l_b_ok)
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
     state.asm = a.jcc(state.asm, "l", l_oob)
-    state.asm = a.cmp_r32_r32(state.asm, "ecx", "r8d")
+    state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_oob)
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
     state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
     state.asm = a.add_rax_imm8(state.asm, 8)
     state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
@@ -1159,62 +1328,38 @@ function cg_emit_expr(state, expr)
     state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
     state.asm = a.jmp(state.asm, l_done)
 
-    state.asm = a.mark(state.asm, l_isstr)
-    state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r10", 4)
-    lid_neg_s = _next_lid(state)
-    l_nonneg_s = "idx_nonneg_s_" + lid_neg_s
-    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
-    state.asm = a.jcc(state.asm, "ge", l_nonneg_s)
-    state.asm = a.add_r64_r64(state.asm, "rcx", "r8")
-    state.asm = a.mark(state.asm, l_nonneg_s)
-    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
+    state.asm = a.mark(state.asm, l_str)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    l_s_ok = "idx_s_ok_" + lid_ix
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.jcc(state.asm, "ge", l_s_ok)
+    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.mark(state.asm, l_s_ok)
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
     state.asm = a.jcc(state.asm, "l", l_oob)
-    state.asm = a.cmp_r32_r32(state.asm, "ecx", "r8d")
+    state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_oob)
-
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
     state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
     state.asm = a.add_rax_imm8(state.asm, 8)
-    state.asm = a.mov_r8_membase_disp(state.asm, "dl", "rax", 0)
-    state.asm = a.mov_membase_disp_r8(state.asm, "rsp", 0x20, "dl")
-
-    state.asm = a.mov_rcx_imm32(state.asm, 10)
-    state.asm = a.call(state.asm, "fn_alloc")
-    state.asm = a.mov_r11_rax(state.asm)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRING, false)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 1, false)
-    state.asm = a.mov_r8_membase_disp(state.asm, "dl", "rsp", 0x20)
-    state.asm = a.mov_membase_disp_r8(state.asm, "r11", 8, "dl")
-    state.asm = a.mov_membase_disp_imm8(state.asm, "r11", 9, 0)
-    state.asm = a.mov_rax_r11(state.asm)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
+    state.asm = a.lea_r11_rip(state.asm, "obj_char_table")
+    state.asm = a.shl_rax_imm8(state.asm, 4)
+    state.asm = a.add_r64_r64(state.asm, "rax", "r11")
     state.asm = a.jmp(state.asm, l_done)
 
     state.asm = a.mark(state.asm, l_bad_target)
+    state = core.emit_dbg_line(state, expr)
     state = _emit_make_error_const(state, c.ERR_INDEX_TARGET_TYPE, "Indexing requires array, string, or bytes")
     state = _emit_auto_errprop(state)
     state.asm = a.jmp(state.asm, l_done)
 
-    state.asm = a.mark(state.asm, l_bad_target_void)
-    state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot index void")
-    state = _emit_auto_errprop(state)
-    state.asm = a.jmp(state.asm, l_done)
-
-    state.asm = a.mark(state.asm, l_bad_index)
-    state = _emit_make_error_const(state, c.ERR_INDEX_TYPE, "Index must be an int")
-    state = _emit_auto_errprop(state)
-    state.asm = a.jmp(state.asm, l_done)
-
-    state.asm = a.mark(state.asm, l_bad_void)
-    state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot use void as index")
-    state = _emit_auto_errprop(state)
-    state.asm = a.jmp(state.asm, l_done)
-
     state.asm = a.mark(state.asm, l_oob)
+    state = core.emit_dbg_line(state, expr)
     state = _emit_make_error_const(state, c.ERR_INDEX_OOB, "Array index out of bounds")
     state = _emit_auto_errprop(state)
 
     state.asm = a.mark(state.asm, l_done)
-    if tmp_idx_ok then state = core.free_expr_temps(state, 16) end if
     return state
   end if
 
@@ -1222,24 +1367,15 @@ function cg_emit_expr(state, expr)
     state = cg_emit_expr(state, expr.right)
     if expr.op == "-" then
       lid_u = _next_lid(state)
-      l_try_float_u = "uneg_try_float_" + lid_u
-      l_fail_u = "uneg_fail_" + lid_u
-      l_done_u = "uneg_done_" + lid_u
-      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
-      state.asm = a.and_r64_imm(state.asm, "r10", 7)
-      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
-      state.asm = a.jcc(state.asm, "ne", l_try_float_u)
-      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
-      state.asm = a.neg_r64(state.asm, "rax")
-      state.asm = a.shl_rax_imm8(state.asm, 3)
-      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-      state.asm = a.jmp(state.asm, l_done_u)
-
-      // float unary minus: 0.0 - x
-      state.asm = a.mark(state.asm, l_try_float_u)
-      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      lid_uv = _next_lid(state)
+      l_int_u = "uminus_int_" + lid_u
+      l_fail_u = "uminus_fail_" + lid_u
+      l_done_u = "uminus_end_" + lid_u
+      l_nvoid_u = "uminus_nvoid_" + lid_uv
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "e", l_int_u)
       state = core.emit_to_double_xmm(state, 0, l_fail_u)
       state.asm = a.xorpd_xmm_xmm(state.asm, "xmm1", "xmm1")
       state.asm = a.subsd_xmm_xmm(state.asm, "xmm1", "xmm0")
@@ -1247,15 +1383,40 @@ function cg_emit_expr(state, expr)
       state = core.emit_normalize_xmm0_to_value(state)
       state.asm = a.jmp(state.asm, l_done_u)
 
+      state.asm = a.mark(state.asm, l_int_u)
+      state.asm = a.neg_rax(state.asm)
+      state.asm = a.add_rax_imm8(state.asm, 2)
+      state.asm = a.jmp(state.asm, l_done_u)
+
       state.asm = a.mark(state.asm, l_fail_u)
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_nvoid_u)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply unary '-' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_done_u)
+      state.asm = a.mark(state.asm, l_nvoid_u)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       state.asm = a.mark(state.asm, l_done_u)
       return state
     end if
     if expr.op == "not" then
       lid_n = _next_lid(state)
+      lid_nv = _next_lid(state)
       l_false = "not_false_" + lid_n
       l_end = "not_end_" + lid_n
+      l_nvoid = "not_nvoid_" + lid_nv
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_nvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply unary 'not' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_end)
+      state.asm = a.mark(state.asm, l_nvoid)
       state = core.emit_jmp_if_false_rax(state, l_false)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
       state.asm = a.jmp(state.asm, l_end)
@@ -1266,8 +1427,10 @@ function cg_emit_expr(state, expr)
     end if
     if expr.op == "~" then
       lid_b = _next_lid(state)
+      lid_v = _next_lid(state)
       l_done_b = "ubnot_done_" + lid_b
       l_end_b = "ubnot_end_" + lid_b
+      l_nvoid_b = "bnot_nvoid_" + lid_v
       state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
       state.asm = a.and_r64_imm(state.asm, "r10", 7)
       state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
@@ -1278,6 +1441,15 @@ function cg_emit_expr(state, expr)
       state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
       state.asm = a.jmp(state.asm, l_end_b)
       state.asm = a.mark(state.asm, l_done_b)
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_nvoid_b)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply unary '~' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_end_b)
+      state.asm = a.mark(state.asm, l_nvoid_b)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       state.asm = a.mark(state.asm, l_end_b)
       return state
@@ -1289,13 +1461,39 @@ function cg_emit_expr(state, expr)
   if k == "Bin" then
     if expr.op == "and" then
       lid_and = _next_lid(state)
+      lid_and_v = _next_lid(state)
+      lid_and_rv = _next_lid(state)
       l_and_false = "and_false_" + lid_and
       l_and_end = "and_end_" + lid_and
+      l_and_nvoid = "and_nvoid_" + lid_and_v
+      l_and_rnvoid = "and_rnvoid_" + lid_and_rv
+      l_and_rfalse = "and_rfalse_" + lid_and
       state = cg_emit_expr(state, expr.left)
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_and_nvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply 'and' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_and_end)
+      state.asm = a.mark(state.asm, l_and_nvoid)
       state = core.emit_jmp_if_false_rax(state, l_and_false)
       state = cg_emit_expr(state, expr.right)
-      state = core.emit_jmp_if_false_rax(state, l_and_false)
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_and_rnvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply 'and' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_and_end)
+      state.asm = a.mark(state.asm, l_and_rnvoid)
+      state = core.emit_jmp_if_false_rax(state, l_and_rfalse)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
+      state.asm = a.jmp(state.asm, l_and_end)
+      state.asm = a.mark(state.asm, l_and_rfalse)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
       state.asm = a.jmp(state.asm, l_and_end)
       state.asm = a.mark(state.asm, l_and_false)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
@@ -1305,15 +1503,37 @@ function cg_emit_expr(state, expr)
 
     if expr.op == "or" then
       lid_or = _next_lid(state)
+      lid_or_v = _next_lid(state)
+      lid_or_rv = _next_lid(state)
       l_or_eval = "or_eval_" + lid_or
-      l_or_false = "or_false_" + lid_or
+      l_or_false = "or_rfalse_" + lid_or
       l_or_end = "or_end_" + lid_or
+      l_or_nvoid = "or_nvoid_" + lid_or_v
+      l_or_rnvoid = "or_rnvoid_" + lid_or_rv
       state = cg_emit_expr(state, expr.left)
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_or_nvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply 'or' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_or_end)
+      state.asm = a.mark(state.asm, l_or_nvoid)
       state = core.emit_jmp_if_false_rax(state, l_or_eval)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
       state.asm = a.jmp(state.asm, l_or_end)
       state.asm = a.mark(state.asm, l_or_eval)
       state = cg_emit_expr(state, expr.right)
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_or_rnvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply 'or' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_or_end)
+      state.asm = a.mark(state.asm, l_or_rnvoid)
       state = core.emit_jmp_if_false_rax(state, l_or_false)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
       state.asm = a.jmp(state.asm, l_or_end)
@@ -1323,22 +1543,26 @@ function cg_emit_expr(state, expr)
       return state
     end if
 
-    tmp_bin_off = core.alloc_expr_temps(state, 16)
-    tmp_bin_ok = true
-    if typeof(tmp_bin_off) != "int" or tmp_bin_off <= 0 then
-      tmp_bin_off = 0x180
-      tmp_bin_ok = false
-    end if
-    lhs_off = tmp_bin_off
-    rhs_off = tmp_bin_off + 8
-
+    left_tmp = core.alloc_expr_temps(state, 8)
+    right_tmp = core.alloc_expr_temps(state, 8)
     state = cg_emit_expr(state, expr.left)
-    state.asm = a.mov_rsp_disp32_rax(state.asm, lhs_off)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, left_tmp)
     state = cg_emit_expr(state, expr.right)
-    state.asm = a.mov_rsp_disp32_rax(state.asm, rhs_off)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, right_tmp)
 
-    state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", lhs_off)
-    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", rhs_off)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", left_tmp)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", right_tmp)
+    state = core.free_expr_temps(state, 16)
+    tmp_bin_ok = false
+
+    lhs_const = _opt_try_const_value(state, expr.left)
+    rhs_const = _opt_try_const_value(state, expr.right)
+    lhs_const_int_ok = lhs_const.ok and typeof(lhs_const.value) == "int"
+    rhs_const_int_ok = rhs_const.ok and typeof(rhs_const.value) == "int"
+    lhs_const_int = 0
+    rhs_const_int = 0
+    if lhs_const_int_ok then lhs_const_int = lhs_const.value end if
+    if rhs_const_int_ok then rhs_const_int = rhs_const.value end if
 
     op = expr.op
     lid = _next_lid(state)
@@ -1350,10 +1574,55 @@ function cg_emit_expr(state, expr)
     l_done = "bin_done_" + lid
 
     if op == "==" or op == "!=" then
-      l_lhs_not_bytes = "eq_lhs_not_bytes_" + lid
-      l_bytes_only = "eq_bytes_only_" + lid
-      l_call_val = "eq_call_val_" + lid
-      l_done_eq = "eq_done_" + lid
+      l_cmp_float = "cmp_float_" + lid
+      l_cmp_fail = "cmp_fail_" + lid
+      l_cmp_done = "cmp_done_" + lid
+      int_cc = "e"
+      if op == "!=" then int_cc = "ne" end if
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_cmp_float)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_cmp_float)
+
+      state.asm = a.cmp_r64_r64(state.asm, "r10", "r11")
+      state.asm = a.setcc_al(state.asm, int_cc)
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+      state.asm = a.jmp(state.asm, l_cmp_done)
+
+      state.asm = a.mark(state.asm, l_cmp_float)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state = core.emit_to_double_xmm(state, 0, l_cmp_fail)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state = core.emit_to_double_xmm(state, 1, l_cmp_fail)
+      state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+      if op == "==" then
+        state.asm = a.setcc_al(state.asm, "e")
+        state.asm = a.setcc_r8(state.asm, "p", "dl")
+        state.asm = a.xor_r8_imm8(state.asm, "dl", 1)
+        state.asm = a.and_r8_r8(state.asm, "al", "dl")
+      else
+        state.asm = a.setcc_al(state.asm, "ne")
+        state.asm = a.setcc_r8(state.asm, "p", "dl")
+        state.asm = a.or_r8_r8(state.asm, "al", "dl")
+      end if
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+      state.asm = a.jmp(state.asm, l_cmp_done)
+
+      state.asm = a.mark(state.asm, l_cmp_fail)
+      eid = _next_lid(state)
+      l_lhs_not_bytes = "eq_lhs_not_bytes_" + eid
+      l_bytes_only = "eq_bytes_only_" + eid
+      l_call_val = "eq_call_val_" + eid
+      l_done_eq = "eq_done_" + eid
       cc_enum = "e"
       if op == "!=" then cc_enum = "ne" end if
       eeid = _next_lid(state)
@@ -1372,7 +1641,6 @@ function cg_emit_expr(state, expr)
       state.asm = a.and_rax_imm8(state.asm, 7)
       state.asm = a.cmp_rax_imm8(state.asm, c.TAG_ENUM)
       state.asm = a.jcc(state.asm, "e", l_lhs_enum)
-
       state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
       state.asm = a.and_rax_imm8(state.asm, 7)
       state.asm = a.cmp_rax_imm8(state.asm, c.TAG_ENUM)
@@ -1386,11 +1654,12 @@ function cg_emit_expr(state, expr)
       state.asm = a.jcc(state.asm, "e", l_enum_enum)
       state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
       state.asm = a.jcc(state.asm, "e", l_enum_int)
+      state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
       if op == "!=" then
-        state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
-      else
-        state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
+        state.asm = a.inc_r32(state.asm, "eax")
       end if
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
       state.asm = a.jmp(state.asm, l_done_eq)
 
       state.asm = a.mark(state.asm, l_rhs_enum)
@@ -1398,11 +1667,12 @@ function cg_emit_expr(state, expr)
       state.asm = a.and_rax_imm8(state.asm, 7)
       state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
       state.asm = a.jcc(state.asm, "e", l_int_enum)
+      state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
       if op == "!=" then
-        state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
-      else
-        state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
+        state.asm = a.inc_r32(state.asm, "eax")
       end if
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
       state.asm = a.jmp(state.asm, l_done_eq)
 
       state.asm = a.mark(state.asm, l_enum_enum)
@@ -1442,8 +1712,6 @@ function cg_emit_expr(state, expr)
       state.asm = a.jmp(state.asm, l_done_eq)
 
       state.asm = a.mark(state.asm, l_no_enum)
-
-      // lhs is bytes?
       state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
       state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
       state.asm = a.and_r64_imm(state.asm, "r9", 7)
@@ -1453,7 +1721,6 @@ function cg_emit_expr(state, expr)
       state.asm = a.cmp_r32_imm(state.asm, "r9d", c.OBJ_BYTES)
       state.asm = a.jcc(state.asm, "ne", l_lhs_not_bytes)
 
-      // lhs bytes: rhs must also be bytes for value equality
       state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
       state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
       state.asm = a.and_r64_imm(state.asm, "r9", 7)
@@ -1463,7 +1730,6 @@ function cg_emit_expr(state, expr)
       state.asm = a.cmp_r32_imm(state.asm, "r9d", c.OBJ_BYTES)
       state.asm = a.jcc(state.asm, "ne", l_bytes_only)
 
-      // both bytes -> content equality
       state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
       state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
       state.asm = a.call(state.asm, "fn_bytes_eq")
@@ -1472,7 +1738,6 @@ function cg_emit_expr(state, expr)
       end if
       state.asm = a.jmp(state.asm, l_done_eq)
 
-      // lhs not bytes: if rhs is bytes, result is false/true (== / !=)
       state.asm = a.mark(state.asm, l_lhs_not_bytes)
       state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
       state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
@@ -1483,7 +1748,6 @@ function cg_emit_expr(state, expr)
       state.asm = a.cmp_r32_imm(state.asm, "r9d", c.OBJ_BYTES)
       state.asm = a.jcc(state.asm, "e", l_bytes_only)
 
-      // neither bytes -> generic value equality
       state.asm = a.mark(state.asm, l_call_val)
       state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
       state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
@@ -1493,15 +1757,16 @@ function cg_emit_expr(state, expr)
       end if
       state.asm = a.jmp(state.asm, l_done_eq)
 
-      // one side bytes, the other not bytes
       state.asm = a.mark(state.asm, l_bytes_only)
+      state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
       if op == "!=" then
-        state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
-      else
-        state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
+        state.asm = a.inc_r32(state.asm, "eax")
       end if
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
 
       state.asm = a.mark(state.asm, l_done_eq)
+      state.asm = a.mark(state.asm, l_cmp_done)
       if tmp_bin_ok then state = core.free_expr_temps(state, 16) end if
       return state
     end if
@@ -1531,25 +1796,331 @@ function cg_emit_expr(state, expr)
       return state
     end if
 
+    if op == "+" then
+      lid_add = _next_lid(state)
+      l_check_numeric = "add_checknum_" + lid_add
+      l_num2_check = "add_checknum2_" + lid_add
+      l_float_add = "add_float_" + lid_add
+      l_bytes = "add_bytes_" + lid_add
+      l_bytes_fail = "add_bytes_fail_" + lid_add
+      l_bytes_check2 = "add_bytes_check2_" + lid_add
+      l_bytes_after = "add_bytes_after_" + lid_add
+      l_add_str = "add_str_" + lid_add
+      l_add_done = "add_done_" + lid_add
+      l_arrcheck = "add_arrcheck_" + lid_add
+
+      vidv = _next_lid(state)
+      l_nvoid = "add_nvoid_" + vidv
+      l_isvoid = "add_isvoid_" + vidv
+      l_void_lhs = "add_voidlhs_" + vidv
+      l_void_rhs = "add_voidrhs_" + vidv
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "e", l_void_lhs)
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "e", l_void_rhs)
+      state.asm = a.jmp(state.asm, l_nvoid)
+
+      state.asm = a.mark(state.asm, l_void_lhs)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_isvoid)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
+      state.asm = a.jcc(state.asm, "e", l_nvoid)
+      state.asm = a.jmp(state.asm, l_isvoid)
+
+      state.asm = a.mark(state.asm, l_void_rhs)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_isvoid)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
+      state.asm = a.jcc(state.asm, "e", l_nvoid)
+      state.asm = a.jmp(state.asm, l_isvoid)
+
+      state.asm = a.mark(state.asm, l_isvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply '+' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_add_done)
+      state.asm = a.mark(state.asm, l_nvoid)
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_check_numeric)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_check_numeric)
+
+      if rhs_const_int_ok and rhs_const_int == 1 then
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+        state.asm = a.add_rax_imm8(state.asm, 8)
+      else
+        if rhs_const_int_ok and rhs_const_int == -1 then
+          state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+          state.asm = a.sub_rax_imm8(state.asm, 8)
+        else
+          if lhs_const_int_ok and lhs_const_int == 1 then
+            state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+            state.asm = a.add_rax_imm8(state.asm, 8)
+          else
+            if lhs_const_int_ok and lhs_const_int == -1 then
+              state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+              state.asm = a.sub_rax_imm8(state.asm, 8)
+            else
+              state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+              state.asm = a.add_r64_r64(state.asm, "rax", "r11")
+              state.asm = a.sub_rax_imm8(state.asm, 1)
+            end if
+          end if
+        end if
+      end if
+      state.asm = a.jmp(state.asm, l_add_done)
+
+      state.asm = a.mark(state.asm, l_check_numeric)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "e", l_num2_check)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_FLOAT)
+      state.asm = a.jcc(state.asm, "e", l_num2_check)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_arrcheck)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
+      state.asm = a.jcc(state.asm, "ne", l_arrcheck)
+
+      state.asm = a.mark(state.asm, l_num2_check)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "e", l_float_add)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_FLOAT)
+      state.asm = a.jcc(state.asm, "e", l_float_add)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_arrcheck)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
+      state.asm = a.jcc(state.asm, "ne", l_arrcheck)
+
+      state.asm = a.mark(state.asm, l_float_add)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state = core.emit_to_double_xmm(state, 0, l_add_str)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state = core.emit_to_double_xmm(state, 1, l_add_str)
+      state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1")
+      state = core.emit_normalize_xmm0_to_value(state)
+      state.asm = a.jmp(state.asm, l_add_done)
+
+      state.asm = a.mark(state.asm, l_arrcheck)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_bytes_check2)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "e", l_bytes)
+
+      state.asm = a.mark(state.asm, l_bytes_check2)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_bytes_after)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "e", l_bytes_fail)
+
+      state.asm = a.mark(state.asm, l_bytes_after)
+      l_arr_ok1 = "arr_add_ok1_" + lid_add
+      l_arr_ok2 = "arr_add_ok2_" + lid_add
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_add_str)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+      state.asm = a.jcc(state.asm, "e", l_arr_ok1)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+      state.asm = a.jcc(state.asm, "ne", l_add_str)
+
+      state.asm = a.mark(state.asm, l_arr_ok1)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_add_str)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+      state.asm = a.jcc(state.asm, "e", l_arr_ok2)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+      state.asm = a.jcc(state.asm, "ne", l_add_str)
+
+      state.asm = a.mark(state.asm, l_arr_ok2)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
+      state.asm = a.call(state.asm, "fn_add_array")
+      state.asm = a.jmp(state.asm, l_add_done)
+
+      state.asm = a.mark(state.asm, l_bytes)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_bytes_fail)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_bytes_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
+      state.asm = a.call(state.asm, "fn_add_bytes")
+      state.asm = a.jmp(state.asm, l_add_done)
+
+      state.asm = a.mark(state.asm, l_bytes_fail)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot add bytes with non-bytes")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_add_done)
+
+      state.asm = a.mark(state.asm, l_add_str)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
+      state.asm = a.call(state.asm, "fn_add_string")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_add_done)
+
+      state.asm = a.mark(state.asm, l_add_done)
+      return state
+    end if
+
+    if op == "-" or op == "*" or op == "%" then
+      lid_arith = _next_lid(state)
+      l_arith_float = "arith_float_" + lid_arith
+      l_arith_fail = "arith_fail_" + lid_arith
+      l_arith_done = "arith_done_" + lid_arith
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_arith_float)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_arith_float)
+
+      if op == "-" then
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+        if rhs_const_int_ok and rhs_const_int == 1 then
+          state.asm = a.sub_rax_imm8(state.asm, 8)
+        else
+          if rhs_const_int_ok and rhs_const_int == -1 then
+            state.asm = a.add_rax_imm8(state.asm, 8)
+          else
+            state.asm = a.sub_r64_r64(state.asm, "rax", "r11")
+            state.asm = a.add_rax_imm8(state.asm, 1)
+          end if
+        end if
+        state.asm = a.jmp(state.asm, l_arith_done)
+      end if
+
+      if op == "*" then
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+        state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+        state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
+        state.asm = a.imul_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.shl_rax_imm8(state.asm, 3)
+        state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+        state.asm = a.jmp(state.asm, l_arith_done)
+      end if
+
+      if op == "%" then
+        l_mod_ok = "mod_ok_" + lid_arith
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+        state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+        state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
+        state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+        state.asm = a.jcc(state.asm, "e", l_arith_fail)
+        state.asm = a.cqo(state.asm)
+        state.asm = a.idiv_r64(state.asm, "r11")
+        state.asm = a.test_r64_r64(state.asm, "rdx", "rdx")
+        state.asm = a.jcc(state.asm, "e", l_mod_ok)
+        state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+        state.asm = a.xor_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+        state.asm = a.jcc(state.asm, "ge", l_mod_ok)
+        state.asm = a.add_r64_r64(state.asm, "rdx", "r11")
+        state.asm = a.mark(state.asm, l_mod_ok)
+        state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+        state.asm = a.shl_rax_imm8(state.asm, 3)
+        state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+        state.asm = a.jmp(state.asm, l_arith_done)
+      end if
+
+      state.asm = a.mark(state.asm, l_arith_float)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state = core.emit_to_double_xmm(state, 0, l_arith_fail)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state = core.emit_to_double_xmm(state, 1, l_arith_fail)
+
+      if op == "-" then
+        state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1")
+      else
+        if op == "*" then
+          state.asm = a.mulsd_xmm_xmm(state.asm, "xmm0", "xmm1")
+        else
+          state.asm = a.xorpd_xmm_xmm(state.asm, "xmm2", "xmm2")
+          state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm1", "xmm2")
+          state.asm = a.jcc(state.asm, "e", l_arith_fail)
+          state.asm = a.movapd_xmm_xmm(state.asm, "xmm3", "xmm0")
+          state.asm = a.divsd_xmm_xmm(state.asm, "xmm0", "xmm1")
+          state.asm = a.roundsd_xmm_xmm_imm8(state.asm, "xmm2", "xmm0", 1)
+          state.asm = a.mulsd_xmm_xmm(state.asm, "xmm2", "xmm1")
+          state.asm = a.subsd_xmm_xmm(state.asm, "xmm3", "xmm2")
+          state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", "xmm3")
+        end if
+      end if
+
+      state = core.emit_normalize_xmm0_to_value(state)
+      state.asm = a.jmp(state.asm, l_arith_done)
+
+      state.asm = a.mark(state.asm, l_arith_fail)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.mark(state.asm, l_arith_done)
+      return state
+    end if
+
     if op == "<" or op == ">" or op == "<=" or op == ">=" then
       l_cmp_float = "bin_cmp_float_" + lid
       l_cmp_fail = "bin_cmp_fail_" + lid
 
       // int fast-path
-      state.asm = a.mov_r64_r64(state.asm, "r9", "r10")
-      state.asm = a.and_r64_imm(state.asm, "r9", 7)
-      state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_INT)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_r64_imm(state.asm, "rax", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_INT)
       state.asm = a.jcc(state.asm, "ne", l_cmp_float)
-      state.asm = a.mov_r64_r64(state.asm, "r9", "r11")
-      state.asm = a.and_r64_imm(state.asm, "r9", 7)
-      state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_INT)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_r64_imm(state.asm, "rax", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_INT)
       state.asm = a.jcc(state.asm, "ne", l_cmp_float)
 
-      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
-      state.asm = a.sar_r64_imm8(state.asm, "rdx", 3)
-      state.asm = a.cmp_r64_r64(state.asm, "rax", "rdx")
+      state.asm = a.cmp_r64_r64(state.asm, "r10", "r11")
       cc = "e"
       if op == "<" then cc = "l" end if
       if op == ">" then cc = "g" end if
@@ -1610,6 +2181,112 @@ function cg_emit_expr(state, expr)
 
       state.asm = a.mark(state.asm, l_done)
       if tmp_bin_ok then state = core.free_expr_temps(state, 16) end if
+      return state
+    end if
+
+    if op == "&" or op == "|" or op == "^" then
+      lid_bit = _next_lid(state)
+      l_bit_fail = "bit_fail_" + lid_bit
+      l_bit_done = "bit_done_" + lid_bit
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_bit_fail)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_bit_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      if op == "&" then
+        state.asm = a.and_r64_r64(state.asm, "rax", "r11")
+      else
+        if op == "|" then
+          state.asm = a.or_r64_r64(state.asm, "rax", "r11")
+        else
+          state.asm = a.xor_r64_r64(state.asm, "rax", "r11")
+          state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+        end if
+      end if
+      state.asm = a.jmp(state.asm, l_bit_done)
+
+      state.asm = a.mark(state.asm, l_bit_fail)
+      lid_void = _next_lid(state)
+      l_bit_nvoid = "bit_nvoid_" + lid_void
+      l_bit_isvoid = "bit_isvoid_" + lid_void
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "e", l_bit_isvoid)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_bit_nvoid)
+      state.asm = a.mark(state.asm, l_bit_isvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply '" + op + "' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_bit_done)
+      state.asm = a.mark(state.asm, l_bit_nvoid)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.mark(state.asm, l_bit_done)
+      return state
+    end if
+
+    if op == "<<" or op == ">>" then
+      lid_sh = _next_lid(state)
+      l_sh_fail = "sh_fail_" + lid_sh
+      l_sh_done = "sh_done_" + lid_sh
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_sh_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_sh_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "r11")
+      state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
+      state.asm = a.jcc(state.asm, "l", l_sh_fail)
+      state.asm = a.and_r64_imm(state.asm, "rcx", 63)
+
+      if op == "<<" then
+        state.asm = a.shl_r64_cl(state.asm, "rax")
+      else
+        state.asm = a.sar_r64_cl(state.asm, "rax")
+      end if
+
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.jmp(state.asm, l_sh_done)
+
+      state.asm = a.mark(state.asm, l_sh_fail)
+      lid_sh_void = _next_lid(state)
+      l_sh_nvoid = "sh_nvoid_" + lid_sh_void
+      l_sh_isvoid = "sh_isvoid_" + lid_sh_void
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "e", l_sh_isvoid)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_sh_nvoid)
+      state.asm = a.mark(state.asm, l_sh_isvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply '" + op + "' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_sh_done)
+      state.asm = a.mark(state.asm, l_sh_nvoid)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.mark(state.asm, l_sh_done)
       return state
     end if
 
@@ -1743,8 +2420,7 @@ function cg_emit_expr(state, expr)
       state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
       state.asm = a.jmp(state.asm, l_done)
       state.asm = a.mark(state.asm, l_sh_bad)
-      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
-      state.asm = a.jmp(state.asm, l_done)
+      state.asm = a.jmp(state.asm, l_fail)
     end if
 
     if want_float_arith then
@@ -1860,6 +2536,48 @@ function cg_emit_expr(state, expr)
     state.asm = a.jmp(state.asm, l_fail)
 
     state.asm = a.mark(state.asm, l_fail)
+    if op == "&" or op == "|" or op == "^" then
+      lid_bit = _next_lid(state)
+      l_bit_nvoid = "bit_nvoid_" + lid_bit
+      l_bit_isvoid = "bit_isvoid_" + lid_bit
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "e", l_bit_isvoid)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_bit_nvoid)
+      state.asm = a.mark(state.asm, l_bit_isvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply '" + op + "' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_done)
+      state.asm = a.mark(state.asm, l_bit_nvoid)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.jmp(state.asm, l_done)
+    end if
+    if op == "<<" or op == ">>" then
+      lid_shf = _next_lid(state)
+      l_sh_nvoid = "sh_nvoid_" + lid_shf
+      l_sh_isvoid = "sh_isvoid_" + lid_shf
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "e", l_sh_isvoid)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.and_rax_imm8(state.asm, 7)
+      state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_sh_nvoid)
+      state.asm = a.mark(state.asm, l_sh_isvoid)
+      state = core.emit_dbg_line(state, expr)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply '" + op + "' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_done)
+      state.asm = a.mark(state.asm, l_sh_nvoid)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.jmp(state.asm, l_done)
+    end if
     if op == "+" then
       l_add_arr = "bin_add_arr_" + lid
       l_add_bytes = "bin_add_bytes_" + lid
@@ -1895,15 +2613,23 @@ function cg_emit_expr(state, expr)
       state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
       state.asm = a.jcc(state.asm, "ne", l_add_str)
       state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r10", 0)
+      l_arr_ok1 = "arr_add_ok1_" + lid
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+      state.asm = a.jcc(state.asm, "e", l_arr_ok1)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
       state.asm = a.jcc(state.asm, "ne", l_add_str)
+      state.asm = a.mark(state.asm, l_arr_ok1)
       state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
       state.asm = a.and_rax_imm8(state.asm, 7)
       state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
       state.asm = a.jcc(state.asm, "ne", l_add_str)
       state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+      l_arr_ok2 = "arr_add_ok2_" + lid
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+      state.asm = a.jcc(state.asm, "e", l_arr_ok2)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
       state.asm = a.jcc(state.asm, "ne", l_add_str)
+      state.asm = a.mark(state.asm, l_arr_ok2)
       state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
       state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
       state.asm = a.call(state.asm, "fn_add_array")
@@ -1956,6 +2682,7 @@ function cg_emit_expr(state, expr)
     call_args = args
     nargs = len(call_args)
     member_runtime = false
+    compiletime_callee_qn = ""
 
     pre_raw = ""
     if typeof(cal) == "struct" and cal.node_kind == "Var" and typeof(cal.name) == "string" then
@@ -1973,64 +2700,21 @@ function cg_emit_expr(state, expr)
     callee = ""
     raw_name = ""
     if typeof(cal) == "struct" then
+      compiletime_callee_qn = _qname_of(state, cal)
       if cal.node_kind == "Member" then
-        tgt_rt = cal.target
-        if typeof(tgt_rt) != "struct" then tgt_rt = cal.obj end if
-        if typeof(tgt_rt) == "struct" then
-          if tgt_rt.node_kind == "Var" then
-            base_rt = _coerce_name(tgt_rt.name)
-            if base_rt != "" then
-              b_rt = scope.cg_resolve_binding(state, base_rt)
-              if typeof(b_rt) == "struct" then
-                bk_rt = _coerce_name(b_rt.kind)
-                if bk_rt == "local" or bk_rt == "param" or bk_rt == "capture" then
-                  member_runtime = true
-                else
-                  base_q_rt = _qualify_identifier(state, base_rt)
-                  flds_rt = _state_struct_fields_get(state, base_q_rt)
-                  if typeof(flds_rt) != "array" then
-                    member_runtime = true
-                  end if
-                end if
-              end if
-            end if
-          else
-            tq_rt = _expr_to_qualname(state, tgt_rt)
-            if tq_rt == "" then
-              member_runtime = true
-            else
-              tq_a = _apply_import_alias(state, tq_rt)
-              tq_q = _qualify_identifier(state, tq_a)
-              target_compile = false
-              if typeof(_state_struct_fields_get(state, tq_a)) == "array" then target_compile = true end if
-              if typeof(_state_struct_fields_get(state, tq_q)) == "array" then target_compile = true end if
-              if typeof(_user_function_get(state, tq_a)) == "struct" then target_compile = true end if
-              if typeof(_user_function_get(state, tq_q)) == "struct" then target_compile = true end if
-              if _state_struct_id_get(state, tq_a, 0) != 0 then target_compile = true end if
-              if _state_struct_id_get(state, tq_q, 0) != 0 then target_compile = true end if
-              if _state_enum_id_get(state, tq_a, -1) >= 0 then target_compile = true end if
-              if _state_enum_id_get(state, tq_q, -1) >= 0 then target_compile = true end if
-              if typeof(_extern_sig_get(state, tq_a)) == "struct" then target_compile = true end if
-              if typeof(_extern_sig_get(state, tq_q)) == "struct" then target_compile = true end if
-              if target_compile == false then
-                member_runtime = true
-              end if
-            end if
-          end if
-        else
-          member_runtime = true
-        end if
+        member_runtime = compiletime_callee_qn == ""
+        callee = compiletime_callee_qn
       end if
       if cal.node_kind == "Var" then
         if typeof(cal.name) == "string" then raw_name = cal.name end if
         if raw_name == "try" or raw_name == "error" or raw_name == "bytes" or raw_name == "byteBuffer" then
           callee = raw_name
         else
-          callee = _qualify_identifier(state, raw_name)
-        end if
-      else
-        if cal.node_kind == "Member" then
-          callee = _expr_to_qualname(state, cal)
+          if compiletime_callee_qn != "" then
+            callee = compiletime_callee_qn
+          else
+            callee = _qualify_identifier(state, raw_name)
+          end if
         end if
       end if
     end if
@@ -2140,7 +2824,7 @@ function cg_emit_expr(state, expr)
           state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_STRUCT)
           state.asm = a.jcc(state.asm, "ne", l_fail_dyn)
           // Keep argument registers intact (rdx carries arg1); use r10d for dispatch id.
-          state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 8)
+          state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
 
           for ci_dyn = 0 to len(cands_dyn) - 1
             c_dyn = cands_dyn[ci_dyn]
@@ -2220,21 +2904,22 @@ function cg_emit_expr(state, expr)
       return state
     end if
 
-    // Direct extern calls are emitted through ABI conversion glue.
-    ex_name = callee
-    if ex_name == "" then ex_name = raw_name end if
-    ex_sig = _extern_sig_get(state, ex_name)
-    if typeof(ex_sig) != "struct" and raw_name != "" and raw_name != ex_name then
-      ex_sig = _extern_sig_get(state, raw_name)
-      if typeof(ex_sig) == "struct" then ex_name = raw_name end if
-    end if
-    if typeof(ex_sig) == "struct" then
-      return _emit_extern_call(state, expr, call_args, "", ex_name, 0)
+    // Builtin toNumber(x)
+    if (callee == "toNumber" or raw_name == "toNumber") and nargs == 1 then
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_toNumber")
+      return state
     end if
 
     // Builtin typeof/typeName must handle type identifiers without evaluating them as variables.
     if (callee == "typeof" or raw_name == "typeof") and nargs == 1 then
       arg0 = call_args[0]
+      known_ty = _opt_try_known_type_label(state, arg0, false)
+      if known_ty != "" then
+        state.asm = a.lea_rax_rip(state.asm, known_ty)
+        return state
+      end if
       arg_name = _expr_to_qualname(state, arg0)
       if arg_name != "" then arg_name = _apply_import_alias(state, arg_name) end if
       if arg_name != "" then
@@ -2270,6 +2955,11 @@ function cg_emit_expr(state, expr)
 
     if (callee == "typeName" or raw_name == "typeName") and nargs == 1 then
       arg1 = call_args[0]
+      known_tn = _opt_try_known_type_label(state, arg1, true)
+      if known_tn != "" then
+        state.asm = a.lea_rax_rip(state.asm, known_tn)
+        return state
+      end if
       argn = _expr_to_qualname(state, arg1)
       if argn != "" then argn = _apply_import_alias(state, argn) end if
 
@@ -2317,57 +3007,964 @@ function cg_emit_expr(state, expr)
       end if
 
       state = cg_emit_expr(state, arg1)
-      lid_tn = _next_lid(state)
-      l_tn_fallback = "tn_call_fallback_" + lid_tn
-      l_tn_done = "tn_call_done_" + lid_tn
-      l_tn_ptr = "tn_call_ptr_" + lid_tn
-      l_tn_sid = "tn_call_sid_" + lid_tn
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_typeName")
+      return state
+    end if
 
-      // Fast path for struct instances/types with concrete names.
+    if (callee == "input" or raw_name == "input") then
+      if nargs == 1 then
+        state = cg_emit_expr(state, call_args[0])
+        lid_inp = _next_lid(state)
+        l_inp_done = "in_prompt_done_" + lid_inp
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        state.asm = a.and_r64_imm(state.asm, "r10", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+        state.asm = a.jcc(state.asm, "ne", l_inp_done)
+        state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+        state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
+        state.asm = a.jcc(state.asm, "ne", l_inp_done)
+        state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rax", 4)
+        state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "rax", 8)
+        state = core.emit_writefile_ptr_len(state)
+        state.asm = a.mark(state.asm, l_inp_done)
+        state.asm = a.call(state.asm, "fn_input")
+        return state
+      end if
+      if nargs == 0 then
+        state.asm = a.call(state.asm, "fn_input")
+        return state
+      end if
+      state.diagnostics = state.diagnostics +["input() expects 0 or 1 arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+
+    // Builtin len(x)
+    if (callee == "len" or raw_name == "len") and nargs == 1 then
+      arg_len = call_args[0]
+      const_len = -1
+      cv_len = _opt_try_const_value(state, arg_len)
+      if typeof(cv_len) == "struct" and cv_len.ok then
+        if typeof(cv_len.value) == "string" then
+          const_len = len(cv_len.value)
+        else
+          const_len = _opt_try_pure_const_array_len(state, arg_len)
+        end if
+      else
+        const_len = _opt_try_pure_const_array_len(state, arg_len)
+      end if
+      if const_len >= 0 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_int(const_len))
+        return state
+      end if
+
+      state = cg_emit_expr(state, arg_len)
+
+      lid_len_early = _next_lid(state)
+      l_len_ok_early = "len_ok_" + lid_len_early
+      l_len_done_early = "len_done_" + lid_len_early
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_len_ok_early)
+      state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply 'len' to void")
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, l_len_done_early)
+
+      state.asm = a.mark(state.asm, l_len_ok_early)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_builtin_len")
+      state.asm = a.mark(state.asm, l_len_done_early)
+      return state
+    end if
+
+    // Builtin decode(bytes[, encoding]) -> string
+    if (callee == "decode" or raw_name == "decode") then
+      if nargs != 1 and nargs != 2 then
+        state.diagnostics = state.diagnostics +["decode() expects 1 or 2 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      tmp_dec = core.alloc_expr_temps(state, 8 + ((nargs - 1) * 8))
+      tmp_dec_ok = typeof(tmp_dec) == "int" and tmp_dec > 0
+      if not tmp_dec_ok then tmp_dec = 0x2F0 end if
+
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_dec, "rax")
+      if nargs == 2 then
+        state = cg_emit_expr(state, call_args[1])
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_dec + 8, "rax")
+      end if
+
+      lid_dec = _next_lid(state)
+      l_dec_fail = "decode_fail_" + lid_dec
+      l_dec_done = "decode_done_" + lid_dec
+
+      if nargs == 2 then
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_dec + 8)
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        state.asm = a.and_r64_imm(state.asm, "r10", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+        state.asm = a.jcc(state.asm, "ne", l_dec_fail)
+        state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+        state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
+        state.asm = a.jcc(state.asm, "ne", l_dec_fail)
+      end if
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_dec)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_decode")
+      state.asm = a.jmp(state.asm, l_dec_done)
+
+      state.asm = a.mark(state.asm, l_dec_fail)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.mark(state.asm, l_dec_done)
+      if tmp_dec_ok then state = core.free_expr_temps(state, 8 + ((nargs - 1) * 8)) end if
+      return state
+    end if
+
+    if (callee == "hex" or raw_name == "hex") and nargs == 1 then
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_hex")
+      return state
+    end if
+
+    if (callee == "fromHex" or raw_name == "fromHex") and nargs == 1 then
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_fromHex")
+      return state
+    end if
+
+    if (callee == "slice" or raw_name == "slice") then
+      if nargs != 3 then
+        state.diagnostics = state.diagnostics +["slice() expects exactly 3 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      tmp_slice = core.alloc_expr_temps(state, 24)
+      tmp_slice_ok = typeof(tmp_slice) == "int" and tmp_slice > 0
+      if not tmp_slice_ok then tmp_slice = 0x2F0 end if
+
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_slice, "rax")
+      state = cg_emit_expr(state, call_args[1])
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_slice + 8, "rax")
+      state = cg_emit_expr(state, call_args[2])
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_slice + 16, "rax")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", tmp_slice)
+      state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_slice + 8)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_slice + 16)
+      state.asm = a.call(state.asm, "fn_slice")
+
+      if tmp_slice_ok then state = core.free_expr_temps(state, 24) end if
+      return state
+    end if
+
+    if callee == "array" then
+      if nargs != 1 and nargs != 2 then
+        state.diagnostics = state.diagnostics +["array() expects 1 or 2 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      tmp_arr_bytes = 8
+      if nargs == 2 then tmp_arr_bytes = 16 end if
+      tmp_arr = core.alloc_expr_temps(state, tmp_arr_bytes)
+      tmp_arr_ok = typeof(tmp_arr) == "int" and tmp_arr > 0
+      if not tmp_arr_ok then tmp_arr = 0x300 end if
+
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_arr, "rax")
+
+      if nargs == 2 then
+        state = cg_emit_expr(state, call_args[1])
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_arr + 8, "rax")
+      end if
+
+      state = mem.ensure_gc_data(state)
+
+      lid_arr = _next_lid(state)
+      l_fail_arr = "array_init_fail_" + lid_arr
+      l_done_arr = "array_init_done_" + lid_arr
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_arr)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_fail_arr)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_fail_arr)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_fail_arr)
+
+      if nargs == 2 then
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_arr + 8)
+        state.asm = a.mov_rip_qword_rax(state.asm, "gc_tmp0")
+      end if
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_arr)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.shl_r64_imm8(state.asm, "rcx", 3)
+      state.asm = a.add_r64_imm(state.asm, "rcx", 8)
+      state.asm = a.call(state.asm, "fn_alloc")
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      if nargs == 2 then
+        lidt_arr = _next_lid(state)
+        l_arr_imm = "array_init_imm_" + lidt_arr
+        l_arr_type_done = "array_init_type_done_" + lidt_arr
+        state.asm = a.mov_rax_rip_qword(state.asm, "gc_tmp0")
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        state.asm = a.and_r64_imm(state.asm, "r10", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+        state.asm = a.jcc(state.asm, "ne", l_arr_imm)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+        state.asm = a.jmp(state.asm, l_arr_type_done)
+        state.asm = a.mark(state.asm, l_arr_imm)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY_IMM, false)
+        state.asm = a.mark(state.asm, l_arr_type_done)
+      else
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY_IMM, false)
+      end if
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_arr)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+      state.asm = a.mov_membase_disp_r32(state.asm, "r11", 4, "edx")
+
+      if nargs == 2 then
+        state.asm = a.mov_rdx_rip_qword(state.asm, "gc_tmp0")
+      else
+        state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_void())
+      end if
+
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_arr, "r11")
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+      state.asm = a.mov_r64_r64(state.asm, "r8", "rdx")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+      state.asm = a.call(state.asm, "fn_fill_qwords")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_arr)
+
+      if nargs == 2 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        state.asm = a.mov_rip_qword_rax(state.asm, "gc_tmp0")
+      end if
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.jmp(state.asm, l_done_arr)
+
+      state.asm = a.mark(state.asm, l_fail_arr)
+      if nargs == 2 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        state.asm = a.mov_rip_qword_rax(state.asm, "gc_tmp0")
+      end if
+      state = _emit_make_error_const(state, c.ERR_ARRAY_INIT_SIZE, "array() size must be an int in range 0..2147483647")
+      state = _emit_auto_errprop(state)
+
+      state.asm = a.mark(state.asm, l_done_arr)
+      if tmp_arr_ok then
+        state = core.free_expr_temps(state, tmp_arr_bytes)
+      end if
+      return state
+    end if
+
+    if (callee == "copyBytes" or raw_name == "copyBytes") then
+      if nargs != 5 then
+        state.diagnostics = state.diagnostics +["copyBytes() expects exactly 5 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      tmp_cb = core.alloc_expr_temps(state, 40)
+      tmp_cb_ok = typeof(tmp_cb) == "int" and tmp_cb > 0
+      if not tmp_cb_ok then tmp_cb = 0x300 end if
+
+      for cbi = 0 to nargs - 1
+        state = cg_emit_expr(state, call_args[cbi])
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_cb + cbi * 8, "rax")
+      end for
+
+      lid_cb = _next_lid(state)
+      l_cb_done = "copybytes_done_" + lid_cb
+      l_cb_fail = "copybytes_fail_" + lid_cb
+      l_cb_min_dst = "copybytes_min_dst_" + lid_cb
+      l_cb_min_src = "copybytes_min_src_" + lid_cb
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_cb)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
       state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
       state.asm = a.and_r64_imm(state.asm, "r10", 7)
       state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
-      state.asm = a.jcc(state.asm, "ne", l_tn_fallback)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
 
-      state.asm = a.mark(state.asm, l_tn_ptr)
-      state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "rax", 0)
-      state.asm = a.cmp_r32_imm(state.asm, "r11d", c.OBJ_STRUCT)
-      state.asm = a.jcc(state.asm, "e", l_tn_sid)
-      state.asm = a.cmp_r32_imm(state.asm, "r11d", c.OBJ_STRUCTTYPE)
-      state.asm = a.jcc(state.asm, "ne", l_tn_fallback)
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_cb + 8)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_cb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_cb_fail)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_cb + 8, "rax")
 
-      state.asm = a.mark(state.asm, l_tn_sid)
-      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 8)
-      if typeof(state.typename_struct_by_id) == "array" and len(state.typename_struct_by_id) > 0 then
-        for tsi = 0 to len(state.typename_struct_by_id) - 1
-          it_tn = state.typename_struct_by_id[tsi]
-          sid_tn = -1
-          lbl_tn = ""
-          if typeof(it_tn) == "array" and len(it_tn) >= 2 then
-            if typeof(it_tn[0]) == "int" then sid_tn = it_tn[0] end if
-            if typeof(it_tn[1]) == "string" then lbl_tn = it_tn[1] end if
-          else
-            if typeof(it_tn) == "struct" then
-              if typeof(it_tn.key) == "int" then sid_tn = it_tn.key end if
-              if typeof(it_tn.value) == "string" then lbl_tn = it_tn.value end if
-            end if
-          end if
-          if sid_tn < 0 or lbl_tn == "" then continue end if
-          l_tn_next = "tn_call_snext_" + sid_tn + "_" + lid_tn + "_" + tsi
-          state.asm = a.cmp_r32_imm(state.asm, "edx", sid_tn)
-          state.asm = a.jcc(state.asm, "ne", l_tn_next)
-          state.asm = a.lea_rax_rip(state.asm, lbl_tn)
-          state.asm = a.jmp(state.asm, l_tn_done)
-          state.asm = a.mark(state.asm, l_tn_next)
-        end for
-      end if
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_cb + 16)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r9", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r10", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
 
-      state.asm = a.mark(state.asm, l_tn_fallback)
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.call(state.asm, "fn_typeName")
-      state.asm = a.mark(state.asm, l_tn_done)
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_cb + 24)
+      state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r9", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_cb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_cb_fail)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_cb + 24, "rax")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_cb + 32)
+      state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r9", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_cb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_cb_fail)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_cb + 32, "rax")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_cb)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_cb + 16)
+
+      state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "r11", 4)
+      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", tmp_cb + 8)
+      state.asm = a.cmp_r32_r32(state.asm, "eax", "r9d")
+      state.asm = a.jcc(state.asm, "ge", l_cb_done)
+      state.asm = a.sub_r32_r32(state.asm, "r9d", "eax")
+
+      state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r10", 4)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rsp", tmp_cb + 24)
+      state.asm = a.cmp_r32_r32(state.asm, "edx", "r8d")
+      state.asm = a.jcc(state.asm, "ge", l_cb_done)
+      state.asm = a.sub_r32_r32(state.asm, "r8d", "edx")
+
+      state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", tmp_cb + 32)
+      state.asm = a.cmp_r32_r32(state.asm, "ecx", "r9d")
+      state.asm = a.jcc(state.asm, "le", l_cb_min_dst)
+      state.asm = a.mov_r32_r32(state.asm, "ecx", "r9d")
+      state.asm = a.mark(state.asm, l_cb_min_dst)
+      state.asm = a.cmp_r32_r32(state.asm, "ecx", "r8d")
+      state.asm = a.jcc(state.asm, "le", l_cb_min_src)
+      state.asm = a.mov_r32_r32(state.asm, "ecx", "r8d")
+      state.asm = a.mark(state.asm, l_cb_min_src)
+      state.asm = a.test_r32_r32(state.asm, "ecx", "ecx")
+      state.asm = a.jcc(state.asm, "le", l_cb_done)
+
+      state.asm = a.mov_r32_r32(state.asm, "r9d", "ecx")
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", tmp_cb + 8)
+      state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r10", 8)
+      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", tmp_cb + 24)
+      state.asm = a.add_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "r9d")
+      state.asm = a.call(state.asm, "fn_copy_bytes")
+      state.asm = a.jmp(state.asm, l_cb_done)
+
+      state.asm = a.mark(state.asm, l_cb_fail)
+      state.asm = a.mark(state.asm, l_cb_done)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      if tmp_cb_ok then state = core.free_expr_temps(state, 40) end if
       return state
     end if
+
+    if (callee == "fillBytes" or raw_name == "fillBytes") then
+      if nargs != 4 then
+        state.diagnostics = state.diagnostics +["fillBytes() expects exactly 4 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      tmp_fb = core.alloc_expr_temps(state, 32)
+      tmp_fb_ok = typeof(tmp_fb) == "int" and tmp_fb > 0
+      if not tmp_fb_ok then tmp_fb = 0x300 end if
+
+      for fbi = 0 to nargs - 1
+        state = cg_emit_expr(state, call_args[fbi])
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_fb + fbi * 8, "rax")
+      end for
+
+      lid_fb = _next_lid(state)
+      l_fb_done = "fillbytes_done_" + lid_fb
+      l_fb_fail = "fillbytes_fail_" + lid_fb
+      l_fb_len_ok = "fillbytes_len_ok_" + lid_fb
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_fb)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_fb + 8)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_fb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_fb_fail)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_fb + 8, "rax")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_fb + 16)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_fb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_fb_fail)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_fb + 16, "rax")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_fb + 24)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_fb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
+      state.asm = a.jcc(state.asm, "g", l_fb_fail)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_fb + 24, "rax")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_fb)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "r11", 4)
+      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", tmp_fb + 8)
+      state.asm = a.cmp_r32_r32(state.asm, "eax", "r9d")
+      state.asm = a.jcc(state.asm, "ge", l_fb_done)
+      state.asm = a.sub_r32_r32(state.asm, "r9d", "eax")
+
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rsp", tmp_fb + 16)
+      state.asm = a.cmp_r32_r32(state.asm, "edx", "r9d")
+      state.asm = a.jcc(state.asm, "le", l_fb_len_ok)
+      state.asm = a.mov_r32_r32(state.asm, "edx", "r9d")
+      state.asm = a.mark(state.asm, l_fb_len_ok)
+      state.asm = a.test_r32_r32(state.asm, "edx", "edx")
+      state.asm = a.jcc(state.asm, "le", l_fb_done)
+
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", tmp_fb + 8)
+      state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rsp", tmp_fb + 24)
+      state.asm = a.call(state.asm, "fn_fill_bytes")
+      state.asm = a.jmp(state.asm, l_fb_done)
+
+      state.asm = a.mark(state.asm, l_fb_fail)
+      state.asm = a.mark(state.asm, l_fb_done)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      if tmp_fb_ok then state = core.free_expr_temps(state, 32) end if
+      return state
+    end if
+
+    if callee == "bytes" or callee == "byteBuffer" then
+      if nargs == 0 then
+        state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
+        state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+        state.asm = a.call(state.asm, "fn_bytes_alloc")
+        return state
+      end if
+
+      if nargs == 2 then
+        tmp_b2 = core.alloc_expr_temps(state, 16)
+        tmp_b2_ok = typeof(tmp_b2) == "int" and tmp_b2 > 0
+        if not tmp_b2_ok then tmp_b2 = 0x300 end if
+
+        state = cg_emit_expr(state, call_args[0])
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_b2, "rax")
+        state = cg_emit_expr(state, call_args[1])
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_b2 + 8, "rax")
+
+        lid_b2 = _next_lid(state)
+        l_fail_b2 = "bytes_fail_" + lid_b2
+        l_done_b2 = "bytes_done_" + lid_b2
+
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_b2)
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        state.asm = a.and_r64_imm(state.asm, "r10", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+        state.asm = a.jcc(state.asm, "ne", l_fail_b2)
+        state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+        state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+        state.asm = a.jcc(state.asm, "l", l_fail_b2)
+        state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+        state.asm = a.jcc(state.asm, "g", l_fail_b2)
+        state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
+
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_b2 + 8)
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        state.asm = a.and_r64_imm(state.asm, "r10", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+        state.asm = a.jcc(state.asm, "ne", l_fail_b2)
+        state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+        state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+        state.asm = a.jcc(state.asm, "l", l_fail_b2)
+        state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
+        state.asm = a.jcc(state.asm, "g", l_fail_b2)
+        state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+
+        state.asm = a.call(state.asm, "fn_bytes_alloc")
+        state.asm = a.jmp(state.asm, l_done_b2)
+        state.asm = a.mark(state.asm, l_fail_b2)
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        state.asm = a.mark(state.asm, l_done_b2)
+        if tmp_b2_ok then state = core.free_expr_temps(state, 16) end if
+        return state
+      end if
+
+      if nargs == 1 then
+        tmp_b1 = core.alloc_expr_temps(state, 16)
+        tmp_b1_ok = typeof(tmp_b1) == "int" and tmp_b1 > 0
+        if not tmp_b1_ok then tmp_b1 = 0x300 end if
+
+        state = cg_emit_expr(state, call_args[0])
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_b1, "rax")
+
+        lid_b1 = _next_lid(state)
+        l_fail_b1 = "bytes1_fail_" + lid_b1
+        l_done_b1 = "bytes1_done_" + lid_b1
+        l_int_b1 = "bytes1_int_" + lid_b1
+        l_ptr_b1 = "bytes1_ptr_" + lid_b1
+        l_str_b1 = "bytes1_str_" + lid_b1
+        l_bcopy_b1 = "bytes1_bcopy_" + lid_b1
+        l_arr_b1 = "bytes1_arr_" + lid_b1
+
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_b1)
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        state.asm = a.and_r64_imm(state.asm, "r10", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+        state.asm = a.jcc(state.asm, "e", l_int_b1)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+        state.asm = a.jcc(state.asm, "e", l_ptr_b1)
+        state.asm = a.jmp(state.asm, l_fail_b1)
+
+        state.asm = a.mark(state.asm, l_int_b1)
+        state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+        state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+        state.asm = a.jcc(state.asm, "l", l_fail_b1)
+        state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+        state.asm = a.jcc(state.asm, "g", l_fail_b1)
+        state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
+        state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+        state.asm = a.call(state.asm, "fn_bytes_alloc")
+        state.asm = a.jmp(state.asm, l_done_b1)
+
+        state.asm = a.mark(state.asm, l_ptr_b1)
+        state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+        state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
+        state.asm = a.jcc(state.asm, "e", l_str_b1)
+        state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+        state.asm = a.jcc(state.asm, "e", l_bcopy_b1)
+        state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+        state.asm = a.jcc(state.asm, "e", l_arr_b1)
+        state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+        state.asm = a.jcc(state.asm, "e", l_arr_b1)
+        state.asm = a.jmp(state.asm, l_fail_b1)
+
+        state.asm = a.mark(state.asm, l_str_b1)
+        state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rax", 4)
+        state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+        state.asm = a.call(state.asm, "fn_bytes_alloc")
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_b1 + 8, "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_b1)
+        state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "r11", 4)
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_b1 + 8)
+        state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r10", 8)
+        state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r11", 8)
+        state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r11", 4)
+        state.asm = a.call(state.asm, "fn_copy_bytes")
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_b1 + 8)
+        state.asm = a.jmp(state.asm, l_done_b1)
+
+        state.asm = a.mark(state.asm, l_arr_b1)
+        state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rax", 4)
+        state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+        state.asm = a.call(state.asm, "fn_bytes_alloc")
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_b1 + 8, "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_b1)
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_b1 + 8)
+        state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r11", 4)
+        state.asm = a.xor_r32_r32(state.asm, "r9d", "r9d")
+
+        l_loop_arr_b1 = "bytes1_arr_loop_" + lid_b1
+        l_done_arr_b1 = "bytes1_arr_done_" + lid_b1
+        l_fail_arr_b1 = "bytes1_arr_fail_" + lid_b1
+
+        state.asm = a.mark(state.asm, l_loop_arr_b1)
+        state.asm = a.cmp_r32_r32(state.asm, "r9d", "r8d")
+        state.asm = a.jcc(state.asm, "ge", l_done_arr_b1)
+        state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r11", "r9", 8, 8)
+        state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+        state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+        state.asm = a.jcc(state.asm, "ne", l_fail_arr_b1)
+        state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+        state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+        state.asm = a.jcc(state.asm, "l", l_fail_arr_b1)
+        state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
+        state.asm = a.jcc(state.asm, "g", l_fail_arr_b1)
+        state.asm = a.lea_r64_mem_bis(state.asm, "rdx", "r10", "r9", 1, 8)
+        state.asm = a.mov_membase_disp_r8(state.asm, "rdx", 0, "al")
+        state.asm = a.inc_r32(state.asm, "r9d")
+        state.asm = a.jmp(state.asm, l_loop_arr_b1)
+
+        state.asm = a.mark(state.asm, l_fail_arr_b1)
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        state.asm = a.jmp(state.asm, l_done_b1)
+
+        state.asm = a.mark(state.asm, l_done_arr_b1)
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_b1 + 8)
+        state.asm = a.jmp(state.asm, l_done_b1)
+
+        state.asm = a.mark(state.asm, l_bcopy_b1)
+        state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rax", 4)
+        state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+        state.asm = a.call(state.asm, "fn_bytes_alloc")
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_b1 + 8, "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_b1)
+        state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "r11", 4)
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_b1 + 8)
+        state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r10", 8)
+        state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r11", 8)
+        state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r11", 4)
+        state.asm = a.call(state.asm, "fn_copy_bytes")
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_b1 + 8)
+        state.asm = a.jmp(state.asm, l_done_b1)
+
+        state.asm = a.mark(state.asm, l_fail_b1)
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        state.asm = a.mark(state.asm, l_done_b1)
+        if tmp_b1_ok then state = core.free_expr_temps(state, 16) end if
+        return state
+      end if
+
+      state.diagnostics = state.diagnostics +["bytes()/byteBuffer() expects 0, 1 or 2 arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+
+    if (callee == "gc_set_limit" or raw_name == "gc_set_limit") then
+      if nargs != 1 then
+        state.diagnostics = state.diagnostics +["gc_set_limit() expects exactly 1 argument"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.mov_r32_imm32(state.asm, "r10d", 1)
+      state.asm = a.call(state.asm, "fn_builtin_gc_set_limit")
+      return state
+    end if
+
+    if callee == "error" then
+      if nargs != 2 then
+        state.diagnostics = state.diagnostics +["Struct error expects 2 args, got " + nargs]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      state.asm = a.mov_rcx_imm32(state.asm, 48)
+      state.asm = a.call(state.asm, "fn_alloc")
+
+      base_err = core.alloc_expr_temps(state, 8)
+      base_err_ok = typeof(base_err) == "int" and base_err > 0
+      if not base_err_ok then base_err = 0x2F8 end if
+
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_err, "rax")
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
+
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_err)
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
+
+      state = cg_emit_expr(state, call_args[1])
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_err)
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_err)
+      state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
+      state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+      state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base_err)
+      if base_err_ok then state = core.free_expr_temps(state, 8) end if
+      return state
+    end if
+
+    if callee == "decodeZ" and nargs == 1 then
+      tmp_dz_direct = core.alloc_expr_temps(state, 16)
+      tmp_dz_direct_ok = typeof(tmp_dz_direct) == "int" and tmp_dz_direct > 0
+      if not tmp_dz_direct_ok then tmp_dz_direct = 0x2F0 end if
+
+      state = cg_emit_expr(state, call_args[0])
+
+      lid_dz_direct = _next_lid(state)
+      l_dz_fail_direct = "decodeZ_fail_" + lid_dz_direct
+      l_dz_done_direct = "decodeZ_done_" + lid_dz_direct
+      l_dz_after_direct = "decodeZ_after_" + lid_dz_direct
+
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_dz_fail_direct)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_dz_fail_direct)
+
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_dz_direct, "rax")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 4)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "rax", 8)
+      state.asm = a.call(state.asm, "fn_scan_nul_bytes")
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "edx")
+
+      state.asm = a.mark(state.asm, l_dz_done_direct)
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "r8")
+      state.asm = a.shl_r64_imm8(state.asm, "r11", 3)
+      state.asm = a.or_r64_imm8(state.asm, "r11", c.TAG_INT)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_dz_direct + 8, "r11")
+
+      state.asm = a.mov_r32_r32(state.asm, "ecx", "r8d")
+      state.asm = a.add_r32_imm(state.asm, "ecx", 9)
+      state.asm = a.call(state.asm, "fn_alloc")
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRING, false)
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_dz_direct + 8)
+      state.asm = a.sar_r64_imm8(state.asm, "r8", 3)
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "r8d")
+      state.asm = a.mov_membase_disp_r32(state.asm, "r11", 4, "r8d")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_dz_direct)
+
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_dz_direct, "r11")
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r10", 8)
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "r8d")
+      state.asm = a.call(state.asm, "fn_copy_bytes")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_dz_direct)
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.add_r64_r64(state.asm, "rax", "r8")
+      state.asm = a.add_rax_imm8(state.asm, 8)
+      state.asm = a.mov_membase_disp_imm8(state.asm, "rax", 0, 0)
+
+      state.asm = a.mov_rax_r11(state.asm)
+      state.asm = a.jmp(state.asm, l_dz_after_direct)
+
+      state.asm = a.mark(state.asm, l_dz_fail_direct)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+
+      state.asm = a.mark(state.asm, l_dz_after_direct)
+      if tmp_dz_direct_ok then state = core.free_expr_temps(state, 16) end if
+      return state
+    end if
+
+    if callee == "decode16Z" and nargs == 1 then
+      tmp_d16_direct = core.alloc_expr_temps(state, 32)
+      tmp_d16_direct_ok = typeof(tmp_d16_direct) == "int" and tmp_d16_direct > 0
+      if not tmp_d16_direct_ok then tmp_d16_direct = 0x2D0 end if
+
+      state = cg_emit_expr(state, call_args[0])
+
+      lid_d16_direct = _next_lid(state)
+      l_d16_fail_direct = "decode16Z_fail_" + lid_d16_direct
+      l_d16_done_direct = "decode16Z_done_" + lid_d16_direct
+      l_d16_after_direct = "decode16Z_after_" + lid_d16_direct
+
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_d16_fail_direct)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_d16_fail_direct)
+
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_d16_direct, "rax")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 4)
+      state.asm = a.shr_r32_imm8(state.asm, "edx", 1)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "rax", 8)
+      state.asm = a.call(state.asm, "fn_scan_nul_wchars")
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "edx")
+
+      state.asm = a.mark(state.asm, l_d16_done_direct)
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "r8")
+      state.asm = a.shl_r64_imm8(state.asm, "r11", 3)
+      state.asm = a.or_r64_imm8(state.asm, "r11", c.TAG_INT)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_d16_direct + 8, "r11")
+
+      state.asm = a.mov_rcx_imm32(state.asm, 65001)
+      state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_d16_direct)
+      state.asm = a.lea_r64_membase_disp(state.asm, "r8", "r8", 8)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", tmp_d16_direct + 8)
+      state.asm = a.sar_r64_imm8(state.asm, "r9", 3)
+      state.asm = a.mov_r32_r32(state.asm, "r9d", "r9d")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x20, 0, true)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x28, 0, true)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x30, 0, true)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x38, 0, true)
+      state.asm = a.call_rip_qword(state.asm, "iat_WideCharToMultiByte")
+
+      state.asm = a.cmp_rax_imm8(state.asm, 0)
+      state.asm = a.jcc(state.asm, "e", l_d16_fail_direct)
+
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.shl_r64_imm8(state.asm, "r10", 3)
+      state.asm = a.or_r64_imm8(state.asm, "r10", c.TAG_INT)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_d16_direct + 16, "r10")
+
+      state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
+      state.asm = a.add_r32_imm(state.asm, "ecx", 9)
+      state.asm = a.call(state.asm, "fn_alloc")
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRING, false)
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_d16_direct + 16)
+      state.asm = a.sar_r64_imm8(state.asm, "r10", 3)
+      state.asm = a.mov_r32_r32(state.asm, "r10d", "r10d")
+      state.asm = a.mov_membase_disp_r32(state.asm, "r11", 4, "r10d")
+
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_d16_direct + 24, "r11")
+
+      state.asm = a.mov_rcx_imm32(state.asm, 65001)
+      state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_d16_direct)
+      state.asm = a.lea_r64_membase_disp(state.asm, "r8", "r8", 8)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", tmp_d16_direct + 8)
+      state.asm = a.sar_r64_imm8(state.asm, "r9", 3)
+      state.asm = a.mov_r32_r32(state.asm, "r9d", "r9d")
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_d16_direct + 24)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r11", 8)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "rax")
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_d16_direct + 16)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x28, "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x30, 0, true)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x38, 0, true)
+      state.asm = a.call_rip_qword(state.asm, "iat_WideCharToMultiByte")
+
+      state.asm = a.cmp_rax_imm8(state.asm, 0)
+      state.asm = a.jcc(state.asm, "e", l_d16_fail_direct)
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_d16_direct + 24)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_d16_direct + 16)
+      state.asm = a.sar_r64_imm8(state.asm, "r10", 3)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.add_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.add_rax_imm8(state.asm, 8)
+      state.asm = a.mov_membase_disp_imm8(state.asm, "rax", 0, 0)
+
+      state.asm = a.mov_rax_r11(state.asm)
+      state.asm = a.jmp(state.asm, l_d16_after_direct)
+
+      state.asm = a.mark(state.asm, l_d16_fail_direct)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+
+      state.asm = a.mark(state.asm, l_d16_after_direct)
+      if tmp_d16_direct_ok then state = core.free_expr_temps(state, 32) end if
+      return state
+    end if
+
+    skip_call_args_eval = false
+    direct_struct_constructor = false
+    direct_user_global = false
+    generic_nonmember_candidate = false
+    compiletime_member_callable = false
+    if typeof(cal) == "struct" and cal.node_kind == "Member" and member_runtime == false then
+      compiletime_member_callable = true
+    end if
+    if typeof(cal) == "struct" and cal.node_kind != "Member" then
+      skip_qn = callee
+      if skip_qn == "" then skip_qn = raw_name end if
+      if skip_qn != "" then
+        skip_fn = _user_function_get(state, skip_qn)
+        if typeof(skip_fn) == "struct" then
+          skip_bind = scope.cg_resolve_binding(state, skip_qn)
+          if typeof(skip_bind) != "struct" or skip_bind.kind == "global" then
+            direct_user_global = true
+          end if
+        end if
+      end if
+
+      if direct_user_global == false then
+        special_qn = skip_qn
+        if special_qn == "" then
+          generic_nonmember_candidate = true
+        else
+          is_special = false
+          if special_qn == "array" then is_special = true end if
+          if special_qn == "bytes" or special_qn == "byteBuffer" then is_special = true end if
+          if special_qn == "len" or special_qn == "typeof" or special_qn == "typeName" then is_special = true end if
+          if special_qn == "input" or special_qn == "decode" or special_qn == "decodeZ" or special_qn == "decode16Z" then is_special = true end if
+          if special_qn == "slice" or special_qn == "copyBytes" or special_qn == "fillBytes" then is_special = true end if
+          if special_qn == "hex" or special_qn == "fromHex" or special_qn == "error" then is_special = true end if
+          if special_qn == "gc_collect" or special_qn == "gc_set_limit" or special_qn == "callStats" then is_special = true end if
+          if special_qn == "heap_count" or special_qn == "heap_bytes_used" or special_qn == "heap_free_bytes" or special_qn == "heap_free_blocks" then is_special = true end if
+          if special_qn == "heap_bytes_committed" or special_qn == "heap_bytes_reserved" then is_special = true end if
+          if is_special == false and _state_struct_id_get(state, special_qn, 0) == 0 then
+            generic_nonmember_candidate = true
+          end if
+        end if
+      end if
+    end if
+    skip_scallee = callee
+    skip_sid = _state_struct_id_get(state, skip_scallee, 0)
+    if skip_sid == 0 and raw_name != "" and raw_name != skip_scallee then
+      skip_sid2 = _state_struct_id_get(state, raw_name, 0)
+      if skip_sid2 != 0 then
+        skip_sid = skip_sid2
+      end if
+    end if
+    if skip_sid != 0 then direct_struct_constructor = true end if
+    if compiletime_member_callable or direct_struct_constructor then skip_call_args_eval = true end if
 
     // Evaluate args left-to-right into a nested-safe temp area first.
     // Nested calls inside argument expressions can use rsp+0x20 too, so we
@@ -2375,32 +3972,40 @@ function cg_emit_expr(state, expr)
     call_args_base = 0
     call_args_alloc = false
     if nargs > 0 then
-      call_args_base = core.alloc_expr_temps(state, nargs * 8)
-      if typeof(call_args_base) == "int" and call_args_base > 0 then
-        call_args_alloc = true
+      if skip_call_args_eval then
+        // Generic indirect-call lowering evaluates arguments directly into rooted temp slots later.
       else
-        call_args_base = 0x300
-      end if
-
-      state = _emit_call_args_eval_recursive(state, call_args, 0, nargs, call_args_base)
-
-      // Materialize canonical outgoing arg slots after all arg expressions ran.
-      for cpi = 0 to nargs - 1
-        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + cpi * 8)
-        if cpi < 4 then
-          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20 + cpi * 8, "rax")
+        call_args_base = core.alloc_expr_temps(state, nargs * 8)
+        if typeof(call_args_base) == "int" and call_args_base > 0 then
+          call_args_alloc = true
+        else
+          call_args_base = 0x300
         end if
-      end for
 
-      if call_args_alloc then
-        state = core.release_expr_temps(state, nargs * 8)
+        state = _emit_call_args_eval_recursive(state, call_args, 0, nargs, call_args_base)
+
+        // Materialize canonical outgoing arg slots after all arg expressions ran.
+        for cpi = 0 to nargs - 1
+          state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + cpi * 8)
+          if cpi < 4 then
+            state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20 + cpi * 8, "rax")
+          end if
+        end for
+
+        if call_args_alloc then
+          state = core.release_expr_temps(state, nargs * 8)
+        end if
       end if
     end if
 
-    if nargs >= 1 then state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 0x20) end if
-    if nargs >= 2 then state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", 0x28) end if
-    if nargs >= 3 then state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", 0x30) end if
-    if nargs >= 4 then state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", 0x38) end if
+    if skip_call_args_eval then
+      // Indirect/devirtualized call paths reload directly from rooted temp slots.
+    else
+      if nargs >= 1 then state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 0x20) end if
+      if nargs >= 2 then state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", 0x28) end if
+      if nargs >= 3 then state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", 0x30) end if
+      if nargs >= 4 then state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", 0x38) end if
+    end if
 
     if raw_name == "" and typeof(cal) == "struct" and cal.node_kind == "Member" then
       raw_name = _expr_to_qualname(state, cal)
@@ -2419,8 +4024,8 @@ function cg_emit_expr(state, expr)
 
       lid_arr = _next_lid(state)
       l_fail_arr = "array_init_fail_" + lid_arr
-      l_fill_top = "array_init_fill_top_" + lid_arr
-      l_fill_done = "array_init_fill_done_" + lid_arr
+      l_arr_imm = "array_init_imm_" + lid_arr
+      l_arr_type_done = "array_init_type_done_" + lid_arr
       l_done_arr = "array_init_done_" + lid_arr
 
       // validate + decode size (tagged int >= 0 and <= 0x7fffffff)
@@ -2451,7 +4056,20 @@ function cg_emit_expr(state, expr)
 
       // r11 = array base
       state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+      if nargs == 2 then
+        state.asm = a.mov_rax_rip_qword(state.asm, "gc_tmp0")
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        state.asm = a.and_r64_imm(state.asm, "r10", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+        state.asm = a.jcc(state.asm, "ne", l_arr_imm)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+        state.asm = a.jmp(state.asm, l_arr_type_done)
+        state.asm = a.mark(state.asm, l_arr_imm)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY_IMM, false)
+        state.asm = a.mark(state.asm, l_arr_type_done)
+      else
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY_IMM, false)
+      end if
 
       // header len (u32)
       state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x20)
@@ -2467,16 +4085,10 @@ function cg_emit_expr(state, expr)
       end if
 
       // fill payload with rdx
-      state.asm = a.lea_r64_membase_disp(state.asm, "r8", "r11", 8)
-      state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "r11", 4)
-      state.asm = a.mark(state.asm, l_fill_top)
-      state.asm = a.test_r32_r32(state.asm, "r9d", "r9d")
-      state.asm = a.jcc(state.asm, "e", l_fill_done)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r8", 0, "rdx")
-      state.asm = a.add_r64_imm(state.asm, "r8", 8)
-      state.asm = a.dec_r32(state.asm, "r9d")
-      state.asm = a.jmp(state.asm, l_fill_top)
-      state.asm = a.mark(state.asm, l_fill_done)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+      state.asm = a.mov_r64_r64(state.asm, "r8", "rdx")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+      state.asm = a.call(state.asm, "fn_fill_qwords")
 
       if nargs == 2 then
         state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -2582,6 +4194,8 @@ function cg_emit_expr(state, expr)
         state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
         state.asm = a.jcc(state.asm, "e", l_bcopy_b1)
         state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+        state.asm = a.jcc(state.asm, "e", l_arr_b1)
+        state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
         state.asm = a.jcc(state.asm, "e", l_arr_b1)
         state.asm = a.jmp(state.asm, l_fail_b1)
 
@@ -2708,48 +4322,25 @@ function cg_emit_expr(state, expr)
       return state
     end if
 
-    if callee == "error" then
-      if nargs != 2 and nargs != 5 then
-        state.diagnostics = state.diagnostics +["error() expects 2 or 5 arguments"]
-        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    // Strict-void parity with Python: len(void) must raise an error.
+    if (callee == "len" or raw_name == "len") and nargs == 1 then
+      arg0 = call_args[0]
+      const_len = -1
+      cv0 = _opt_try_const_value(state, arg0)
+      if typeof(cv0) == "struct" and cv0.ok then
+        if typeof(cv0.value) == "string" then
+          const_len = len(cv0.value)
+        else
+          const_len = _opt_try_pure_const_array_len(state, arg0)
+        end if
+      else
+        const_len = _opt_try_pure_const_array_len(state, arg0)
+      end if
+      if const_len >= 0 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_int(const_len))
         return state
       end if
 
-      state.asm = a.mov_rcx_imm32(state.asm, 56)
-      state.asm = a.call(state.asm, "fn_alloc")
-      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 5, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, c.ERROR_STRUCT_ID, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
-
-      if nargs == 2 then
-        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x20)
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
-        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x28)
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "r10")
-        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
-        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
-        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
-      else
-        for ei = 0 to 4
-          if ei < 4 then
-            state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x20 + ei * 8)
-          else
-            state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", call_args_base + ei * 8)
-          end if
-          state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16 + ei * 8, "r10")
-        end for
-      end if
-      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-      return state
-    end if
-
-    // Strict-void parity with Python: len(void) must raise an error.
-    if (callee == "len" or raw_name == "len") and nargs == 1 then
       lid_len = _next_lid(state)
       l_len_ok = "len_ok_" + lid_len
       l_len_done = "len_done_" + lid_len
@@ -2770,11 +4361,477 @@ function cg_emit_expr(state, expr)
       return state
     end if
 
-    bname = _builtin_label(callee)
-    if bname == "" and raw_name != "" then bname = _builtin_label(raw_name) end if
-    if bname != "" then
-      state.asm = a.mov_r32_imm32(state.asm, "r10d", nargs)
-      state.asm = a.call(state.asm, bname)
+    if (callee == "hex" or raw_name == "hex") then
+      if nargs != 1 then
+        state.diagnostics = state.diagnostics +["hex() expects exactly 1 argument"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_hex")
+      return state
+    end if
+
+    if (callee == "fromHex" or raw_name == "fromHex") then
+      if nargs != 1 then
+        state.diagnostics = state.diagnostics +["fromHex() expects exactly 1 argument"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_fromHex")
+      return state
+    end if
+
+    if (callee == "slice" or raw_name == "slice") then
+      if nargs != 3 then
+        state.diagnostics = state.diagnostics +["slice() expects exactly 3 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_slice")
+      return state
+    end if
+
+    if (callee == "gc_collect" or raw_name == "gc_collect") then
+      if nargs != 0 then
+        state.diagnostics = state.diagnostics +["gc_collect() expects 0 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_gc_collect")
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+
+    if (callee == "gc_set_limit" or raw_name == "gc_set_limit") then
+      if nargs != 1 then
+        state.diagnostics = state.diagnostics +["gc_set_limit() expects exactly 1 argument"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.mov_r32_imm32(state.asm, "r10d", 1)
+      state.asm = a.call(state.asm, "fn_builtin_gc_set_limit")
+      return state
+    end if
+
+    if (callee == "callStats" or raw_name == "callStats") then
+      if nargs != 0 then
+        state.diagnostics = state.diagnostics +["callStats() expects 0 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_callStats")
+      return state
+    end if
+
+    if (callee == "heap_count" or raw_name == "heap_count") then
+      if nargs != 0 then
+        state.diagnostics = state.diagnostics +["heap_count() expects 0 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_heap_count")
+      return state
+    end if
+
+    if (callee == "heap_bytes_used" or raw_name == "heap_bytes_used") then
+      if nargs != 0 then
+        state.diagnostics = state.diagnostics +["heap_bytes_used() expects 0 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_heap_bytes_used")
+      return state
+    end if
+
+    if (callee == "heap_free_bytes" or raw_name == "heap_free_bytes") then
+      if nargs != 0 then
+        state.diagnostics = state.diagnostics +["heap_free_bytes() expects 0 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_heap_free_bytes")
+      return state
+    end if
+
+    if (callee == "heap_free_blocks" or raw_name == "heap_free_blocks") then
+      if nargs != 0 then
+        state.diagnostics = state.diagnostics +["heap_free_blocks() expects 0 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.call(state.asm, "fn_heap_free_blocks")
+      return state
+    end if
+
+    if (callee == "heap_bytes_committed" or raw_name == "heap_bytes_committed") then
+      if nargs != 0 then
+        state.diagnostics = state.diagnostics +["heap_bytes_committed() expects 0 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.mov_rax_rip_qword(state.asm, "heap_end")
+      state.asm = a.mov_rdx_rip_qword(state.asm, "heap_base")
+      state.asm = a.sub_r64_r64(state.asm, "rax", "rdx")
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+      return state
+    end if
+
+    if (callee == "heap_bytes_reserved" or raw_name == "heap_bytes_reserved") then
+      if nargs != 0 then
+        state.diagnostics = state.diagnostics +["heap_bytes_reserved() expects 0 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.mov_rax_rip_qword(state.asm, "heap_reserve_end")
+      state.asm = a.mov_rdx_rip_qword(state.asm, "heap_base")
+      state.asm = a.sub_r64_r64(state.asm, "rax", "rdx")
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+      return state
+    end if
+
+    if (callee == "copyBytes" or raw_name == "copyBytes") then
+      if nargs != 5 then
+        state.diagnostics = state.diagnostics +["copyBytes() expects exactly 5 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      lid_cb = _next_lid(state)
+      l_cb_done = "copybytes_done_" + lid_cb
+      l_cb_fail = "copybytes_fail_" + lid_cb
+      l_cb_min_dst = "copybytes_min_dst_" + lid_cb
+      l_cb_min_src = "copybytes_min_src_" + lid_cb
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rcx")
+      state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_cb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_cb_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "r8", "r8")
+      state.asm = a.mov_r64_r64(state.asm, "r10", "r8")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r8", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "r10", "r9")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "r9", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "r9", 0)
+      state.asm = a.jcc(state.asm, "l", l_cb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "r9", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_cb_fail)
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", call_args_base + 32)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rcx")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_cb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
+      state.asm = a.jcc(state.asm, "l", l_cb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rcx", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_cb_fail)
+
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+      state.asm = a.cmp_r32_r32(state.asm, "eax", "r10d")
+      state.asm = a.jcc(state.asm, "ge", l_cb_done)
+      state.asm = a.sub_r32_r32(state.asm, "r10d", "eax")
+
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r8", 4)
+      state.asm = a.cmp_r32_r32(state.asm, "r9d", "edx")
+      state.asm = a.jcc(state.asm, "ge", l_cb_done)
+      state.asm = a.sub_r32_r32(state.asm, "edx", "r9d")
+
+      state.asm = a.cmp_r32_r32(state.asm, "ecx", "r10d")
+      state.asm = a.jcc(state.asm, "le", l_cb_min_dst)
+      state.asm = a.mov_r32_r32(state.asm, "ecx", "r10d")
+      state.asm = a.mark(state.asm, l_cb_min_dst)
+      state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
+      state.asm = a.jcc(state.asm, "le", l_cb_min_src)
+      state.asm = a.mov_r32_r32(state.asm, "ecx", "edx")
+      state.asm = a.mark(state.asm, l_cb_min_src)
+      state.asm = a.test_r32_r32(state.asm, "ecx", "ecx")
+      state.asm = a.jcc(state.asm, "le", l_cb_done)
+
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "ecx")
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+      state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r8", 8)
+      state.asm = a.add_r64_r64(state.asm, "rdx", "r9")
+      state.asm = a.call(state.asm, "fn_copy_bytes")
+      state.asm = a.jmp(state.asm, l_cb_done)
+
+      state.asm = a.mark(state.asm, l_cb_fail)
+      state.asm = a.mark(state.asm, l_cb_done)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+
+    if (callee == "fillBytes" or raw_name == "fillBytes") then
+      if nargs != 4 then
+        state.diagnostics = state.diagnostics +["fillBytes() expects exactly 4 arguments"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+
+      lid_fb = _next_lid(state)
+      l_fb_done = "fillbytes_done_" + lid_fb
+      l_fb_fail = "fillbytes_fail_" + lid_fb
+      l_fb_len_ok = "fillbytes_len_ok_" + lid_fb
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rcx")
+      state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_fb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_fb_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "r8")
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rcx")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
+      state.asm = a.jcc(state.asm, "l", l_fb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "rcx", 0x7FFFFFFF)
+      state.asm = a.jcc(state.asm, "g", l_fb_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "r9", "r9")
+      state.asm = a.mov_r64_r64(state.asm, "r10", "r9")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_fb_fail)
+      state.asm = a.sar_r64_imm8(state.asm, "r9", 3)
+      state.asm = a.cmp_r64_imm(state.asm, "r9", 0)
+      state.asm = a.jcc(state.asm, "l", l_fb_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "r9", 255)
+      state.asm = a.jcc(state.asm, "g", l_fb_fail)
+
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+      state.asm = a.cmp_r32_r32(state.asm, "eax", "r10d")
+      state.asm = a.jcc(state.asm, "ge", l_fb_done)
+      state.asm = a.sub_r32_r32(state.asm, "r10d", "eax")
+
+      state.asm = a.mov_r32_r32(state.asm, "edx", "ecx")
+      state.asm = a.cmp_r32_r32(state.asm, "edx", "r10d")
+      state.asm = a.jcc(state.asm, "le", l_fb_len_ok)
+      state.asm = a.mov_r32_r32(state.asm, "edx", "r10d")
+      state.asm = a.mark(state.asm, l_fb_len_ok)
+      state.asm = a.test_r32_r32(state.asm, "edx", "edx")
+      state.asm = a.jcc(state.asm, "le", l_fb_done)
+
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "r9d")
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+      state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_fill_bytes")
+      state.asm = a.jmp(state.asm, l_fb_done)
+
+      state.asm = a.mark(state.asm, l_fb_fail)
+      state.asm = a.mark(state.asm, l_fb_done)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+
+    if (callee == "decodeZ" or raw_name == "decodeZ") then
+      if nargs != 1 then
+        state.diagnostics = state.diagnostics +["decodeZ() expects exactly 1 argument"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      lid_dz = _next_lid(state)
+      l_dz_fail = "decodeZ_fail_" + lid_dz
+      l_dz_after = "decodeZ_after_" + lid_dz
+      tmp_dz = core.alloc_expr_temps(state, 16)
+      tmp_dz_ok = typeof(tmp_dz) == "int" and tmp_dz > 0
+      if not tmp_dz_ok then tmp_dz = 0x2F0 end if
+
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rcx")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_dz_fail)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rcx", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_dz_fail)
+
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_dz, "rcx")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rcx", 4)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "rcx", 8)
+      state.asm = a.call(state.asm, "fn_scan_nul_bytes")
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "edx")
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "r8")
+      state.asm = a.shl_r64_imm8(state.asm, "r11", 3)
+      state.asm = a.or_r64_imm8(state.asm, "r11", c.TAG_INT)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_dz + 8, "r11")
+
+      state.asm = a.mov_r32_r32(state.asm, "ecx", "r8d")
+      state.asm = a.add_r32_imm(state.asm, "ecx", 9)
+      state.asm = a.call(state.asm, "fn_alloc")
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRING, false)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_dz + 8)
+      state.asm = a.sar_r64_imm8(state.asm, "r8", 3)
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "r8d")
+      state.asm = a.mov_membase_disp_r32(state.asm, "r11", 4, "r8d")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_dz)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_dz, "r11")
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r10", 8)
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "r8d")
+      state.asm = a.call(state.asm, "fn_copy_bytes")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_dz)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_dz + 8)
+      state.asm = a.sar_r64_imm8(state.asm, "r8", 3)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.add_r64_r64(state.asm, "rax", "r8")
+      state.asm = a.add_rax_imm8(state.asm, 8)
+      state.asm = a.mov_membase_disp_imm8(state.asm, "rax", 0, 0)
+      state.asm = a.mov_rax_r11(state.asm)
+      state.asm = a.jmp(state.asm, l_dz_after)
+
+      state.asm = a.mark(state.asm, l_dz_fail)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+
+      state.asm = a.mark(state.asm, l_dz_after)
+      if tmp_dz_ok then state = core.release_expr_temps(state, 16) end if
+      return state
+    end if
+
+    if (callee == "decode16Z" or raw_name == "decode16Z") then
+      if nargs != 1 then
+        state.diagnostics = state.diagnostics +["decode16Z() expects exactly 1 argument"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      lid_d16 = _next_lid(state)
+      l_d16_fail = "decode16Z_fail_" + lid_d16
+      l_d16_after = "decode16Z_after_" + lid_d16
+      tmp_d16 = core.alloc_expr_temps(state, 32)
+      tmp_d16_ok = typeof(tmp_d16) == "int" and tmp_d16 > 0
+      if not tmp_d16_ok then tmp_d16 = 0x2D0 end if
+
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rcx")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_d16_fail)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rcx", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.jcc(state.asm, "ne", l_d16_fail)
+
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_d16, "rcx")
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rcx", 4)
+      state.asm = a.sar_r64_imm8(state.asm, "rdx", 1)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "rcx", 8)
+      state.asm = a.call(state.asm, "fn_scan_nul_wchars")
+      state.asm = a.mov_r32_r32(state.asm, "r8d", "edx")
+
+      state.asm = a.mov_r64_r64(state.asm, "r11", "r8")
+      state.asm = a.shl_r64_imm8(state.asm, "r11", 3)
+      state.asm = a.or_r64_imm8(state.asm, "r11", c.TAG_INT)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_d16 + 8, "r11")
+
+      state.asm = a.mov_rcx_imm32(state.asm, 65001)
+      state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_d16)
+      state.asm = a.lea_r64_membase_disp(state.asm, "r8", "r8", 8)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", tmp_d16 + 8)
+      state.asm = a.sar_r64_imm8(state.asm, "r9", 3)
+      state.asm = a.mov_r32_r32(state.asm, "r9d", "r9d")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x20, 0, true)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x28, 0, true)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x30, 0, true)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x38, 0, true)
+      state.asm = a.mov_rax_rip_qword(state.asm, "iat_WideCharToMultiByte")
+      state.asm = a.call_rax(state.asm)
+      state.asm = a.cmp_rax_imm8(state.asm, 0)
+      state.asm = a.jcc(state.asm, "e", l_d16_fail)
+
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.shl_r64_imm8(state.asm, "r10", 3)
+      state.asm = a.or_r64_imm8(state.asm, "r10", c.TAG_INT)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_d16 + 16, "r10")
+
+      state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
+      state.asm = a.add_r32_imm(state.asm, "ecx", 9)
+      state.asm = a.call(state.asm, "fn_alloc")
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRING, false)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_d16 + 16)
+      state.asm = a.sar_r64_imm8(state.asm, "r10", 3)
+      state.asm = a.mov_r32_r32(state.asm, "r10d", "r10d")
+      state.asm = a.mov_membase_disp_r32(state.asm, "r11", 4, "r10d")
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_d16 + 24, "r11")
+
+      state.asm = a.mov_rcx_imm32(state.asm, 65001)
+      state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_d16)
+      state.asm = a.lea_r64_membase_disp(state.asm, "r8", "r8", 8)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", tmp_d16 + 8)
+      state.asm = a.sar_r64_imm8(state.asm, "r9", 3)
+      state.asm = a.mov_r32_r32(state.asm, "r9d", "r9d")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_d16 + 24)
+      state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r11", 8)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "rax")
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tmp_d16 + 16)
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x28, "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x30, 0, true)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x38, 0, true)
+      state.asm = a.call_rax(state.asm)
+      state.asm = a.cmp_rax_imm8(state.asm, 0)
+      state.asm = a.jcc(state.asm, "e", l_d16_fail)
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", tmp_d16 + 24)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_d16 + 16)
+      state.asm = a.sar_r64_imm8(state.asm, "r10", 3)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.add_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.add_rax_imm8(state.asm, 8)
+      state.asm = a.mov_membase_disp_imm8(state.asm, "rax", 0, 0)
+      state.asm = a.mov_rax_r11(state.asm)
+      state.asm = a.jmp(state.asm, l_d16_after)
+
+      state.asm = a.mark(state.asm, l_d16_fail)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+
+      state.asm = a.mark(state.asm, l_d16_after)
+      if tmp_d16_ok then state = core.release_expr_temps(state, 32) end if
       return state
     end if
 
@@ -2807,117 +4864,85 @@ function cg_emit_expr(state, expr)
       end if
 
       if sid == c.ERROR_STRUCT_ID and nargs == 2 then
-        state.asm = a.mov_rcx_imm32(state.asm, 56)
+        state.asm = a.mov_rcx_imm32(state.asm, 48)
         state.asm = a.call(state.asm, "fn_alloc")
+        base_err = core.alloc_expr_temps(state, 8)
+        base_err_ok = typeof(base_err) == "int" and base_err > 0
+        if not base_err_ok then base_err = 0x2F8 end if
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_err, "rax")
         state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
         state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 5, false)
-        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, c.ERROR_STRUCT_ID, false)
-        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
-        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x20)
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
-        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x28)
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "r10")
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
+        state = cg_emit_expr(state, call_args[0])
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_err)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
+        state = cg_emit_expr(state, call_args[1])
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_err)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_err)
         state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
         state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
         state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
-        state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-        state = _emit_auto_errprop(state)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base_err)
+        if base_err_ok then state = core.free_expr_temps(state, 8) end if
         return state
       end if
 
-      state.asm = a.mov_rcx_imm32(state.asm, 16 + nargs * 8)
+      state.asm = a.mov_rcx_imm32(state.asm, 8 + nargs * 8)
       state.asm = a.call(state.asm, "fn_alloc")
-      state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 0, c.OBJ_STRUCT, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 4, nargs, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 8, sid, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 12, 0, false)
+      base_struct = core.alloc_expr_temps(state, 8)
+      base_struct_ok = typeof(base_struct) == "int" and base_struct > 0
+      if not base_struct_ok then base_struct = 0x2F8 end if
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_struct, "rax")
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, sid, false)
       if nargs > 0 then
         for fi = 0 to nargs - 1
-          if fi < 4 then
-            state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x20 + fi * 8)
-          else
-            state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", call_args_base + fi * 8)
-          end if
-          state.asm = a.mov_membase_disp_r64(state.asm, "rax", 16 + fi * 8, "r10")
+          state = cg_emit_expr(state, call_args[fi])
+          state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_struct)
+          state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + fi * 8, "rax")
         end for
       end if
-      state = _emit_auto_errprop(state)
-      return state
-    end if
-
-    fn = _user_function_get(state, callee)
-    if typeof(fn) != "struct" and raw_name != "" and raw_name != callee then
-      fn = _user_function_get(state, raw_name)
-      if typeof(fn) == "struct" then callee = raw_name end if
-    end if
-    if typeof(fn) == "struct" then
-      fn_stack_save_off = 0
-      fn_stack_save_count = 0
-      fn_stack_save_alloc = false
-      if nargs > 8 then
-        fn_stack_save_count = nargs - 8
-        fn_stack_save_bytes = fn_stack_save_count * 8
-        fn_stack_save_off = core.alloc_expr_temps(state, fn_stack_save_bytes)
-        if typeof(fn_stack_save_off) == "int" and fn_stack_save_off > 0 then
-          fn_stack_save_alloc = true
-          for ssi_fn = 0 to fn_stack_save_count - 1
-            state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x40 + ssi_fn * 8)
-            state.asm = a.mov_membase_disp_r64(state.asm, "rsp", fn_stack_save_off + ssi_fn * 8, "rax")
-          end for
-        else
-          fn_stack_save_count = 0
-        end if
-      end if
-      if nargs > 4 then
-        for si_fn = 4 to nargs - 1
-          state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + si_fn * 8)
-          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20 + (si_fn - 4) * 8, "rax")
-        end for
-      end if
-      state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
-      state.asm = a.call(state.asm, "fn_user_" + callee)
-      if fn_stack_save_count > 0 then
-        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-        for ssi_fn2 = 0 to fn_stack_save_count - 1
-          state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", fn_stack_save_off + ssi_fn2 * 8)
-          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x40 + ssi_fn2 * 8, "r11")
-        end for
-        if fn_stack_save_alloc then
-          state = core.release_expr_temps(state, fn_stack_save_count * 8)
-        end if
-        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-      end if
-      state = _emit_auto_errprop(state)
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base_struct)
+      if base_struct_ok then state = core.free_expr_temps(state, 8) end if
       return state
     end if
 
     // Indirect callable dispatch (first-class function values).
     state.call_indirect_count = state.call_indirect_count + 1
     callee_is_member = false
+    direct_guard_obj_lbl = ""
+    direct_guard_call_lbl = ""
+    direct_guard_builtin_nargs = false
     callee_desc = ""
     recv_desc = "receiver"
     meth_desc = "member"
     if typeof(cal) == "struct" and cal.node_kind == "Member" then
       callee_is_member = true
-      callee_desc = _expr_to_qualname(state, cal)
-      mnx = _coerce_name(cal.name)
-      if mnx == "" then mnx = _coerce_name(cal.field) end if
-      if mnx != "" then meth_desc = mnx end if
-      if callee_desc != "" and s.contains(callee_desc, ".") then
-        ppd = s.split(callee_desc, ".")
-        if typeof(ppd) == "array" and len(ppd) > 1 then
-          meth_desc = _coerce_name(ppd[len(ppd) - 1])
-          head = slice(ppd, 0, len(ppd) - 1)
-          if typeof(head) != "array" then head = [] end if
-          recv_desc = s.join(head, ".")
+      ppq = _qname_parts_any(cal)
+      if typeof(ppq) == "array" and len(ppq) > 0 then
+        callee_desc = s.join(ppq, ".")
+      end if
+      if callee_desc == "" then
+        mnx0 = _coerce_name(cal.name)
+        if mnx0 == "" then mnx0 = _coerce_name(cal.field) end if
+        callee_desc = mnx0
+      end if
+      if callee_desc != "" then
+        last_dot = -1
+        for di = 0 to len(callee_desc) - 1
+          if callee_desc[di] == "." then last_dot = di end if
+        end for
+        if last_dot >= 0 then
+          recv_desc = s.substr(callee_desc, 0, last_dot)
+          meth_desc = s.substr(callee_desc, last_dot + 1, len(callee_desc) - last_dot - 1)
+        else
+          meth_desc = callee_desc
         end if
-      else
-        tb = _expr_to_qualname(state, cal.target)
-        if tb != "" then recv_desc = tb end if
       end if
       if recv_desc == "" then recv_desc = "receiver" end if
       if meth_desc == "" then meth_desc = "member" end if
@@ -2930,6 +4955,427 @@ function cg_emit_expr(state, expr)
       end if
     end if
     if callee_desc == "" then callee_desc = "<value>" end if
+
+    if callee_is_member == false then
+      dg_name = callee
+      if dg_name == "" then dg_name = raw_name end if
+      if dg_name != "" then
+        b_dg = scope.cg_resolve_binding(state, dg_name)
+        if typeof(b_dg) != "struct" or b_dg.kind == "global" then
+          fn = _user_function_get(state, dg_name)
+          if typeof(fn) == "struct" then
+            obj_lbl_dg = _strpair_get(state.function_static_obj_labels, dg_name)
+            if obj_lbl_dg != "" then
+              direct_guard_obj_lbl = obj_lbl_dg
+              direct_guard_call_lbl = "fn_user_" + dg_name
+              direct_guard_builtin_nargs = false
+            end if
+          else
+            sp_code = ""
+            sp_min = 0
+            sp_max = -1
+            if typeof(state.builtin_specs) == "array" then
+              for bi_dg = 0 to len(state.builtin_specs) - 1
+                sp = state.builtin_specs[bi_dg]
+                if typeof(sp) != "array" or len(sp) < 4 then continue end if
+                if _coerce_name(sp[0]) != dg_name then continue end if
+                if typeof(sp[1]) == "int" then sp_min = sp[1] end if
+                if typeof(sp[2]) == "int" then sp_max = sp[2] end if
+                sp_code = _coerce_name(sp[3])
+                break
+              end for
+            end if
+            if sp_code != "" then
+              obj_lbl_dg = _strpair_get(state.builtin_static_obj_labels, dg_name)
+              if obj_lbl_dg != "" and nargs >= sp_min and nargs <= sp_max then
+                direct_guard_obj_lbl = obj_lbl_dg
+                direct_guard_call_lbl = sp_code
+                direct_guard_builtin_nargs = true
+              end if
+            else
+              obj_lbl_dg = _strpair_get(state.extern_static_obj_labels, dg_name)
+              stub_lbl_dg = _strpair_get(state.extern_stub_labels, dg_name)
+              if obj_lbl_dg != "" and stub_lbl_dg != "" then
+                direct_guard_obj_lbl = obj_lbl_dg
+                direct_guard_call_lbl = stub_lbl_dg
+                direct_guard_builtin_nargs = true
+              end if
+            end if
+          end if
+        end if
+      end if
+    end if
+    // Unified indirect-call lowering for member and non-member calls.
+    if true then
+      diag_extra_nm = 0
+      if callee_is_member then diag_extra_nm = 24 end if
+      base_nm = core.alloc_expr_temps(state, (nargs + 1) * 8 + diag_extra_nm)
+      if typeof(base_nm) != "int" or base_nm <= 0 then
+        state.diagnostics = state.diagnostics + ["Expression temp overflow in indirect call lowering"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      if callee_is_member then
+        void_imm_diag = t.enc_void()
+        state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", base_nm + (nargs + 1) * 8 + 0, void_imm_diag, true)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", base_nm + (nargs + 1) * 8 + 8, void_imm_diag, true)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", base_nm + (nargs + 1) * 8 + 16, void_imm_diag, true)
+      end if
+
+      state = cg_emit_expr(state, cal)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_nm, "rax")
+
+      if nargs > 0 then
+        for argi_nm = 0 to nargs - 1
+          if skip_call_args_eval then
+            arg_nm = call_args[argi_nm]
+            if typeof(arg_nm) == "int" and arg_nm == 0 then
+              state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+            else
+              state = cg_emit_expr(state, arg_nm)
+            end if
+          else
+            if argi_nm < 4 then
+              state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x20 + argi_nm * 8)
+            else
+              state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + argi_nm * 8)
+            end if
+          end if
+          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_nm + (argi_nm + 1) * 8, "rax")
+        end for
+      end if
+
+      devirt_done_lbl_nm = ""
+      if direct_guard_obj_lbl != "" and direct_guard_call_lbl != "" then
+        l_devirt_indirect_nm = "icall_devirt_indirect_" + _next_lid(state)
+        devirt_done_lbl_nm = "icall_devirt_done_" + _next_lid(state)
+
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_nm)
+        state.asm = a.lea_rax_rip(state.asm, direct_guard_obj_lbl)
+        state.asm = a.cmp_r64_r64(state.asm, "r11", "rax")
+        state.asm = a.jcc(state.asm, "ne", l_devirt_indirect_nm)
+
+        if nargs >= 1 then state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base_nm + 8) end if
+        if nargs >= 2 then state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base_nm + 16) end if
+        if nargs >= 3 then state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", base_nm + 24) end if
+        if nargs >= 4 then state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", base_nm + 32) end if
+        if nargs > 4 then
+          for si_nm = 4 to nargs - 1
+            state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base_nm + (si_nm + 1) * 8)
+            state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20 + (si_nm - 4) * 8, "r10")
+          end for
+        end if
+
+        if direct_guard_builtin_nargs then
+          state.asm = a.mov_r32_imm32(state.asm, "r10d", nargs)
+        else
+          state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+        end if
+        state.asm = a.call(state.asm, direct_guard_call_lbl)
+        state = _emit_auto_errprop(state)
+        state.asm = a.jmp(state.asm, devirt_done_lbl_nm)
+        state.asm = a.mark(state.asm, l_devirt_indirect_nm)
+      end if
+
+      if nargs >= 1 then state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base_nm + 8) end if
+      if nargs >= 2 then state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base_nm + 16) end if
+      if nargs >= 3 then state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", base_nm + 24) end if
+      if nargs >= 4 then state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", base_nm + 32) end if
+      if nargs > 4 then
+        for so_nm = 4 to nargs - 1
+          state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base_nm + (so_nm + 1) * 8)
+          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20 + (so_nm - 4) * 8, "r10")
+        end for
+      end if
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_nm)
+
+      fid_nm = _next_lid(state)
+      l_fail_nm = "icall_fail_" + fid_nm
+      l_done_nm = "icall_done_" + fid_nm
+      l_fun_nm = "icall_fun_" + fid_nm
+      l_clo_nm = "icall_clo_" + fid_nm
+      l_stt_nm = "icall_stt_" + fid_nm
+      l_blt_nm = "icall_blt_" + fid_nm
+
+      state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_fail_nm)
+
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_FUNCTION)
+      state.asm = a.jcc(state.asm, "e", l_fun_nm)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_CLOSURE)
+      state.asm = a.jcc(state.asm, "e", l_clo_nm)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_STRUCTTYPE)
+      state.asm = a.jcc(state.asm, "e", l_stt_nm)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_BUILTIN)
+      state.asm = a.jcc(state.asm, "e", l_blt_nm)
+      state.asm = a.jmp(state.asm, l_fail_nm)
+
+      state.asm = a.mark(state.asm, l_fun_nm)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
+      state.asm = a.jcc(state.asm, "ne", l_fail_nm)
+      state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+      state.asm = a.call_membase_disp(state.asm, "r11", 8)
+      state.asm = a.jmp(state.asm, l_done_nm)
+
+      state.asm = a.mark(state.asm, l_clo_nm)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
+      state.asm = a.jcc(state.asm, "ne", l_fail_nm)
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "r11", 16)
+      state.asm = a.call_membase_disp(state.asm, "r11", 8)
+      state.asm = a.jmp(state.asm, l_done_nm)
+
+      state.asm = a.mark(state.asm, l_blt_nm)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
+      state.asm = a.jcc(state.asm, "g", l_fail_nm)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 8)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
+      state.asm = a.jcc(state.asm, "l", l_fail_nm)
+      state.asm = a.mov_r32_imm32(state.asm, "r10d", nargs)
+      state.asm = a.call_membase_disp(state.asm, "r11", 16)
+      state.asm = a.jmp(state.asm, l_done_nm)
+
+      state.asm = a.mark(state.asm, l_stt_nm)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
+      state.asm = a.jcc(state.asm, "ne", l_fail_nm)
+
+      if nargs == 2 then
+        lid_err_nm = _next_lid(state)
+        l_stt_norm_nm = "icall_stt_normal_" + lid_err_nm
+
+        state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 8)
+        state.asm = a.cmp_r32_imm(state.asm, "r10d", c.ERROR_STRUCT_ID)
+        state.asm = a.jcc(state.asm, "ne", l_stt_norm_nm)
+
+        state.asm = a.mov_rcx_imm32(state.asm, 48)
+        state.asm = a.call(state.asm, "fn_alloc")
+        state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base_nm + 8)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "r10")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base_nm + 16)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.jmp(state.asm, l_done_nm)
+
+        state.asm = a.mark(state.asm, l_stt_norm_nm)
+      end if
+
+      state.asm = a.mov_rcx_imm32(state.asm, 8 + nargs * 8)
+      state.asm = a.call(state.asm, "fn_alloc")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_nm)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 0, c.OBJ_STRUCT, false)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 8)
+      state.asm = a.mov_membase_disp_r32(state.asm, "rax", 4, "r10d")
+      if nargs > 0 then
+        for fi_nm = 0 to nargs - 1
+          state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base_nm + (fi_nm + 1) * 8)
+          state.asm = a.mov_membase_disp_r64(state.asm, "rax", 8 + fi_nm * 8, "r10")
+        end for
+      end if
+      state.asm = a.jmp(state.asm, l_done_nm)
+
+      state.asm = a.mark(state.asm, l_fail_nm)
+      lid_void_nm = _next_lid(state)
+      l_not_void_nm = "icall_not_void_" + lid_void_nm
+      state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_VOID)
+      state.asm = a.jcc(state.asm, "ne", l_not_void_nm)
+      if callee_is_member then
+        state = _emit_make_error_const(state, c.ERR_CALL_NOT_CALLABLE, "'" + recv_desc + "' has no function '" + meth_desc + "'")
+      else
+        state = _emit_make_error_const(state, c.ERR_CALL_NOT_CALLABLE, "Cannot call void")
+      end if
+      state.asm = a.jmp(state.asm, l_done_nm)
+
+      state.asm = a.mark(state.asm, l_not_void_nm)
+      if callee_is_member then
+        if callee_desc == "" then callee_desc = "member" end if
+        lbl_pref_nm = "objstr_" + len(state.rdata.labels)
+        state.rdata = d.rdata_add_obj_string(state.rdata, lbl_pref_nm, "Cannot call '" + callee_desc + "' with " + nargs + " args (expected ")
+        lbl_p3_nm = "objstr_" + len(state.rdata.labels)
+        state.rdata = d.rdata_add_obj_string(state.rdata, lbl_p3_nm, "..")
+        lbl_p4_nm = "objstr_" + len(state.rdata.labels)
+        state.rdata = d.rdata_add_obj_string(state.rdata, lbl_p4_nm, ")")
+
+        tmp_nm = base_nm + (nargs + 1) * 8
+        lid_mdiag_nm = _next_lid(state)
+        l_msimple_nm = "icall_mdiag_simple_" + lid_mdiag_nm
+        l_mfun_nm = "icall_mdiag_fun_" + lid_mdiag_nm
+        l_mblt_nm = "icall_mdiag_blt_" + lid_mdiag_nm
+        l_mstt_nm = "icall_mdiag_stt_" + lid_mdiag_nm
+        l_mdone_nm = "icall_mdiag_done_" + lid_mdiag_nm
+
+        state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
+        state.asm = a.and_r64_imm(state.asm, "r10", 7)
+        state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+        state.asm = a.jcc(state.asm, "ne", l_msimple_nm)
+        state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 0)
+        state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_FUNCTION)
+        state.asm = a.jcc(state.asm, "e", l_mfun_nm)
+        state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_CLOSURE)
+        state.asm = a.jcc(state.asm, "e", l_mfun_nm)
+        state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_BUILTIN)
+        state.asm = a.jcc(state.asm, "e", l_mblt_nm)
+        state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_STRUCTTYPE)
+        state.asm = a.jcc(state.asm, "e", l_mstt_nm)
+        state.asm = a.jmp(state.asm, l_msimple_nm)
+
+        state.asm = a.mark(state.asm, l_mfun_nm)
+        state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+        state.asm = a.mov_r64_r64(state.asm, "r10", "r10")
+        state.asm = a.shl_r64_imm8(state.asm, "r10", 3)
+        state.asm = a.or_r64_imm(state.asm, "r10", c.TAG_INT)
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_nm + 8, "r10")
+
+        state.asm = a.lea_rax_rip(state.asm, lbl_pref_nm)
+        state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_nm + 8)
+        state.asm = a.call(state.asm, "fn_add_string")
+        state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+        state.asm = a.lea_rax_rip(state.asm, lbl_p4_nm)
+        state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+        state.asm = a.call(state.asm, "fn_add_string")
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_nm, "rax")
+
+        state.asm = a.mov_rcx_imm32(state.asm, 48)
+        state.asm = a.call(state.asm, "fn_alloc")
+        state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_int(c.ERR_CALL_NOT_CALLABLE))
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_nm)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.jmp(state.asm, l_mdone_nm)
+
+        state.asm = a.mark(state.asm, l_mblt_nm)
+        state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+        state.asm = a.mov_r64_r64(state.asm, "r10", "r10")
+        state.asm = a.shl_r64_imm8(state.asm, "r10", 3)
+        state.asm = a.or_r64_imm(state.asm, "r10", c.TAG_INT)
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_nm + 8, "r10")
+        state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 8)
+        state.asm = a.mov_r64_r64(state.asm, "r10", "r10")
+        state.asm = a.shl_r64_imm8(state.asm, "r10", 3)
+        state.asm = a.or_r64_imm(state.asm, "r10", c.TAG_INT)
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_nm + 16, "r10")
+
+        state.asm = a.lea_rax_rip(state.asm, lbl_pref_nm)
+        state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_nm + 8)
+        state.asm = a.call(state.asm, "fn_add_string")
+        state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+        state.asm = a.lea_rax_rip(state.asm, lbl_p3_nm)
+        state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+        state.asm = a.call(state.asm, "fn_add_string")
+        state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_nm + 16)
+        state.asm = a.call(state.asm, "fn_add_string")
+        state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+        state.asm = a.lea_rax_rip(state.asm, lbl_p4_nm)
+        state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+        state.asm = a.call(state.asm, "fn_add_string")
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_nm, "rax")
+
+        state.asm = a.mov_rcx_imm32(state.asm, 48)
+        state.asm = a.call(state.asm, "fn_alloc")
+        state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_int(c.ERR_CALL_NOT_CALLABLE))
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_nm)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.jmp(state.asm, l_mdone_nm)
+
+        state.asm = a.mark(state.asm, l_mstt_nm)
+        state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+        state.asm = a.mov_r64_r64(state.asm, "r10", "r10")
+        state.asm = a.shl_r64_imm8(state.asm, "r10", 3)
+        state.asm = a.or_r64_imm(state.asm, "r10", c.TAG_INT)
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_nm + 8, "r10")
+
+        state.asm = a.lea_rax_rip(state.asm, lbl_pref_nm)
+        state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_nm + 8)
+        state.asm = a.call(state.asm, "fn_add_string")
+        state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+        state.asm = a.lea_rax_rip(state.asm, lbl_p4_nm)
+        state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+        state.asm = a.call(state.asm, "fn_add_string")
+        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_nm, "rax")
+
+        state.asm = a.mov_rcx_imm32(state.asm, 48)
+        state.asm = a.call(state.asm, "fn_alloc")
+        state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_int(c.ERR_CALL_NOT_CALLABLE))
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_nm)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+        state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.jmp(state.asm, l_mdone_nm)
+
+        state.asm = a.mark(state.asm, l_msimple_nm)
+        msg_simple_nm = "Cannot call '" + callee_desc + "' with " + nargs + " args"
+        state = _emit_make_error_const(state, c.ERR_CALL_NOT_CALLABLE, msg_simple_nm)
+        state.asm = a.mark(state.asm, l_mdone_nm)
+      else
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      end if
+
+      state.asm = a.mark(state.asm, l_done_nm)
+      state = _emit_auto_errprop(state)
+      if devirt_done_lbl_nm != "" then
+        state.asm = a.mark(state.asm, devirt_done_lbl_nm)
+      end if
+
+      state = core.free_expr_temps(state, (nargs + 1) * 8 + diag_extra_nm)
+      void_imm_nm = t.enc_void()
+      if nargs > 4 then
+        for clr_nm = 4 to nargs - 1
+          state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x20 + (clr_nm - 4) * 8, void_imm_nm, true)
+        end for
+      end if
+      return state
+    end if
 
     // Preserve evaluated args across callee evaluation.
     if nargs > 0 then
@@ -2972,10 +5418,31 @@ function cg_emit_expr(state, expr)
 
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x2F0)
 
+    devirt_done_lbl = ""
+    if direct_guard_obj_lbl != "" and direct_guard_call_lbl != "" then
+      l_devirt_indirect = "icall_devirt_indirect_" + _next_lid(state)
+      devirt_done_lbl = "icall_devirt_done_" + _next_lid(state)
+
+      state.asm = a.lea_rax_rip(state.asm, direct_guard_obj_lbl)
+      state.asm = a.cmp_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.jcc(state.asm, "ne", l_devirt_indirect)
+
+      if direct_guard_builtin_nargs then
+        state.asm = a.mov_r32_imm32(state.asm, "r10d", nargs)
+      else
+        state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+      end if
+      state.asm = a.call(state.asm, direct_guard_call_lbl)
+      state = _emit_auto_errprop(state)
+      state.asm = a.jmp(state.asm, devirt_done_lbl)
+      state.asm = a.mark(state.asm, l_devirt_indirect)
+    end if
+
     fid_ic = _next_lid(state)
     l_fail_ic = "icall_fail_" + fid_ic
     l_done_ic = "icall_done_" + fid_ic
     l_fun_ic = "icall_fun_" + fid_ic
+    l_clo_ic = "icall_clo_" + fid_ic
     l_stt_ic = "icall_stt_" + fid_ic
     l_blt_ic = "icall_blt_" + fid_ic
 
@@ -2987,6 +5454,8 @@ function cg_emit_expr(state, expr)
     state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 0)
     state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_FUNCTION)
     state.asm = a.jcc(state.asm, "e", l_fun_ic)
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_CLOSURE)
+    state.asm = a.jcc(state.asm, "e", l_clo_ic)
     state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_STRUCTTYPE)
     state.asm = a.jcc(state.asm, "e", l_stt_ic)
     state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_BUILTIN)
@@ -2997,9 +5466,16 @@ function cg_emit_expr(state, expr)
     state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
     state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
     state.asm = a.jcc(state.asm, "ne", l_fail_ic)
-    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", 8)
+    state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+    state.asm = a.call_membase_disp(state.asm, "r11", 8)
+    state.asm = a.jmp(state.asm, l_done_ic)
+
+    state.asm = a.mark(state.asm, l_clo_ic)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
+    state.asm = a.jcc(state.asm, "ne", l_fail_ic)
     state.asm = a.mov_r64_membase_disp(state.asm, "r10", "r11", 16)
-    state.asm = a.call_rax(state.asm)
+    state.asm = a.call_membase_disp(state.asm, "r11", 8)
     state.asm = a.jmp(state.asm, l_done_ic)
 
     state.asm = a.mark(state.asm, l_blt_ic)
@@ -3026,23 +5502,21 @@ function cg_emit_expr(state, expr)
       state.asm = a.cmp_r32_imm(state.asm, "r10d", c.ERROR_STRUCT_ID)
       state.asm = a.jcc(state.asm, "ne", l_stt_norm)
 
-      state.asm = a.mov_rcx_imm32(state.asm, 56)
+      state.asm = a.mov_rcx_imm32(state.asm, 48)
       state.asm = a.call(state.asm, "fn_alloc")
       state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
       state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 5, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, c.ERROR_STRUCT_ID, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
       state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x300)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "r10")
       state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x308)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "r10")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
       state.asm = a.mov_rax_r11(state.asm)
       state.asm = a.jmp(state.asm, l_done_ic)
 
@@ -3083,14 +5557,8 @@ function cg_emit_expr(state, expr)
 
     state.asm = a.mark(state.asm, l_not_void)
     if callee_is_member then
-      lbl_desc = "objstr_" + len(state.rdata.labels)
-      state.rdata = d.rdata_add_obj_string(state.rdata, lbl_desc, callee_desc)
-      lbl_p0 = "objstr_" + len(state.rdata.labels)
-      state.rdata = d.rdata_add_obj_string(state.rdata, lbl_p0, "Cannot call '")
-      lbl_p1 = "objstr_" + len(state.rdata.labels)
-      state.rdata = d.rdata_add_obj_string(state.rdata, lbl_p1, "' with ")
-      lbl_p2 = "objstr_" + len(state.rdata.labels)
-      state.rdata = d.rdata_add_obj_string(state.rdata, lbl_p2, " args (expected ")
+      lbl_pref = "objstr_" + len(state.rdata.labels)
+      state.rdata = d.rdata_add_obj_string(state.rdata, lbl_pref, "Cannot call '" + callee_desc + "' with " + nargs + " args (expected ")
       lbl_p3 = "objstr_" + len(state.rdata.labels)
       state.rdata = d.rdata_add_obj_string(state.rdata, lbl_p3, "..")
       lbl_p4 = "objstr_" + len(state.rdata.labels)
@@ -3113,6 +5581,8 @@ function cg_emit_expr(state, expr)
       state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 0)
       state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_FUNCTION)
       state.asm = a.jcc(state.asm, "e", l_mfun)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_CLOSURE)
+      state.asm = a.jcc(state.asm, "e", l_mfun)
       state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_BUILTIN)
       state.asm = a.jcc(state.asm, "e", l_mblt)
       state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_STRUCTTYPE)
@@ -3126,22 +5596,7 @@ function cg_emit_expr(state, expr)
       state.asm = a.or_r64_imm(state.asm, "r10", c.TAG_INT)
       state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_min, "r10")
 
-      state.asm = a.lea_rax_rip(state.asm, lbl_p0)
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_desc)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_p1)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_int(nargs))
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_p2)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
+      state.asm = a.lea_rax_rip(state.asm, lbl_pref)
       state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
       state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_min)
       state.asm = a.call(state.asm, "fn_add_string")
@@ -3151,23 +5606,21 @@ function cg_emit_expr(state, expr)
       state.asm = a.call(state.asm, "fn_add_string")
       state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_msg, "rax")
 
-      state.asm = a.mov_rcx_imm32(state.asm, 56)
+      state.asm = a.mov_rcx_imm32(state.asm, 48)
       state.asm = a.call(state.asm, "fn_alloc")
       state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
       state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 5, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, c.ERROR_STRUCT_ID, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_int(c.ERR_CALL_NOT_CALLABLE))
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
       state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_msg)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "r10")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
       state.asm = a.mov_rax_r11(state.asm)
       state.asm = a.jmp(state.asm, l_mdone)
 
@@ -3183,22 +5636,7 @@ function cg_emit_expr(state, expr)
       state.asm = a.or_r64_imm(state.asm, "r10", c.TAG_INT)
       state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_max, "r10")
 
-      state.asm = a.lea_rax_rip(state.asm, lbl_p0)
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_desc)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_p1)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_int(nargs))
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_p2)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
+      state.asm = a.lea_rax_rip(state.asm, lbl_pref)
       state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
       state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_min)
       state.asm = a.call(state.asm, "fn_add_string")
@@ -3215,23 +5653,21 @@ function cg_emit_expr(state, expr)
       state.asm = a.call(state.asm, "fn_add_string")
       state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_msg, "rax")
 
-      state.asm = a.mov_rcx_imm32(state.asm, 56)
+      state.asm = a.mov_rcx_imm32(state.asm, 48)
       state.asm = a.call(state.asm, "fn_alloc")
       state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
       state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 5, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, c.ERROR_STRUCT_ID, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_int(c.ERR_CALL_NOT_CALLABLE))
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
       state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_msg)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "r10")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
       state.asm = a.mov_rax_r11(state.asm)
       state.asm = a.jmp(state.asm, l_mdone)
 
@@ -3242,22 +5678,7 @@ function cg_emit_expr(state, expr)
       state.asm = a.or_r64_imm(state.asm, "r10", c.TAG_INT)
       state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_min, "r10")
 
-      state.asm = a.lea_rax_rip(state.asm, lbl_p0)
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_desc)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_p1)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_int(nargs))
-      state.asm = a.call(state.asm, "fn_add_string")
-      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-      state.asm = a.lea_rax_rip(state.asm, lbl_p2)
-      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
-      state.asm = a.call(state.asm, "fn_add_string")
+      state.asm = a.lea_rax_rip(state.asm, lbl_pref)
       state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
       state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_min)
       state.asm = a.call(state.asm, "fn_add_string")
@@ -3267,23 +5688,21 @@ function cg_emit_expr(state, expr)
       state.asm = a.call(state.asm, "fn_add_string")
       state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_msg, "rax")
 
-      state.asm = a.mov_rcx_imm32(state.asm, 56)
+      state.asm = a.mov_rcx_imm32(state.asm, 48)
       state.asm = a.call(state.asm, "fn_alloc")
       state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
       state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 5, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, c.ERROR_STRUCT_ID, false)
-      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_int(c.ERR_CALL_NOT_CALLABLE))
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
       state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", tmp_msg)
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "r10")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
       state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
       state.asm = a.mov_rax_r11(state.asm)
       state.asm = a.jmp(state.asm, l_mdone)
 
@@ -3302,12 +5721,26 @@ function cg_emit_expr(state, expr)
         state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", ic_stack_save_off + ssi_ic2 * 8)
         state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x40 + ssi_ic2 * 8, "r11")
       end for
-      if ic_stack_save_alloc then
-        state = core.release_expr_temps(state, ic_stack_save_count * 8)
-      end if
       state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
     end if
     state = _emit_auto_errprop(state)
+    if devirt_done_lbl != "" then
+      l_after_ic = "icall_after_" + fid_ic
+      state.asm = a.jmp(state.asm, l_after_ic)
+      state.asm = a.mark(state.asm, devirt_done_lbl)
+      if ic_stack_save_count > 0 then
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        for ssi_ic3 = 0 to ic_stack_save_count - 1
+          state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", ic_stack_save_off + ssi_ic3 * 8)
+          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x40 + ssi_ic3 * 8, "r11")
+        end for
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      end if
+      state.asm = a.mark(state.asm, l_after_ic)
+    end if
+    if ic_stack_save_count > 0 and ic_stack_save_alloc then
+      state = core.release_expr_temps(state, ic_stack_save_count * 8)
+    end if
     if nargs > 4 then
       for si3 = 4 to nargs - 1
         state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x20 + (si3 - 4) * 8, t.enc_void(), true)
@@ -3319,26 +5752,53 @@ function cg_emit_expr(state, expr)
   if k == "ArrayLit" then
     n = 0
     if typeof(expr.items) == "array" then n = len(expr.items) end if
+
+    imm_items = []
+    all_imm = true
+    if n > 0 then
+      for i = 0 to n - 1
+        enc = _opt_try_const_immediate_encoded(state, expr.items[i])
+        if enc == 0 then
+          all_imm = false
+          break
+        end if
+        imm_items = imm_items + [enc]
+      end for
+    end if
+
     state.asm = a.mov_rcx_imm32(state.asm, 8 + n * 8)
     state.asm = a.call(state.asm, "fn_alloc")
-    base_off = core.alloc_expr_temps(state, 8)
-    if typeof(base_off) != "int" or base_off <= 0 then base_off = 0x2F8 end if
-    state.asm = a.mov_rsp_disp32_rax(state.asm, base_off)
-    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_off)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, n, false)
-    if n > 0 then
-      i = 0
-      while i < n
-        if i < 0 or i >= len(expr.items) then break end if
-        state = cg_emit_expr(state, expr.items[i])
-        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_off)
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + i * 8, "rax")
-        i = i + 1
-      end while
+    base_tmp = core.alloc_expr_value_temp(state, true)
+    state = core.expr_value_temp_store_rax(state, base_tmp)
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+
+    if all_imm then
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY_IMM, false)
+    else
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
     end if
-    state.asm = a.mov_rax_rsp_disp32(state.asm, base_off)
-    state = core.free_expr_temps(state, 8)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, n, false)
+
+    if n > 0 then
+      if all_imm then
+        for i = 0 to n - 1
+          state.asm = a.mov_rax_imm64(state.asm, imm_items[i])
+          state = core.expr_value_temp_load(state, "r11", base_tmp)
+          state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + i * 8, "rax")
+        end for
+      else
+        i = 0
+        while i < n
+          if i < 0 or i >= len(expr.items) then break end if
+          state = cg_emit_expr(state, expr.items[i])
+          state = core.expr_value_temp_load(state, "r11", base_tmp)
+          state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + i * 8, "rax")
+          i = i + 1
+        end while
+      end if
+    end if
+    state = core.expr_value_temp_load(state, "rax", base_tmp)
+    state = core.free_expr_value_temp(state, base_tmp)
     return state
   end if
 
@@ -3367,12 +5827,95 @@ function _qname_parts(state, ex)
   return s.split(qn, ".")
 end function
 
-function _qname_parts_any(state, ex)
-  return _qname_parts(state, ex)
-end function
-
 function _qname_of(state, ex)
-  return _expr_to_qualname(state, ex)
+  if typeof(ex) != "struct" then return "" end if
+
+  if ex.node_kind == "Var" then
+    return _qualify_identifier(state, _coerce_name(ex.name))
+  end if
+
+  if ex.node_kind != "Member" then return "" end if
+
+  parts2 = _qname_parts_any(ex)
+  if typeof(parts2) != "array" or len(parts2) <= 0 then return "" end if
+
+  full = s.join(parts2, ".")
+  full_m = _apply_import_alias(state, full)
+
+  base0 = _coerce_name(parts2[0])
+  b0 = scope.cg_resolve_binding(state, base0)
+  kind0 = ""
+  if typeof(b0) == "struct" then kind0 = _coerce_name(b0.kind) end if
+  base_localish = typeof(b0) == "struct" and kind0 != "" and kind0 != "global"
+
+  meth = _coerce_name(parts2[len(parts2) - 1])
+  struct_qn = ""
+  if len(parts2) >= 2 then
+    for pi = 0 to len(parts2) - 2
+      if struct_qn != "" then struct_qn = struct_qn + "." end if
+      struct_qn = struct_qn + _coerce_name(parts2[pi])
+    end for
+  end if
+  struct_qn_m = _apply_import_alias(state, struct_qn)
+
+  sqs = _qname_with_prefixes(state, struct_qn_m)
+  if typeof(sqs) == "array" and len(sqs) > 0 then
+    for sqi = 0 to len(sqs) - 1
+      md = _state_struct_static_methods_get(state, sqs[sqi])
+      if (typeof(md) == "array" and len(md) > 0) or typeof(md) == "struct" then
+        fn_qn = _method_map_get(md, meth)
+        if fn_qn != "" then return fn_qn end if
+      end if
+    end for
+  end if
+
+  is_struct_type_ref = false
+  if typeof(sqs) == "array" and len(sqs) > 0 then
+    for sqi2 = 0 to len(sqs) - 1
+      if typeof(_state_struct_fields_get(state, sqs[sqi2])) == "array" then
+        if base_localish == false then is_struct_type_ref = true end if
+        break
+      end if
+    end for
+  end if
+
+  alias_target0 = ""
+  if typeof(state.import_alias_index) == "struct" then
+    at0 = t.fastmap_get(state.import_alias_index, base0, "")
+    if typeof(at0) == "string" then alias_target0 = at0 end if
+  end if
+  if alias_target0 == "" then
+    alias_target0 = _alias_lookup(state.import_aliases, base0)
+  end if
+
+  full_cands = _qname_with_prefixes(state, full_m)
+  if alias_target0 != "" and base_localish == false then
+    if typeof(full_cands) == "array" and len(full_cands) > 0 then
+      for fci = 0 to len(full_cands) - 1
+        if _qname_exists(state, full_cands[fci]) then return full_cands[fci] end if
+      end for
+    end if
+    return ""
+  end if
+
+  if is_struct_type_ref then
+    if typeof(full_cands) == "array" and len(full_cands) > 0 then
+      for fci2 = 0 to len(full_cands) - 1
+        if _qname_exists(state, full_cands[fci2]) then return full_cands[fci2] end if
+      end for
+    end if
+    return ""
+  end if
+
+  if typeof(b0) == "struct" then return "" end if
+
+  if typeof(full_cands) == "array" and len(full_cands) > 0 then
+    for fci3 = 0 to len(full_cands) - 1
+      if _qname_exists(state, full_cands[fci3]) then return full_cands[fci3] end if
+    end for
+  end if
+
+  return ""
 end function
 
 function _qname_with_prefixes(state, qname)
@@ -3380,7 +5923,6 @@ function _qname_with_prefixes(state, qname)
   vals_b = t.arr_chunk_new(4)
   vals_b = t.arr_chunk_push(vals_b, qname)
   vals = t.arr_chunk_finish(vals_b)
-  if s.contains(qname, ".") then return vals end if
 
   p1 = state.current_qname_prefix
   if typeof(p1) == "string" and p1 != "" then
@@ -3414,6 +5956,10 @@ end function
 
 function _qname_exists(state, qname)
   if typeof(qname) != "string" or qname == "" then return false end if
+  if typeof(_user_function_get(state, qname)) == "struct" then return true end if
+  if typeof(_extern_sig_get(state, qname)) == "struct" then return true end if
+  if typeof(_state_struct_fields_get(state, qname)) == "array" then return true end if
+  if _state_enum_id_get(state, qname, -1) >= 0 then return true end if
   b = scope.cg_resolve_binding(state, qname)
   return typeof(b) == "struct"
 end function
@@ -3737,35 +6283,33 @@ function _emit_make_error_const(state, code, message)
   lbl = "objstr_" + len(state.rdata.labels)
   state.rdata = d.rdata_add_obj_string(state.rdata, lbl, msg)
 
-  state.asm = a.mov_rcx_imm32(state.asm, 56)
+  state.asm = a.mov_rcx_imm32(state.asm, 48)
   state.asm = a.call(state.asm, "fn_alloc")
   state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
 
-  // header: type / nfields / struct_id / pad
+  // header: type / struct_id
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 5, false)
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 8, c.ERROR_STRUCT_ID, false)
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 12, 0, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
 
   // field0 = code
   state.asm = a.mov_rax_imm64(state.asm, t.enc_int(err_code))
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
 
   // field1 = message
   state.asm = a.lea_rax_rip(state.asm, lbl)
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
 
   // field2 = script
   state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
 
   // field3 = func
   state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
 
   // field4 = line
   state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
 
   state.asm = a.mov_rax_r11(state.asm)
   return state
@@ -3778,6 +6322,7 @@ function _emit_auto_errprop(state)
 
   lid = _next_lid(state)
   l_noerr = "errprop_noerr_" + lid
+  l_cold = "errprop_cold_" + lid
 
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
   state.asm = a.and_r64_imm(state.asm, "r10", 7)
@@ -3786,18 +6331,32 @@ function _emit_auto_errprop(state)
   state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "rax", 0)
   state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_STRUCT)
   state.asm = a.jcc(state.asm, "ne", l_noerr)
-  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "rax", 8)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "rax", 4)
   state.asm = a.cmp_r32_imm(state.asm, "r10d", c.ERROR_STRUCT_ID)
   state.asm = a.jcc(state.asm, "ne", l_noerr)
 
+  if core.defer_cold_block(state, l_cold, _emit_auto_errprop_cold_block) then
+    state.asm = a.jmp(state.asm, l_cold)
+  else
+    if state.in_function and typeof(state.func_ret_label) == "string" and state.func_ret_label != "" then
+      state.asm = a.jmp(state.asm, state.func_ret_label)
+    else
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_unhandled_error_exit")
+    end if
+  end if
+
+  state.asm = a.mark(state.asm, l_noerr)
+  return state
+end function
+
+function _emit_auto_errprop_cold_block(state)
   if state.in_function and typeof(state.func_ret_label) == "string" and state.func_ret_label != "" then
     state.asm = a.jmp(state.asm, state.func_ret_label)
   else
     state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
     state.asm = a.call(state.asm, "fn_unhandled_error_exit")
   end if
-
-  state.asm = a.mark(state.asm, l_noerr)
   return state
 end function
 
@@ -4294,8 +6853,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
     end while
   end if
 
-  state.asm = a.mov_rax_rip_qword(state.asm, _extern_iat_label(dll, sym))
-  state.asm = a.call_rax(state.asm)
+  state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
   state = _emit_extern_ret_from_native(state, sig.ret_ty, l_fail, pos)
   state.asm = a.jmp(state.asm, l_done)
 
@@ -4341,9 +6899,14 @@ function _opt_emit_const_value(state, value)
     return state
   end if
   if tv == "float" then
-    lbl = "cflt_" + len(state.rdata.labels)
-    state.rdata = d.rdata_add_obj_float(state.rdata, lbl, value)
-    state.asm = a.lea_rax_rip(state.asm, lbl)
+    enc = t.try_enc_float_immediate(value)
+    if typeof(enc) == "int" then
+      state.asm = a.mov_rax_imm64(state.asm, enc)
+    else
+      lbl = "cflt_" + len(state.rdata.labels)
+      state.rdata = d.rdata_add_obj_float(state.rdata, lbl, value)
+      state.asm = a.lea_rax_rip(state.asm, lbl)
+    end if
     return state
   end if
   if tv == "string" then
@@ -4494,8 +7057,7 @@ function emit_extern_stubs(state)
       end for
     end if
 
-    state.asm = a.mov_rax_rip_qword(state.asm, _extern_iat_label(dll, sym))
-    state.asm = a.call_rax(state.asm)
+    state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
     state = _emit_extern_ret_from_native(state, ret_ty, l_fail, pos)
     state.asm = a.jmp(state.asm, l_done)
 

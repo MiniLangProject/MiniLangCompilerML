@@ -26,6 +26,15 @@ struct AsmBuilder
   chunk_tail,
   chunk_size,
   buf_valid,
+  before_call_live_temps,
+  tracked_helpers,
+  peephole_last_jump,
+end struct
+
+struct GPR
+  id,
+  size,
+  force_rex,
 end struct
 
 struct EncMem
@@ -34,9 +43,38 @@ struct EncMem
   tail,
 end struct
 
+_materialize_keepalive = 0
+
+function _starts_with_text(text, prefix)
+  if typeof(text) != "string" then return false end if
+  if typeof(prefix) != "string" then return false end if
+  if len(prefix) <= 0 then return true end if
+  if len(text) < len(prefix) then return false end if
+  for i = 0 to len(prefix) - 1
+    if text[i] != prefix[i] then return false end if
+  end for
+  return true
+end function
+
+function _array_contains_text(arr, value)
+  if typeof(arr) != "array" or len(arr) <= 0 then return false end if
+  for i = 0 to len(arr) - 1
+    if arr[i] == value then return true end if
+  end for
+  return false
+end function
+
+function _keepalive_barrier(value)
+  return value
+end function
+
+function _alloc_zero_bytes_keepalive(keepalive, size)
+  return bytes(size, 0)
+end function
+
 function newAsmBuilder()
   cs = 65536
-  return AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false)
+  return AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], [])
 end function
 
 function get_patches(asm)
@@ -60,6 +98,10 @@ function clear_calls(asm)
   return asm
 end function
 
+function get_tracked_helpers(asm)
+  return asm.tracked_helpers
+end function
+
 function _patch_push(asm, patch)
   app = t.arr_chunked_push(asm.patches_chunks, asm.patches_tail, patch, 256)
   asm.patches_chunks = app[0]
@@ -71,6 +113,32 @@ function _call_push(asm, label)
   app = t.arr_chunked_push(asm.calls_chunks, asm.calls_tail, label, 256)
   asm.calls_chunks = app[0]
   asm.calls_tail = app[1]
+  return asm
+end function
+
+function _track_helper_label(asm, label)
+  if typeof(label) != "string" or label == "" then return asm end if
+  if _starts_with_text(label, "fn_") == false then return asm end if
+  if _starts_with_text(label, "fn_user_") then return asm end if
+  if _starts_with_text(label, "fn_extern_") then return asm end if
+  if typeof(asm.tracked_helpers) != "array" then asm.tracked_helpers = [] end if
+  if _array_contains_text(asm.tracked_helpers, label) == false then
+    asm.tracked_helpers = asm.tracked_helpers + [label]
+  end if
+  return asm
+end function
+
+function _spill_before_call(asm)
+  live = asm.before_call_live_temps
+  if typeof(live) != "array" or len(live) <= 0 then return asm end if
+  for i = 0 to len(live) - 1
+    tmp = live[i]
+    if typeof(tmp) != "struct" then continue end if
+    if typeof(tmp.reg) != "string" or tmp.reg == "" then continue end if
+    if typeof(tmp.dirty) != "bool" or tmp.dirty == false then continue end if
+    asm = mov_membase_disp_r64(asm, "rsp", tmp.off, tmp.reg)
+    tmp.dirty = false
+  end for
   return asm
 end function
 
@@ -113,6 +181,92 @@ function _rid_any(name)
   if name == "r14" or name == "r14d" or name == "r14b" then return 14 end if
   if name == "r15" or name == "r15d" or name == "r15b" then return 15 end if
   return -1
+end function
+
+function _is_r8_name(name)
+  return name == "al" or name == "cl" or name == "dl" or name == "bl" or name == "spl" or name == "bpl" or name == "sil" or name == "dil" or name == "r8b" or name == "r9b" or name == "r10b" or name == "r11b" or name == "r12b" or name == "r13b" or name == "r14b" or name == "r15b"
+end function
+
+function _is_r32_name(name)
+  return name == "eax" or name == "ecx" or name == "edx" or name == "ebx" or name == "esp" or name == "ebp" or name == "esi" or name == "edi" or name == "r8d" or name == "r9d" or name == "r10d" or name == "r11d" or name == "r12d" or name == "r13d" or name == "r14d" or name == "r15d"
+end function
+
+function _is_force_rex_8(name)
+  return name == "spl" or name == "bpl" or name == "sil" or name == "dil"
+end function
+
+function _byte_at(asm, idx)
+  if typeof(idx) != "int" or idx < 0 or idx >= asm.size then return -1 end if
+  ci = idx >> 16
+  off = idx & 0xFFFF
+  pi = ci >> 8
+  po = ci & 0xFF
+  if pi < len(asm.chunk_pages) then
+    pg = asm.chunk_pages[pi]
+    if typeof(pg) == "array" and po >= 0 and po < len(pg) then
+      ch = pg[po]
+      if typeof(ch) == "bytes" and off >= 0 and off < len(ch) then return ch[off] end if
+    end if
+  else
+    ti = ci - (len(asm.chunk_pages) << 8)
+    if typeof(asm.chunk_tail) == "array" then
+      if ti >= 0 and ti < len(asm.chunk_tail) and typeof(asm.chunk_tail[ti]) == "bytes" then
+        ch2 = asm.chunk_tail[ti]
+        if off >= 0 and off < len(ch2) then return ch2[off] end if
+      end if
+    else
+      if typeof(asm.chunk_tail) == "struct" and typeof(asm.chunk_tail.data) == "array" then
+        tn = t.arr_chunk_tail_len(asm.chunk_tail)
+        if ti >= 0 and ti < tn and typeof(asm.chunk_tail.data[ti]) == "bytes" then
+          ch3 = asm.chunk_tail.data[ti]
+          if off >= 0 and off < len(ch3) then return ch3[off] end if
+        end if
+      end if
+    end if
+  end if
+  return -1
+end function
+
+function _patches_replace(asm, patches)
+  asm.patches_chunks = []
+  asm.patches_tail = []
+  if typeof(patches) != "array" then return asm end if
+  for i = 0 to len(patches) - 1
+    asm = _patch_push(asm, patches[i])
+  end for
+  return asm
+end function
+
+function _remove_patch_at(asm, idx)
+  patches = get_patches(asm)
+  if typeof(patches) != "array" then return asm end if
+  if idx < 0 or idx >= len(patches) then return asm end if
+  kept = []
+  for i = 0 to len(patches) - 1
+    if i != idx then
+      kept = kept + [patches[i]]
+    end if
+  end for
+  return _patches_replace(asm, kept)
+end function
+
+function _last_patch(asm)
+  tn = t.arr_chunk_tail_len(asm.patches_tail)
+  if tn <= 0 then return 0 end if
+  return t.arr_chunk_tail_get(asm.patches_tail, tn - 1, 0)
+end function
+
+function _drop_last_patch(asm)
+  tn = t.arr_chunk_tail_len(asm.patches_tail)
+  if tn <= 0 then return asm end if
+  if typeof(asm.patches_tail) == "array" then
+    asm.patches_tail = slice(asm.patches_tail, 0, tn - 1)
+    return asm
+  end if
+  if typeof(asm.patches_tail) == "struct" then
+    asm.patches_tail.used = tn - 1
+  end if
+  return asm
 end function
 
 function _chunk_count(asm)
@@ -196,6 +350,7 @@ function _set_chunk_byte(asm, idx, value)
 end function
 
 function _materialize_buffer(asm)
+  global _materialize_keepalive
   if typeof(asm.buf) == "bytes" and asm.buf_valid and len(asm.buf) == asm.size then
     return asm
   end if
@@ -205,8 +360,17 @@ function _materialize_buffer(asm)
     return asm
   end if
 
+  _materialize_keepalive = asm
   asm = _ensure_capacity(asm, asm.size)
-  buf_out = bytes(asm.size, 0)
+  asm_keep = asm
+  _materialize_keepalive = asm_keep
+  asm_keep = _keepalive_barrier(asm_keep)
+  chunk_n = _chunk_count(asm_keep)
+  if chunk_n < 0 then return asm_keep end if
+  size0 = asm_keep.size
+  buf_out = _alloc_zero_bytes_keepalive(asm_keep, size0)
+  asm = asm_keep
+  if typeof(_materialize_keepalive) == "struct" then asm = _materialize_keepalive end if
   cs = asm.chunk_size
   dst = 0
   ci = 0
@@ -224,6 +388,9 @@ function _materialize_buffer(asm)
   end while
   asm.buf = buf_out
   asm.buf_valid = true
+  asm.chunk_pages = []
+  asm.chunk_tail = []
+  _materialize_keepalive = 0
   return asm
 end function
 
@@ -392,7 +559,7 @@ function _scale_bits(scale)
   if scale == 2 then return 1 end if
   if scale == 4 then return 2 end if
   if scale == 8 then return 3 end if
-  return 0
+  return error(1, "Invalid SIB scale: " + scale)
 end function
 
 function _encode_mem_bis(reg_field, base_id, index_id, scale, disp)
@@ -402,7 +569,9 @@ function _encode_mem_bis(reg_field, base_id, index_id, scale, disp)
   if base_id >= 8 then rex_b = 1 end if
   rex_x = 0
   if index_id >= 8 then rex_x = 1 end if
-  if idx_lo == 4 then idx_lo = 0 end if
+  if idx_lo == 4 then
+    return error(1, "SIB index cannot be rsp/r12")
+  end if
 
   mod = 0
   disp_bytes = bytes(0)
@@ -429,6 +598,24 @@ function _encode_mem_bis(reg_field, base_id, index_id, scale, disp)
   return EncMem(rex_x, rex_b, tail)
 end function
 
+function _vex3(m, w, vvvv, l, pp, r, x, b)
+  rb = 1
+  if r != 0 then rb = 0 end if
+  xb = 1
+  if x != 0 then xb = 0 end if
+  bb = 1
+  if b != 0 then bb = 0 end if
+  b1 = (rb << 7) |(xb << 6) |(bb << 5) |(m & 0x1F)
+  v_field = 0xF
+  if vvvv == void then
+    v_field = 0xF
+  else
+    v_field = 0xF ^ (vvvv & 0xF)
+  end if
+  b2 = ((w & 1) << 7) |(v_field << 3) |((l & 1) << 2) |(pp & 0x3)
+  return _emit_bytes_u8(0xC4) + _emit_bytes_u8(b1) + _emit_bytes_u8(b2)
+end function
+
 function _xmm_id(name)
   if name == "xmm0" then return 0 end if
   if name == "xmm1" then return 1 end if
@@ -449,6 +636,26 @@ function _xmm_id(name)
   return -1
 end function
 
+function _ymm_id(name)
+  if name == "ymm0" then return 0 end if
+  if name == "ymm1" then return 1 end if
+  if name == "ymm2" then return 2 end if
+  if name == "ymm3" then return 3 end if
+  if name == "ymm4" then return 4 end if
+  if name == "ymm5" then return 5 end if
+  if name == "ymm6" then return 6 end if
+  if name == "ymm7" then return 7 end if
+  if name == "ymm8" then return 8 end if
+  if name == "ymm9" then return 9 end if
+  if name == "ymm10" then return 10 end if
+  if name == "ymm11" then return 11 end if
+  if name == "ymm12" then return 12 end if
+  if name == "ymm13" then return 13 end if
+  if name == "ymm14" then return 14 end if
+  if name == "ymm15" then return 15 end if
+  return -1
+end function
+
 function emit(asm, b)
   return _emit(asm, b)
 end function
@@ -466,6 +673,23 @@ function emit64(asm, x)
 end function
 
 function mark(asm, name)
+  here = pos(asm)
+  last_jump = []
+  if typeof(asm.peephole_last_jump) == "array" then last_jump = asm.peephole_last_jump end if
+  if len(last_jump) == 4 then
+    start = last_jump[0]
+    jend = last_jump[1]
+    target = last_jump[2]
+    disp_pos = last_jump[3]
+    if target == name and jend == here then
+      p = _last_patch(asm)
+      if typeof(p) == "struct" and p.pos == disp_pos and p.target == name then
+        asm = _drop_last_patch(asm)
+      end if
+      asm = _peephole_trim_tail(asm, jend - start)
+    end if
+  end if
+  asm.peephole_last_jump = []
   asm.labels = []
   asm = _label_push(asm, AsmLabel(name, pos(asm)))
   return asm
@@ -492,7 +716,7 @@ function finalize(asm)
       tgt = t.fastmap_get(label_pos_map, p.target, -1)
       if typeof(tgt) != "int" then tgt = -1 end if
       if tgt < 0 then
-        continue
+        return error(1, "Unknown label referenced in patch: " + p.target)
       end if
       disp = tgt -(p.pos + 4)
       b = t.u32(disp)
@@ -513,10 +737,21 @@ function nop(asm)
 end function
 
 function jmp(asm, label)
+  start = pos(asm)
   asm = _emit8(asm, 0xE9)
   p = pos(asm)
   asm = _emit32(asm, 0)
   asm = _patch_push(asm, AsmPatch(p, label, "rel32"))
+  asm.peephole_last_jump = [start, pos(asm), label, p]
+  return asm
+end function
+
+function jmp_r64(asm, reg)
+  r = _rid_any(reg)
+  if r < 0 then return asm end if
+  asm = _emit_rex(asm, 0, 0, 0, (r >> 3) & 1, false)
+  asm = _emit8(asm, 0xFF)
+  asm = _emit_modrm(asm, 3, 4, r & 7)
   return asm
 end function
 
@@ -541,9 +776,11 @@ function jcc(asm, cc, label)
   if op < 0 then return asm end if
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, op)
+  start = pos(asm) - 2
   p = pos(asm)
   asm = _emit32(asm, 0)
   asm = _patch_push(asm, AsmPatch(p, label, "rel32"))
+  asm.peephole_last_jump = [start, pos(asm), label, p]
   return asm
 end function
 
@@ -561,19 +798,43 @@ function ja(asm, label) return jcc(asm, "a", label) end function
 function jae(asm, label) return jcc(asm, "ae", label) end function
 
 function call(asm, label)
+  asm = _spill_before_call(asm)
   asm = _emit8(asm, 0xE8)
   p = pos(asm)
   asm = _emit32(asm, 0)
   asm = _patch_push(asm, AsmPatch(p, label, "rel32"))
   if typeof(label) == "string" then
     asm = _call_push(asm, label)
+    asm = _track_helper_label(asm, label)
   end if
   return asm
 end function
 
 function call_rax(asm)
+  asm = _spill_before_call(asm)
   asm = _emit8(asm, 0xFF)
   asm = _emit8(asm, 0xD0)
+  return asm
+end function
+
+function call_membase_disp(asm, base, disp)
+  asm = _spill_before_call(asm)
+  b = _rid_any(base)
+  if b < 0 then return asm end if
+  enc = _encode_mem(2, b, disp)
+  asm = _emit_rex(asm, 0, 0, enc.rex_x, enc.rex_b, false)
+  asm = _emit8(asm, 0xFF)
+  asm = _emit(asm, enc.tail)
+  return asm
+end function
+
+function call_rip_qword(asm, label)
+  asm = _spill_before_call(asm)
+  asm = _emit8(asm, 0xFF)
+  asm = _emit8(asm, 0x15)
+  p = pos(asm)
+  asm = _emit32(asm, 0)
+  asm = _patch_push(asm, AsmPatch(p, label, "rip32"))
   return asm
 end function
 
@@ -631,6 +892,17 @@ end function
 function pop_reg(asm, reg)
   rid = _rid_any(reg)
   if rid < 0 then return asm end if
+  push_len = 1
+  if rid >= 8 then push_len = 2 end if
+  if asm.size >= push_len then
+    start = asm.size - push_len
+    ok = true
+    if rid >= 8 and _byte_at(asm, start) != 0x41 then ok = false end if
+    if ok and _byte_at(asm, asm.size - 1) != 0x50 +(rid & 7) then ok = false end if
+    if ok then
+      return _peephole_trim_tail(asm, push_len)
+    end if
+  end if
   if rid >= 8 then
     asm = _emit8(asm, 0x41)
   end if
@@ -658,9 +930,25 @@ end function
 function mov_r64_imm64(asm, dst, imm)
   rd = _rid_any(dst)
   if rd < 0 then return asm end if
-  asm = _emit_rex(asm, 1, 0, 0, (rd >> 3) & 1, false)
+  rex_b = (rd >> 3) & 1
+  imm_v = imm
+  imm_u = imm & 0xFFFFFFFFFFFFFFFF
+  if imm_v >= 0 and imm_v <= 0xFFFFFFFF then
+    asm = _emit_rex(asm, 0, 0, 0, rex_b, false)
+    asm = _emit8(asm, 0xB8 +(rd & 7))
+    asm = _emit32(asm, imm_u)
+    return asm
+  end if
+  if imm_v < 0 and imm_v >= -2147483648 then
+    asm = _emit_rex(asm, 1, 0, 0, rex_b, false)
+    asm = _emit8(asm, 0xC7)
+    asm = _emit_modrm(asm, 3, 0, rd & 7)
+    asm = _emit32(asm, imm_u)
+    return asm
+  end if
+  asm = _emit_rex(asm, 1, 0, 0, rex_b, false)
   asm = _emit8(asm, 0xB8 +(rd & 7))
-  asm = _emit64(asm, imm)
+  asm = _emit64(asm, imm_u)
   return asm
 end function
 
@@ -679,6 +967,20 @@ function mov_rax_imm64(asm, imm)
   return mov_r64_imm64(asm, "rax", imm)
 end function
 
+function mov_r64_u64_hi_lo_exact(asm, dst, hi32, lo32)
+  rd = _rid_any(dst)
+  if rd < 0 then return asm end if
+  asm = _emit_rex(asm, 1, 0, 0, (rd >> 3) & 1, false)
+  asm = _emit8(asm, 0xB8 +(rd & 7))
+  asm = _emit32(asm, lo32)
+  asm = _emit32(asm, hi32)
+  return asm
+end function
+
+function mov_rax_u64_hi_lo_exact(asm, hi32, lo32)
+  return mov_r64_u64_hi_lo_exact(asm, "rax", hi32, lo32)
+end function
+
 function mov_rcx_imm32(asm, imm)
   return mov_r32_imm32(asm, "ecx", imm)
 end function
@@ -688,114 +990,159 @@ function mov_r8d_imm32(asm, imm)
 end function
 
 function mov_r64_r64(asm, dst, src)
+  if dst == src then return asm end if
   rd = _rid_any(dst)
   rs = _rid_any(src)
   if rd < 0 or rs < 0 then return asm end if
-  asm = _emit_rex(asm, 1, (rs >> 3) & 1, 0, (rd >> 3) & 1, false)
-  asm = _emit8(asm, 0x89)
-  asm = _emit_modrm(asm, 3, rs & 7, rd & 7)
+  asm = _emit_rex(asm, 1, (rd >> 3) & 1, 0, (rs >> 3) & 1, false)
+  asm = _emit8(asm, 0x8B)
+  asm = _emit_modrm(asm, 3, rd & 7, rs & 7)
   return asm
 end function
 
 function mov_r32_r32(asm, dst, src)
+  if dst == src then return asm end if
   rd = _rid_any(dst)
   rs = _rid_any(src)
   if rd < 0 or rs < 0 then return asm end if
-  asm = _emit_rex(asm, 0, (rs >> 3) & 1, 0, (rd >> 3) & 1, false)
-  asm = _emit8(asm, 0x89)
-  asm = _emit_modrm(asm, 3, rs & 7, rd & 7)
+  asm = _emit_rex(asm, 0, (rd >> 3) & 1, 0, (rs >> 3) & 1, false)
+  asm = _emit8(asm, 0x8B)
+  asm = _emit_modrm(asm, 3, rd & 7, rs & 7)
   return asm
 end function
 
 function mov_r8_r8(asm, dst, src)
+  if dst == src then return asm end if
   rd = _rid_any(dst)
   rs = _rid_any(src)
   if rd < 0 or rs < 0 then return asm end if
-  force = false
-  if dst == "spl" or dst == "bpl" or dst == "sil" or dst == "dil" then force = true end if
-  if src == "spl" or src == "bpl" or src == "sil" or src == "dil" then force = true end if
-  asm = _emit_rex(asm, 0, (rs >> 3) & 1, 0, (rd >> 3) & 1, force)
-  asm = _emit8(asm, 0x88)
-  asm = _emit_modrm(asm, 3, rs & 7, rd & 7)
+  if _is_r8_name(dst) == false or _is_r8_name(src) == false then return error(1, "mov_r8_r8 requires 8-bit registers") end if
+  force = _is_force_rex_8(dst) or _is_force_rex_8(src)
+  asm = _emit_rex(asm, 0, (rd >> 3) & 1, 0, (rs >> 3) & 1, force)
+  asm = _emit8(asm, 0x8A)
+  asm = _emit_modrm(asm, 3, rd & 7, rs & 7)
   return asm
 end function
 
-function _grp1_imm(asm, reg_name, subop, imm, w, imm8)
-  rd = _rid_any(reg_name)
+function _grp1_imm(asm, size, subop, rm, imm)
+  if size != 8 and size != 32 and size != 64 then return error(1, "Unsupported operand size for grp1") end if
+  rd = -1
+  opcode = 0
+  imm_bytes = bytes(0)
+  w = 0
+  if typeof(rm) == "string" then
+    rd = _rid_any(rm)
+  else
+    rd = rm
+  end if
   if rd < 0 then return asm end if
+  if size == 8 then
+    opcode = 0x80
+    imm_bytes = _emit_bytes_u8(imm)
+    w = 0
+  else
+    if _fits_i8(imm) then
+      opcode = 0x83
+      imm_bytes = _emit_bytes_u8(imm)
+    else
+      opcode = 0x81
+      imm_bytes = t.u32(imm)
+    end if
+    if size == 64 then w = 1 else w = 0 end if
+  end if
   asm = _emit_rex(asm, w, 0, 0, (rd >> 3) & 1, false)
-
-  if imm8 then
-    asm = _emit8(asm, 0x83)
-    asm = _emit_modrm(asm, 3, subop, rd & 7)
-    asm = _emit8(asm, imm)
-    return asm
-  end if
-
-  // `ADD rax/eax, imm` short form is only valid for exact register id 0.
-  // Do not apply it to extended registers like r8/r8d (their low 3 bits are also 0).
-  if subop == 0 and rd == 0 then
-    asm = _emit8(asm, 0x05)
-    asm = _emit32(asm, imm)
-    return asm
-  end if
-  asm = _emit8(asm, 0x81)
+  asm = _emit8(asm, opcode)
   asm = _emit_modrm(asm, 3, subop, rd & 7)
-  asm = _emit32(asm, imm)
+  asm = _emit(asm, imm_bytes)
   return asm
 end function
 
-function add_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 0, imm, 1, false) end function
-function sub_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 5, imm, 1, false) end function
-function and_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 4, imm, 1, false) end function
-function or_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 1, imm, 1, false) end function
-function xor_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 6, imm, 1, false) end function
-function cmp_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 7, imm, 1, false) end function
+function add_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 0, reg_name, imm) end function
+function sub_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 5, reg_name, imm) end function
+function and_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 4, reg_name, imm) end function
+function or_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 1, reg_name, imm) end function
+function xor_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 6, reg_name, imm) end function
+function cmp_r64_imm(asm, reg_name, imm)
+  if imm == 0 then
+    return test_r64_r64(asm, reg_name, reg_name)
+  end if
+  return _grp1_imm(asm, 64, 7, reg_name, imm)
+end function
 
-function add_r64_imm8(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 0, imm, 1, true) end function
-function sub_r64_imm8(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 5, imm, 1, true) end function
-function and_r64_imm8(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 4, imm, 1, true) end function
-function or_r64_imm8(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 1, imm, 1, true) end function
-function xor_r64_imm8(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 6, imm, 1, true) end function
-function cmp_r64_imm8(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 7, imm, 1, true) end function
+function add_r64_imm8(asm, reg_name, imm)
+  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
+  return add_r64_imm(asm, reg_name, imm)
+end function
+function sub_r64_imm8(asm, reg_name, imm)
+  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
+  return sub_r64_imm(asm, reg_name, imm)
+end function
+function and_r64_imm8(asm, reg_name, imm)
+  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
+  return and_r64_imm(asm, reg_name, imm)
+end function
+function or_r64_imm8(asm, reg_name, imm)
+  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
+  return or_r64_imm(asm, reg_name, imm)
+end function
+function xor_r64_imm8(asm, reg_name, imm)
+  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
+  return xor_r64_imm(asm, reg_name, imm)
+end function
+function cmp_r64_imm8(asm, reg_name, imm)
+  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
+  return cmp_r64_imm(asm, reg_name, imm)
+end function
 
-function add_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 0, imm, 0, false) end function
-function sub_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 5, imm, 0, false) end function
-function and_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 4, imm, 0, false) end function
-function or_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 1, imm, 0, false) end function
-function xor_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 6, imm, 0, false) end function
-function cmp_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 7, imm, 0, false) end function
-function cmp_r32_imm32(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 7, imm, 0, false) end function
-function cmp_r64_imm32(asm, reg_name, imm) return _grp1_imm(asm, reg_name, 7, imm, 1, false) end function
+function add_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 0, reg_name, imm) end function
+function sub_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 5, reg_name, imm) end function
+function and_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 4, reg_name, imm) end function
+function or_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 1, reg_name, imm) end function
+function xor_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 6, reg_name, imm) end function
+function cmp_r32_imm(asm, reg_name, imm)
+  if imm == 0 then
+    return test_r32_r32(asm, reg_name, reg_name)
+  end if
+  return _grp1_imm(asm, 32, 7, reg_name, imm)
+end function
+function cmp_r32_imm32(asm, reg_name, imm) return cmp_r32_imm(asm, reg_name, imm) end function
+function cmp_r64_imm32(asm, reg_name, imm) return cmp_r64_imm(asm, reg_name, imm) end function
 
 function _emit_bin_rr(asm, op, dst, src, w)
   rd = _rid_any(dst)
   rs = _rid_any(src)
   if rd < 0 or rs < 0 then return asm end if
-  asm = _emit_rex(asm, w, (rs >> 3) & 1, 0, (rd >> 3) & 1, false)
+  asm = _emit_rex(asm, w, (rd >> 3) & 1, 0, (rs >> 3) & 1, false)
   asm = _emit8(asm, op)
-  asm = _emit_modrm(asm, 3, rs & 7, rd & 7)
+  asm = _emit_modrm(asm, 3, rd & 7, rs & 7)
   return asm
 end function
 
-function add_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x01, dst, src, 1) end function
-function sub_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x29, dst, src, 1) end function
-function add_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x01, dst, src, 0) end function
-function sub_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x29, dst, src, 0) end function
-function xor_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x31, dst, src, 1) end function
-function xor_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x31, dst, src, 0) end function
-function and_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x21, dst, src, 1) end function
-function or_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x09, dst, src, 1) end function
-function and_r8_r8(asm, dst, src) return _emit_bin_rr(asm, 0x20, dst, src, 0) end function
-function or_r8_r8(asm, dst, src) return _emit_bin_rr(asm, 0x08, dst, src, 0) end function
+function add_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x03, dst, src, 1) end function
+function sub_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x2B, dst, src, 1) end function
+function add_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x03, dst, src, 0) end function
+function sub_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x2B, dst, src, 0) end function
+function xor_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x33, dst, src, 1) end function
+function xor_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x33, dst, src, 0) end function
+function and_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x23, dst, src, 1) end function
+function or_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x0B, dst, src, 1) end function
+function and_r8_r8(asm, dst, src) return _emit_bin_rr(asm, 0x22, dst, src, 0) end function
+function or_r8_r8(asm, dst, src) return _emit_bin_rr(asm, 0x0A, dst, src, 0) end function
 
-function cmp_r64_r64(asm, left, right) return _emit_bin_rr(asm, 0x39, left, right, 1) end function
-function cmp_r32_r32(asm, left, right) return _emit_bin_rr(asm, 0x39, left, right, 0) end function
+function cmp_r64_r64(asm, left, right) return _emit_bin_rr(asm, 0x3B, left, right, 1) end function
+function cmp_r32_r32(asm, left, right) return _emit_bin_rr(asm, 0x3B, left, right, 0) end function
 function test_r64_r64(asm, left, right) return _emit_bin_rr(asm, 0x85, left, right, 1) end function
 function test_r32_r32(asm, left, right) return _emit_bin_rr(asm, 0x85, left, right, 0) end function
 
 function test_r8_r8(asm, left, right)
-  return _emit_bin_rr(asm, 0x84, left, right, 0)
+  if _is_r8_name(left) == false or _is_r8_name(right) == false then return error(1, "test_r8_r8 requires 8-bit regs") end if
+  aa = _rid_any(left)
+  bb = _rid_any(right)
+  force = _is_force_rex_8(left) or _is_force_rex_8(right)
+  asm = _emit_rex(asm, 0, (bb >> 3) & 1, 0, (aa >> 3) & 1, force)
+  asm = _emit8(asm, 0x84)
+  asm = _emit_modrm(asm, 3, bb & 7, aa & 7)
+  return asm
 end function
 
 function setcc_r8(asm, cc, dst8)
@@ -816,11 +1163,10 @@ function setcc_r8(asm, cc, dst8)
   if cc == "np" then op = 0x9B end if
   if cc == "o" then op = 0x90 end if
   if cc == "no" then op = 0x91 end if
-  if op < 0 then return asm end if
+  if op < 0 then return error(1, "Unknown setcc: " + cc) end if
+  if _is_r8_name(dst8) == false then return error(1, "setcc_r8 requires an 8-bit register") end if
   rd = _rid_any(dst8)
-  if rd < 0 then return asm end if
-  force = false
-  if dst8 == "spl" or dst8 == "bpl" or dst8 == "sil" or dst8 == "dil" then force = true end if
+  force = _is_force_rex_8(dst8)
   asm = _emit_rex(asm, 0, 0, 0, (rd >> 3) & 1, force)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, op)
@@ -833,11 +1179,10 @@ function setcc_al(asm, cc)
 end function
 
 function movzx_r32_r8(asm, dst, src8)
+  if _is_r32_name(dst) == false or _is_r8_name(src8) == false then return error(1, "movzx_r32_r8 requires (r32, r8)") end if
   rd = _rid_any(dst)
   rs = _rid_any(src8)
-  if rd < 0 or rs < 0 then return asm end if
-  force = false
-  if src8 == "spl" or src8 == "bpl" or src8 == "sil" or src8 == "dil" then force = true end if
+  force = _is_force_rex_8(src8)
   asm = _emit_rex(asm, 0, (rd >> 3) & 1, 0, (rs >> 3) & 1, force)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0xB6)
@@ -879,6 +1224,7 @@ function shr_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 5, reg_na
 function sar_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 7, reg_name, imm, 1) end function
 function shl_r32_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 4, reg_name, imm, 0) end function
 function sar_r32_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 7, reg_name, imm, 0) end function
+function shr_r32_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 5, reg_name, imm, 0) end function
 
 function sar_rax_imm8(asm, imm) return sar_r64_imm8(asm, "rax", imm) end function
 function shl_rax_imm8(asm, imm) return shl_r64_imm8(asm, "rax", imm) end function
@@ -1004,11 +1350,11 @@ function mov_membase_disp_r32(asm, base, disp, src)
 end function
 
 function mov_r8_membase_disp(asm, dst, base, disp)
+  if _is_r8_name(dst) == false then return error(1, "mov_r8_membase_disp requires an 8-bit dst register") end if
   d = _rid_any(dst)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  force = false
-  if dst == "spl" or dst == "bpl" or dst == "sil" or dst == "dil" then force = true end if
+  force = _is_force_rex_8(dst)
   enc = _encode_mem(d & 7, b, disp)
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
@@ -1019,11 +1365,11 @@ function mov_r8_membase_disp(asm, dst, base, disp)
 end function
 
 function mov_membase_disp_r8(asm, base, disp, src)
+  if _is_r8_name(src) == false then return error(1, "mov_membase_disp_r8 requires an 8-bit src register") end if
   sreg = _rid_any(src)
   b = _rid_any(base)
   if sreg < 0 or b < 0 then return asm end if
-  force = false
-  if src == "spl" or src == "bpl" or src == "sil" or src == "dil" then force = true end if
+  force = _is_force_rex_8(src)
   enc = _encode_mem(sreg & 7, b, disp)
   rex_r = 0
   if sreg >= 8 then rex_r = 1 end if
@@ -1089,8 +1435,7 @@ end function
 function _grp1_r8_imm8(asm, subop, reg8, imm)
   r = _rid_any(reg8)
   if r < 0 then return asm end if
-  force = false
-  if reg8 == "spl" or reg8 == "bpl" or reg8 == "sil" or reg8 == "dil" then force = true end if
+  force = _is_force_rex_8(reg8)
   asm = _emit_rex(asm, 0, 0, 0, (r >> 3) & 1, force)
   asm = _emit8(asm, 0x80)
   asm = _emit_modrm(asm, 3, subop, r & 7)
@@ -1122,11 +1467,11 @@ function test_r64_imm32(asm, reg_name, imm)
 end function
 
 function cmp_r8_membase_disp(asm, reg8, base, disp)
+  if _is_r8_name(reg8) == false then return error(1, "cmp_r8_membase_disp requires an 8-bit reg") end if
   r = _rid_any(reg8)
   b = _rid_any(base)
   if r < 0 or b < 0 then return asm end if
-  force = false
-  if reg8 == "spl" or reg8 == "bpl" or reg8 == "sil" or reg8 == "dil" then force = true end if
+  force = _is_force_rex_8(reg8)
   enc = _encode_mem(r & 7, b, disp)
   rex_r = 0
   if r >= 8 then rex_r = 1 end if
@@ -1148,6 +1493,7 @@ function cmp_membase_disp_imm8(asm, base, disp, imm)
 end function
 
 function movzx_r32_membase_disp(asm, dst32, base, disp)
+  if _is_r32_name(dst32) == false then return error(1, "movzx_r32_membase_disp requires 32-bit dst") end if
   d = _rid_any(dst32)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
@@ -1158,6 +1504,21 @@ function movzx_r32_membase_disp(asm, dst32, base, disp)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0xB6)
   asm = _emit(asm, enc.tail)
+  return asm
+end function
+
+function bsf_r32_r32(asm, dst32, src32)
+  if _is_r32_name(dst32) == false or _is_r32_name(src32) == false then return error(1, "bsf_r32_r32 requires (r32, r32)") end if
+  d = _rid_any(dst32)
+  s = _rid_any(src32)
+  rex_r = 0
+  if d >= 8 then rex_r = 1 end if
+  rex_b = 0
+  if s >= 8 then rex_b = 1 end if
+  asm = _emit_rex(asm, 0, rex_r, 0, rex_b, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xBC)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
   return asm
 end function
 
@@ -1412,6 +1773,12 @@ function imul_r64_r64_imm(asm, dst, src, imm)
   sreg = _rid_any(src)
   if d < 0 or sreg < 0 then return asm end if
   asm = _emit_rex(asm, 1, (d >> 3) & 1, 0, (sreg >> 3) & 1, false)
+  if imm >= -128 and imm <= 127 then
+    asm = _emit8(asm, 0x6B)
+    asm = _emit_modrm(asm, 3, d & 7, sreg & 7)
+    asm = _emit8(asm, imm)
+    return asm
+  end if
   asm = _emit8(asm, 0x69)
   asm = _emit_modrm(asm, 3, d & 7, sreg & 7)
   asm = _emit32(asm, imm)
@@ -1445,6 +1812,45 @@ end function
 function rep_movsb(asm)
   asm = _emit8(asm, 0xF3)
   asm = _emit8(asm, 0xA4)
+  return asm
+end function
+
+function rep_movsq(asm)
+  asm = _emit8(asm, 0xF3)
+  asm = _emit8(asm, 0x48)
+  asm = _emit8(asm, 0xA5)
+  return asm
+end function
+
+function rep_stosb(asm)
+  asm = _emit8(asm, 0xF3)
+  asm = _emit8(asm, 0xAA)
+  return asm
+end function
+
+function rep_stosq(asm)
+  asm = _emit8(asm, 0xF3)
+  asm = _emit8(asm, 0x48)
+  asm = _emit8(asm, 0xAB)
+  return asm
+end function
+
+function repe_cmpsb(asm)
+  asm = _emit8(asm, 0xF3)
+  asm = _emit8(asm, 0xA6)
+  return asm
+end function
+
+function cpuid(asm)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xA2)
+  return asm
+end function
+
+function xgetbv(asm)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x01)
+  asm = _emit8(asm, 0xD0)
   return asm
 end function
 
@@ -1490,6 +1896,7 @@ function xorpd_xmm_xmm(asm, dst_xmm, src_xmm)
 end function
 
 function movapd_xmm_xmm(asm, dst_xmm, src_xmm)
+  if dst_xmm == src_xmm then return asm end if
   return _emit_sse_rr(asm, 0x66, -1, 0x28, dst_xmm, src_xmm)
 end function
 
@@ -1569,7 +1976,176 @@ function movq_xmm_r64(asm, dst_xmm, src_reg)
   return asm
 end function
 
+function movd_r32_xmm(asm, dst, src)
+  if _is_r32_name(dst) == false then return error(1, "movd_r32_xmm requires 32-bit dst") end if
+  d = _rid_any(dst)
+  s = _xmm_id(src)
+  if d < 0 or s < 0 then return asm end if
+  asm = _emit8(asm, 0x66)
+  asm = _emit_rex(asm, 0, (s >> 3) & 1, 0, (d >> 3) & 1, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x7E)
+  asm = _emit_modrm(asm, 3, s & 7, d & 7)
+  return asm
+end function
+
+function movdqu_xmm_membase_disp(asm, dst, base, disp)
+  d = _xmm_id(dst)
+  b = _rid_any(base)
+  if d < 0 or b < 0 then return asm end if
+  enc = _encode_mem(d & 7, b, disp)
+  asm = _emit8(asm, 0xF3)
+  asm = _emit_rex(asm, 0, (d >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x6F)
+  asm = _emit(asm, enc.tail)
+  return asm
+end function
+
+function movdqu_membase_disp_xmm(asm, base, disp, src)
+  s = _xmm_id(src)
+  b = _rid_any(base)
+  if s < 0 or b < 0 then return asm end if
+  enc = _encode_mem(s & 7, b, disp)
+  asm = _emit8(asm, 0xF3)
+  asm = _emit_rex(asm, 0, (s >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x7F)
+  asm = _emit(asm, enc.tail)
+  return asm
+end function
+
+function pxor_xmm_xmm(asm, dst, src)
+  return _emit_sse_rr(asm, 0x66, -1, 0xEF, dst, src)
+end function
+
+function pcmpeqb_xmm_xmm(asm, dst, src)
+  return _emit_sse_rr(asm, 0x66, -1, 0x74, dst, src)
+end function
+
+function pcmpeqw_xmm_xmm(asm, dst, src)
+  return _emit_sse_rr(asm, 0x66, -1, 0x75, dst, src)
+end function
+
+function pmovmskb_r32_xmm(asm, dst32, src)
+  if _is_r32_name(dst32) == false then return error(1, "pmovmskb_r32_xmm requires 32-bit dst") end if
+  d = _rid_any(dst32)
+  s = _xmm_id(src)
+  if d < 0 or s < 0 then return asm end if
+  asm = _emit8(asm, 0x66)
+  asm = _emit_rex(asm, 0, (d >> 3) & 1, 0, (s >> 3) & 1, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xD7)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+function punpcklqdq_xmm_xmm(asm, dst, src)
+  return _emit_sse_rr(asm, 0x66, -1, 0x6C, dst, src)
+end function
+
+function cvtsd2ss_xmm_xmm(asm, dst, src)
+  d = _xmm_id(dst)
+  s = _xmm_id(src)
+  if d < 0 or s < 0 then return asm end if
+  asm = _emit8(asm, 0xF2)
+  asm = _emit_rex(asm, 0, (d >> 3) & 1, 0, (s >> 3) & 1, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x5A)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+function cvtss2sd_xmm_xmm(asm, dst, src)
+  d = _xmm_id(dst)
+  s = _xmm_id(src)
+  if d < 0 or s < 0 then return asm end if
+  asm = _emit8(asm, 0xF3)
+  asm = _emit_rex(asm, 0, (d >> 3) & 1, 0, (s >> 3) & 1, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x5A)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+function vmovdqu_ymm_membase_disp(asm, dst, base, disp)
+  d = _ymm_id(dst)
+  b = _rid_any(base)
+  if d < 0 or b < 0 then return asm end if
+  enc = _encode_mem(d & 7, b, disp)
+  asm = _emit(asm, _vex3(1, 0, void, 1, 2, (d >> 3) & 1, enc.rex_x, enc.rex_b))
+  asm = _emit8(asm, 0x6F)
+  asm = _emit(asm, enc.tail)
+  return asm
+end function
+
+function vmovdqu_membase_disp_ymm(asm, base, disp, src)
+  s = _ymm_id(src)
+  b = _rid_any(base)
+  if s < 0 or b < 0 then return asm end if
+  enc = _encode_mem(s & 7, b, disp)
+  asm = _emit(asm, _vex3(1, 0, void, 1, 2, (s >> 3) & 1, enc.rex_x, enc.rex_b))
+  asm = _emit8(asm, 0x7F)
+  asm = _emit(asm, enc.tail)
+  return asm
+end function
+
+function vpcmpeqb_ymm_ymm_ymm(asm, dst, src1, src2)
+  d = _ymm_id(dst)
+  s1 = _ymm_id(src1)
+  s2 = _ymm_id(src2)
+  if d < 0 or s1 < 0 or s2 < 0 then return asm end if
+  asm = _emit(asm, _vex3(1, 0, s1, 1, 1, (d >> 3) & 1, 0, (s2 >> 3) & 1))
+  asm = _emit8(asm, 0x74)
+  asm = _emit_modrm(asm, 3, d & 7, s2 & 7)
+  return asm
+end function
+
+function vpcmpeqw_ymm_ymm_ymm(asm, dst, src1, src2)
+  d = _ymm_id(dst)
+  s1 = _ymm_id(src1)
+  s2 = _ymm_id(src2)
+  if d < 0 or s1 < 0 or s2 < 0 then return asm end if
+  asm = _emit(asm, _vex3(1, 0, s1, 1, 1, (d >> 3) & 1, 0, (s2 >> 3) & 1))
+  asm = _emit8(asm, 0x75)
+  asm = _emit_modrm(asm, 3, d & 7, s2 & 7)
+  return asm
+end function
+
+function vpmovmskb_r32_ymm(asm, dst32, src)
+  if _is_r32_name(dst32) == false then return error(1, "vpmovmskb_r32_ymm requires 32-bit dst") end if
+  d = _rid_any(dst32)
+  s = _ymm_id(src)
+  if d < 0 or s < 0 then return asm end if
+  asm = _emit(asm, _vex3(1, 0, void, 1, 1, (d >> 3) & 1, 0, (s >> 3) & 1))
+  asm = _emit8(asm, 0xD7)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+function vpxor_ymm_ymm_ymm(asm, dst, src1, src2)
+  d = _ymm_id(dst)
+  s1 = _ymm_id(src1)
+  s2 = _ymm_id(src2)
+  if d < 0 or s1 < 0 or s2 < 0 then return asm end if
+  asm = _emit(asm, _vex3(1, 0, s1, 1, 1, (d >> 3) & 1, 0, (s2 >> 3) & 1))
+  asm = _emit8(asm, 0xEF)
+  asm = _emit_modrm(asm, 3, d & 7, s2 & 7)
+  return asm
+end function
+
+function vzeroupper(asm)
+  asm = _emit8(asm, 0xC5)
+  asm = _emit8(asm, 0xF8)
+  asm = _emit8(asm, 0x77)
+  return asm
+end function
+
 function _peephole_trim_tail(asm, n)
+  if typeof(n) != "int" or n <= 0 then return asm end if
+  if typeof(asm.size) != "int" or asm.size < n then return asm end if
+  asm.size = asm.size - n
+  asm.buf_valid = false
   return asm
 end function
 
@@ -1582,7 +2158,18 @@ function disable_listing(asm)
 end function
 
 function gpr(name)
-  return _rid_any(name)
+  if _is_r8_name(name) then
+    rid = _rid_any(name)
+    return GPR(rid, 8, _is_force_rex_8(name))
+  end if
+  if _is_r32_name(name) then
+    return GPR(_rid_any(name), 32, false)
+  end if
+  rd = _rid_any(name)
+  if rd >= 0 then
+    return GPR(rd, 64, false)
+  end if
+  return error(1, "Unknown register: " + name)
 end function
 
 function _rex(w, r, x, b, force)
