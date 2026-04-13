@@ -17,6 +17,7 @@
 import std.assert as a
 import std.core as c
 import std.string as s
+import std.string_builder as sb
 import std.bytes as b
 import std.encoding.hex as hx
 import std.encoding.base64 as b64
@@ -31,6 +32,7 @@ import std.ds.stack as stack
 import std.ds.queue as queue
 import std.ds.hashmap as hm
 import std.ds.set as hset
+import std.ds.list as list
 import std.net as net
 
 function _assertNotError(v, msg)
@@ -84,6 +86,11 @@ function test_core_assert_result()
 end function
 
 function test_string_hex_bytes()
+  chk(a.assertEq(str(123), "123", "string: str int"))
+  chk(a.assertEq(str(true), "true", "string: str bool"))
+  chk(a.assertEq(str("abc"), "abc", "string: str string"))
+  chk(a.assertEq(s.repeat("ab", 3), "ababab", "string: repeat"))
+  chk(a.assertEq(s.substr("hello", 1, 3), "ell", "string: substr"))
   chk(a.assertEq(s.trim("  hi  "), "hi", "string: trim"))
   chk(a.assertTrue(s.startsWith("hello", "he"), "string: startsWith"))
   chk(a.assertTrue(s.endsWith("hello", "lo"), "string: endsWith"))
@@ -93,6 +100,13 @@ function test_string_hex_bytes()
   chk(a.assertEq(parts[1], "b", "string: split item"))
   chk(a.assertEq(s.join(["a", "b"], "-"), "a-b", "string: join"))
   chk(a.assertEq(s.replaceAll("aaab", "a", "x"), "xxxb", "string: replaceAll"))
+  chk(a.assertEq(s.replaceFirst("aaab", "a", "x"), "xaab", "string: replaceFirst"))
+  longHay = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxabcdefghijklmno---abcdefghijklmno"
+  longNeedle = "abcdefghijklmno"
+  chk(a.assertEq(s.indexOf(longHay, longNeedle, 0), 32, "string: indexOf long first"))
+  chk(a.assertEq(s.indexOf(longHay, longNeedle, 33), 50, "string: indexOf long next"))
+  chk(a.assertEq(s.lastIndexOf(longHay, longNeedle), 50, "string: lastIndexOf long"))
+  chk(a.assertTrue(s.contains(longHay, longNeedle), "string: contains"))
 
   // new string helpers
   chk(a.assertTrue(s.isBlank(" \t\r\n"), "string: isBlank"))
@@ -117,6 +131,20 @@ function test_string_hex_bytes()
   chk(a.assertTrue(b.equals(fromHex("0011"), fromHex("00 11")), "bytes: equals"))
   chk(a.assertTrue(b.ctEquals(fromHex("deadbeef"), fromHex("DE AD BE EF")), "bytes: ctEquals"))
   chk(a.assertFalse(b.ctEquals(fromHex("00"), fromHex("00 00")), "bytes: ctEquals len mismatch"))
+  chk(a.assertTrue(b.startsWith(fromHex("00112233"), fromHex("0011")), "bytes: startsWith"))
+  chk(a.assertTrue(b.endsWith(fromHex("00112233"), fromHex("2233")), "bytes: endsWith"))
+  bh = bytes(longHay)
+  bn = bytes(longNeedle)
+  chk(a.assertEq(b.indexOf(fromHex("0011221122"), fromHex("1122"), 0), 1, "bytes: indexOf short first"))
+  chk(a.assertEq(b.lastIndexOf(fromHex("0011221122"), fromHex("1122")), 3, "bytes: lastIndexOf short last"))
+  chk(a.assertEq(b.indexOf(bh, bn, 0), 32, "bytes: indexOf long first"))
+  chk(a.assertEq(b.indexOf(bh, bn, 33), 50, "bytes: indexOf long next"))
+  chk(a.assertEq(b.compare(fromHex("0011"), fromHex("0011")), 0, "bytes: compare eq"))
+  chk(a.assertEq(b.compare(fromHex("0011"), fromHex("0012")), -1, "bytes: compare lt"))
+  chk(a.assertEq(b.compare(fromHex("0013"), fromHex("0012")), 1, "bytes: compare gt"))
+  fillBuf = bytes(6, 0)
+  b.fill(fillBuf, 0xAB)
+  chk(a.assertEq(hex(fillBuf), "abababababab", "bytes: fill"))
 
   // bytes base64 helpers
   b64s = b64.toBase64(bytes("Hello"))
@@ -140,6 +168,30 @@ function test_string_hex_bytes()
   chk(a.assertEq(hex(x3), "ff11dd33", "bytes: xor"))
   b.xorInPlace(x1, x2)
   chk(a.assertEq(hex(x1), "ff11dd33", "bytes: xorInPlace"))
+end function
+
+function test_string_builder()
+  bld = sb.StringBuilder.new()
+  chk(a.assertEq(bld.len(), 0, "stringBuilder: len initial"))
+  bld.appendString("hello")
+  bld.appendString(" ")
+  bld.append(123)
+  chk(a.assertEq(bld.toString(), "hello 123", "stringBuilder: append"))
+  bld.appendLine("!")
+  chk(a.assertEq(bld.toString(), "hello 123!\n", "stringBuilder: appendLine"))
+  bld.clear()
+  chk(a.assertEq(bld.len(), 0, "stringBuilder: len clear"))
+  chk(a.assertEq(bld.toString(), "", "stringBuilder: clear"))
+
+  bld2 = sb.StringBuilder.withCapacity(2)
+  bld2.appendString("ab")
+  bld2.appendString("cd")
+  bld2.appendString("ef")
+  chk(a.assertEq(bld2.toString(), "abcdef", "stringBuilder: growth"))
+
+  bld3 = sb.StringBuilder.new()
+  bld3.appendSlice("abcdef", 1, 3)
+  chk(a.assertEq(bld3.toString(), "bcd", "stringBuilder: appendSlice"))
 end function
 
 function test_array_sort_random()
@@ -195,6 +247,25 @@ end function
 function test_math_fmt_time()
   chk(a.assertEq(m.abs(-5), 5, "math: abs int"))
   chk(a.assertEq(m.abs(-3.5), 3.5, "math: abs float"))
+  chk(a.assertEq(typeof(1.5), "float", "float: immediate literal type"))
+  chk(a.assertEq(1.5 + 2.25, 3.75, "float: immediate add"))
+  chk(a.assertTrue(1.5 == 1.5, "float: immediate equality"))
+  chk(a.assertEq(toNumber("1.5"), 1.5, "float: parsed immediate value"))
+  chk(a.assertEq(typeof(toNumber("1.5")), "float", "float: parsed immediate type"))
+  chk(a.assertEq(toFloat("2.0"), 2.0, "float: toFloat exact string value"))
+  chk(a.assertEq(typeof(toFloat("2.0")), "float", "float: toFloat exact string type"))
+  chk(a.assertEq(typeof(toFloat(2)), "float", "float: toFloat int type"))
+  chk(a.assertEq(1.500000000000001, 1.500000000000001, "float: boxed fallback exact value"))
+  chk(a.assertEq(typeof(1.500000000000001), "float", "float: boxed fallback type"))
+  chk(a.assertEq(typeof(m.floor(2.0)), "float", "math: floor exact float type"))
+  chk(a.assertEq(m.floor(2.0), 2.0, "math: floor exact float value"))
+  chk(a.assertEq(typeof(m.ceil(2.0)), "float", "math: ceil exact float type"))
+  chk(a.assertEq(m.ceil(-2.9), -2, "math: ceil negative"))
+  chk(a.assertEq(typeof(m.trunc(2.0)), "int", "math: trunc exact float type"))
+  chk(a.assertEq(m.trunc(-2.9), -2, "math: trunc negative"))
+  chk(a.assertEq(typeof(m.round(2.0)), "int", "math: round exact float type"))
+  chk(a.assertEq(m.round(2.5), 3, "math: round half away +"))
+  chk(a.assertEq(m.round(-2.5), -3, "math: round half away -"))
   chk(a.assertEq(m.sign(-7), -1, "math: sign -"))
   chk(a.assertEq(m.sign(0), 0, "math: sign 0"))
   chk(a.assertEq(m.sign(9), 1, "math: sign +"))
@@ -216,6 +287,7 @@ function test_math_fmt_time()
   chk(a.assertEq(fmt.padRight("x", 3, "."), "x..", "fmt: padRight"))
   chk(a.assertEq(fmt.center("x", 3, "."), ".x.", "fmt: center"))
   chk(a.assertEq(fmt.quote("a\"b"), "\"a\\\"b\"", "fmt: quote"))
+  chk(a.assertEq(fmt.quote("a\\b\n"), "\"a\\\\b\\n\"", "fmt: quote escapes"))
   chk(a.assertEq(fmt.repeat("ab", 3), "ababab", "fmt: repeat"))
 
   t1 = t.ticks()
@@ -277,6 +349,11 @@ function test_fs_io()
   chk(_assertNotError(rtxt, "fs: readAllText ok"))
   chk(a.assertTrue(s.startsWith(rtxt, "hello"), "fs: readAllText content"))
 
+  names = try(fs.listDir("."))
+  chk(_assertNotError(names, "fs: listDir ok"))
+  chk(a.assertTrue(arr.contains(names, p_txt), "fs: listDir contains txt"))
+  chk(a.assertTrue(arr.contains(names, p_bin) == false, "fs: listDir before bin"))
+
   lines = try(fs.readAllLines(p_txt))
   chk(_assertNotError(lines, "fs: readAllLines ok"))
   chk(a.assertEq(lines[0], "hello", "fs: readAllLines[0]"))
@@ -289,6 +366,10 @@ function test_fs_io()
   rb = try(fs.readAllBytes(p_bin))
   chk(_assertNotError(rb, "fs: readAllBytes ok"))
   chk(a.assertEq(hex(rb), "0011aaff", "fs: bytes roundtrip"))
+
+  names2 = try(fs.listDir("."))
+  chk(_assertNotError(names2, "fs: listDir after bin"))
+  chk(a.assertTrue(arr.contains(names2, p_bin), "fs: listDir contains bin"))
 
   // file size
   sz = try(fs.fileSize(p_bin))
@@ -343,6 +424,45 @@ function test_base64_ds()
   chk(a.assertEq(st.len(), 3, "stack: len"))
   chk(a.assertEq(st.peekOr(0), 3, "stack: peekOr"))
   chk(a.assertEq(st.popOr(0), 3, "stack: popOr"))
+  chk(a.assertEq(st.popOr(0), 2, "stack: popOr2"))
+  chk(a.assertEq(st.popOr(0), 1, "stack: popOr3"))
+  chk(a.assertTrue(st.isEmpty(), "stack: empty after pops"))
+
+  // growth + LIFO under larger load
+  for i = 0 to 255
+    st.push(i)
+  end for
+  chk(a.assertEq(st.len(), 256, "stack: len after growth"))
+  chk(a.assertEq(st.peekOr(0), 255, "stack: peek after growth"))
+
+  okLifo = true
+  i = 255
+  while i >= 0
+    v = st.pop()
+    if v != i then
+      okLifo = false
+    end if
+    i = i - 1
+  end while
+  chk(a.assertTrue(okLifo, "stack: lifo after growth"))
+  chk(a.assertTrue(st.isEmpty(), "stack: empty after growth pops"))
+
+  // fromArray / toArray
+  st2 = stack.Stack.fromArray([9, 8, 7])
+  chk(a.assertEq(st2.len(), 3, "stack: fromArray len"))
+  chk(a.assertEq(st2.popOr(0), 7, "stack: fromArray pop"))
+  st2Arr = st2.toArray()
+  chk(a.assertEq(len(st2Arr), 2, "stack: toArray len"))
+  chk(a.assertEq(st2Arr[0], 9, "stack: toArray[0]"))
+  chk(a.assertEq(st2Arr[1], 8, "stack: toArray[1]"))
+
+  // direct constructor compatibility (legacy payload shape)
+  legacy = stack.Stack([4, 5])
+  legacy.push(6)
+  chk(a.assertEq(legacy.popOr(0), 6, "stack: legacy ctor push/pop"))
+  chk(a.assertEq(legacy.popOr(0), 5, "stack: legacy ctor pop2"))
+  chk(a.assertEq(legacy.popOr(0), 4, "stack: legacy ctor pop3"))
+  chk(a.assertTrue(legacy.isEmpty(), "stack: legacy ctor empty"))
 
   // ds.queue
   q = queue.Queue.new()
@@ -360,12 +480,46 @@ function test_base64_ds()
   chk(a.assertEq(mp.get(1), "x", "hashmap: get"))
   chk(a.assertTrue(mp.delete(1), "hashmap: delete"))
   chk(a.assertFalse(mp.has(1), "hashmap: has after delete"))
+  chk(a.assertTrue(mp.set("alpha", 123), "hashmap: string set"))
+  chk(a.assertTrue(mp.has("alpha"), "hashmap: string has"))
+  chk(a.assertEq(mp.get("alpha"), 123, "hashmap: string get"))
+  chk(a.assertTrue(mp.delete("alpha"), "hashmap: string delete"))
+  chk(a.assertFalse(mp.has("alpha"), "hashmap: string has after delete"))
 
   hs = hset.HashSet.new()
   chk(a.assertTrue(hs.add(10), "set: add"))
   chk(a.assertTrue(hs.has(10), "set: has"))
   chk(a.assertTrue(hs.delete(10), "set: delete"))
   chk(a.assertFalse(hs.has(10), "set: has after delete"))
+  chk(a.assertTrue(hs.add("beta"), "set: string add"))
+  chk(a.assertTrue(hs.has("beta"), "set: string has"))
+  chk(a.assertTrue(hs.delete("beta"), "set: string delete"))
+  chk(a.assertFalse(hs.has("beta"), "set: string has after delete"))
+
+  // ds.list
+  lst = list.List.new()
+  chk(a.assertTrue(lst.isEmpty(), "list: isEmpty"))
+  lst.add(1)
+  lst.push(2)
+  lst.addAll([3, 4])
+  chk(a.assertEq(lst.len(), 4, "list: len after addAll"))
+  chk(a.assertEq(lst.first(), 1, "list: first"))
+  chk(a.assertEq(lst.last(), 4, "list: last"))
+  chk(a.assertEq(lst.get(1), 2, "list: get"))
+  chk(a.assertTrue(lst.set(1, 20), "list: set ok"))
+  chk(a.assertEq(lst.get(1), 20, "list: set value"))
+  chk(a.assertTrue(lst.insert(2, 99), "list: insert"))
+  chk(a.assertEq(lst.toArray(), [1, 20, 99, 3, 4], "list: toArray after insert"))
+  chk(a.assertEq(lst.removeAt(2), 99, "list: removeAt"))
+  chk(a.assertEq(lst.popOr(-1), 4, "list: popOr"))
+  chk(a.assertEq(lst.toArray(), [1, 20, 3], "list: toArray final"))
+  lst.reserve(64)
+  chk(a.assertEq(lst.len(), 3, "list: len after reserve"))
+  lst.clear()
+  chk(a.assertTrue(lst.isEmpty(), "list: clear"))
+  lst2 = list.List.fromArray(["a", "b", "c"])
+  chk(a.assertEq(lst2.pop(), "c", "list: fromArray pop"))
+  chk(a.assertEq(lst2.toArray(), ["a", "b"], "list: fromArray toArray"))
 end function
 
 function _tcpListenAny(backlog)
@@ -527,6 +681,7 @@ function main(args)
 
   test_core_assert_result()
   test_string_hex_bytes()
+  test_string_builder()
   test_array_sort_random()
   test_math_fmt_time()
   test_fs_io()
@@ -541,4 +696,3 @@ function main(args)
   print "=== STDLIB: FAIL ==="
   return 1
 end function
-

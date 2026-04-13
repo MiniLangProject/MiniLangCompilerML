@@ -1001,6 +1001,10 @@ function _parse_int_literal(raw)
   return toNumber(raw)
 end function
 
+function _parse_float_literal(raw)
+  return toFloat(raw)
+end function
+
 function _precedence(op)
   if op == "or" then return 1 end if
   if op == "and" then return 2 end if
@@ -1065,7 +1069,7 @@ function _parse_primary()
     sp = t.pos
     _advance()
     if _match_number_has_dot(t.value) then
-      return Num("Num", toNumber(t.value), sp, _filename)
+      return Num("Num", _parse_float_literal(t.value), sp, _filename)
     end if
     return Num("Num", _parse_int_literal(t.value), sp, _filename)
   end if

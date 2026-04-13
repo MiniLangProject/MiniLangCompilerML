@@ -1660,6 +1660,26 @@ function mov_rip_qword_r11(asm, label)
   return asm
 end function
 
+function mov_rip_qword_r8(asm, label)
+  asm = _emit_rex(asm, 1, 1, 0, 0, false)
+  asm = _emit8(asm, 0x89)
+  asm = _emit8(asm, 0x05)
+  p = pos(asm)
+  asm = _emit32(asm, 0)
+  asm = _patch_push(asm, AsmPatch(p, label, "rip32"))
+  return asm
+end function
+
+function mov_rip_qword_r9(asm, label)
+  asm = _emit_rex(asm, 1, 1, 0, 0, false)
+  asm = _emit8(asm, 0x89)
+  asm = _emit8(asm, 0x0D)
+  p = pos(asm)
+  asm = _emit32(asm, 0)
+  asm = _patch_push(asm, AsmPatch(p, label, "rip32"))
+  return asm
+end function
+
 function mov_r64_mem_bis(asm, dst, base, index_reg, scale, disp)
   d = _rid_any(dst)
   b = _rid_any(base)

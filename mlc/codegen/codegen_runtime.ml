@@ -123,6 +123,29 @@ function _emit_normalize_xmm0_to_value(state)
   return state
 end function
 
+function _emit_force_xmm0_to_float_value(state)
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_box = "forcef_box_" + lid
+  l_end = "forcef_end_" + lid
+
+  state.asm = a.cvtsd2ss_xmm_xmm(state.asm, "xmm2", "xmm0")
+  state.asm = a.cvtss2sd_xmm_xmm(state.asm, "xmm3", "xmm2")
+  state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm3")
+  state.asm = a.jcc(state.asm, "ne", l_box)
+  state.asm = a.jcc(state.asm, "p", l_box)
+  state.asm = a.movd_r32_xmm(state.asm, "eax", "xmm2")
+  state.asm = a.shl_rax_imm8(state.asm, 3)
+  state.asm = a.or_rax_imm8(state.asm, c.TAG_FLOAT)
+  state.asm = a.jmp(state.asm, l_end)
+
+  state.asm = a.mark(state.asm, l_box)
+  state.asm = a.call(state.asm, "fn_box_float")
+
+  state.asm = a.mark(state.asm, l_end)
+  return state
+end function
+
 function emit_cpu_init_function(state)
   state.asm = a.mark(state.asm, "fn_cpu_init")
 
@@ -537,6 +560,592 @@ function emit_scan_nul_wchars_function(state)
 
   state.asm = a.mark(state.asm, l_done)
   state.asm = a.mov_r32_r32(state.asm, "edx", "r9d")
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_bytes_hash_function(state)
+  state.asm = a.mark(state.asm, "fn_bytes_hash")
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_fail = "bhash_fail_" + lid
+  l_loop = "bhash_loop_" + lid
+  l_done = "bhash_done_" + lid
+
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r9", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+
+  state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r9", 4)
+  state.asm = a.mov_r64_imm64(state.asm, "rax", 2166136261)
+  state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
+  state.asm = a.mark(state.asm, l_loop)
+  state.asm = a.cmp_r32_r32(state.asm, "ecx", "r11d")
+  state.asm = a.jcc(state.asm, "ge", l_done)
+  state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r9", "rcx", 1, 8)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "r10d", "r10", 0)
+  state.asm = a.xor_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.imul_r64_r64_imm(state.asm, "rax", "rax", 16777619)
+  state.asm = a.and_r64_imm(state.asm, "rax", 0xFFFFFFFF)
+  state.asm = a.inc_r32(state.asm, "ecx")
+  state.asm = a.jmp(state.asm, l_loop)
+
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.or_r64_imm8(state.asm, "rax", c.TAG_INT)
+  state.asm = a.ret(state.asm)
+
+  state.asm = a.mark(state.asm, l_fail)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_string_hash_function(state)
+  state.asm = a.mark(state.asm, "fn_string_hash")
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_fail = "shash_fail_" + lid
+  l_loop = "shash_loop_" + lid
+  l_done = "shash_done_" + lid
+
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r9", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_STRING)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+
+  state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r9", 4)
+  state.asm = a.mov_r64_imm64(state.asm, "rax", 2166136261)
+  state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
+  state.asm = a.mark(state.asm, l_loop)
+  state.asm = a.cmp_r32_r32(state.asm, "ecx", "r11d")
+  state.asm = a.jcc(state.asm, "ge", l_done)
+  state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r9", "rcx", 1, 8)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "r10d", "r10", 0)
+  state.asm = a.xor_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.imul_r64_r64_imm(state.asm, "rax", "rax", 16777619)
+  state.asm = a.and_r64_imm(state.asm, "rax", 0xFFFFFFFF)
+  state.asm = a.inc_r32(state.asm, "ecx")
+  state.asm = a.jmp(state.asm, l_loop)
+
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.or_r64_imm8(state.asm, "rax", c.TAG_INT)
+  state.asm = a.ret(state.asm)
+
+  state.asm = a.mark(state.asm, l_fail)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_bytes_startswith_function(state)
+  state.asm = a.mark(state.asm, "fn_bytes_startswith")
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_false = "bstarts_false_" + lid
+  l_true = "bstarts_true_" + lid
+  l_done = "bstarts_done_" + lid
+
+  state.asm = a.mov_r64_r64(state.asm, "r8", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rdx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r8", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r9", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+
+  state.asm = a.cmp_r64_r64(state.asm, "r8", "r9")
+  state.asm = a.jcc(state.asm, "e", l_true)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r8", 4)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r9", 4)
+  state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
+  state.asm = a.jcc(state.asm, "e", l_true)
+  state.asm = a.cmp_r32_r32(state.asm, "r11d", "r10d")
+  state.asm = a.jcc(state.asm, "g", l_false)
+  state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r8", 8)
+  state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r9", 8)
+  state.asm = a.mov_r32_r32(state.asm, "r8d", "r11d")
+  state.asm = a.call(state.asm, "fn_mem_eq_bytes")
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_false)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_true)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
+
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_bytes_endswith_function(state)
+  state.asm = a.mark(state.asm, "fn_bytes_endswith")
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_false = "bends_false_" + lid
+  l_true = "bends_true_" + lid
+  l_done = "bends_done_" + lid
+
+  state.asm = a.mov_r64_r64(state.asm, "r8", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rdx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r8", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r9", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+
+  state.asm = a.cmp_r64_r64(state.asm, "r8", "r9")
+  state.asm = a.jcc(state.asm, "e", l_true)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r8", 4)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r9", 4)
+  state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
+  state.asm = a.jcc(state.asm, "e", l_true)
+  state.asm = a.cmp_r32_r32(state.asm, "r11d", "r10d")
+  state.asm = a.jcc(state.asm, "g", l_false)
+  state.asm = a.mov_r32_r32(state.asm, "eax", "r10d")
+  state.asm = a.sub_r32_r32(state.asm, "eax", "r11d")
+  state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r8", 8)
+  state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r9", 8)
+  state.asm = a.mov_r32_r32(state.asm, "r8d", "r11d")
+  state.asm = a.call(state.asm, "fn_mem_eq_bytes")
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_false)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_true)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
+
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_bytes_indexof_function(state)
+  state.asm = a.mark(state.asm, "fn_bytes_indexof")
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_fail = "bidx_fail_" + lid
+  l_not_found = "bidx_not_found_" + lid
+  l_start_nonneg = "bidx_start_nonneg_" + lid
+  l_start_in_range = "bidx_start_in_range_" + lid
+  l_prepare = "bidx_prepare_" + lid
+  l_outer = "bidx_outer_" + lid
+  l_inner = "bidx_inner_" + lid
+  l_found = "bidx_found_" + lid
+  l_done = "bidx_done_" + lid
+
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "r11", 4)
+
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rdx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r10", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+  state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.sar_r64_imm8(state.asm, "r8", 3)
+  state.asm = a.cmp_r64_imm(state.asm, "r8", 0)
+  state.asm = a.jcc(state.asm, "ge", l_start_nonneg)
+  state.asm = a.xor_r32_r32(state.asm, "r8d", "r8d")
+  state.asm = a.mark(state.asm, l_start_nonneg)
+  state.asm = a.cmp_r64_r64(state.asm, "r8", "r9")
+  state.asm = a.jcc(state.asm, "le", l_start_in_range)
+  state.asm = a.mov_r64_r64(state.asm, "r8", "r9")
+  state.asm = a.mark(state.asm, l_start_in_range)
+
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r10", 4)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x20, "edx")
+  state.asm = a.test_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.jcc(state.asm, "ne", l_prepare)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.or_r64_imm8(state.asm, "rax", c.TAG_INT)
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_prepare)
+  state.asm = a.cmp_r32_r32(state.asm, "edx", "r9d")
+  state.asm = a.jcc(state.asm, "g", l_not_found)
+  state.asm = a.mov_r32_r32(state.asm, "eax", "r9d")
+  state.asm = a.sub_r32_r32(state.asm, "eax", "edx")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x24, "eax")
+  state.asm = a.cmp_r32_r32(state.asm, "r8d", "eax")
+  state.asm = a.jcc(state.asm, "g", l_not_found)
+  state.asm = a.mov_r32_r32(state.asm, "r9d", "r8d")
+
+  state.asm = a.mark(state.asm, l_outer)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x24)
+  state.asm = a.cmp_r32_r32(state.asm, "r9d", "eax")
+  state.asm = a.jcc(state.asm, "g", l_not_found)
+  state.asm = a.xor_r32_r32(state.asm, "r8d", "r8d")
+
+  state.asm = a.mark(state.asm, l_inner)
+  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x20)
+  state.asm = a.cmp_r32_r32(state.asm, "r8d", "ecx")
+  state.asm = a.jcc(state.asm, "ge", l_found)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.add_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.lea_r64_mem_bis(state.asm, "rdx", "r11", "rax", 1, 8)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rdx", 0)
+  state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r10", "r8", 1, 8)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
+  state.asm = a.cmp_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.jcc(state.asm, "ne", l_inner + "_miss")
+  state.asm = a.inc_r32(state.asm, "r8d")
+  state.asm = a.jmp(state.asm, l_inner)
+
+  state.asm = a.mark(state.asm, l_inner + "_miss")
+  state.asm = a.inc_r32(state.asm, "r9d")
+  state.asm = a.jmp(state.asm, l_outer)
+
+  state.asm = a.mark(state.asm, l_found)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.or_r64_imm8(state.asm, "rax", c.TAG_INT)
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_not_found)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_int(-1))
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_fail)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_bytes_lastindexof_function(state)
+  state.asm = a.mark(state.asm, "fn_bytes_lastindexof")
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_fail = "bridx_fail_" + lid
+  l_not_found = "bridx_not_found_" + lid
+  l_prepare = "bridx_prepare_" + lid
+  l_outer = "bridx_outer_" + lid
+  l_inner = "bridx_inner_" + lid
+  l_found = "bridx_found_" + lid
+  l_done = "bridx_done_" + lid
+
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "r11", 4)
+
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rdx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r10", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r10", 4)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x20, "edx")
+  state.asm = a.test_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.jcc(state.asm, "ne", l_prepare)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.or_r64_imm8(state.asm, "rax", c.TAG_INT)
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_prepare)
+  state.asm = a.cmp_r32_r32(state.asm, "edx", "r9d")
+  state.asm = a.jcc(state.asm, "g", l_not_found)
+  state.asm = a.mov_r32_r32(state.asm, "eax", "r9d")
+  state.asm = a.sub_r32_r32(state.asm, "eax", "edx")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x24, "eax")
+  state.asm = a.mov_r32_r32(state.asm, "r9d", "eax")
+
+  state.asm = a.mark(state.asm, l_outer)
+  state.asm = a.cmp_r32_imm(state.asm, "r9d", 0)
+  state.asm = a.jcc(state.asm, "l", l_not_found)
+  state.asm = a.xor_r32_r32(state.asm, "r8d", "r8d")
+
+  state.asm = a.mark(state.asm, l_inner)
+  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x20)
+  state.asm = a.cmp_r32_r32(state.asm, "r8d", "ecx")
+  state.asm = a.jcc(state.asm, "ge", l_found)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.add_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.lea_r64_mem_bis(state.asm, "rdx", "r11", "rax", 1, 8)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rdx", 0)
+  state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r10", "r8", 1, 8)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
+  state.asm = a.cmp_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.jcc(state.asm, "ne", l_inner + "_miss")
+  state.asm = a.inc_r32(state.asm, "r8d")
+  state.asm = a.jmp(state.asm, l_inner)
+
+  state.asm = a.mark(state.asm, l_inner + "_miss")
+  state.asm = a.dec_r32(state.asm, "r9d")
+  state.asm = a.jmp(state.asm, l_outer)
+
+  state.asm = a.mark(state.asm, l_found)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.or_r64_imm8(state.asm, "rax", c.TAG_INT)
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_not_found)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_int(-1))
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_fail)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_bytes_compare_function(state)
+  state.asm = a.mark(state.asm, "fn_bytes_compare")
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_fail = "bcmp_fail_" + lid
+  l_loop = "bcmp_loop_" + lid
+  l_done = "bcmp_done_" + lid
+
+  state.asm = a.mov_r64_r64(state.asm, "r8", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rdx")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+  state.asm = a.and_r64_imm(state.asm, "rax", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r8", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r9", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_fail)
+
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r8", 4)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r9", 4)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x20, "r10d")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x24, "r11d")
+  state.asm = a.xor_r64_r64(state.asm, "rcx", "rcx")
+  state.asm = a.cmp_r32_r32(state.asm, "r11d", "r10d")
+  state.asm = a.jcc(state.asm, "ge", l_loop)
+  state.asm = a.mov_r32_r32(state.asm, "r10d", "r11d")
+
+  state.asm = a.mark(state.asm, l_loop)
+  state.asm = a.test_r32_r32(state.asm, "r10d", "r10d")
+  state.asm = a.jcc(state.asm, "e", l_done)
+  state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r8", "rcx", 1, 8)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
+  state.asm = a.lea_r64_mem_bis(state.asm, "rdx", "r9", "rcx", 1, 8)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rdx", 0)
+  state.asm = a.cmp_r32_r32(state.asm, "eax", "edx")
+  state.asm = a.jcc(state.asm, "b", l_done + "_neg")
+  state.asm = a.jcc(state.asm, "a", l_done + "_pos")
+  state.asm = a.inc_r64(state.asm, "rcx")
+  state.asm = a.dec_r32(state.asm, "r10d")
+  state.asm = a.jmp(state.asm, l_loop)
+
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x20)
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rsp", 0x24)
+  state.asm = a.cmp_r32_r32(state.asm, "eax", "edx")
+  state.asm = a.jcc(state.asm, "b", l_done + "_neg")
+  state.asm = a.jcc(state.asm, "a", l_done + "_pos")
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_int(0))
+  state.asm = a.jmp(state.asm, l_done + "_ret")
+
+  state.asm = a.mark(state.asm, l_done + "_neg")
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_int(-1))
+  state.asm = a.jmp(state.asm, l_done + "_ret")
+
+  state.asm = a.mark(state.asm, l_done + "_pos")
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_int(1))
+  state.asm = a.jmp(state.asm, l_done + "_ret")
+
+  state.asm = a.mark(state.asm, l_fail)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+
+  state.asm = a.mark(state.asm, l_done + "_ret")
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_builtin_copyStringBytes_function(state)
+  state.asm = a.mark(state.asm, "fn_builtin_copyStringBytes")
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_ret_void = "bcopys_ret_void_" + lid
+  l_len_dst = "bcopys_len_dst_" + lid
+  l_len_src = "bcopys_len_src_" + lid
+
+  state.asm = a.cmp_r32_imm(state.asm, "r10d", 5)
+  state.asm = a.jcc(state.asm, "ne", l_ret_void)
+
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "r10", "r8")
+  state.asm = a.mov_r64_r64(state.asm, "r8", "r9")
+
+  // dst must be OBJ_BYTES
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
+  state.asm = a.and_r64_imm(state.asm, "r9", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_ret_void)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", l_ret_void)
+
+  // dstOff -> r9d
+  state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
+  state.asm = a.and_r64_imm(state.asm, "r9", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_INT)
+  state.asm = a.jcc(state.asm, "ne", l_ret_void)
+  state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+  state.asm = a.jcc(state.asm, "l", l_ret_void)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+  state.asm = a.jcc(state.asm, "g", l_ret_void)
+  state.asm = a.mov_r32_r32(state.asm, "r9d", "eax")
+
+  // src must be OBJ_STRING
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.and_r64_imm(state.asm, "rcx", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rcx", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", l_ret_void)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r10", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_STRING)
+  state.asm = a.jcc(state.asm, "ne", l_ret_void)
+
+  // srcOff -> r8d
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.and_r64_imm(state.asm, "rcx", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rcx", c.TAG_INT)
+  state.asm = a.jcc(state.asm, "ne", l_ret_void)
+  state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+  state.asm = a.jcc(state.asm, "l", l_ret_void)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+  state.asm = a.jcc(state.asm, "g", l_ret_void)
+  state.asm = a.mov_r32_r32(state.asm, "r8d", "eax")
+
+  // len -> edx
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x28)
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.and_r64_imm(state.asm, "rcx", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rcx", c.TAG_INT)
+  state.asm = a.jcc(state.asm, "ne", l_ret_void)
+  state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+  state.asm = a.jcc(state.asm, "l", l_ret_void)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+  state.asm = a.jcc(state.asm, "g", l_ret_void)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+
+  // Clamp length to available tail room in both buffers.
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 4)
+  state.asm = a.cmp_r32_r32(state.asm, "r9d", "eax")
+  state.asm = a.jcc(state.asm, "ge", l_ret_void)
+  state.asm = a.sub_r32_r32(state.asm, "eax", "r9d")
+
+  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "r10", 4)
+  state.asm = a.cmp_r32_r32(state.asm, "r8d", "ecx")
+  state.asm = a.jcc(state.asm, "ge", l_ret_void)
+  state.asm = a.sub_r32_r32(state.asm, "ecx", "r8d")
+
+  state.asm = a.cmp_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.jcc(state.asm, "le", l_len_dst)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.mark(state.asm, l_len_dst)
+  state.asm = a.cmp_r32_r32(state.asm, "edx", "ecx")
+  state.asm = a.jcc(state.asm, "le", l_len_src)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "ecx")
+  state.asm = a.mark(state.asm, l_len_src)
+  state.asm = a.test_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.jcc(state.asm, "le", l_ret_void)
+
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x20, "edx")
+  state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+  state.asm = a.add_r64_r64(state.asm, "rcx", "r9")
+  state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r10", 8)
+  state.asm = a.add_r64_r64(state.asm, "rdx", "r8")
+  state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rsp", 0x20)
+  state.asm = a.call(state.asm, "fn_copy_bytes")
+
+  state.asm = a.mark(state.asm, l_ret_void)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   state.asm = a.ret(state.asm)
   return state
 end function
@@ -1050,6 +1659,32 @@ function emit_toNumber_function(state)
   state.asm = a.mark(state.asm, l_fail)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
 
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_toFloat_function(state)
+  state.asm = a.mark(state.asm, "fn_toFloat")
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_fail = "toflt_fail_" + lid
+  l_done = "toflt_done_" + lid
+
+  state.asm = a.call(state.asm, "fn_toNumber")
+  state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+  state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
+  state.asm = a.jcc(state.asm, "e", l_done)
+  state = _emit_to_double_xmm(state, 0, l_fail)
+  state = _emit_force_xmm0_to_float_value(state)
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_fail)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   state.asm = a.mark(state.asm, l_done)
   state.asm = a.add_rsp_imm8(state.asm, 0x28)
   state.asm = a.ret(state.asm)
@@ -2361,3 +2996,4 @@ function emit_callStats_function(state)
   state.asm = a.ret(state.asm)
   return state
 end function
+

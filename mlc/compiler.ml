@@ -165,6 +165,7 @@ function _usage()
   print "MiniLang self-hosted compiler (bootstrap frontend)"
   print "Usage:"
   print "  mlc_win64.exe <input.ml> <output.exe> [compiler options]"
+  print "  mlc_win64.exe <ignored> <output.exe> --link-obj-dir <tmp-dir> [compiler options]"
   print "Extra self-hosted checks:"
   print "  --self-frontcheck"
   print "  --self-frontcheck-keep-going"
@@ -456,6 +457,20 @@ function _tmp_obj_path(tmp_dir, index, module_path, kind)
     stem = _sanitize_fs_component(_file_stem(module_path))
   end if
   return _path_join(tmp_dir, index + "_" + stem + ".mlo")
+end function
+
+function _clear_tmp_obj_dir(tmp_dir)
+  names = fs.listDir(tmp_dir)
+  if typeof(names) != "array" or len(names) <= 0 then return true end if
+  ok = true
+  for i = 0 to len(names) - 1
+    nm = names[i]
+    if typeof(nm) != "string" or nm == "" then continue end if
+    full = _path_join(tmp_dir, nm)
+    if fs.isDir(full) then continue end if
+    if fs.delete(full) == false then ok = false end if
+  end for
+  return ok
 end function
 
 function _section_has_payload(blob, labels, patches, size_hint)
@@ -1898,7 +1913,7 @@ function _mlo_patches_from_asm(arr)
       if typeof(it.pos) == "int" then pos = it.pos end if
       trg = _coerce_name(it.target)
       kind = _coerce_name(it.kind)
-      if trg == "" or kind == "" then continue end if
+      if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
       out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
     end for
   end if
@@ -1915,7 +1930,7 @@ function _mlo_patches_from_data(arr)
       if typeof(it.offset) == "int" then pos = it.offset end if
       trg = _coerce_name(it.target)
       kind = _coerce_name(it.kind)
-      if trg == "" or kind == "" then continue end if
+      if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
       out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
     end for
   end if
@@ -2034,7 +2049,10 @@ function _mlo_patches_after(patches, prefix_off)
       pt = patches[i]
       if typeof(pt) != "struct" then continue end if
       if typeof(pt.offset) != "int" or pt.offset < prefix_off then continue end if
-      out_b = t.arr_chunk_push(out_b, MloPatch(pt.offset - prefix_off, _coerce_name(pt.target), _coerce_name(pt.kind)))
+      trg = _coerce_name(pt.target)
+      kind = _coerce_name(pt.kind)
+      if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
+      out_b = t.arr_chunk_push(out_b, MloPatch(pt.offset - prefix_off, trg, kind))
     end for
   end if
   return t.arr_chunk_finish(out_b)
@@ -2081,6 +2099,32 @@ function _mlo_preserve_module_label(name)
   if _startsWith(name, "fn_user_") then return true end if
   if _startsWith(name, "modinit_") then return true end if
   return false
+end function
+
+function _mlo_is_shared_runtime_data_label(name)
+  if typeof(name) != "string" or name == "" then return false end if
+  if name == "gc_roots_head" or name == "gc_free_head" then return true end if
+  if name == "gc_bytes_since" or name == "gc_bytes_limit" then return true end if
+  if name == "gc_young_bytes_since" or name == "gc_young_bytes_limit" then return true end if
+  if name == "gc_mark_top" then return true end if
+  if _startsWith(name, "gc_tmp") then return true end if
+  if _startsWith(name, "gc_mark_bits_") then return true end if
+  if _startsWith(name, "heap_") then return true end if
+  return false
+end function
+
+function _mlo_strip_shared_runtime_data_labels(labels)
+  out_b = t.arr_chunk_new(64)
+  if typeof(labels) == "array" and len(labels) > 0 then
+    for i = 0 to len(labels) - 1
+      lb = labels[i]
+      if typeof(lb) != "struct" then continue end if
+      nm = _coerce_name(lb.name)
+      if _mlo_is_shared_runtime_data_label(nm) then continue end if
+      out_b = t.arr_chunk_push(out_b, lb)
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
 end function
 
 function _mlo_label_map_add(mapv, old_name, new_name)
@@ -2604,13 +2648,24 @@ function _patch_triplets_for_link(patches, default_kind)
   if typeof(patches) == "array" and len(patches) > 0 then
     for i = 0 to len(patches) - 1
       pt = patches[i]
-      if typeof(pt) != "struct" then continue end if
       off = 0
-      roff = try(pt.offset)
-      if typeof(roff) == "int" then off = roff end if
-      trg = _coerce_name(try(pt.target))
-      if typeof(trg) != "string" or trg == "" then continue end if
-      kind = _coerce_name(try(pt.kind))
+      trg = ""
+      kind = ""
+      if typeof(pt) == "struct" then
+        roff = try(pt.offset)
+        if typeof(roff) == "int" then off = roff end if
+        trg = _coerce_name(try(pt.target))
+        kind = _coerce_name(try(pt.kind))
+      else
+        if typeof(pt) == "array" and len(pt) >= 2 then
+          if typeof(pt[0]) == "int" then off = pt[0] end if
+          trg = _coerce_name(pt[1])
+          if len(pt) >= 3 then kind = _coerce_name(pt[2]) end if
+        else
+          continue
+        end if
+      end if
+      if typeof(trg) != "string" or trg == "" or trg == "unknown" then continue end if
       if typeof(kind) != "string" or kind == "" or kind == "unknown" then
         kind = default_kind
       end if
@@ -2618,6 +2673,175 @@ function _patch_triplets_for_link(patches, default_kind)
     end for
   end if
   return t.arr_chunk_finish(out_b)
+end function
+
+function _apply_link_patches(patches, obj_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, image_base, section_buf, is_rel32, patch_index, unknown_prefix, invalid_prefix)
+  if typeof(patches) != "array" or len(patches) <= 0 then
+    return [0, label_map, patch_index]
+  end if
+
+  last_target = ""
+  last_value = -1
+  for i = 0 to len(patches) - 1
+    pt = patches[i]
+
+    pt_off = 0
+    pt_target = ""
+    if typeof(pt) == "struct" then
+      pt_off = try(pt.offset)
+      if typeof(pt_off) != "int" then pt_off = 0 end if
+      pt_target = _coerce_name(try(pt.target))
+    else
+      if typeof(pt) == "array" and len(pt) >= 2 then
+        if typeof(pt[0]) == "int" then pt_off = pt[0] end if
+        pt_target = _coerce_name(pt[1])
+      else
+        continue
+      end if
+    end if
+    if typeof(pt_target) != "string" or pt_target == "" then continue end if
+
+    trg = -1
+    if pt_target == last_target then
+      trg = last_value
+    else
+      trg = t.fastmap_get(label_map, _label_key(pt_target), -1)
+      if typeof(trg) != "int" or trg < 0 then
+        trg = _label_lookup_fallback(labels, pt_target, -1)
+      end if
+      if typeof(trg) != "int" or trg < 0 then
+        trg = _link_rec_labels_lookup(obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target, -1)
+        if typeof(trg) == "int" and trg >= 0 then
+          label_map = t.fastmap_set(label_map, _label_key(pt_target), trg)
+        end if
+      end if
+      last_target = pt_target
+      last_value = trg
+    end if
+    if typeof(trg) != "int" or trg < 0 then
+      print unknown_prefix + pt_target
+      return [2, label_map, patch_index]
+    end if
+
+    abs_off = obj_off + pt_off
+    if is_rel32 then
+      if abs_off < 0 or abs_off + 3 >= len(section_buf) then
+        print invalid_prefix + pt_target
+        return [2, label_map, patch_index]
+      end if
+      src_next = text_rva + abs_off + 4
+      disp = trg - src_next
+      b4 = t.u32(disp)
+      section_buf[abs_off] = b4[0]
+      section_buf[abs_off + 1] = b4[1]
+      section_buf[abs_off + 2] = b4[2]
+      section_buf[abs_off + 3] = b4[3]
+      patch_index = patch_index + 1
+    else
+      if abs_off < 0 or abs_off + 7 >= len(section_buf) then
+        print invalid_prefix + pt_target
+        return [2, label_map, patch_index]
+      end if
+      target_va = image_base + trg
+      b8 = t.u64(target_va)
+      for bi = 0 to 7
+        section_buf[abs_off + bi] = b8[bi]
+      end for
+    end if
+  end for
+
+  return [0, label_map, patch_index]
+end function
+
+function _char_code_local(ch)
+  b = bytes(ch)
+  if typeof(b) != "bytes" or len(b) <= 0 then return -1 end if
+  return b[0]
+end function
+
+function _mlo_sort_rank(name)
+  if typeof(name) != "string" then name = _coerce_name(name) end if
+  if name == "" then return 2147483647 end if
+  acc = 0
+  saw = false
+  for i = 0 to len(name) - 1
+    c = _char_code_local(name[i])
+    if c >= 48 and c <= 57 then
+      saw = true
+      acc = (acc * 10) + (c - 48)
+      continue
+    end if
+    break
+  end for
+  if saw then return acc end if
+  return 2147483647
+end function
+
+function _string_leq(a, b)
+  if typeof(a) != "string" then a = _coerce_name(a) end if
+  if typeof(b) != "string" then b = _coerce_name(b) end if
+  na = len(a)
+  nb = len(b)
+  n = na
+  if nb < n then n = nb end if
+  if n > 0 then
+    for i = 0 to n - 1
+      ca = _char_code_local(a[i])
+      cb = _char_code_local(b[i])
+      if ca < cb then return true end if
+      if ca > cb then return false end if
+    end for
+  end if
+  return na <= nb
+end function
+
+function _sort_strings_inplace(items)
+  if typeof(items) != "array" or len(items) <= 1 then return items end if
+  for i = 1 to len(items) - 1
+    cur = items[i]
+    cur_key = _coerce_name(cur)
+    cur_rank = _mlo_sort_rank(cur_key)
+    j = i - 1
+    while j >= 0
+      prev_key = _coerce_name(items[j])
+      prev_rank = _mlo_sort_rank(prev_key)
+      if prev_rank < cur_rank then break end if
+      if prev_rank == cur_rank and _string_leq(prev_key, cur_key) then break end if
+      items[j + 1] = items[j]
+      j = j - 1
+    end while
+    items[j + 1] = cur
+  end for
+  return items
+end function
+
+function _collect_mlo_paths_from_dir(obj_dir)
+  if typeof(obj_dir) != "string" or obj_dir == "" then
+    return error(1, "missing object directory")
+  end if
+  if fs.isDir(obj_dir) == false then
+    return error(1, "object directory not found: " + obj_dir)
+  end if
+
+  names = fs.listDir(obj_dir)
+  if typeof(names) == "error" then return names end if
+  names = _sort_strings_inplace(names)
+
+  out_b = t.arr_chunk_new(64)
+  if len(names) > 0 then
+    for i = 0 to len(names) - 1
+      nm = _coerce_name(names[i])
+      if _endsWith(nm, ".mlo") == false then continue end if
+      full = _path_join(obj_dir, nm)
+      if fs.isFile(full) == false then continue end if
+      out_b = t.arr_chunk_push(out_b, full)
+    end for
+  end if
+  obj_paths = t.arr_chunk_finish(out_b)
+  if len(obj_paths) <= 0 then
+    return error(1, "no .mlo files found in object directory: " + obj_dir)
+  end if
+  return obj_paths
 end function
 
 function _mlo_skip_labels(rd)
@@ -2658,6 +2882,9 @@ function _mlo_read_patch_triplets(rd, default_kind)
       if typeof(rk) == "error" then return rk end if
       rd = rk[0]
       kind = rk[1]
+      if typeof(trg) != "string" or trg == "" or trg == "unknown" then
+        continue
+      end if
       if typeof(kind) != "string" or kind == "" or kind == "unknown" then
         kind = default_kind
       end if
@@ -2725,18 +2952,21 @@ function _read_mlo_patch_triplets(path)
   return [asm_patches, rdata_patches, data_patches]
 end function
 
+function _label_key(name)
+  txt = _coerce_name(name)
+  if txt == "" then return "" end if
+  return txt
+end function
+
 function _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target)
-  trg = t.fastmap_get(label_map, target, -1)
+  trg = t.fastmap_get(label_map, _label_key(target), -1)
   if typeof(trg) != "int" or trg < 0 then
     trg = _label_lookup_fallback(labels, target, -1)
-    if typeof(trg) == "int" and trg >= 0 then
-      label_map = t.fastmap_set(label_map, target, trg)
-    end if
   end if
   if typeof(trg) != "int" or trg < 0 then
     trg = _link_rec_labels_lookup(link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target, -1)
     if typeof(trg) == "int" and trg >= 0 then
-      label_map = t.fastmap_set(label_map, target, trg)
+      label_map = t.fastmap_set(label_map, _label_key(target), trg)
     end if
   end if
   return [label_map, trg]
@@ -2801,6 +3031,9 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       rk = _objreader_read_string(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
       rd = rk[0]
+      if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
+        continue
+      end if
 
       rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
       label_map = rr[0]
@@ -2845,6 +3078,9 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       rk = _objreader_read_string(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
       rd = rk[0]
+      if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
+        continue
+      end if
 
       rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
       label_map = rr[0]
@@ -2886,6 +3122,9 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       rk = _objreader_read_string(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
       rd = rk[0]
+      if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
+        continue
+      end if
 
       rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
       label_map = rr[0]
@@ -3212,6 +3451,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   rdata_parts_b = t.arr_chunk_new(64)
   data_parts_b = t.arr_chunk_new(64)
   link_patch_recs_b = t.arr_chunk_new(64)
+  obj_label_recs_b = t.arr_chunk_new(64)
   text_labels_b = t.arr_chunk_new(4096)
   rdata_labels_b = t.arr_chunk_new(4096)
   data_labels_b = t.arr_chunk_new(4096)
@@ -3310,7 +3550,11 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       end for
     end if
 
-    link_patch_recs_b = t.arr_chunk_push(link_patch_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
+    asm_patch_triplets = _patch_triplets_for_link(obj.asm_patches, "rel32")
+    rdata_patch_triplets = _patch_triplets_for_link(obj.rdata_patches, "abs64")
+    data_patch_triplets = _patch_triplets_for_link(obj.data_patches, "abs64")
+    link_patch_recs_b = t.arr_chunk_push(link_patch_recs_b, [text_obj_off, rdata_obj_off, data_obj_off, asm_patch_triplets, rdata_patch_triplets, data_patch_triplets])
+    obj_label_recs_b = t.arr_chunk_push(obj_label_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
 
     imports = _mlo_merge_imports(imports, obj.imports)
     text_off = text_obj_off + len(obj.text)
@@ -3327,6 +3571,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   rdata_buf = _concat_bytes_parts(rdata_parts_b)
   data_buf = _concat_bytes_parts(data_parts_b)
   link_patch_recs = t.arr_chunk_finish(link_patch_recs_b)
+  obj_label_recs = t.arr_chunk_finish(obj_label_recs_b)
 
   p = pe.newPEBuilder()
   p.subsystem = subsystem
@@ -3371,16 +3616,17 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   label_count = len(text_labels) + len(rdata_labels) + len(data_labels) + len(bss_labels)
   if typeof(idr.iat_symbols) == "array" then label_count = label_count + (len(idr.iat_symbols) * 2) end if
-  label_map = t.fastmap_new((label_count * 2) + 64)
-  labels_dump_b = t.arr_chunk_new(512)
+  label_map = t.fastmap_new((label_count * 4) + 64)
+  want_labels_dump = typeof(_dump_labels_path) == "string" and _dump_labels_path != ""
+  labels_b = t.arr_chunk_new(512)
 
   if len(text_labels) > 0 then
     for li = 0 to len(text_labels) - 1
       lb = text_labels[li]
       if typeof(lb) != "struct" then continue end if
       final_v = text_rva + lb.offset
-      label_map = t.fastmap_set(label_map, _coerce_name(lb.name), final_v)
-      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(_coerce_name(lb.name), final_v))
+      label_map = t.fastmap_set(label_map, _label_key(lb.name), final_v)
+      labels_b = t.arr_chunk_push(labels_b, StrIntPair(_coerce_name(lb.name), final_v))
     end for
   end if
   if len(rdata_labels) > 0 then
@@ -3388,8 +3634,8 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       lb = rdata_labels[li]
       if typeof(lb) != "struct" then continue end if
       final_v = rdata_rva + lb.offset
-      label_map = t.fastmap_set(label_map, _coerce_name(lb.name), final_v)
-      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(_coerce_name(lb.name), final_v))
+      label_map = t.fastmap_set(label_map, _label_key(lb.name), final_v)
+      labels_b = t.arr_chunk_push(labels_b, StrIntPair(_coerce_name(lb.name), final_v))
     end for
   end if
   if len(data_labels) > 0 then
@@ -3397,8 +3643,8 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       lb = data_labels[li]
       if typeof(lb) != "struct" then continue end if
       final_v = data_rva + lb.offset
-      label_map = t.fastmap_set(label_map, _coerce_name(lb.name), final_v)
-      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(_coerce_name(lb.name), final_v))
+      label_map = t.fastmap_set(label_map, _label_key(lb.name), final_v)
+      labels_b = t.arr_chunk_push(labels_b, StrIntPair(_coerce_name(lb.name), final_v))
     end for
   end if
   if len(bss_labels) > 0 then
@@ -3406,8 +3652,8 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       lb = bss_labels[li]
       if typeof(lb) != "struct" then continue end if
       final_v = bss_rva + lb.offset
-      label_map = t.fastmap_set(label_map, _coerce_name(lb.name), final_v)
-      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(_coerce_name(lb.name), final_v))
+      label_map = t.fastmap_set(label_map, _label_key(lb.name), final_v)
+      labels_b = t.arr_chunk_push(labels_b, StrIntPair(_coerce_name(lb.name), final_v))
     end for
   end if
   if typeof(idr.iat_symbols) == "array" and len(idr.iat_symbols) > 0 then
@@ -3416,44 +3662,20 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       if typeof(it) != "struct" then continue end if
       if typeof(it.func) != "string" or typeof(it.rva) != "int" then continue end if
       nm1 = "iat_" + it.func
-      label_map = t.fastmap_set(label_map, nm1, it.rva)
-      labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(nm1, it.rva))
+      label_map = t.fastmap_set(label_map, _label_key(nm1), it.rva)
+      labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm1, it.rva))
       if typeof(it.dll) == "string" then
         nm2 = "iat_" + _dll_base(it.dll) + "_" + it.func
-        label_map = t.fastmap_set(label_map, nm2, it.rva)
-        labels_dump_b = t.arr_chunk_push(labels_dump_b, StrIntPair(nm2, it.rva))
+        label_map = t.fastmap_set(label_map, _label_key(nm2), it.rva)
+        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm2, it.rva))
       end if
     end for
   end if
-  labels = t.arr_chunk_finish(labels_dump_b)
+  labels = t.arr_chunk_finish(labels_b)
 
-  entry_rva = t.fastmap_get(label_map, entry_label, -1)
+  entry_rva = t.fastmap_get(label_map, _label_key(entry_label), -1)
   if typeof(entry_rva) != "int" or entry_rva < 0 then
-    entry_rva = _label_lookup_fallback(labels, entry_label, -1)
-    if typeof(entry_rva) == "int" and entry_rva >= 0 then
-      label_map = t.fastmap_set(label_map, entry_label, entry_rva)
-    end if
-  end if
-  if typeof(entry_rva) != "int" or entry_rva < 0 then
-    entry_rva = _link_rec_labels_lookup(link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, entry_label, -1)
-    if typeof(entry_rva) == "int" and entry_rva >= 0 then
-      label_map = t.fastmap_set(label_map, entry_label, entry_rva)
-    end if
-  end if
-  if typeof(entry_rva) != "int" or entry_rva < 0 then
-    entry_rva = t.fastmap_get(label_map, "__ml_entry", -1)
-    if typeof(entry_rva) != "int" or entry_rva < 0 then
-      entry_rva = _label_lookup_fallback(labels, "__ml_entry", -1)
-      if typeof(entry_rva) == "int" and entry_rva >= 0 then
-        label_map = t.fastmap_set(label_map, "__ml_entry", entry_rva)
-      end if
-    end if
-  end if
-  if typeof(entry_rva) != "int" or entry_rva < 0 then
-    entry_rva = _link_rec_labels_lookup(link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, "__ml_entry", -1)
-    if typeof(entry_rva) == "int" and entry_rva >= 0 then
-      label_map = t.fastmap_set(label_map, "__ml_entry", entry_rva)
-    end if
+    entry_rva = t.fastmap_get(label_map, _label_key("__ml_entry"), -1)
   end if
   if typeof(entry_rva) != "int" or entry_rva < 0 then
     print "CompileError: missing program entry label in linked objects"
@@ -3486,14 +3708,35 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     patch_index = 0
     for ri = 0 to len(link_patch_recs) - 1
       rec = link_patch_recs[ri]
-      if typeof(rec) != "array" or len(rec) < 5 then continue end if
-      src_patch = _coerce_name(rec[0])
-      obj_text_off = rec[1]
-      obj_rdata_off = rec[2]
-      obj_data_off = rec[3]
-      apr = _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, buf, rdata_buf, data_buf, patch_index)
+      if typeof(rec) != "array" or len(rec) < 6 then continue end if
+      obj_text_off = rec[0]
+      obj_rdata_off = rec[1]
+      obj_data_off = rec[2]
+      text_patches = rec[3]
+      rdata_patches = rec[4]
+      data_patches = rec[5]
+
+      apr = _apply_link_patches(text_patches, obj_text_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, buf, true, patch_index, "CompileError: unknown patch target: ", "CompileError: invalid patch position for: ")
       if typeof(apr) != "array" or len(apr) < 3 then
-        print "CompileError: internal patch application failed"
+        print "CompileError: internal text patch application failed"
+        return 2
+      end if
+      if apr[0] != 0 then return apr[0] end if
+      label_map = apr[1]
+      patch_index = apr[2]
+
+      apr = _apply_link_patches(rdata_patches, obj_rdata_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, rdata_buf, false, patch_index, "CompileError: unknown data patch target: ", "CompileError: invalid data patch position for: ")
+      if typeof(apr) != "array" or len(apr) < 3 then
+        print "CompileError: internal rdata patch application failed"
+        return 2
+      end if
+      if apr[0] != 0 then return apr[0] end if
+      label_map = apr[1]
+      patch_index = apr[2]
+
+      apr = _apply_link_patches(data_patches, obj_data_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, data_buf, false, patch_index, "CompileError: unknown data patch target: ", "CompileError: invalid data patch position for: ")
+      if typeof(apr) != "array" or len(apr) < 3 then
+        print "CompileError: internal data patch application failed"
         return 2
       end if
       if apr[0] != 0 then return apr[0] end if
@@ -3597,6 +3840,10 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     print "CompileError: failed to create object tmp dir: " + tmp_dir
     return 2
   end if
+  if _clear_tmp_obj_dir(tmp_dir) == false then
+    print "CompileError: failed to clean object tmp dir: " + tmp_dir
+    return 2
+  end if
 
   main_name = _find_main_name(st)
   helper_union = []
@@ -3615,7 +3862,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
 
   for mi = 0 to len(visited) - 1
     module_file = visited[mi]
-    mod_cg = codegen.clone_for_object(cg, false)
+    mod_cg = codegen.clone_for_object(cg, true)
     if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
       print "CompileError: failed to clone module codegen state"
       return 2
@@ -3645,7 +3892,8 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     end if
 
     helper_union = _merge_string_arrays(helper_union, mst.used_helpers)
-    mod_obj = _mlo_from_state("module", module_file, entry_label, mst)
+    mod_obj = _mlo_from_state_delta("module", module_file, entry_label, mst, cg.state)
+    mod_obj.data_labels = _mlo_strip_shared_runtime_data_labels(mod_obj.data_labels)
     mod_obj = _mlo_namespace_object(mod_obj, "objm_" + mi, true)
     helper_union = _collect_internal_helper_targets(helper_union, mod_obj.asm_patches)
     helper_union = _collect_internal_helper_targets(helper_union, mod_obj.rdata_patches)
@@ -3735,6 +3983,17 @@ function compile_to_exe(input_ml, output_exe)
   return compile_to_exe_opts(input_ml, output_exe, [], false, 20, [], false, false, 3)
 end function
 
+function link_obj_dir_to_exe(obj_dir, output_exe, subsystem)
+  obj_paths = _collect_mlo_paths_from_dir(obj_dir)
+  if typeof(obj_paths) == "error" then
+    msg = "failed to enumerate object files"
+    if typeof(obj_paths.message) == "string" then msg = obj_paths.message end if
+    print "CompileError: " + msg
+    return 2
+  end if
+  return _link_mlo_files(obj_paths, output_exe, subsystem)
+end function
+
 function run_cli(args)
   global _mem_probe_enabled
   global _dump_labels_path
@@ -3784,6 +4043,11 @@ function run_cli(args)
     return 2
   end if
   subsystem = ss[1]
+
+  link_obj_dir = _get_flag_value(args, "--link-obj-dir")
+  if link_obj_dir != "" then
+    return link_obj_dir_to_exe(link_obj_dir, out_path, subsystem)
+  end if
 
   return compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
 end function

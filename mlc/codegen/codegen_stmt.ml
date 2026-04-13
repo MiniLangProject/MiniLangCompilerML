@@ -146,6 +146,15 @@ function _set_user_function(state, qname, fn_node)
   return state
 end function
 
+function _diag_stmt_loc(st)
+  if typeof(st) != "struct" then return "" end if
+  fn = _coerce_name(try(st._filename))
+  pos = try(st._pos)
+  if fn != "" and typeof(pos) == "int" then return " at " + fn + ":" + pos end if
+  if fn != "" then return " at " + fn end if
+  return ""
+end function
+
 function _user_function_get_node(state, qname)
   arr = state.user_functions
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
@@ -418,12 +427,15 @@ end function
 
 function _breakstack_pop(state)
   if typeof(state.break_stack) != "array" or len(state.break_stack) <= 0 then return state end if
-  tmp = slice(state.break_stack, 0, len(state.break_stack) - 1)
-  if typeof(tmp) == "array" then
-    state.break_stack = tmp
-  else
+  if len(state.break_stack) == 1 then
     state.break_stack = []
+    return state
   end if
+  tmp = []
+  for bi = 0 to len(state.break_stack) - 2
+    tmp = tmp + [state.break_stack[bi]]
+  end for
+  state.break_stack = tmp
   return state
 end function
 
@@ -1792,7 +1804,7 @@ function cg_emit_stmt(state, stmt)
 
   if k == "Continue" then
     if typeof(state.break_stack) != "array" or len(state.break_stack) <= 0 then
-      state.diagnostics = state.diagnostics +["continue outside loop"]
+      state.diagnostics = state.diagnostics +["continue outside loop" + _diag_stmt_loc(stmt)]
       return state
     end if
 
@@ -1811,7 +1823,7 @@ function cg_emit_stmt(state, stmt)
       i2 = i2 - 1
     end while
 
-    state.diagnostics = state.diagnostics +["continue outside loop"]
+    state.diagnostics = state.diagnostics +["continue outside loop" + _diag_stmt_loc(stmt)]
     return state
   end if
 
@@ -5323,6 +5335,7 @@ function _builtin_specs()
   return [
     ["len", 1, 1, "fn_builtin_len"],
     ["toNumber", 1, 1, "fn_toNumber"],
+    ["toFloat", 1, 1, "fn_toFloat"],
     ["typeof", 1, 1, "fn_typeof"],
     ["typeName", 1, 1, "fn_typeName"],
     ["input", 0, 1, "fn_builtin_input"],
@@ -5332,7 +5345,31 @@ function _builtin_specs()
     ["hex", 1, 1, "fn_hex"],
     ["fromHex", 1, 1, "fn_fromHex"],
     ["slice", 3, 3, "fn_slice"],
+    ["bytesHash", 1, 1, "fn_bytes_hash"],
+    ["stringHash", 1, 1, "fn_string_hash"],
+    ["bytesStartsWith", 2, 2, "fn_bytes_startswith"],
+    ["bytesEndsWith", 2, 2, "fn_bytes_endswith"],
+    ["bytesIndexOf", 3, 3, "fn_bytes_indexof"],
+    ["bytesLastIndexOf", 2, 2, "fn_bytes_lastindexof"],
+    ["bytesCompare", 2, 2, "fn_bytes_compare"],
+    ["str", 1, 1, "fn_value_to_string"],
+    ["stringSlice", 3, 3, "fn_string_slice"],
+    ["stringIndexOf", 3, 3, "fn_string_indexof"],
+    ["stringLastIndexOf", 2, 2, "fn_string_lastindexof"],
+    ["stringStartsWith", 2, 2, "fn_string_startswith"],
+    ["stringEndsWith", 2, 2, "fn_string_endswith"],
+    ["stringRepeat", 2, 2, "fn_string_repeat"],
+    ["stringTrimLeftAscii", 1, 1, "fn_string_ltrim_ascii"],
+    ["stringTrimRightAscii", 1, 1, "fn_string_rtrim_ascii"],
+    ["stringTrimAscii", 1, 1, "fn_string_trim_ascii"],
+    ["stringIsBlankAscii", 1, 1, "fn_string_is_blank_ascii"],
+    ["stringReverse", 1, 1, "fn_string_reverse"],
+    ["stringToLowerAscii", 1, 1, "fn_string_to_lower_ascii"],
+    ["stringToUpperAscii", 1, 1, "fn_string_to_upper_ascii"],
+    ["stringEqualsIgnoreCaseAscii", 2, 2, "fn_string_eq_ignore_case_ascii"],
+    ["stringJoin", 2, 2, "fn_string_join"],
     ["copyBytes", 5, 5, "fn_builtin_copyBytes"],
+    ["copyStringBytes", 5, 5, "fn_builtin_copyStringBytes"],
     ["fillBytes", 4, 4, "fn_builtin_fillBytes"],
     ["gc_collect", 0, 0, "fn_builtin_gc_collect"],
     ["gc_set_limit", 1, 1, "fn_builtin_gc_set_limit"],
