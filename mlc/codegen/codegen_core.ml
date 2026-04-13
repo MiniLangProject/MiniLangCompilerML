@@ -1155,6 +1155,25 @@ function emit_normalize_xmm0_to_value(state)
   return state
 end function
 
+function emit_force_xmm0_to_float_value(state)
+  lid = new_label_id(state)
+  l_box = "forcef_box_" + lid
+  l_end = "forcef_end_" + lid
+  state.asm = a.cvtsd2ss_xmm_xmm(state.asm, "xmm2", "xmm0")
+  state.asm = a.cvtss2sd_xmm_xmm(state.asm, "xmm3", "xmm2")
+  state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm3")
+  state.asm = a.jcc(state.asm, "ne", l_box)
+  state.asm = a.jcc(state.asm, "p", l_box)
+  state.asm = a.movd_r32_xmm(state.asm, "eax", "xmm2")
+  state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.or_rax_imm8(state.asm, c.TAG_FLOAT)
+  state.asm = a.jmp(state.asm, l_end)
+  state.asm = a.mark(state.asm, l_box)
+  state.asm = a.call(state.asm, "fn_box_float")
+  state.asm = a.mark(state.asm, l_end)
+  return state
+end function
+
 function emit_to_double_xmm(state, xmm, fail_label)
   lid = new_label_id(state)
   l_int = "todbl_int_" + lid
@@ -1349,6 +1368,7 @@ function _helper_supported(lbl)
   if lbl == "fn_decref" then return true end if
   if lbl == "fn_input" then return true end if
   if lbl == "fn_toNumber" then return true end if
+  if lbl == "fn_toFloat" then return true end if
   if lbl == "fn_typeof" then return true end if
   if lbl == "fn_typeName" then return true end if
   if lbl == "fn_unhandled_error_exit" then return true end if
@@ -1361,6 +1381,13 @@ function _helper_supported(lbl)
   if lbl == "fn_heap_grow" then return true end if
   if lbl == "fn_gc_collect" then return true end if
   if lbl == "fn_mem_eq_bytes" then return true end if
+  if lbl == "fn_bytes_hash" then return true end if
+  if lbl == "fn_string_hash" then return true end if
+  if lbl == "fn_bytes_startswith" then return true end if
+  if lbl == "fn_bytes_endswith" then return true end if
+  if lbl == "fn_bytes_indexof" then return true end if
+  if lbl == "fn_bytes_lastindexof" then return true end if
+  if lbl == "fn_bytes_compare" then return true end if
   if lbl == "fn_scan_nul_bytes" then return true end if
   if lbl == "fn_scan_byte2_bytes" then return true end if
   if lbl == "fn_scan_nul_wchars" then return true end if
@@ -1370,6 +1397,21 @@ function _helper_supported(lbl)
   if lbl == "fn_box_float" then return true end if
   if lbl == "fn_value_to_string" then return true end if
   if lbl == "fn_str_eq" then return true end if
+  if lbl == "fn_string_slice" then return true end if
+  if lbl == "fn_string_indexof" then return true end if
+  if lbl == "fn_string_lastindexof" then return true end if
+  if lbl == "fn_string_startswith" then return true end if
+  if lbl == "fn_string_endswith" then return true end if
+  if lbl == "fn_string_repeat" then return true end if
+  if lbl == "fn_string_ltrim_ascii" then return true end if
+  if lbl == "fn_string_rtrim_ascii" then return true end if
+  if lbl == "fn_string_trim_ascii" then return true end if
+  if lbl == "fn_string_is_blank_ascii" then return true end if
+  if lbl == "fn_string_reverse" then return true end if
+  if lbl == "fn_string_to_lower_ascii" then return true end if
+  if lbl == "fn_string_to_upper_ascii" then return true end if
+  if lbl == "fn_string_eq_ignore_case_ascii" then return true end if
+  if lbl == "fn_string_join" then return true end if
   if lbl == "fn_val_eq" then return true end if
   if lbl == "fn_add_string" then return true end if
   if lbl == "fn_add_array" then return true end if
@@ -1386,6 +1428,7 @@ function _helper_supported(lbl)
   if lbl == "fn_builtin_len" then return true end if
   if lbl == "fn_builtin_input" then return true end if
   if lbl == "fn_builtin_copyBytes" then return true end if
+  if lbl == "fn_builtin_copyStringBytes" then return true end if
   if lbl == "fn_builtin_fillBytes" then return true end if
   if lbl == "fn_builtin_gc_collect" then return true end if
   if lbl == "fn_builtin_gc_set_limit" then return true end if
@@ -1403,6 +1446,7 @@ function _emit_helper_by_label(state, lbl)
   if lbl == "fn_decref" then return mem.emit_decref_function(state) end if
   if lbl == "fn_input" then return bal.emit_input_function(state) end if
   if lbl == "fn_toNumber" then return rt.emit_toNumber_function(state) end if
+  if lbl == "fn_toFloat" then return rt.emit_toFloat_function(state) end if
   if lbl == "fn_typeof" then return rt.emit_typeof_function(state) end if
   if lbl == "fn_typeName" then return rt.emit_typeName_function(state) end if
   if lbl == "fn_unhandled_error_exit" then return rt.emit_unhandled_error_exit_function(state) end if
@@ -1415,6 +1459,13 @@ function _emit_helper_by_label(state, lbl)
   if lbl == "fn_heap_grow" then return mem.emit_heap_grow_function(state) end if
   if lbl == "fn_gc_collect" then return mem.emit_gc_collect_function(state) end if
   if lbl == "fn_mem_eq_bytes" then return rt.emit_mem_eq_bytes_function(state) end if
+  if lbl == "fn_bytes_hash" then return rt.emit_bytes_hash_function(state) end if
+  if lbl == "fn_string_hash" then return rt.emit_string_hash_function(state) end if
+  if lbl == "fn_bytes_startswith" then return rt.emit_bytes_startswith_function(state) end if
+  if lbl == "fn_bytes_endswith" then return rt.emit_bytes_endswith_function(state) end if
+  if lbl == "fn_bytes_indexof" then return rt.emit_bytes_indexof_function(state) end if
+  if lbl == "fn_bytes_lastindexof" then return rt.emit_bytes_lastindexof_function(state) end if
+  if lbl == "fn_bytes_compare" then return rt.emit_bytes_compare_function(state) end if
   if lbl == "fn_scan_nul_bytes" then return rt.emit_scan_nul_bytes_function(state) end if
   if lbl == "fn_scan_byte2_bytes" then return rt.emit_scan_byte2_bytes_function(state) end if
   if lbl == "fn_scan_nul_wchars" then return rt.emit_scan_nul_wchars_function(state) end if
@@ -1424,6 +1475,21 @@ function _emit_helper_by_label(state, lbl)
   if lbl == "fn_box_float" then return bal.emit_box_float_function(state) end if
   if lbl == "fn_value_to_string" then return bal.emit_value_to_string_function(state) end if
   if lbl == "fn_str_eq" then return rt.emit_string_eq_function(state) end if
+  if lbl == "fn_string_slice" then return bal.emit_string_slice_function(state) end if
+  if lbl == "fn_string_indexof" then return bal.emit_string_indexof_function(state) end if
+  if lbl == "fn_string_lastindexof" then return bal.emit_string_lastindexof_function(state) end if
+  if lbl == "fn_string_startswith" then return bal.emit_string_startswith_function(state) end if
+  if lbl == "fn_string_endswith" then return bal.emit_string_endswith_function(state) end if
+  if lbl == "fn_string_repeat" then return bal.emit_string_repeat_function(state) end if
+  if lbl == "fn_string_ltrim_ascii" then return bal.emit_string_ltrim_ascii_function(state) end if
+  if lbl == "fn_string_rtrim_ascii" then return bal.emit_string_rtrim_ascii_function(state) end if
+  if lbl == "fn_string_trim_ascii" then return bal.emit_string_trim_ascii_function(state) end if
+  if lbl == "fn_string_is_blank_ascii" then return bal.emit_string_is_blank_ascii_function(state) end if
+  if lbl == "fn_string_reverse" then return bal.emit_string_reverse_function(state) end if
+  if lbl == "fn_string_to_lower_ascii" then return bal.emit_string_to_lower_ascii_function(state) end if
+  if lbl == "fn_string_to_upper_ascii" then return bal.emit_string_to_upper_ascii_function(state) end if
+  if lbl == "fn_string_eq_ignore_case_ascii" then return bal.emit_string_eq_ignore_case_ascii_function(state) end if
+  if lbl == "fn_string_join" then return bal.emit_string_join_function(state) end if
   if lbl == "fn_val_eq" then return rt.emit_value_eq_function(state) end if
   if lbl == "fn_add_string" then return bal.emit_string_add_function(state) end if
   if lbl == "fn_add_array" then return bal.emit_array_add_function(state) end if
@@ -1440,6 +1506,7 @@ function _emit_helper_by_label(state, lbl)
   if lbl == "fn_builtin_len" then return rt.emit_builtin_len_function(state) end if
   if lbl == "fn_builtin_input" then return rt.emit_builtin_input_function(state) end if
   if lbl == "fn_builtin_copyBytes" then return rt.emit_builtin_copyBytes_function(state) end if
+  if lbl == "fn_builtin_copyStringBytes" then return rt.emit_builtin_copyStringBytes_function(state) end if
   if lbl == "fn_builtin_fillBytes" then return rt.emit_builtin_fillBytes_function(state) end if
   if lbl == "fn_builtin_gc_collect" then return rt.emit_builtin_gc_collect_function(state) end if
   if lbl == "fn_builtin_gc_set_limit" then return rt.emit_builtin_gc_set_limit_function(state) end if
@@ -1449,10 +1516,16 @@ end function
 function _helper_rank(lbl)
   ordered = [
     "fn_cpu_init", "fn_alloc", "fn_heap_grow", "fn_gc_collect", "fn_copy_bytes", "fn_fill_bytes",
-    "fn_fill_qwords", "fn_mem_eq_bytes", "fn_str_eq", "fn_bytes_eq", "fn_add_string", "fn_add_array",
-    "fn_add_bytes", "fn_value_to_string", "fn_box_float", "fn_toNumber", "fn_typeof", "fn_typeName",
-    "fn_int_to_dec", "fn_strlen", "fn_decode", "fn_decodeZ", "fn_decode16Z", "fn_hex", "fn_fromHex",
-    "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_fillBytes",
+    "fn_fill_qwords", "fn_mem_eq_bytes", "fn_bytes_hash", "fn_string_hash", "fn_bytes_startswith",
+    "fn_bytes_endswith", "fn_bytes_indexof", "fn_bytes_lastindexof", "fn_bytes_compare", "fn_str_eq",
+    "fn_string_slice", "fn_string_indexof", "fn_string_lastindexof", "fn_string_startswith",
+    "fn_string_endswith", "fn_string_repeat", "fn_string_ltrim_ascii", "fn_string_rtrim_ascii",
+    "fn_string_trim_ascii", "fn_string_is_blank_ascii", "fn_string_reverse", "fn_string_to_lower_ascii",
+    "fn_string_to_upper_ascii", "fn_string_eq_ignore_case_ascii", "fn_string_join", "fn_bytes_eq",
+    "fn_add_string", "fn_add_array", "fn_add_bytes", "fn_value_to_string", "fn_box_float", "fn_toNumber",
+    "fn_toFloat",
+    "fn_typeof", "fn_typeName", "fn_int_to_dec", "fn_strlen", "fn_decode", "fn_decodeZ", "fn_decode16Z", "fn_hex", "fn_fromHex",
+    "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_copyStringBytes", "fn_builtin_fillBytes",
     "fn_builtin_gc_collect", "fn_builtin_gc_set_limit", "fn_build_args", "fn_init_argvw", "fn_incref",
     "fn_decref", "fn_callStats", "fn_heap_count", "fn_heap_bytes_used", "fn_heap_bytes_committed",
     "fn_heap_bytes_reserved", "fn_heap_free_bytes", "fn_heap_free_blocks", "fn_unhandled_error_exit"

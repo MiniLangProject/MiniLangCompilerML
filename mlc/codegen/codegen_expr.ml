@@ -13,6 +13,8 @@ struct ConstEvalResult
   value,
 end struct
 
+_F64_POS_HALF_BITS = 4602678819172646912
+
 function inline _opt_truthy(v)
   tv = typeof(v)
   if tv == "void" then return false end if
@@ -269,6 +271,7 @@ function inline _builtin_label(name)
   if typeof(nm) != "string" then return "" end if
   if nm == "len" then return "fn_builtin_len" end if
   if nm == "toNumber" then return "fn_toNumber" end if
+  if nm == "toFloat" then return "fn_toFloat" end if
   if nm == "typeof" then return "fn_typeof" end if
   if nm == "typeName" then return "fn_typeName" end if
   if nm == "input" then return "fn_builtin_input" end if
@@ -280,6 +283,32 @@ function inline _builtin_label(name)
   if nm == "hex" then return "fn_hex" end if
   if nm == "fromHex" then return "fn_fromHex" end if
   if nm == "slice" then return "fn_slice" end if
+  if nm == "bytesHash" then return "fn_bytes_hash" end if
+  if nm == "stringHash" then return "fn_string_hash" end if
+  if nm == "bytesStartsWith" then return "fn_bytes_startswith" end if
+  if nm == "bytesEndsWith" then return "fn_bytes_endswith" end if
+  if nm == "bytesIndexOf" then return "fn_bytes_indexof" end if
+  if nm == "bytesLastIndexOf" then return "fn_bytes_lastindexof" end if
+  if nm == "bytesCompare" then return "fn_bytes_compare" end if
+  if nm == "str" then return "fn_value_to_string" end if
+  if nm == "stringSlice" then return "fn_string_slice" end if
+  if nm == "stringIndexOf" then return "fn_string_indexof" end if
+  if nm == "stringLastIndexOf" then return "fn_string_lastindexof" end if
+  if nm == "stringStartsWith" then return "fn_string_startswith" end if
+  if nm == "stringEndsWith" then return "fn_string_endswith" end if
+  if nm == "stringRepeat" then return "fn_string_repeat" end if
+  if nm == "stringTrimLeftAscii" then return "fn_string_ltrim_ascii" end if
+  if nm == "stringTrimRightAscii" then return "fn_string_rtrim_ascii" end if
+  if nm == "stringTrimAscii" then return "fn_string_trim_ascii" end if
+  if nm == "stringIsBlankAscii" then return "fn_string_is_blank_ascii" end if
+  if nm == "stringReverse" then return "fn_string_reverse" end if
+  if nm == "stringToLowerAscii" then return "fn_string_to_lower_ascii" end if
+  if nm == "stringToUpperAscii" then return "fn_string_to_upper_ascii" end if
+  if nm == "stringEqualsIgnoreCaseAscii" then return "fn_string_eq_ignore_case_ascii" end if
+  if nm == "stringJoin" then return "fn_string_join" end if
+  if nm == "copyBytes" then return "fn_builtin_copyBytes" end if
+  if nm == "copyStringBytes" then return "fn_builtin_copyStringBytes" end if
+  if nm == "fillBytes" then return "fn_builtin_fillBytes" end if
   if nm == "callStats" then return "fn_callStats" end if
   if nm == "heap_count" then return "fn_heap_count" end if
   if nm == "heap_bytes_used" then return "fn_heap_bytes_used" end if
@@ -780,6 +809,13 @@ function _qname_parts_any(expr)
     return base2 +[nm2]
   end if
   return 0
+end function
+
+function _emit_std_math_roundlike_intrinsic(state, callee_name, arg)
+  // Conservative selfhost fallback: keep std.math floor/ceil/trunc/round on the
+  // MiniLang stdlib implementation until the direct SSE lowering is proven
+  // parity-correct on the ML compiler too.
+  return [state, false]
 end function
 
 function cg_emit_expr(state, expr)
@@ -2722,6 +2758,18 @@ function cg_emit_expr(state, expr)
     end if
     if callee == "" and raw_name != "" then callee = raw_name end if
 
+    math_callee = callee
+    if math_callee == "" then math_callee = raw_name end if
+    if nargs == 1 and (math_callee == "std.math.floor" or math_callee == "std.math.ceil" or math_callee == "std.math.trunc" or math_callee == "std.math.round") then
+      rr_math = _emit_std_math_roundlike_intrinsic(state, math_callee, call_args[0])
+      if typeof(rr_math) == "array" and len(rr_math) >= 2 and rr_math[1] == true then
+        return rr_math[0]
+      end if
+      if typeof(rr_math) == "array" and len(rr_math) >= 1 then
+        state = rr_math[0]
+      end if
+    end if
+
     // OOP-style struct instance call: obj.method(args...)
     // Compile as dynamic dispatch on receiver.struct_id -> direct call of hoisted method body.
     if typeof(cal) == "struct" and cal.node_kind == "Member" and member_runtime then
@@ -2900,17 +2948,20 @@ function cg_emit_expr(state, expr)
       end if
     end if
 
-    if nargs > 32 then
-      state.diagnostics = state.diagnostics +["Too many call arguments: " + nargs]
-      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
-      return state
-    end if
-
     // Builtin toNumber(x)
     if (callee == "toNumber" or raw_name == "toNumber") and nargs == 1 then
       state = cg_emit_expr(state, call_args[0])
       state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
       state.asm = a.call(state.asm, "fn_toNumber")
+      return state
+    end if
+
+    // Builtin toFloat(x): parse/coerce numerics but preserve exact
+    // integer-valued floats as floats instead of normalizing them to TAG_INT.
+    if (callee == "toFloat" or raw_name == "toFloat") and nargs == 1 then
+      state = cg_emit_expr(state, call_args[0])
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_toFloat")
       return state
     end if
 
