@@ -257,6 +257,8 @@ function main(args)
   if _test_adv(compiler_path, repo_root, "py_import_init_global", "tests/ported_py/test_import_initializer_behavior_global/main_ce_bad.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_no_newlines", "tests/ported_py/test_no_newlines_required/no_newlines_required.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_import_constexpr_ok", "tests/ported_py/test_import_constexpr_ok/main_ce_ok.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test_adv(compiler_path, repo_root, "py_imported_callable_value", "tests/ported_py/test_imported_callable_value/main_imported_callable.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
+
 
   if _test_adv(compiler_path, repo_root, "py_main_args_exit", "tests/ported_py/test_main_args_and_exitcode/main_args.ml", "run_rc7", "", run_args_main) then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_main_void", "tests/ported_py/test_main_void_exit0/main_void.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if

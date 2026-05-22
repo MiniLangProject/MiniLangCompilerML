@@ -1136,9 +1136,9 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
   source_text = ""
   if typeof(parsed.source) == "string" then source_text = parsed.source end if
   parsed_modules = _parsed_module_set(parsed_modules, path, source_text, part_for_codegen)
-  // Drop full AST early: below we only need import nodes.
-  parsed.program = []
-  program = []
+  // Keep the parsed AST rooted while recursive imports are loaded. The codegen
+  // cache references these nodes later; dropping the local root here can let
+  // nested expression nodes be reclaimed under GC pressure.
   if len(imports) > 0 then
     ii_box = [0]
     while ii_box[0] < len(imports)
@@ -1877,9 +1877,15 @@ function _mlo_labels_from_arr(arr)
     for i = 0 to len(arr) - 1
       it = arr[i]
       if typeof(it) != "struct" then continue end if
-      nm = _coerce_name(it.name)
+      nm = _coerce_name(try(it.name))
       off = 0
-      if typeof(it.offset) == "int" then off = it.offset end if
+      off0 = try(it.offset)
+      if typeof(off0) == "int" then
+        off = off0
+      else
+        pos0 = try(it.pos)
+        if typeof(pos0) == "int" then off = pos0 end if
+      end if
       if nm == "" then continue end if
       out_b = t.arr_chunk_push(out_b, MloLabel(nm, off))
     end for
@@ -1893,9 +1899,15 @@ function _mlo_labels_from_asm_labels(arr)
     for i = 0 to len(arr) - 1
       it = arr[i]
       if typeof(it) != "struct" then continue end if
-      nm = _coerce_name(it.name)
+      nm = _coerce_name(try(it.name))
       off = 0
-      if typeof(it.pos) == "int" then off = it.pos end if
+      pos0 = try(it.pos)
+      if typeof(pos0) == "int" then
+        off = pos0
+      else
+        off0 = try(it.offset)
+        if typeof(off0) == "int" then off = off0 end if
+      end if
       if nm == "" then continue end if
       out_b = t.arr_chunk_push(out_b, MloLabel(nm, off))
     end for
@@ -1910,9 +1922,15 @@ function _mlo_patches_from_asm(arr)
       it = arr[i]
       if typeof(it) != "struct" then continue end if
       pos = 0
-      if typeof(it.pos) == "int" then pos = it.pos end if
-      trg = _coerce_name(it.target)
-      kind = _coerce_name(it.kind)
+      pos0 = try(it.pos)
+      if typeof(pos0) == "int" then
+        pos = pos0
+      else
+        off0 = try(it.offset)
+        if typeof(off0) == "int" then pos = off0 end if
+      end if
+      trg = _coerce_name(try(it.target))
+      kind = _coerce_name(try(it.kind))
       if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
       out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
     end for
@@ -1927,9 +1945,15 @@ function _mlo_patches_from_data(arr)
       it = arr[i]
       if typeof(it) != "struct" then continue end if
       pos = 0
-      if typeof(it.offset) == "int" then pos = it.offset end if
-      trg = _coerce_name(it.target)
-      kind = _coerce_name(it.kind)
+      off0 = try(it.offset)
+      if typeof(off0) == "int" then
+        pos = off0
+      else
+        pos0 = try(it.pos)
+        if typeof(pos0) == "int" then pos = pos0 end if
+      end if
+      trg = _coerce_name(try(it.target))
+      kind = _coerce_name(try(it.kind))
       if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
       out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
     end for
@@ -2593,7 +2617,7 @@ function _link_rec_labels_lookup(recs, text_rva, rdata_rva, data_rva, bss_rva, n
     data_off = rec[3]
     bss_off = rec[4]
 
-    ro = _read_mlo_file(obj_path)
+    ro = _read_mlo_file_for_layout(obj_path)
     if typeof(ro) == "error" then continue end if
     asm_labels = ro.asm_labels
     rdata_labels = ro.rdata_labels
@@ -2860,6 +2884,116 @@ function _mlo_skip_labels(rd)
     end for
   end if
   return rd
+end function
+
+function _mlo_skip_patches(rd)
+  rc = _objreader_read_u32(rd)
+  if typeof(rc) == "error" then return rc end if
+  rd = rc[0]
+  count = rc[1]
+  if count > 0 then
+    for i = 0 to count - 1
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return ro end if
+      rd = ro[0]
+      rt = _objreader_read_string(rd)
+      if typeof(rt) == "error" then return rt end if
+      rd = rt[0]
+      rk = _objreader_read_string(rd)
+      if typeof(rk) == "error" then return rk end if
+      rd = rk[0]
+    end for
+  end if
+  return rd
+end function
+
+function _read_mlo_file_for_layout(path)
+  raw = fs.readAllBytes(path)
+  if typeof(raw) == "error" then return raw end if
+  rd = _objreader_new(raw)
+
+  rmagic = _objreader_read_string(rd)
+  if typeof(rmagic) == "error" then return rmagic end if
+  rd = rmagic[0]
+  if rmagic[1] != "MLO1" then return error(1, "invalid MiniLang object magic") end if
+
+  rver = _objreader_read_u32(rd)
+  if typeof(rver) == "error" then return rver end if
+  rd = rver[0]
+  if rver[1] != 1 then return error(1, "unsupported MiniLang object version") end if
+
+  rkind = _objreader_read_string(rd)
+  if typeof(rkind) == "error" then return rkind end if
+  rd = rkind[0]
+  kind = rkind[1]
+
+  rmod = _objreader_read_string(rd)
+  if typeof(rmod) == "error" then return rmod end if
+  rd = rmod[0]
+  module_file = rmod[1]
+
+  rentry = _objreader_read_string(rd)
+  if typeof(rentry) == "error" then return rentry end if
+  rd = rentry[0]
+  entry_label = rentry[1]
+
+  rtext = _objreader_read_bytes(rd)
+  if typeof(rtext) == "error" then return rtext end if
+  rd = rtext[0]
+  text = rtext[1]
+
+  rrdata = _objreader_read_bytes(rd)
+  if typeof(rrdata) == "error" then return rrdata end if
+  rd = rrdata[0]
+  rdata = rrdata[1]
+
+  rdata2 = _objreader_read_bytes(rd)
+  if typeof(rdata2) == "error" then return rdata2 end if
+  rd = rdata2[0]
+  data = rdata2[1]
+
+  rbss = _objreader_read_u32(rd)
+  if typeof(rbss) == "error" then return rbss end if
+  rd = rbss[0]
+  bss_size = rbss[1]
+
+  r1 = _mlo_read_labels(rd)
+  if typeof(r1) == "error" then return r1 end if
+  rd = r1[0]
+  asm_labels = r1[1]
+
+  r2 = _mlo_skip_patches(rd)
+  if typeof(r2) == "error" then return r2 end if
+  rd = r2
+
+  r3 = _mlo_read_labels(rd)
+  if typeof(r3) == "error" then return r3 end if
+  rd = r3[0]
+  rdata_labels = r3[1]
+
+  r4 = _mlo_skip_patches(rd)
+  if typeof(r4) == "error" then return r4 end if
+  rd = r4
+
+  r5 = _mlo_read_labels(rd)
+  if typeof(r5) == "error" then return r5 end if
+  rd = r5[0]
+  data_labels = r5[1]
+
+  r6 = _mlo_skip_patches(rd)
+  if typeof(r6) == "error" then return r6 end if
+  rd = r6
+
+  r7 = _mlo_read_labels(rd)
+  if typeof(r7) == "error" then return r7 end if
+  rd = r7[0]
+  bss_labels = r7[1]
+
+  r8 = _mlo_read_imports(rd)
+  if typeof(r8) == "error" then return r8 end if
+  imports = r8[1]
+
+  return MloObject(kind, module_file, entry_label, text, rdata, data, bss_size, asm_labels, [], rdata_labels, [], data_labels, [], bss_labels, imports)
 end function
 
 function _mlo_read_patch_triplets(rd, default_kind)
@@ -3450,7 +3584,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   text_parts_b = t.arr_chunk_new(64)
   rdata_parts_b = t.arr_chunk_new(64)
   data_parts_b = t.arr_chunk_new(64)
-  link_patch_recs_b = t.arr_chunk_new(64)
+  patch_file_recs_b = t.arr_chunk_new(64)
   obj_label_recs_b = t.arr_chunk_new(64)
   text_labels_b = t.arr_chunk_new(4096)
   rdata_labels_b = t.arr_chunk_new(4096)
@@ -3470,7 +3604,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   for oi = 0 to len(obj_paths) - 1
     obj_path = obj_paths[oi]
-    ro = _read_mlo_file(obj_path)
+    ro = _read_mlo_file_for_layout(obj_path)
     if typeof(ro) == "error" then
       msg = "failed to read MiniLang object file"
       if typeof(ro.message) == "string" then msg = ro.message end if
@@ -3550,10 +3684,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       end for
     end if
 
-    asm_patch_triplets = _patch_triplets_for_link(obj.asm_patches, "rel32")
-    rdata_patch_triplets = _patch_triplets_for_link(obj.rdata_patches, "abs64")
-    data_patch_triplets = _patch_triplets_for_link(obj.data_patches, "abs64")
-    link_patch_recs_b = t.arr_chunk_push(link_patch_recs_b, [text_obj_off, rdata_obj_off, data_obj_off, asm_patch_triplets, rdata_patch_triplets, data_patch_triplets])
+    patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off])
     obj_label_recs_b = t.arr_chunk_push(obj_label_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
 
     imports = _mlo_merge_imports(imports, obj.imports)
@@ -3562,6 +3693,9 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     data_off = data_obj_off + len(obj.data)
     bss_off = bss_obj_off + obj.bss_size
 
+    if (oi % 8) == 0 then
+      gc_collect()
+    end if
     if (oi % 32) == 0 then
       _heap_probe("link:obj_" + oi)
     end if
@@ -3570,7 +3704,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   text_buf = _concat_bytes_parts(text_parts_b)
   rdata_buf = _concat_bytes_parts(rdata_parts_b)
   data_buf = _concat_bytes_parts(data_parts_b)
-  link_patch_recs = t.arr_chunk_finish(link_patch_recs_b)
+  patch_file_recs = t.arr_chunk_finish(patch_file_recs_b)
   obj_label_recs = t.arr_chunk_finish(obj_label_recs_b)
 
   p = pe.newPEBuilder()
@@ -3704,44 +3838,27 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   end if
 
   buf = text_buf
-  if typeof(link_patch_recs) == "array" and len(link_patch_recs) > 0 then
+  if typeof(patch_file_recs) == "array" and len(patch_file_recs) > 0 then
     patch_index = 0
-    for ri = 0 to len(link_patch_recs) - 1
-      rec = link_patch_recs[ri]
-      if typeof(rec) != "array" or len(rec) < 6 then continue end if
-      obj_text_off = rec[0]
-      obj_rdata_off = rec[1]
-      obj_data_off = rec[2]
-      text_patches = rec[3]
-      rdata_patches = rec[4]
-      data_patches = rec[5]
+    for ri = 0 to len(patch_file_recs) - 1
+      rec = patch_file_recs[ri]
+      if typeof(rec) != "array" or len(rec) < 4 then continue end if
+      src_patch = _coerce_name(rec[0])
+      obj_text_off = rec[1]
+      obj_rdata_off = rec[2]
+      obj_data_off = rec[3]
 
-      apr = _apply_link_patches(text_patches, obj_text_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, buf, true, patch_index, "CompileError: unknown patch target: ", "CompileError: invalid patch position for: ")
+      apr = _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, buf, rdata_buf, data_buf, patch_index)
       if typeof(apr) != "array" or len(apr) < 3 then
-        print "CompileError: internal text patch application failed"
+        print "CompileError: internal streamed patch application failed"
         return 2
       end if
       if apr[0] != 0 then return apr[0] end if
       label_map = apr[1]
       patch_index = apr[2]
-
-      apr = _apply_link_patches(rdata_patches, obj_rdata_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, rdata_buf, false, patch_index, "CompileError: unknown data patch target: ", "CompileError: invalid data patch position for: ")
-      if typeof(apr) != "array" or len(apr) < 3 then
-        print "CompileError: internal rdata patch application failed"
-        return 2
+      if ((ri + 1) % 8) == 0 then
+        gc_collect()
       end if
-      if apr[0] != 0 then return apr[0] end if
-      label_map = apr[1]
-      patch_index = apr[2]
-
-      apr = _apply_link_patches(data_patches, obj_data_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, data_buf, false, patch_index, "CompileError: unknown data patch target: ", "CompileError: invalid data patch position for: ")
-      if typeof(apr) != "array" or len(apr) < 3 then
-        print "CompileError: internal data patch application failed"
-        return 2
-      end if
-      if apr[0] != 0 then return apr[0] end if
-      label_map = apr[1]
-      patch_index = apr[2]
     end for
   end if
 
@@ -3856,8 +3973,10 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     visited = [input_abs]
   end if
 
-  load.program = []
-  gc_collect()
+  // Keep the merged AST rooted while module objects are emitted.  The object
+  // pipeline still references function bodies through the codegen state; if the
+  // original program root is dropped here, deeply nested expression nodes can be
+  // collected and later reused as unrelated compiler objects.
   _heap_probe("compile:post_plan_gc")
 
   for mi = 0 to len(visited) - 1
@@ -4051,4 +4170,3 @@ function run_cli(args)
 
   return compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
 end function
-

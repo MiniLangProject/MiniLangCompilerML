@@ -452,7 +452,7 @@ function cg_declare_binding(state, name, kind, is_const, const_expr, const_value
   const_expr,
   false,
   const_value_py,
-  0,
+  void,
   ""
   )
 
@@ -521,6 +521,26 @@ function cg_set_const_binding_value(state, name, pyv)
           b.is_const = true
           b.const_initialized = true
           b.const_value_py = pyv
+          b.const_value_encoded = void
+          b.const_value_label = ""
+          if typeof(pyv) == "bool" then
+            b.const_value_encoded = t.enc_bool(pyv)
+          else if typeof(pyv) == "int" then
+            b.const_value_encoded = t.enc_int(pyv)
+          else if typeof(pyv) == "float" then
+            enc = t.try_enc_float_immediate(pyv)
+            if typeof(enc) == "int" then
+              b.const_value_encoded = enc
+            else
+              lbl = "cflt_" + len(state.rdata.labels)
+              state.rdata = d.rdata_add_obj_float(state.rdata, lbl, pyv)
+              b.const_value_label = lbl
+            end if
+          else if typeof(pyv) == "string" then
+            lbl2 = "cstr_" + len(state.rdata.labels)
+            state.rdata = d.rdata_add_obj_string(state.rdata, lbl2, pyv)
+            b.const_value_label = lbl2
+          end if
           fr[j] = b
           ss[i] = fr
           state.scope_stack = ss
@@ -558,10 +578,17 @@ function scope_global_slots(state)
 end function
 
 function _coerce_name(name)
-  if typeof(name) == "string" then return name end if
-  if typeof(name) == "struct" and typeof(name.name) == "string" then return name.name end if
-  if typeof(name) == "struct" and typeof(name.value) == "string" then return name.value end if
-  return "" + name
+  tv = typeof(name)
+  if tv == "string" then return name end if
+  if tv == "struct" then
+    nm = try(name.name)
+    if typeof(nm) == "string" then return nm end if
+    vv = try(name.value)
+    if typeof(vv) == "string" then return vv end if
+    return ""
+  end if
+  if tv == "int" or tv == "bool" or tv == "float" then return "" + name end if
+  return ""
 end function
 
 function is_ident(s)
@@ -710,8 +737,8 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   is_const,
   const_expr,
   false,
-  0,
-  0,
+  void,
+  void,
   ""
   )
 
@@ -993,7 +1020,7 @@ function emit_load_var_scoped(state, name)
     state.diagnostics = state.diagnostics + ["Undefined variable '" + nm + "'"]
     return state
   end if
-  if b.is_const then
+  if b.is_const and b.const_initialized then
     if typeof(b.const_value_encoded) == "int" then
       state.asm = a.mov_rax_imm64(state.asm, b.const_value_encoded)
       return state
@@ -1002,6 +1029,11 @@ function emit_load_var_scoped(state, name)
       state.asm = a.lea_rax_rip(state.asm, b.const_value_label)
       return state
     end if
+  end if
+  if b.kind == "global" and b.is_const and b.const_initialized == false then
+    state.diagnostics = state.diagnostics + ["const '" + nm + "' is not constexpr-evaluable"]
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return state
   end if
 
   if b.kind == "capture" or (typeof(b.capture_index) == "int" and b.capture_index >= 0) then

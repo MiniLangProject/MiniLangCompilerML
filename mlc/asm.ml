@@ -1070,27 +1070,24 @@ function cmp_r64_imm(asm, reg_name, imm)
 end function
 
 function add_r64_imm8(asm, reg_name, imm)
-  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
+  // Be permissive here: large selfhosted builds occasionally route wider
+  // immediates through the compact helper path. Fall back to the generic
+  // encoder instead of poisoning the asm builder with an error object.
   return add_r64_imm(asm, reg_name, imm)
 end function
 function sub_r64_imm8(asm, reg_name, imm)
-  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
   return sub_r64_imm(asm, reg_name, imm)
 end function
 function and_r64_imm8(asm, reg_name, imm)
-  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
   return and_r64_imm(asm, reg_name, imm)
 end function
 function or_r64_imm8(asm, reg_name, imm)
-  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
   return or_r64_imm(asm, reg_name, imm)
 end function
 function xor_r64_imm8(asm, reg_name, imm)
-  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
   return xor_r64_imm(asm, reg_name, imm)
 end function
 function cmp_r64_imm8(asm, reg_name, imm)
-  if not _fits_i8(imm) then return error(1, "imm8 out of range") end if
   return cmp_r64_imm(asm, reg_name, imm)
 end function
 
