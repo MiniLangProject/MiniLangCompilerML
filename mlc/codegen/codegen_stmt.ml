@@ -19,14 +19,17 @@ function inline _join_qname(prefix, name)
 end function
 
 function inline _coerce_name(v)
-  if typeof(v) == "string" then return v end if
-  if typeof(v) == "struct" then
+  tv = typeof(v)
+  if tv == "string" then return v end if
+  if tv == "struct" then
     nm = try(v.name)
     if typeof(nm) == "string" then return nm end if
     vv = try(v.value)
     if typeof(vv) == "string" then return vv end if
+    return ""
   end if
-  return "" + v
+  if tv == "int" or tv == "bool" or tv == "float" then return "" + v end if
+  return ""
 end function
 
 function inline _fn_codegen_key(fn_node)
@@ -2378,7 +2381,7 @@ function _flatten_runtime_inner(state, stmts, prefix, current_file)
     end if
 
     st = _tag_ns_prefix(st, pref)
-    k = st.node_kind
+    k = _coerce_name(try(st.node_kind))
 
     handled = false
 
@@ -2849,7 +2852,7 @@ end function
 
 function _analysis_scan_expr(state, ex, allow_func_ident)
   if typeof(ex) != "struct" then return state end if
-  nk = _coerce_name(ex.node_kind)
+  nk = _coerce_name(try(ex.node_kind))
 
   if nk == "Var" then
     nm0 = _coerce_name(try(ex.name))
@@ -2880,7 +2883,7 @@ function _analysis_scan_expr(state, ex, allow_func_ident)
     cal = _analysis_call_callee(ex)
     args = _analysis_call_args(ex)
     cal_kind = ""
-    if typeof(cal) == "struct" then cal_kind = _coerce_name(cal.node_kind) end if
+    if typeof(cal) == "struct" then cal_kind = _coerce_name(try(cal.node_kind)) end if
 
     if cal_kind == "Var" then
       raw_name = _coerce_name(try(cal.name))
@@ -3331,59 +3334,66 @@ function _closure_expr_reads(ex, used)
   if typeof(used) != "array" and typeof(used) != "struct" then used = _name_set_new(64) end if
   if typeof(ex) != "struct" then return used end if
 
-  k = ex.node_kind
-  if k == "Var" and typeof(ex.name) == "string" then
-    return _name_set_add(used, ex.name)
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Var" then
+    nm = _coerce_name(try(ex.name))
+    if nm != "" then return _name_set_add(used, nm) end if
+    return used
   end if
 
   if k == "Unary" then
-    return _closure_expr_reads(ex.right, used)
+    return _closure_expr_reads(try(ex.right), used)
   end if
 
   if k == "Bin" then
-    used = _closure_expr_reads(ex.left, used)
-    used = _closure_expr_reads(ex.right, used)
+    used = _closure_expr_reads(try(ex.left), used)
+    used = _closure_expr_reads(try(ex.right), used)
     return used
   end if
 
   if k == "Call" then
-    cal = ex.callee
-    if typeof(cal) != "struct" then cal = ex.func end if
+    cal = _analysis_call_callee(ex)
     used = _closure_expr_reads(cal, used)
-    if typeof(ex.args) == "array" and len(ex.args) > 0 then
-      for i = 0 to len(ex.args) - 1
-        if i < 0 or i >= len(ex.args) then break end if
-        used = _closure_expr_reads(ex.args[i], used)
+    args = _analysis_call_args(ex)
+    if len(args) > 0 then
+      for i = 0 to len(args) - 1
+        if i < 0 or i >= len(args) then break end if
+        used = _closure_expr_reads(args[i], used)
       end for
     end if
     return used
   end if
 
   if k == "Index" then
-    used = _closure_expr_reads(ex.target, used)
-    used = _closure_expr_reads(ex.index, used)
+    used = _closure_expr_reads(try(ex.target), used)
+    used = _closure_expr_reads(try(ex.index), used)
     return used
   end if
 
   if k == "Member" then
-    tgt = ex.target
-    if typeof(tgt) != "struct" then tgt = ex.obj end if
+    tgt = _analysis_member_target(ex)
     return _closure_expr_reads(tgt, used)
   end if
 
-  if k == "ArrayLit" and typeof(ex.items) == "array" and len(ex.items) > 0 then
-    for i = 0 to len(ex.items) - 1
-      if i < 0 or i >= len(ex.items) then break end if
-      used = _closure_expr_reads(ex.items[i], used)
-    end for
+  if k == "ArrayLit" then
+    items = try(ex.items)
+    if typeof(items) == "array" and len(items) > 0 then
+      for i = 0 to len(items) - 1
+        if i < 0 or i >= len(items) then break end if
+        used = _closure_expr_reads(items[i], used)
+      end for
+    end if
     return used
   end if
 
-  if k == "StructInit" and typeof(ex.values) == "array" and len(ex.values) > 0 then
-    for i = 0 to len(ex.values) - 1
-      if i < 0 or i >= len(ex.values) then break end if
-      used = _closure_expr_reads(ex.values[i], used)
-    end for
+  if k == "StructInit" then
+    vals = try(ex.values)
+    if typeof(vals) == "array" and len(vals) > 0 then
+      for i = 0 to len(vals) - 1
+        if i < 0 or i >= len(vals) then break end if
+        used = _closure_expr_reads(vals[i], used)
+      end for
+    end if
     return used
   end if
 
@@ -3402,7 +3412,7 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
     st = stmts[i]
     i = i + 1
     if typeof(st) != "struct" then continue end if
-    k = st.node_kind
+    k = _coerce_name(try(st.node_kind))
 
     if k == "GlobalDecl" and typeof(st.names) == "array" and len(st.names) > 0 then
       j = 0
@@ -3416,14 +3426,14 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
     end if
 
     if k == "Assign" then
-      nm2 = _coerce_name(st.name)
+      nm2 = _coerce_name(try(st.name))
       if nm2 != "" and _name_set_has(globals_decl, nm2) == false then
         locals_set = _name_set_add(locals_set, nm2)
       end if
     end if
 
     if k == "For" then
-      v = _coerce_name(st.var)
+      v = _coerce_name(try(st.var))
       if v != "" then locals_set = _name_set_add(locals_set, v) end if
     end if
 
@@ -3434,21 +3444,22 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
 
     if k == "FunctionDef" then
       nested = _arr_add_unique(nested, st)
-      fnn = _coerce_name(st.name)
+      fnn = _coerce_name(try(st.name))
       if fnn != "" then locals_set = _name_set_add(locals_set, fnn) end if
       continue
     end if
 
     if k == "If" then
-      sub = _closure_collect_locals_walk(st.then_body, locals_set, globals_decl, nested)
+      sub = _closure_collect_locals_walk(try(st.then_body), locals_set, globals_decl, nested)
       locals_set = sub[0]
       globals_decl = sub[1]
       nested = sub[2]
-      if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
         ei = 0
-        en = len(st.elifs)
+        en = len(elifs)
         while ei < en
-          eb = st.elifs[ei]
+          eb = elifs[ei]
           body = []
           if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" then body = eb[1] end if
           sub2 = _closure_collect_locals_walk(body, locals_set, globals_decl, nested)
@@ -3458,7 +3469,7 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
           ei = ei + 1
         end while
       end if
-      sub3 = _closure_collect_locals_walk(st.else_body, locals_set, globals_decl, nested)
+      sub3 = _closure_collect_locals_walk(try(st.else_body), locals_set, globals_decl, nested)
       locals_set = sub3[0]
       globals_decl = sub3[1]
       nested = sub3[2]
@@ -3466,7 +3477,7 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
     end if
 
     if k == "While" or k == "DoWhile" or k == "For" or _is_foreach_stmt(st) then
-      sub4 = _closure_collect_locals_walk(st.body, locals_set, globals_decl, nested)
+      sub4 = _closure_collect_locals_walk(try(st.body), locals_set, globals_decl, nested)
       locals_set = sub4[0]
       globals_decl = sub4[1]
       nested = sub4[2]
@@ -3474,13 +3485,15 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
     end if
 
     if k == "Switch" then
-      if typeof(st.cases) == "array" and len(st.cases) > 0 then
+      cases = try(st.cases)
+      if typeof(cases) == "array" and len(cases) > 0 then
         ci = 0
-        cn = len(st.cases)
+        cn = len(cases)
         while ci < cn
-          cs = st.cases[ci]
-          if typeof(cs) == "struct" and typeof(cs.body) == "array" then
-            sub5 = _closure_collect_locals_walk(cs.body, locals_set, globals_decl, nested)
+          cs = cases[ci]
+          cs_body = try(cs.body)
+          if typeof(cs) == "struct" and typeof(cs_body) == "array" then
+            sub5 = _closure_collect_locals_walk(cs_body, locals_set, globals_decl, nested)
             locals_set = sub5[0]
             globals_decl = sub5[1]
             nested = sub5[2]
@@ -3488,7 +3501,7 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
           ci = ci + 1
         end while
       end if
-      sub6 = _closure_collect_locals_walk(st.default_body, locals_set, globals_decl, nested)
+      sub6 = _closure_collect_locals_walk(try(st.default_body), locals_set, globals_decl, nested)
       locals_set = sub6[0]
       globals_decl = sub6[1]
       nested = sub6[2]
@@ -3513,7 +3526,7 @@ function _closure_collect_locals_and_nested(fn_node)
     end for
   end if
 
-  body = fn_node.body
+  body = try(fn_node.body)
   if typeof(body) != "array" then body = [] end if
   return _closure_collect_locals_walk(body, locals_set, globals_decl, nested)
 end function
@@ -3528,37 +3541,38 @@ function _closure_collect_uses(stmts)
     st = stmts[i]
     i = i + 1
     if typeof(st) != "struct" then continue end if
-    k = st.node_kind
+    k = _coerce_name(try(st.node_kind))
     if k == "FunctionDef" then continue end if
 
     if k == "Assign" or k == "Print" or k == "ExprStmt" or k == "Return" then
-      used = _closure_expr_reads(st.expr, used)
+      used = _closure_expr_reads(try(st.expr), used)
       continue
     end if
 
     if k == "SetMember" then
-      tgt = st.obj
-      if typeof(tgt) != "struct" then tgt = st.target end if
+      tgt = try(st.obj)
+      if typeof(tgt) != "struct" then tgt = try(st.target) end if
       used = _closure_expr_reads(tgt, used)
-      used = _closure_expr_reads(st.expr, used)
+      used = _closure_expr_reads(try(st.expr), used)
       continue
     end if
 
     if k == "SetIndex" then
-      used = _closure_expr_reads(st.target, used)
-      used = _closure_expr_reads(st.index, used)
-      used = _closure_expr_reads(st.expr, used)
+      used = _closure_expr_reads(try(st.target), used)
+      used = _closure_expr_reads(try(st.index), used)
+      used = _closure_expr_reads(try(st.expr), used)
       continue
     end if
 
     if k == "If" then
-      used = _closure_expr_reads(st.cond, used)
-      used = _name_set_union(used, _closure_collect_uses(st.then_body))
-      if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
+      used = _closure_expr_reads(try(st.cond), used)
+      used = _name_set_union(used, _closure_collect_uses(try(st.then_body)))
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
         ei = 0
-        en = len(st.elifs)
+        en = len(elifs)
         while ei < en
-          eb = st.elifs[ei]
+          eb = elifs[ei]
           if typeof(eb) == "array" and len(eb) >= 1 then
             used = _closure_expr_reads(eb[0], used)
           end if
@@ -3568,62 +3582,65 @@ function _closure_collect_uses(stmts)
           ei = ei + 1
         end while
       end if
-      used = _name_set_union(used, _closure_collect_uses(st.else_body))
+      used = _name_set_union(used, _closure_collect_uses(try(st.else_body)))
       continue
     end if
 
     if k == "While" then
-      used = _closure_expr_reads(st.cond, used)
-      used = _name_set_union(used, _closure_collect_uses(st.body))
+      used = _closure_expr_reads(try(st.cond), used)
+      used = _name_set_union(used, _closure_collect_uses(try(st.body)))
       continue
     end if
 
     if k == "DoWhile" then
-      used = _name_set_union(used, _closure_collect_uses(st.body))
-      used = _closure_expr_reads(st.cond, used)
+      used = _name_set_union(used, _closure_collect_uses(try(st.body)))
+      used = _closure_expr_reads(try(st.cond), used)
       continue
     end if
 
     if k == "For" then
-      used = _closure_expr_reads(st.start, used)
-      used = _closure_expr_reads(st.end_expr, used)
-      used = _name_set_union(used, _closure_collect_uses(st.body))
+      used = _closure_expr_reads(try(st.start), used)
+      used = _closure_expr_reads(try(st.end_expr), used)
+      used = _name_set_union(used, _closure_collect_uses(try(st.body)))
       continue
     end if
 
     if _is_foreach_stmt(st) then
-      used = _closure_expr_reads(st.iterable, used)
-      used = _name_set_union(used, _closure_collect_uses(st.body))
+      used = _closure_expr_reads(try(st.iterable), used)
+      used = _name_set_union(used, _closure_collect_uses(try(st.body)))
       continue
     end if
 
     if k == "Switch" then
-      used = _closure_expr_reads(st.expr, used)
-      if typeof(st.cases) == "array" and len(st.cases) > 0 then
+      used = _closure_expr_reads(try(st.expr), used)
+      cases = try(st.cases)
+      if typeof(cases) == "array" and len(cases) > 0 then
         ci = 0
-        cn = len(st.cases)
+        cn = len(cases)
         while ci < cn
-          cs = st.cases[ci]
+          cs = cases[ci]
           if typeof(cs) != "struct" then
             ci = ci + 1
             continue
           end if
-          if cs.kind == "values" and typeof(cs.values) == "array" and len(cs.values) > 0 then
+          cs_kind = _coerce_name(try(cs.kind))
+          cs_values = try(cs.values)
+          if cs_kind == "values" and typeof(cs_values) == "array" and len(cs_values) > 0 then
             vi = 0
-            vn = len(cs.values)
+            vn = len(cs_values)
             while vi < vn
-              used = _closure_expr_reads(cs.values[vi], used)
+              used = _closure_expr_reads(cs_values[vi], used)
               vi = vi + 1
             end while
           else
-            used = _closure_expr_reads(cs.range_start, used)
-            used = _closure_expr_reads(cs.range_end, used)
+            used = _closure_expr_reads(try(cs.range_start), used)
+            used = _closure_expr_reads(try(cs.range_end), used)
           end if
-          used = _name_set_union(used, _closure_collect_uses(cs.body))
+          used = _name_set_union(used, _closure_collect_uses(try(cs.body)))
           ci = ci + 1
         end while
       end if
-      used = _name_set_union(used, _closure_collect_uses(st.default_body))
+      used = _name_set_union(used, _closure_collect_uses(try(st.default_body)))
       continue
     end if
   end while
@@ -3634,8 +3651,9 @@ end function
 function _closure_collect_writes(fn_node)
   written = _name_set_new(64)
   stmts = fn_node
-  if typeof(fn_node) == "struct" and typeof(fn_node.body) == "array" then
-    stmts = fn_node.body
+  if typeof(fn_node) == "struct" then
+    body0 = try(fn_node.body)
+    if typeof(body0) == "array" then stmts = body0 end if
   end if
   if typeof(stmts) != "array" or len(stmts) <= 0 then return written end if
 
@@ -3645,49 +3663,52 @@ function _closure_collect_writes(fn_node)
     st = stmts[i]
     i = i + 1
     if typeof(st) != "struct" then continue end if
-    k = st.node_kind
+    k = _coerce_name(try(st.node_kind))
     if k == "FunctionDef" then continue end if
 
-    if k == "Assign" and typeof(st.name) == "string" then
-      written = _name_set_add(written, st.name)
+    if k == "Assign" then
+      wnm = _coerce_name(try(st.name))
+      if wnm != "" then written = _name_set_add(written, wnm) end if
       continue
     end if
 
     if k == "If" then
-      written = _name_set_union(written, _closure_collect_writes(st.then_body))
-      if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
+      written = _name_set_union(written, _closure_collect_writes(try(st.then_body)))
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
         ei = 0
-        en = len(st.elifs)
+        en = len(elifs)
         while ei < en
-          eb = st.elifs[ei]
+          eb = elifs[ei]
           if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" then
             written = _name_set_union(written, _closure_collect_writes(eb[1]))
           end if
           ei = ei + 1
         end while
       end if
-      written = _name_set_union(written, _closure_collect_writes(st.else_body))
+      written = _name_set_union(written, _closure_collect_writes(try(st.else_body)))
       continue
     end if
 
     if k == "While" or k == "DoWhile" or k == "For" or _is_foreach_stmt(st) then
-      written = _name_set_union(written, _closure_collect_writes(st.body))
+      written = _name_set_union(written, _closure_collect_writes(try(st.body)))
       continue
     end if
 
     if k == "Switch" then
-      if typeof(st.cases) == "array" and len(st.cases) > 0 then
+      cases = try(st.cases)
+      if typeof(cases) == "array" and len(cases) > 0 then
         ci = 0
-        cn = len(st.cases)
+        cn = len(cases)
         while ci < cn
-          cs = st.cases[ci]
+          cs = cases[ci]
           if typeof(cs) == "struct" then
-            written = _name_set_union(written, _closure_collect_writes(cs.body))
+            written = _name_set_union(written, _closure_collect_writes(try(cs.body)))
           end if
           ci = ci + 1
         end while
       end if
-      written = _name_set_union(written, _closure_collect_writes(st.default_body))
+      written = _name_set_union(written, _closure_collect_writes(try(st.default_body)))
       continue
     end if
   end while
@@ -3721,53 +3742,54 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     st = stmts[i]
     i = i + 1
     if typeof(st) != "struct" then continue end if
-    k = st.node_kind
+    k = _coerce_name(try(st.node_kind))
     if k == "FunctionDef" then continue end if
 
     if k == "Assign" then
-      rr = _closure_expr_reads(st.expr, _name_set_new(16))
+      rr = _closure_expr_reads(try(st.expr), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr)
-      nm = _coerce_name(st.name)
+      nm = _coerce_name(try(st.name))
       if nm != "" then written_yet = _name_set_add(written_yet, nm) end if
       continue
     end if
 
     if k == "Print" or k == "ExprStmt" or k == "Return" then
-      rr2 = _closure_expr_reads(st.expr, _name_set_new(16))
+      rr2 = _closure_expr_reads(try(st.expr), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr2)
       continue
     end if
 
     if k == "SetMember" then
       rr3 = _name_set_new(16)
-      tgt = st.obj
-      if typeof(tgt) != "struct" then tgt = st.target end if
+      tgt = try(st.obj)
+      if typeof(tgt) != "struct" then tgt = try(st.target) end if
       rr3 = _closure_expr_reads(tgt, rr3)
-      rr3 = _closure_expr_reads(st.expr, rr3)
+      rr3 = _closure_expr_reads(try(st.expr), rr3)
       read_before = _note_reads(read_before, written_yet, rr3)
       continue
     end if
 
     if k == "SetIndex" then
       rr4 = _name_set_new(16)
-      rr4 = _closure_expr_reads(st.target, rr4)
-      rr4 = _closure_expr_reads(st.index, rr4)
-      rr4 = _closure_expr_reads(st.expr, rr4)
+      rr4 = _closure_expr_reads(try(st.target), rr4)
+      rr4 = _closure_expr_reads(try(st.index), rr4)
+      rr4 = _closure_expr_reads(try(st.expr), rr4)
       read_before = _note_reads(read_before, written_yet, rr4)
       continue
     end if
 
     if k == "If" then
-      rc = _closure_expr_reads(st.cond, _name_set_new(16))
+      rc = _closure_expr_reads(try(st.cond), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rc)
-      sub = _closure_collect_rbfw_walk(st.then_body, read_before, written_yet)
+      sub = _closure_collect_rbfw_walk(try(st.then_body), read_before, written_yet)
       read_before = sub[0]
       written_yet = sub[1]
-      if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
         ei = 0
-        en = len(st.elifs)
+        en = len(elifs)
         while ei < en
-          eb = st.elifs[ei]
+          eb = elifs[ei]
           if typeof(eb) == "array" and len(eb) >= 1 then
             rc2 = _closure_expr_reads(eb[0], _name_set_new(16))
             read_before = _note_reads(read_before, written_yet, rc2)
@@ -3780,87 +3802,90 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
           ei = ei + 1
         end while
       end if
-      sub3 = _closure_collect_rbfw_walk(st.else_body, read_before, written_yet)
+      sub3 = _closure_collect_rbfw_walk(try(st.else_body), read_before, written_yet)
       read_before = sub3[0]
       written_yet = sub3[1]
       continue
     end if
 
     if k == "While" then
-      rc3 = _closure_expr_reads(st.cond, _name_set_new(16))
+      rc3 = _closure_expr_reads(try(st.cond), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rc3)
-      sub4 = _closure_collect_rbfw_walk(st.body, read_before, written_yet)
+      sub4 = _closure_collect_rbfw_walk(try(st.body), read_before, written_yet)
       read_before = sub4[0]
       written_yet = sub4[1]
       continue
     end if
 
     if k == "DoWhile" then
-      sub5 = _closure_collect_rbfw_walk(st.body, read_before, written_yet)
+      sub5 = _closure_collect_rbfw_walk(try(st.body), read_before, written_yet)
       read_before = sub5[0]
       written_yet = sub5[1]
-      rc4 = _closure_expr_reads(st.cond, _name_set_new(16))
+      rc4 = _closure_expr_reads(try(st.cond), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rc4)
       continue
     end if
 
     if k == "For" then
       rr5 = _name_set_new(16)
-      rr5 = _closure_expr_reads(st.start, rr5)
-      rr5 = _closure_expr_reads(st.end_expr, rr5)
+      rr5 = _closure_expr_reads(try(st.start), rr5)
+      rr5 = _closure_expr_reads(try(st.end_expr), rr5)
       read_before = _note_reads(read_before, written_yet, rr5)
-      v = _coerce_name(st.var)
+      v = _coerce_name(try(st.var))
       if v != "" then written_yet = _name_set_add(written_yet, v) end if
-      sub6 = _closure_collect_rbfw_walk(st.body, read_before, written_yet)
+      sub6 = _closure_collect_rbfw_walk(try(st.body), read_before, written_yet)
       read_before = sub6[0]
       written_yet = sub6[1]
       continue
     end if
 
     if _is_foreach_stmt(st) then
-      rr6 = _closure_expr_reads(st.iterable, _name_set_new(16))
+      rr6 = _closure_expr_reads(try(st.iterable), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr6)
       fv = _foreach_var_name(st)
       if fv != "" then written_yet = _name_set_add(written_yet, fv) end if
-      sub7 = _closure_collect_rbfw_walk(st.body, read_before, written_yet)
+      sub7 = _closure_collect_rbfw_walk(try(st.body), read_before, written_yet)
       read_before = sub7[0]
       written_yet = sub7[1]
       continue
     end if
 
     if k == "Switch" then
-      rr7 = _closure_expr_reads(st.expr, _name_set_new(16))
+      rr7 = _closure_expr_reads(try(st.expr), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr7)
-      if typeof(st.cases) == "array" and len(st.cases) > 0 then
+      cases = try(st.cases)
+      if typeof(cases) == "array" and len(cases) > 0 then
         ci = 0
-        cn = len(st.cases)
+        cn = len(cases)
         while ci < cn
-          cs = st.cases[ci]
+          cs = cases[ci]
           if typeof(cs) != "struct" then
             ci = ci + 1
             continue
           end if
-          if cs.kind == "values" and typeof(cs.values) == "array" and len(cs.values) > 0 then
+          cs_kind = _coerce_name(try(cs.kind))
+          cs_values = try(cs.values)
+          if cs_kind == "values" and typeof(cs_values) == "array" and len(cs_values) > 0 then
             vi = 0
-            vn = len(cs.values)
+            vn = len(cs_values)
             while vi < vn
-              rr8 = _closure_expr_reads(cs.values[vi], _name_set_new(16))
+              rr8 = _closure_expr_reads(cs_values[vi], _name_set_new(16))
               read_before = _note_reads(read_before, written_yet, rr8)
               vi = vi + 1
             end while
           else
             rr9 = _name_set_new(16)
-            rr9 = _closure_expr_reads(cs.range_start, rr9)
-            rr9 = _closure_expr_reads(cs.range_end, rr9)
+            rr9 = _closure_expr_reads(try(cs.range_start), rr9)
+            rr9 = _closure_expr_reads(try(cs.range_end), rr9)
             read_before = _note_reads(read_before, written_yet, rr9)
           end if
-          sub8 = _closure_collect_rbfw_walk(cs.body, read_before, written_yet)
+          sub8 = _closure_collect_rbfw_walk(try(cs.body), read_before, written_yet)
           read_before = sub8[0]
           written_yet = sub8[1]
           ci = ci + 1
         end while
       end if
-      sub9 = _closure_collect_rbfw_walk(st.default_body, read_before, written_yet)
+      sub9 = _closure_collect_rbfw_walk(try(st.default_body), read_before, written_yet)
       read_before = sub9[0]
       written_yet = sub9[1]
       continue
@@ -4236,8 +4261,8 @@ function _closure_declare_capture_bindings(state, fn_node)
       false,
       0,
       false,
-      0,
-      0,
+      void,
+      void,
       ""
     )
 
@@ -5331,6 +5356,50 @@ function _declare_top_level_global_bindings(state, program)
   return state
 end function
 
+function _precompute_top_level_const_bindings(state, program)
+  if typeof(program) != "array" or len(program) <= 0 then return state end if
+
+  max_passes = len(program) + 1
+  pass = 0
+  progress = true
+  old_qpref = state.current_qname_prefix
+  old_fpref = state.current_file_prefix
+
+  while progress and pass < max_passes
+    progress = false
+    pass = pass + 1
+
+    for i = 0 to len(program) - 1
+      st = program[i]
+      if typeof(st) != "struct" then continue end if
+      if _coerce_name(st.node_kind) != "ConstDecl" then continue end if
+
+      qn = _coerce_name(st.name)
+      if qn == "" then continue end if
+
+      b = scope.cg_resolve_binding(state, qn)
+      if typeof(b) == "struct" and b.is_const and b.const_initialized then continue end if
+      if _is_constexpr_expr(state, st.expr) == false then continue end if
+
+      pref = ""
+      raw_pref = try(st._ml_ns_prefix)
+      if typeof(raw_pref) == "string" then pref = raw_pref end if
+      state.current_qname_prefix = pref
+      state.current_file_prefix = pref
+
+      cv = exprmod.cg_expr_try_const_value(state, st.expr)
+      if cv.ok then
+        state = scope.cg_set_const_binding_value(state, qn, cv.value)
+        progress = true
+      end if
+    end for
+  end while
+
+  state.current_qname_prefix = old_qpref
+  state.current_file_prefix = old_fpref
+  return state
+end function
+
 function _builtin_specs()
   return [
     ["len", 1, 1, "fn_builtin_len"],
@@ -5909,6 +5978,7 @@ function emit_program(state, program)
     end for
   end if
   state = _declare_top_level_global_bindings(state, program)
+  state = _precompute_top_level_const_bindings(state, program)
   state = _mem_probe(state, "owner_map_done")
 
   // Match Python codegen: reserve only globals referenced by `global ...`
@@ -6018,83 +6088,11 @@ function emit_program(state, program)
   state = mem.emit_heap_init(state, 0)
   state.asm = a.call(state.asm, "fn_cpu_init")
 
-  // Point global callable/type slots at immutable .rdata objects.
-  if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
-    for i = 0 to len(state.user_functions) - 1
-      itf = state.user_functions[i]
-      if typeof(itf) != "array" or len(itf) != 2 then continue end if
-      fn_qn = _coerce_name(itf[0])
-      fn_node = itf[1]
-      if fn_qn == "" or typeof(fn_node) != "struct" then continue end if
-      lblf = _strpair_get(state.function_global_labels, fn_qn)
-      if lblf == "" then continue end if
-      objf = _strpair_get(state.function_static_obj_labels, fn_qn)
-      if objf == "" then continue end if
-      state.asm = a.lea_rax_rip(state.asm, objf)
-      state.asm = a.mov_rip_qword_rax(state.asm, lblf)
-    end for
-  end if
-
-  // Point struct globals at immutable .rdata objects.
-  if typeof(state.struct_fields) == "array" and len(state.struct_fields) > 0 then
-    for si = 0 to len(state.struct_fields) - 1
-      sf = state.struct_fields[si]
-      sqn = ""
-      flds = []
-      if typeof(sf) == "struct" then
-        sqn = _coerce_name(sf.key)
-        if typeof(sf.values) == "array" then flds = sf.values end if
-      else
-        if typeof(sf) == "array" and len(sf) >= 2 then
-          sqn = _coerce_name(sf[0])
-          if typeof(sf[1]) == "array" then flds = sf[1] end if
-        end if
-      end if
-      if sqn == "" then continue end if
-      lbls = _strpair_get(state.struct_global_labels, sqn)
-      if lbls == "" then continue end if
-      objs = _strpair_get(state.struct_static_obj_labels, sqn)
-      if objs == "" then continue end if
-      state.asm = a.lea_rax_rip(state.asm, objs)
-      state.asm = a.mov_rip_qword_rax(state.asm, lbls)
-    end for
-  end if
-
-  // Point builtin globals at immutable .rdata objects.
-  if typeof(state.builtin_specs) == "array" and len(state.builtin_specs) > 0 then
-    for bi = 0 to len(state.builtin_specs) - 1
-      sp = state.builtin_specs[bi]
-      if typeof(sp) != "array" or len(sp) < 4 then continue end if
-      bname = _coerce_name(sp[0])
-      blbl = _coerce_name(sp[3])
-      if bname == "" or blbl == "" then continue end if
-      gbl = _strpair_get(state.builtin_global_labels, bname)
-      if gbl == "" then continue end if
-      objb = _strpair_get(state.builtin_static_obj_labels, bname)
-      if objb == "" then continue end if
-      state.used_helpers = add(state.used_helpers, blbl)
-      state.asm = a.lea_rax_rip(state.asm, objb)
-      state.asm = a.mov_rip_qword_rax(state.asm, gbl)
-    end for
-  end if
-
-  // Point extern globals at immutable .rdata objects.
-  if typeof(state.extern_sigs) == "array" and len(state.extern_sigs) > 0 then
-    for ei = 0 to len(state.extern_sigs) - 1
-      sig = state.extern_sigs[ei]
-      if typeof(sig) != "struct" then continue end if
-      qn = _coerce_name(sig.qname)
-      if qn == "" then qn = _coerce_name(sig.name) end if
-      if qn == "" then continue end if
-      gbl2 = _strpair_get(state.extern_global_labels, qn)
-      stub_lbl = _strpair_get(state.extern_stub_labels, qn)
-      if gbl2 == "" or stub_lbl == "" then continue end if
-      obja = _strpair_get(state.extern_static_obj_labels, qn)
-      if obja == "" then continue end if
-      state.asm = a.lea_rax_rip(state.asm, obja)
-      state.asm = a.mov_rip_qword_rax(state.asm, gbl2)
-    end for
-  end if
+  // Point all known callable/type globals at immutable .rdata objects.
+  // Drive this from the actual global binding table instead of the earlier
+  // cached label lists so imported/selfhosted builds cannot end up reading a
+  // later shadow slot that was never initialized.
+  state = _emit_static_global_slot_initializers_from_globals(state)
   state = _mem_probe(state, "static_globals_done")
 
   // Emit per-file module init blocks inline inside the entry frame.
@@ -6297,6 +6295,55 @@ function emit_program(state, program)
 
   // Emit runtime/builtin helper bodies
   state = core.emit_used_helpers(state)
+  return state
+end function
+
+function _static_obj_label_for_global_name(state, name)
+  nm = _coerce_name(name)
+  if nm == "" then return "" end if
+  lbl = _strpair_get(state.function_static_obj_labels, nm)
+  if lbl != "" then return lbl end if
+  lbl = _strpair_get(state.struct_static_obj_labels, nm)
+  if lbl != "" then return lbl end if
+  lbl = _strpair_get(state.builtin_static_obj_labels, nm)
+  if lbl != "" then return lbl end if
+  lbl = _strpair_get(state.extern_static_obj_labels, nm)
+  if lbl != "" then return lbl end if
+  return ""
+end function
+
+function _builtin_code_label_for_name(state, name)
+  nm = _coerce_name(name)
+  if nm == "" then return "" end if
+  if typeof(state.builtin_specs) != "array" or len(state.builtin_specs) <= 0 then return "" end if
+  for bi = 0 to len(state.builtin_specs) - 1
+    sp = state.builtin_specs[bi]
+    if typeof(sp) != "array" or len(sp) < 4 then continue end if
+    if _coerce_name(sp[0]) == nm then
+      return _coerce_name(sp[3])
+    end if
+  end for
+  return ""
+end function
+
+function _emit_static_global_slot_initializers_from_globals(state)
+  if typeof(state.globals) != "array" or len(state.globals) <= 0 then return state end if
+  for gi = 0 to len(state.globals) - 1
+    gb = state.globals[gi]
+    if typeof(gb) != "struct" then continue end if
+    if _coerce_name(gb.kind) != "global" then continue end if
+    gname = _coerce_name(gb.name)
+    glabel = _coerce_name(gb.label)
+    if gname == "" or glabel == "" then continue end if
+    obj_lbl = _static_obj_label_for_global_name(state, gname)
+    if obj_lbl == "" then continue end if
+    blbl = _builtin_code_label_for_name(state, gname)
+    if blbl != "" then
+      state.used_helpers = add(state.used_helpers, blbl)
+    end if
+    state.asm = a.lea_rax_rip(state.asm, obj_lbl)
+    state.asm = a.mov_rip_qword_rax(state.asm, glabel)
+  end for
   return state
 end function
 
@@ -6660,6 +6707,7 @@ function prepare_program_for_objects(state, program)
     end for
   end if
   state = _declare_top_level_global_bindings(state, program)
+  state = _precompute_top_level_const_bindings(state, program)
   state = _mem_probe(state, "owner_map_done")
 
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
@@ -6768,71 +6816,7 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
   state = mem.emit_heap_init(state, 0)
   state.asm = a.call(state.asm, "fn_cpu_init")
 
-  if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
-    for i = 0 to len(state.user_functions) - 1
-      itf = state.user_functions[i]
-      if typeof(itf) != "array" or len(itf) != 2 then continue end if
-      fn_qn = _coerce_name(itf[0])
-      fn_node = itf[1]
-      if fn_qn == "" or typeof(fn_node) != "struct" then continue end if
-      lblf = _strpair_get(state.function_global_labels, fn_qn)
-      if lblf == "" then continue end if
-      objf = _strpair_get(state.function_static_obj_labels, fn_qn)
-      if objf == "" then continue end if
-      state.asm = a.lea_rax_rip(state.asm, objf)
-      state.asm = a.mov_rip_qword_rax(state.asm, lblf)
-    end for
-  end if
-
-  if typeof(state.struct_fields) == "array" and len(state.struct_fields) > 0 then
-    for si = 0 to len(state.struct_fields) - 1
-      sf = state.struct_fields[si]
-      sqn = ""
-      if typeof(sf) == "struct" then sqn = _coerce_name(sf.key) end if
-      if typeof(sf) == "array" and len(sf) >= 2 then sqn = _coerce_name(sf[0]) end if
-      if sqn == "" then continue end if
-      lbls = _strpair_get(state.struct_global_labels, sqn)
-      if lbls == "" then continue end if
-      objs = _strpair_get(state.struct_static_obj_labels, sqn)
-      if objs == "" then continue end if
-      state.asm = a.lea_rax_rip(state.asm, objs)
-      state.asm = a.mov_rip_qword_rax(state.asm, lbls)
-    end for
-  end if
-
-  if typeof(state.builtin_specs) == "array" and len(state.builtin_specs) > 0 then
-    for bi = 0 to len(state.builtin_specs) - 1
-      sp = state.builtin_specs[bi]
-      if typeof(sp) != "array" or len(sp) < 4 then continue end if
-      bname = _coerce_name(sp[0])
-      blbl = _coerce_name(sp[3])
-      if bname == "" or blbl == "" then continue end if
-      gbl = _strpair_get(state.builtin_global_labels, bname)
-      if gbl == "" then continue end if
-      objb = _strpair_get(state.builtin_static_obj_labels, bname)
-      if objb == "" then continue end if
-      state.used_helpers = add(state.used_helpers, blbl)
-      state.asm = a.lea_rax_rip(state.asm, objb)
-      state.asm = a.mov_rip_qword_rax(state.asm, gbl)
-    end for
-  end if
-
-  if typeof(state.extern_sigs) == "array" and len(state.extern_sigs) > 0 then
-    for ei = 0 to len(state.extern_sigs) - 1
-      sig = state.extern_sigs[ei]
-      if typeof(sig) != "struct" then continue end if
-      qn = _coerce_name(sig.qname)
-      if qn == "" then qn = _coerce_name(sig.name) end if
-      if qn == "" then continue end if
-      gbl2 = _strpair_get(state.extern_global_labels, qn)
-      stub_lbl = _strpair_get(state.extern_stub_labels, qn)
-      if gbl2 == "" or stub_lbl == "" then continue end if
-      obja = _strpair_get(state.extern_static_obj_labels, qn)
-      if obja == "" then continue end if
-      state.asm = a.lea_rax_rip(state.asm, obja)
-      state.asm = a.mov_rip_qword_rax(state.asm, gbl2)
-    end for
-  end if
+  state = _emit_static_global_slot_initializers_from_globals(state)
   state = _mem_probe(state, "static_globals_done")
 
   state = core.push_cold_block_scope(state)
@@ -7592,24 +7576,27 @@ end function
 
 function analyze_expr(state, ex)
   if typeof(ex) != "struct" then return state end if
-  if ex.node_kind == "Var" and typeof(ex.name) == "string" then
-    state = analyze_read_var(state, ex.name)
+  nk = _coerce_name(try(ex.node_kind))
+  if nk == "Var" then
+    nm = _coerce_name(try(ex.name))
+    if nm != "" then state = analyze_read_var(state, nm) end if
   end if
-  if ex.node_kind == "Member" and typeof(ex.target) == "struct" then
-    state = analyze_expr(state, ex.target)
+  if nk == "Member" then
+    state = analyze_expr(state, _analysis_member_target(ex))
   end if
-  if ex.node_kind == "Unary" then
-    state = analyze_expr(state, ex.right)
+  if nk == "Unary" then
+    state = analyze_expr(state, try(ex.right))
   end if
-  if ex.node_kind == "Bin" then
-    state = analyze_expr(state, ex.left)
-    state = analyze_expr(state, ex.right)
+  if nk == "Bin" then
+    state = analyze_expr(state, try(ex.left))
+    state = analyze_expr(state, try(ex.right))
   end if
-  if ex.node_kind == "Call" then
-    state = analyze_expr(state, ex.func)
-    if typeof(ex.args) == "array" and len(ex.args) > 0 then
-      for i = 0 to len(ex.args) - 1
-        state = analyze_expr(state, ex.args[i])
+  if nk == "Call" then
+    state = analyze_expr(state, _analysis_call_callee(ex))
+    args = _analysis_call_args(ex)
+    if len(args) > 0 then
+      for i = 0 to len(args) - 1
+        state = analyze_expr(state, args[i])
       end for
     end if
   end if
@@ -7620,8 +7607,8 @@ function analyze_block(state, stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return state end if
   for i = 0 to len(stmts) - 1
     st = stmts[i]
-    if typeof(st) == "struct" and typeof(st.expr) == "struct" then
-      state = analyze_expr(state, st.expr)
+    if typeof(st) == "struct" and typeof(try(st.expr)) == "struct" then
+      state = analyze_expr(state, try(st.expr))
     end if
     state = cg_emit_stmt(state, st)
   end for
@@ -7662,13 +7649,13 @@ end function
 
 function max_calls_expr(state, ex)
   if typeof(ex) != "struct" then return 0 end if
-  nk = _coerce_name(ex.node_kind)
+  nk = _coerce_name(try(ex.node_kind))
   m = 0
   if nk == "Call" then
     args = _analysis_call_args(ex)
     cal = _analysis_call_callee(ex)
     call_arity = len(args)
-    if typeof(cal) == "struct" and _coerce_name(cal.node_kind) == "Member" then
+    if typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" then
       mname = _coerce_name(try(cal.name))
       if _struct_methods_any_has(state, mname) then
         call_arity = call_arity + 1
