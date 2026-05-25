@@ -1,0 +1,5 @@
+build/test-bin/
+build/test-logs/
+build/tmp/
+tests/_rt_*.exe
+tests/tmp/
