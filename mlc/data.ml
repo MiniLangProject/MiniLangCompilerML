@@ -50,7 +50,9 @@ end struct
 function _find_data_label_index(labels, name)
   if len(labels) <= 0 then return -1 end if
   for i = 0 to len(labels) - 1
-    if labels[i].name == name then return i end if
+    it = labels[i]
+    if typeof(it) != "struct" then continue end if
+    if try(it.name) == name then return i end if
   end for
   return -1
 end function
@@ -67,7 +69,9 @@ end function
 function _find_range_label_index(labels, name)
   if len(labels) <= 0 then return -1 end if
   for i = 0 to len(labels) - 1
-    if labels[i].name == name then return i end if
+    it = labels[i]
+    if typeof(it) != "struct" then continue end if
+    if try(it.name) == name then return i end if
   end for
   return -1
 end function
@@ -347,12 +351,6 @@ end function
 
 function rdata_add_obj_string(rb, name, text)
   payload = bytes(text)
-  hit = _find_pool_entry(rb.pool_obj_string, payload)
-  if typeof(hit) == "struct" then
-    pe = hit
-    rb.labels = _upsert_range_label(rb.labels, name, pe.offset, pe.length)
-    return rb
-  end if
 
   rb = rdata_pad_align(rb, 8)
   off = _buf_used(rb)
@@ -369,12 +367,6 @@ end function
 
 function rdata_add_obj_float(rb, name, value)
   packed = _float_to_f64le(value)
-  hit = _find_pool_entry(rb.pool_obj_float, packed)
-  if typeof(hit) == "struct" then
-    pe = hit
-    rb.labels = _upsert_range_label(rb.labels, name, pe.offset, pe.length)
-    return rb
-  end if
 
   rb = rdata_pad_align(rb, 8)
   off = _buf_used(rb)

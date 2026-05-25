@@ -10,6 +10,8 @@ import mlc.asm as a
 
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
+extern function GetModuleFileNameW(module as ptr, buffer as buffer, bufferLen as u32) from "kernel32.dll" symbol "GetModuleFileNameW" returns u32
+extern function _wsystem(cmd as wstr) from "msvcrt.dll" returns int
 
 struct FrontDiag
   kind,
@@ -186,6 +188,7 @@ function _get_flag_value(args, flag)
 end function
 
 function inline _startsWith(text, pref)
+  if typeof(text) != "string" or typeof(pref) != "string" then return false end if
   if len(pref) > len(text) then return false end if
   for i = 0 to len(pref) - 1
     if text[i] != pref[i] then return false end if
@@ -194,6 +197,7 @@ function inline _startsWith(text, pref)
 end function
 
 function inline _endsWith(text, suf)
+  if typeof(text) != "string" or typeof(suf) != "string" then return false end if
   if len(suf) > len(text) then return false end if
   off = len(text) - len(suf)
   for i = 0 to len(suf) - 1
@@ -314,6 +318,20 @@ function _path_abspath(p)
   abs_p = decode16Z(buf)
   if typeof(abs_p) != "string" or abs_p == "" then return p end if
   return abs_p
+end function
+
+function _self_exe_path()
+  buf = bytes(8192, 0)
+  n = GetModuleFileNameW(0, buf, 4096)
+  if typeof(n) != "int" or n <= 0 then return "" end if
+  p = decode16Z(buf)
+  if typeof(p) != "string" then return "" end if
+  return p
+end function
+
+function _cmd_quote_arg(x)
+  if typeof(x) != "string" then return "\"\"" end if
+  return "\"" + x + "\""
 end function
 
 function _path_norm_cached(p)
@@ -1549,6 +1567,19 @@ function _collect_runtime_config(args)
   return cfg
 end function
 
+function _compiler_gc_limit_from_config(runtime_config)
+  compiler_gc_limit = _cfg_get_int(runtime_config, "compiler_gc_limit_bytes", 0)
+  if compiler_gc_limit <= 0 then
+    compiler_gc_limit = _cfg_get_int(runtime_config, "gc_bytes_limit", 0)
+  end if
+  if compiler_gc_limit <= 0 then
+    compiler_gc_limit = _cfg_get_int(runtime_config, "commit_bytes", 64 << 20)
+    if compiler_gc_limit < (64 << 20) then compiler_gc_limit = 64 << 20 end if
+    if compiler_gc_limit > (256 << 20) then compiler_gc_limit = 256 << 20 end if
+  end if
+  return compiler_gc_limit
+end function
+
 function _parse_subsystem_value(v)
   x = s.toLowerAscii(s.trim("" + v))
   if x == "console" or x == "cui" then return [true, 3] end if
@@ -2072,11 +2103,48 @@ function _mlo_patches_after(patches, prefix_off)
     for i = 0 to len(patches) - 1
       pt = patches[i]
       if typeof(pt) != "struct" then continue end if
-      if typeof(pt.offset) != "int" or pt.offset < prefix_off then continue end if
-      trg = _coerce_name(pt.target)
-      kind = _coerce_name(pt.kind)
+      off0 = try(pt.offset)
+      if typeof(off0) != "int" or off0 < prefix_off then continue end if
+      trg = _coerce_name(try(pt.target))
+      kind = _coerce_name(try(pt.kind))
       if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
-      out_b = t.arr_chunk_push(out_b, MloPatch(pt.offset - prefix_off, trg, kind))
+      out_b = t.arr_chunk_push(out_b, MloPatch(off0 - prefix_off, trg, kind))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_align_down8(value)
+  v = value
+  if typeof(v) != "int" or v <= 0 then return 0 end if
+  return v - (v % 8)
+end function
+
+function _mlo_labels_after_cut(labels, min_off, cut_off)
+  out_b = t.arr_chunk_new(64)
+  if typeof(labels) == "array" and len(labels) > 0 then
+    for i = 0 to len(labels) - 1
+      lb = labels[i]
+      if typeof(lb) != "struct" then continue end if
+      if typeof(lb.offset) != "int" or lb.offset < min_off then continue end if
+      out_b = t.arr_chunk_push(out_b, MloLabel(_coerce_name(lb.name), lb.offset - cut_off))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_patches_after_cut(patches, min_off, cut_off)
+  out_b = t.arr_chunk_new(64)
+  if typeof(patches) == "array" and len(patches) > 0 then
+    for i = 0 to len(patches) - 1
+      pt = patches[i]
+      if typeof(pt) != "struct" then continue end if
+      off0 = try(pt.offset)
+      if typeof(off0) != "int" or off0 < min_off then continue end if
+      trg = _coerce_name(try(pt.target))
+      kind = _coerce_name(try(pt.kind))
+      if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
+      out_b = t.arr_chunk_push(out_b, MloPatch(off0 - cut_off, trg, kind))
     end for
   end if
   return t.arr_chunk_finish(out_b)
@@ -2091,9 +2159,10 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
     rdata_prefix = base_state.rdata.used
   end if
   if rdata_prefix > 0 and len(obj.rdata) >= rdata_prefix then
-    obj.rdata = slice(obj.rdata, rdata_prefix, len(obj.rdata) - rdata_prefix)
-    obj.rdata_labels = _mlo_labels_after(obj.rdata_labels, rdata_prefix)
-    obj.rdata_patches = _mlo_patches_after(obj.rdata_patches, rdata_prefix)
+    rdata_cut = _mlo_align_down8(rdata_prefix)
+    obj.rdata = slice(obj.rdata, rdata_cut, len(obj.rdata) - rdata_cut)
+    obj.rdata_labels = _mlo_labels_after_cut(obj.rdata_labels, rdata_prefix, rdata_cut)
+    obj.rdata_patches = _mlo_patches_after_cut(obj.rdata_patches, rdata_prefix, rdata_cut)
   end if
 
   data_prefix = 0
@@ -2101,9 +2170,10 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
     data_prefix = base_state.data.used
   end if
   if data_prefix > 0 and len(obj.data) >= data_prefix then
-    obj.data = slice(obj.data, data_prefix, len(obj.data) - data_prefix)
-    obj.data_labels = _mlo_labels_after(obj.data_labels, data_prefix)
-    obj.data_patches = _mlo_patches_after(obj.data_patches, data_prefix)
+    data_cut = _mlo_align_down8(data_prefix)
+    obj.data = slice(obj.data, data_cut, len(obj.data) - data_cut)
+    obj.data_labels = _mlo_labels_after_cut(obj.data_labels, data_prefix, data_cut)
+    obj.data_patches = _mlo_patches_after_cut(obj.data_patches, data_prefix, data_cut)
   end if
 
   bss_prefix = 0
@@ -2111,8 +2181,9 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
     bss_prefix = base_state.bss.size
   end if
   if obj.bss_size >= bss_prefix then
-    obj.bss_size = obj.bss_size - bss_prefix
-    obj.bss_labels = _mlo_labels_after(obj.bss_labels, bss_prefix)
+    bss_cut = _mlo_align_down8(bss_prefix)
+    obj.bss_size = obj.bss_size - bss_cut
+    obj.bss_labels = _mlo_labels_after_cut(obj.bss_labels, bss_prefix, bss_cut)
   end if
 
   return obj
@@ -2122,6 +2193,15 @@ function _mlo_preserve_module_label(name)
   if typeof(name) != "string" or name == "" then return false end if
   if _startsWith(name, "fn_user_") then return true end if
   if _startsWith(name, "modinit_") then return true end if
+  if _startsWith(name, "cstr_") then return true end if
+  if _startsWith(name, "cflt_") then return true end if
+  if _startsWith(name, "flt_") then return true end if
+  if _startsWith(name, "objstr_") then return true end if
+  if _startsWith(name, "str_") then return true end if
+  if _startsWith(name, "obj_fn_static_") then return true end if
+  if _startsWith(name, "obj_structtype_static_") then return true end if
+  if _startsWith(name, "obj_builtin_static_") then return true end if
+  if _startsWith(name, "obj_extern_static_") then return true end if
   return false
 end function
 
@@ -2173,29 +2253,41 @@ function _mlo_rename_labels(labels, prefix, preserve_public, label_map)
 end function
 
 function _mlo_rename_patches(patches, label_map)
-  renamed = patches
-  if typeof(renamed) != "array" or len(renamed) <= 0 then return renamed end if
-  for i = 0 to len(renamed) - 1
-    pt = renamed[i]
+  if typeof(patches) != "array" or len(patches) <= 0 then return patches end if
+  renamed_b = t.arr_chunk_new(64)
+  for i = 0 to len(patches) - 1
+    pt = patches[i]
     if typeof(pt) != "struct" then continue end if
-    trg = _coerce_name(pt.target)
+    trg = _coerce_name(try(pt.target))
     if trg == "" then continue end if
     new_trg = t.fastmap_get(label_map, trg, trg)
-    renamed[i] = MloPatch(pt.offset, new_trg, pt.kind)
+    off = try(pt.offset)
+    if typeof(off) != "int" then off = 0 end if
+    kind = _coerce_name(try(pt.kind))
+    if kind == "" then continue end if
+    renamed_b = t.arr_chunk_push(renamed_b, MloPatch(off, new_trg, kind))
   end for
-  return renamed
+  return t.arr_chunk_finish(renamed_b)
+end function
+
+function _mlo_label_count(labels)
+  if typeof(labels) != "array" then return 0 end if
+  return len(labels)
 end function
 
 function _mlo_namespace_object(obj, prefix, preserve_public)
   if typeof(obj) != "struct" then return obj end if
   if typeof(prefix) != "string" or prefix == "" then return obj end if
-  label_map = t.fastmap_new(256)
+  label_count = _mlo_label_count(obj.asm_labels) + _mlo_label_count(obj.rdata_labels) + _mlo_label_count(obj.data_labels) + _mlo_label_count(obj.bss_labels)
+  label_map_cap = (label_count * 4) + 64
+  if label_map_cap < 256 then label_map_cap = 256 end if
+  label_map = t.fastmap_new(label_map_cap)
 
   rr = _mlo_rename_labels(obj.asm_labels, prefix, preserve_public, label_map)
   obj.asm_labels = rr[0]
   label_map = rr[1]
 
-  rr = _mlo_rename_labels(obj.rdata_labels, prefix, false, label_map)
+  rr = _mlo_rename_labels(obj.rdata_labels, prefix, preserve_public, label_map)
   obj.rdata_labels = rr[0]
   label_map = rr[1]
 
@@ -2287,9 +2379,11 @@ function _mlo_bp_write_patches(bp, patches)
         bp = _mlo_bp_string(bp, "")
         continue
       end if
-      bp = _mlo_bp_u32(bp, pt.offset)
-      bp = _mlo_bp_string(bp, _coerce_name(pt.target))
-      bp = _mlo_bp_string(bp, _coerce_name(pt.kind))
+      off = try(pt.offset)
+      if typeof(off) != "int" then off = 0 end if
+      bp = _mlo_bp_u32(bp, off)
+      bp = _mlo_bp_string(bp, _coerce_name(try(pt.target)))
+      bp = _mlo_bp_string(bp, _coerce_name(try(pt.kind)))
     end for
   end if
   return bp
@@ -2335,9 +2429,11 @@ function _mlo_write_patches(ob, patches)
         ob = _objbuf_string(ob, "")
         continue
       end if
-      ob = _objbuf_u32(ob, pt.offset)
-      ob = _objbuf_string(ob, _coerce_name(pt.target))
-      ob = _objbuf_string(ob, _coerce_name(pt.kind))
+      off = try(pt.offset)
+      if typeof(off) != "int" then off = 0 end if
+      ob = _objbuf_u32(ob, off)
+      ob = _objbuf_string(ob, _coerce_name(try(pt.target)))
+      ob = _objbuf_string(ob, _coerce_name(try(pt.kind)))
     end for
   end if
   return ob
@@ -2571,8 +2667,10 @@ function _debug_validate_patch_names(label, patches)
       print "[dbg][mlo] non-struct patch in " + label + " at " + i + " type=" + typeof(pt)
       return
     end if
-    if typeof(pt.target) != "string" or typeof(pt.kind) != "string" then
-      print "[dbg][mlo] bad patch in " + label + " at " + i + " target_type=" + typeof(pt.target) + " target_name=" + _coerce_name(pt.target) + " kind_type=" + typeof(pt.kind) + " kind_name=" + _coerce_name(pt.kind)
+    pt_target = try(pt.target)
+    pt_kind = try(pt.kind)
+    if typeof(pt_target) != "string" or typeof(pt_kind) != "string" then
+      print "[dbg][mlo] bad patch in " + label + " at " + i + " target_type=" + typeof(pt_target) + " target_name=" + _coerce_name(pt_target) + " kind_type=" + typeof(pt_kind) + " kind_name=" + _coerce_name(pt_kind)
       return
     end if
   end for
@@ -2605,24 +2703,108 @@ function _label_lookup_fallback(labels, name, defaultv)
   return defaultv
 end function
 
+function _link_target_obj_index(name)
+  if typeof(name) != "string" or s.startsWith(name, "objm_") == false then return "" end if
+  p = s.indexOf(name, "__", 5)
+  if typeof(p) != "int" or p <= 5 then return "" end if
+  return s.substr(name, 5, p - 5)
+end function
+
+function _link_target_obj_index_num(name)
+  idx = _link_target_obj_index(name)
+  if idx == "" then return -1 end if
+  acc = 0
+  for i = 0 to len(idx) - 1
+    c = _char_code_local(idx[i])
+    if c < 48 or c > 57 then return -1 end if
+    acc = (acc * 10) + (c - 48)
+  end for
+  return acc
+end function
+
+function _link_obj_label_map_set(obj_index_map, name, value)
+  idx = _link_target_obj_index_num(name)
+  if idx < 0 then return obj_index_map end if
+  while idx >= len(obj_index_map)
+    obj_index_map = obj_index_map + [0]
+  end while
+  lm = obj_index_map[idx]
+  if typeof(lm) != "struct" then lm = t.fastmap_new(256) end if
+  lm = t.fastmap_set(lm, name, value)
+  obj_index_map[idx] = lm
+  return obj_index_map
+end function
+
+function _link_obj_label_map_get(obj_index_map, name, defaultv)
+  idx = _link_target_obj_index_num(name)
+  if idx < 0 or typeof(obj_index_map) != "array" or idx >= len(obj_index_map) then return defaultv end if
+  lm = obj_index_map[idx]
+  if typeof(lm) != "struct" then return defaultv end if
+  return t.fastmap_get(lm, name, defaultv)
+end function
+
+function _link_obj_label_list_set(obj_index_lists, name, value)
+  idx = _link_target_obj_index_num(name)
+  if idx < 0 then return obj_index_lists end if
+  while idx >= len(obj_index_lists)
+    obj_index_lists = obj_index_lists + [0]
+  end while
+  b = obj_index_lists[idx]
+  if typeof(b) != "struct" or typeof(b.chunks) != "array" then b = t.arr_chunk_new(256) end if
+  b = t.arr_chunk_push(b, StrIntPair(name, value))
+  obj_index_lists[idx] = b
+  return obj_index_lists
+end function
+
+function _link_obj_label_list_get(obj_index_lists, name, defaultv)
+  idx = _link_target_obj_index_num(name)
+  if idx < 0 or typeof(obj_index_lists) != "array" or idx >= len(obj_index_lists) then return defaultv end if
+  arr = obj_index_lists[idx]
+  if typeof(arr) == "struct" and typeof(arr.chunks) == "array" then arr = t.arr_chunk_finish(arr) end if
+  if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
+  for i = 0 to len(arr) - 1
+    it = arr[i]
+    if typeof(it) == "struct" and typeof(try(it.key)) == "string" and try(it.key) == name then
+      if typeof(try(it.value)) == "int" then return try(it.value) end if
+    end if
+  end for
+  return defaultv
+end function
+
 function _link_rec_labels_lookup(recs, text_rva, rdata_rva, data_rva, bss_rva, name, defaultv)
   if typeof(name) != "string" or name == "" then return defaultv end if
   if typeof(recs) != "array" or len(recs) <= 0 then return defaultv end if
+  want_obj = _link_target_obj_index(name)
   for i = 0 to len(recs) - 1
     rec = recs[i]
     if typeof(rec) != "array" or len(rec) < 5 then continue end if
     obj_path = _coerce_name(rec[0])
+    if want_obj != "" then
+      base_obj = _basename(obj_path)
+      if s.startsWith(base_obj, want_obj + "_") == false then continue end if
+    end if
     text_off = rec[1]
     rdata_off = rec[2]
     data_off = rec[3]
     bss_off = rec[4]
 
-    ro = _read_mlo_file_for_layout(obj_path)
-    if typeof(ro) == "error" then continue end if
-    asm_labels = ro.asm_labels
-    rdata_labels = ro.rdata_labels
-    data_labels = ro.data_labels
-    bss_labels = ro.bss_labels
+    asm_labels = []
+    rdata_labels = []
+    data_labels = []
+    bss_labels = []
+    if len(rec) >= 9 then
+      asm_labels = rec[5]
+      rdata_labels = rec[6]
+      data_labels = rec[7]
+      bss_labels = rec[8]
+    else
+      ro = _read_mlo_file_for_layout(obj_path)
+      if typeof(ro) == "error" then continue end if
+      asm_labels = ro.asm_labels
+      rdata_labels = ro.rdata_labels
+      data_labels = ro.data_labels
+      bss_labels = ro.bss_labels
+    end if
 
     if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
       for li = 0 to len(asm_labels) - 1
@@ -3096,6 +3278,9 @@ function _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdat
   trg = t.fastmap_get(label_map, _label_key(target), -1)
   if typeof(trg) != "int" or trg < 0 then
     trg = _label_lookup_fallback(labels, target, -1)
+    if typeof(trg) == "int" and trg >= 0 then
+      label_map = t.fastmap_set(label_map, _label_key(target), trg)
+    end if
   end if
   if typeof(trg) != "int" or trg < 0 then
     trg = _link_rec_labels_lookup(link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target, -1)
@@ -3106,7 +3291,211 @@ function _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdat
   return [label_map, trg]
 end function
 
-function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, image_base, buf, rdata_buf, data_buf, patch_index)
+function _link_local_labels_get(local_label_map, local_labels, target)
+  trg = t.fastmap_get(local_label_map, _label_key(target), -1)
+  if typeof(trg) == "int" and trg >= 0 then return trg end if
+  return -1
+end function
+
+function _link_local_patch_target(src_patch, target)
+  if typeof(src_patch) != "string" or typeof(target) != "string" then return "" end if
+  if target == "" or s.startsWith(target, "objm_") then return "" end if
+  base = _basename(src_patch)
+  sep = s.indexOf(base, "_", 0)
+  if typeof(sep) != "int" or sep <= 0 then return "" end if
+  idx = s.substr(base, 0, sep)
+  if idx == "" then return "" end if
+  return "objm_" + idx + "__" + target
+end function
+
+function _link_target_prefers_global(target)
+  if typeof(target) != "string" or target == "" then return true end if
+  if s.startsWith(target, "objm_") then return true end if
+  if s.startsWith(target, "fn_") then return true end if
+  if s.startsWith(target, "g_") then return true end if
+  if s.startsWith(target, "gc_") then return true end if
+  if s.startsWith(target, "heap_") then return true end if
+  if s.startsWith(target, "iat_") then return true end if
+  if s.startsWith(target, "modinit_") then return true end if
+  if s.startsWith(target, "dbg_loc_") then return true end if
+  return false
+end function
+
+function _link_resolve_patch_target(label_map, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, target)
+  if s.startsWith(target, "objm_") then
+    trg_obj = _link_local_labels_get(local_label_map, local_labels, target)
+    if typeof(trg_obj) == "int" and trg_obj >= 0 then return [label_map, trg_obj] end if
+    trg_obj = _link_obj_label_map_get(obj_index_map, target, -1)
+    if typeof(trg_obj) != "int" or trg_obj < 0 then
+      trg_obj = _link_obj_label_list_get(obj_index_lists, target, -1)
+    end if
+    if typeof(trg_obj) != "int" or trg_obj < 0 then
+      trg_obj = _link_rec_labels_lookup(link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target, -1)
+    end if
+    return [label_map, trg_obj]
+  end if
+
+  local_target = _link_local_patch_target(src_patch, target)
+  if _link_target_prefers_global(target) == false then
+    trg = _link_local_labels_get(local_label_map, local_labels, target)
+    if typeof(trg) == "int" and trg >= 0 then return [label_map, trg] end if
+  end if
+
+  if local_target != "" and local_target != target and _link_target_prefers_global(target) == false then
+    trg = _link_local_labels_get(local_label_map, local_labels, local_target)
+    if typeof(trg) == "int" and trg >= 0 then return [label_map, trg] end if
+    trg = _link_obj_label_map_get(obj_index_map, local_target, -1)
+    if typeof(trg) == "int" and trg >= 0 then return [label_map, trg] end if
+  end if
+
+  rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target)
+  label_map = rr[0]
+  trg = rr[1]
+  if typeof(trg) == "int" and trg >= 0 then return [label_map, trg] end if
+
+  if local_target != "" and local_target != target and _link_target_prefers_global(target) then
+    trg = _link_local_labels_get(local_label_map, local_labels, target)
+    if typeof(trg) == "int" and trg >= 0 then return [label_map, trg] end if
+    trg = _link_local_labels_get(local_label_map, local_labels, local_target)
+    if typeof(trg) == "int" and trg >= 0 then return [label_map, trg] end if
+    trg = _link_obj_label_map_get(obj_index_map, local_target, -1)
+  end if
+  return [label_map, trg]
+end function
+
+function _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, target)
+  cached = t.fastmap_get(target_cache, target, -1)
+  if typeof(cached) == "int" and cached >= 0 then
+    return [label_map, target_cache, cached]
+  end if
+
+  rr = _link_resolve_patch_target(label_map, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, target)
+  label_map = rr[0]
+  trg = rr[1]
+  if typeof(trg) == "int" and trg >= 0 then
+    target_cache = t.fastmap_set(target_cache, target, trg)
+  end if
+  return [label_map, target_cache, trg]
+end function
+
+function _link_local_label_add(local_label_map, local_labels_b, name, value)
+  nm = _label_key(name)
+  if nm == "" then return [local_label_map, local_labels_b] end if
+  local_label_map = t.fastmap_set(local_label_map, nm, value)
+  local_labels_b = t.arr_chunk_push(local_labels_b, StrIntPair(nm, value))
+  return [local_label_map, local_labels_b]
+end function
+
+function _link_scan_local_labels(raw, obj_text_off, obj_rdata_off, obj_data_off, obj_bss_off, text_rva, rdata_rva, data_rva, bss_rva)
+  local_label_cap = 2048
+  if typeof(raw) == "bytes" then
+    if len(raw) > 1000000 then
+      local_label_cap = 65536
+    else
+      if len(raw) > 200000 then local_label_cap = 16384 end if
+    end if
+  end if
+  local_label_map = t.fastmap_new(local_label_cap)
+  local_labels_b = t.arr_chunk_new(128)
+  rd = _objreader_new(raw)
+
+  rmagic = _objreader_read_string(rd)
+  if typeof(rmagic) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+  rd = rmagic[0]
+  rver = _objreader_read_u32(rd)
+  if typeof(rver) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+  rd = rver[0]
+  for i = 0 to 2
+    rs = _objreader_read_string(rd)
+    if typeof(rs) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+    rd = rs[0]
+  end for
+  for i = 0 to 2
+    rb = _objreader_read_bytes(rd)
+    if typeof(rb) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+    rd = rb[0]
+  end for
+  rbss = _objreader_read_u32(rd)
+  if typeof(rbss) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+  rd = rbss[0]
+
+  r1 = _mlo_read_labels(rd)
+  if typeof(r1) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+  rd = r1[0]
+  labs = r1[1]
+  if typeof(labs) == "array" and len(labs) > 0 then
+    for li = 0 to len(labs) - 1
+      lb = labs[li]
+      if typeof(lb) != "struct" then continue end if
+      lb_name = _coerce_name(try(lb.name))
+      lb_off = try(lb.offset)
+      if lb_name == "" or typeof(lb_off) != "int" then continue end if
+      rr = _link_local_label_add(local_label_map, local_labels_b, lb_name, text_rva + obj_text_off + lb_off)
+      local_label_map = rr[0]
+      local_labels_b = rr[1]
+    end for
+  end if
+  rd = _mlo_skip_patches(rd)
+  if typeof(rd) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+
+  r2 = _mlo_read_labels(rd)
+  if typeof(r2) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+  rd = r2[0]
+  labs = r2[1]
+  if typeof(labs) == "array" and len(labs) > 0 then
+    for li = 0 to len(labs) - 1
+      lb = labs[li]
+      if typeof(lb) != "struct" then continue end if
+      lb_name = _coerce_name(try(lb.name))
+      lb_off = try(lb.offset)
+      if lb_name == "" or typeof(lb_off) != "int" then continue end if
+      rr = _link_local_label_add(local_label_map, local_labels_b, lb_name, rdata_rva + obj_rdata_off + lb_off)
+      local_label_map = rr[0]
+      local_labels_b = rr[1]
+    end for
+  end if
+  rd = _mlo_skip_patches(rd)
+  if typeof(rd) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+
+  r3 = _mlo_read_labels(rd)
+  if typeof(r3) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+  rd = r3[0]
+  labs = r3[1]
+  if typeof(labs) == "array" and len(labs) > 0 then
+    for li = 0 to len(labs) - 1
+      lb = labs[li]
+      if typeof(lb) != "struct" then continue end if
+      lb_name = _coerce_name(try(lb.name))
+      lb_off = try(lb.offset)
+      if lb_name == "" or typeof(lb_off) != "int" then continue end if
+      rr = _link_local_label_add(local_label_map, local_labels_b, lb_name, data_rva + obj_data_off + lb_off)
+      local_label_map = rr[0]
+      local_labels_b = rr[1]
+    end for
+  end if
+  rd = _mlo_skip_patches(rd)
+  if typeof(rd) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+
+  r4 = _mlo_read_labels(rd)
+  if typeof(r4) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
+  labs = r4[1]
+  if typeof(labs) == "array" and len(labs) > 0 then
+    for li = 0 to len(labs) - 1
+      lb = labs[li]
+      if typeof(lb) != "struct" then continue end if
+      lb_name = _coerce_name(try(lb.name))
+      lb_off = try(lb.offset)
+      if lb_name == "" or typeof(lb_off) != "int" then continue end if
+      rr = _link_local_label_add(local_label_map, local_labels_b, lb_name, bss_rva + obj_bss_off + lb_off)
+      local_label_map = rr[0]
+      local_labels_b = rr[1]
+    end for
+  end if
+
+  return [local_label_map, t.arr_chunk_finish(local_labels_b)]
+end function
+
+function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, obj_bss_off, label_map, obj_index_map, obj_index_lists, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, image_base, buf, rdata_buf, data_buf, patch_index)
   raw = fs.readAllBytes(src_patch)
   if typeof(raw) == "error" then
     msg = "failed to read MiniLang object file during patching"
@@ -3144,6 +3533,20 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   rbss = _objreader_read_u32(rd)
   if typeof(rbss) == "error" then return [2, label_map, patch_index] end if
   rd = rbss[0]
+  local_scan = _link_scan_local_labels(raw, obj_text_off, obj_rdata_off, obj_data_off, obj_bss_off, text_rva, rdata_rva, data_rva, bss_rva)
+  local_label_map = local_scan[0]
+  local_labels = local_scan[1]
+  last_target = ""
+  last_value = -1
+  target_cache_cap = 4096
+  if typeof(raw) == "bytes" then
+    if len(raw) > 1000000 then
+      target_cache_cap = 65536
+    else
+      if len(raw) > 200000 then target_cache_cap = 16384 end if
+    end if
+  end if
+  target_cache = t.fastmap_new(target_cache_cap)
 
   rskip1 = _mlo_skip_labels(rd)
   if typeof(rskip1) == "error" then return [2, label_map, patch_index] end if
@@ -3169,9 +3572,17 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
         continue
       end if
 
-      rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
-      label_map = rr[0]
-      trg = rr[1]
+      trg = -1
+      if pt_target == last_target then
+        trg = last_value
+      else
+        rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
+        label_map = rr[0]
+        target_cache = rr[1]
+        trg = rr[2]
+        last_target = pt_target
+        last_value = trg
+      end if
       if typeof(trg) != "int" or trg < 0 then
         print "CompileError: unknown patch target: " + pt_target
         return [2, label_map, patch_index]
@@ -3216,9 +3627,17 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
         continue
       end if
 
-      rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
-      label_map = rr[0]
-      trg = rr[1]
+      trg = -1
+      if pt_target == last_target then
+        trg = last_value
+      else
+        rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
+        label_map = rr[0]
+        target_cache = rr[1]
+        trg = rr[2]
+        last_target = pt_target
+        last_value = trg
+      end if
       if typeof(trg) != "int" or trg < 0 then
         print "CompileError: unknown data patch target: " + pt_target
         return [2, label_map, patch_index]
@@ -3260,9 +3679,17 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
         continue
       end if
 
-      rr = _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, pt_target)
-      label_map = rr[0]
-      trg = rr[1]
+      trg = -1
+      if pt_target == last_target then
+        trg = last_value
+      else
+        rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
+        label_map = rr[0]
+        target_cache = rr[1]
+        trg = rr[2]
+        last_target = pt_target
+        last_value = trg
+      end if
       if typeof(trg) != "int" or trg < 0 then
         print "CompileError: unknown data patch target: " + pt_target
         return [2, label_map, patch_index]
@@ -3354,7 +3781,7 @@ function _collect_internal_helper_targets(dst, patches)
   for i = 0 to len(patches) - 1
     pt = patches[i]
     if typeof(pt) != "struct" then continue end if
-    trg = _coerce_name(pt.target)
+    trg = _coerce_name(try(pt.target))
     if _is_internal_helper_label_local(trg) == false then continue end if
     if _array_contains(merged, trg) then continue end if
     merged = merged + [trg]
@@ -3659,32 +4086,44 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       for li = 0 to len(obj.asm_labels) - 1
         lb = obj.asm_labels[li]
         if typeof(lb) != "struct" then continue end if
-        text_labels_b = t.arr_chunk_push(text_labels_b, MloLabel(_coerce_name(lb.name), text_obj_off + lb.offset))
+        lb_name = _coerce_name(try(lb.name))
+        lb_off = try(lb.offset)
+        if lb_name == "" or typeof(lb_off) != "int" then continue end if
+        text_labels_b = t.arr_chunk_push(text_labels_b, MloLabel(lb_name, text_obj_off + lb_off))
       end for
     end if
     if typeof(obj.rdata_labels) == "array" and len(obj.rdata_labels) > 0 then
       for li = 0 to len(obj.rdata_labels) - 1
         lb = obj.rdata_labels[li]
         if typeof(lb) != "struct" then continue end if
-        rdata_labels_b = t.arr_chunk_push(rdata_labels_b, MloLabel(_coerce_name(lb.name), rdata_obj_off + lb.offset))
+        lb_name = _coerce_name(try(lb.name))
+        lb_off = try(lb.offset)
+        if lb_name == "" or typeof(lb_off) != "int" then continue end if
+        rdata_labels_b = t.arr_chunk_push(rdata_labels_b, MloLabel(lb_name, rdata_obj_off + lb_off))
       end for
     end if
     if typeof(obj.data_labels) == "array" and len(obj.data_labels) > 0 then
       for li = 0 to len(obj.data_labels) - 1
         lb = obj.data_labels[li]
         if typeof(lb) != "struct" then continue end if
-        data_labels_b = t.arr_chunk_push(data_labels_b, MloLabel(_coerce_name(lb.name), data_obj_off + lb.offset))
+        lb_name = _coerce_name(try(lb.name))
+        lb_off = try(lb.offset)
+        if lb_name == "" or typeof(lb_off) != "int" then continue end if
+        data_labels_b = t.arr_chunk_push(data_labels_b, MloLabel(lb_name, data_obj_off + lb_off))
       end for
     end if
     if typeof(obj.bss_labels) == "array" and len(obj.bss_labels) > 0 then
       for li = 0 to len(obj.bss_labels) - 1
         lb = obj.bss_labels[li]
         if typeof(lb) != "struct" then continue end if
-        bss_labels_b = t.arr_chunk_push(bss_labels_b, MloLabel(_coerce_name(lb.name), bss_obj_off + lb.offset))
+        lb_name = _coerce_name(try(lb.name))
+        lb_off = try(lb.offset)
+        if lb_name == "" or typeof(lb_off) != "int" then continue end if
+        bss_labels_b = t.arr_chunk_push(bss_labels_b, MloLabel(lb_name, bss_obj_off + lb_off))
       end for
     end if
 
-    patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off])
+    patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
     obj_label_recs_b = t.arr_chunk_push(obj_label_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
 
     imports = _mlo_merge_imports(imports, obj.imports)
@@ -3748,9 +4187,15 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   data_labels = t.arr_chunk_finish(data_labels_b)
   bss_labels = t.arr_chunk_finish(bss_labels_b)
 
-  label_count = len(text_labels) + len(rdata_labels) + len(data_labels) + len(bss_labels)
-  if typeof(idr.iat_symbols) == "array" then label_count = label_count + (len(idr.iat_symbols) * 2) end if
-  label_map = t.fastmap_new((label_count * 4) + 64)
+  label_map = t.fastmap_new(65536)
+  obj_index_map = []
+  obj_index_lists = []
+  if typeof(obj_label_recs) == "array" and len(obj_label_recs) > 0 then
+    for oi = 0 to len(obj_label_recs)
+      obj_index_map = obj_index_map + [0]
+      obj_index_lists = obj_index_lists + [0]
+    end for
+  end if
   want_labels_dump = typeof(_dump_labels_path) == "string" and _dump_labels_path != ""
   labels_b = t.arr_chunk_new(512)
 
@@ -3758,36 +4203,68 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     for li = 0 to len(text_labels) - 1
       lb = text_labels[li]
       if typeof(lb) != "struct" then continue end if
-      final_v = text_rva + lb.offset
-      label_map = t.fastmap_set(label_map, _label_key(lb.name), final_v)
-      labels_b = t.arr_chunk_push(labels_b, StrIntPair(_coerce_name(lb.name), final_v))
+      lb_off = try(lb.offset)
+      if typeof(lb_off) != "int" then continue end if
+      final_v = text_rva + lb_off
+      nm = _label_key(try(lb.name))
+      if nm == "" then continue end if
+      if s.startsWith(nm, "objm_") then
+        obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
+      else
+        label_map = t.fastmap_set(label_map, nm, final_v)
+        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
+      end if
     end for
   end if
   if len(rdata_labels) > 0 then
     for li = 0 to len(rdata_labels) - 1
       lb = rdata_labels[li]
       if typeof(lb) != "struct" then continue end if
-      final_v = rdata_rva + lb.offset
-      label_map = t.fastmap_set(label_map, _label_key(lb.name), final_v)
-      labels_b = t.arr_chunk_push(labels_b, StrIntPair(_coerce_name(lb.name), final_v))
+      lb_off = try(lb.offset)
+      if typeof(lb_off) != "int" then continue end if
+      final_v = rdata_rva + lb_off
+      nm = _label_key(try(lb.name))
+      if nm == "" then continue end if
+      if s.startsWith(nm, "objm_") then
+        obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
+      else
+        label_map = t.fastmap_set(label_map, nm, final_v)
+        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
+      end if
     end for
   end if
   if len(data_labels) > 0 then
     for li = 0 to len(data_labels) - 1
       lb = data_labels[li]
       if typeof(lb) != "struct" then continue end if
-      final_v = data_rva + lb.offset
-      label_map = t.fastmap_set(label_map, _label_key(lb.name), final_v)
-      labels_b = t.arr_chunk_push(labels_b, StrIntPair(_coerce_name(lb.name), final_v))
+      lb_off = try(lb.offset)
+      if typeof(lb_off) != "int" then continue end if
+      final_v = data_rva + lb_off
+      nm = _label_key(try(lb.name))
+      if nm == "" then continue end if
+      if s.startsWith(nm, "objm_") then
+        obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
+      else
+        label_map = t.fastmap_set(label_map, nm, final_v)
+        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
+      end if
     end for
   end if
   if len(bss_labels) > 0 then
     for li = 0 to len(bss_labels) - 1
       lb = bss_labels[li]
       if typeof(lb) != "struct" then continue end if
-      final_v = bss_rva + lb.offset
-      label_map = t.fastmap_set(label_map, _label_key(lb.name), final_v)
-      labels_b = t.arr_chunk_push(labels_b, StrIntPair(_coerce_name(lb.name), final_v))
+      lb_off = try(lb.offset)
+      if typeof(lb_off) != "int" then continue end if
+      final_v = bss_rva + lb_off
+      nm = _label_key(try(lb.name))
+      if nm == "" then continue end if
+      if s.startsWith(nm, "objm_") then
+        obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
+      else
+        label_map = t.fastmap_set(label_map, nm, final_v)
+        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
+      end if
     end for
   end if
   if typeof(idr.iat_symbols) == "array" and len(idr.iat_symbols) > 0 then
@@ -3806,6 +4283,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     end for
   end if
   labels = t.arr_chunk_finish(labels_b)
+  _heap_probe("link:labels_done")
 
   entry_rva = t.fastmap_get(label_map, _label_key(entry_label), -1)
   if typeof(entry_rva) != "int" or entry_rva < 0 then
@@ -3847,8 +4325,10 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       obj_text_off = rec[1]
       obj_rdata_off = rec[2]
       obj_data_off = rec[3]
+      obj_bss_off = 0
+      if len(rec) >= 5 and typeof(rec[4]) == "int" then obj_bss_off = rec[4] end if
 
-      apr = _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, buf, rdata_buf, data_buf, patch_index)
+      apr = _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, obj_bss_off, label_map, obj_index_map, obj_index_lists, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, p.image_base, buf, rdata_buf, data_buf, patch_index)
       if typeof(apr) != "array" or len(apr) < 3 then
         print "CompileError: internal streamed patch application failed"
         return 2
@@ -3859,8 +4339,10 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       if ((ri + 1) % 8) == 0 then
         gc_collect()
       end if
+      _heap_probe("link:patch_obj_" + (ri + 1))
     end for
   end if
+  _heap_probe("link:patches_done")
 
   tx = p.sections[0]
   tx.data = buf
@@ -3886,14 +4368,88 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   return 0
 end function
 
+function _subsystem_cli_name(subsystem)
+  if subsystem == 2 then return "windows" end if
+  return "console"
+end function
+
+function _link_should_use_fresh_process(obj_paths)
+  if typeof(obj_paths) != "array" then return false end if
+  return len(obj_paths) > 128
+end function
+
+function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem, runtime_config)
+  global _dump_labels_path
+  self_exe = _self_exe_path()
+  if self_exe == "" then return -1 end if
+
+  cmd = "call " + _cmd_quote_arg(self_exe)
+  cmd = cmd + " " + _cmd_quote_arg(input_ml)
+  cmd = cmd + " " + _cmd_quote_arg(output_exe)
+  cmd = cmd + " --link-obj-dir " + _cmd_quote_arg(obj_dir)
+  cmd = cmd + " --subsystem " + _subsystem_cli_name(subsystem)
+
+  compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
+  if typeof(compiler_gc_limit) == "int" and compiler_gc_limit > 0 then
+    cmd = cmd + " --gc-limit " + compiler_gc_limit
+  end if
+  if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
+    cmd = cmd + " --dump-labels " + _cmd_quote_arg(_dump_labels_path)
+  end if
+
+  print "Linking in fresh compiler process..."
+  rc = _wsystem(cmd)
+  if typeof(rc) != "int" then
+    print "CompileError: failed to run link subprocess"
+    return 2
+  end if
+  if rc != 0 then
+    print "CompileError: link subprocess failed with exit code " + rc
+    return 2
+  end if
+  return 0
+end function
+
+function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg, base_state, helper_union, module_obj_paths_b)
+  if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
+    return [2, "failed to build module object", helper_union, module_obj_paths_b, 0]
+  end if
+
+  mst = mod_cg.state
+  if typeof(mst.diagnostics) == "array" and len(mst.diagnostics) > 0 then
+    msg = mst.diagnostics[0]
+    if typeof(msg) != "string" then msg = "" + msg end if
+    return [2, msg, helper_union, module_obj_paths_b, mst.label_id]
+  end if
+
+  helper_union = _merge_string_arrays(helper_union, mst.used_helpers)
+  mod_obj = _mlo_from_state_delta("module", module_file, entry_label, mst, base_state)
+  mod_obj.data_labels = _mlo_strip_shared_runtime_data_labels(mod_obj.data_labels)
+  mod_obj = _mlo_namespace_object(mod_obj, "objm_" + obj_index, true)
+  helper_union = _collect_internal_helper_targets(helper_union, mod_obj.asm_patches)
+  helper_union = _collect_internal_helper_targets(helper_union, mod_obj.rdata_patches)
+  helper_union = _collect_internal_helper_targets(helper_union, mod_obj.data_patches)
+
+  mod_path = _tmp_obj_path(tmp_dir, obj_index, module_file, "module")
+  wr_mod = _write_mlo_file(mod_path, mod_obj)
+  if typeof(wr_mod) == "error" then
+    msg2 = "writeAllBytes failed"
+    if typeof(wr_mod.message) == "string" then msg2 = wr_mod.message end if
+    return [2, msg2 + " (" + mod_path + ")", helper_union, module_obj_paths_b, mst.label_id]
+  end if
+
+  module_obj_paths_b = t.arr_chunk_push(module_obj_paths_b, mod_path)
+  label_id = mst.label_id
+  mod_obj = 0
+  mst = 0
+  wr_mod = 0
+  gc_collect()
+  return [0, "", helper_union, module_obj_paths_b, label_id]
+end function
+
 function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
-  compiler_gc_limit = _cfg_get_int(runtime_config, "compiler_gc_limit_bytes", 0)
-  if compiler_gc_limit <= 0 then
-    compiler_gc_limit = _cfg_get_int(runtime_config, "commit_bytes", 64 << 20)
-    if compiler_gc_limit < (64 << 20) then compiler_gc_limit = 64 << 20 end if
-    if compiler_gc_limit > (256 << 20) then compiler_gc_limit = 256 << 20 end if
-  end if
+  compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
   gc_set_limit(compiler_gc_limit)
   _heap_probe("compile:start")
   if _mem_probe_enabled then
@@ -3915,7 +4471,9 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
 
   extern_sigs = collect_extern_sigs(load.program)
   _heap_probe("compile:extern_sigs_done")
+  _heap_probe("compile:before_new_codegen")
   cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
+  _heap_probe("compile:new_codegen_done")
   if typeof(cg) != "struct" or typeof(cg.state) != "struct" then
     print "CompileError: failed to initialize code generator"
     return 2
@@ -3926,8 +4484,11 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   cg.state.call_profile = call_profile
   cg.state.trace_calls = trace_calls
   cg.state.is_windows_subsystem = (subsystem == 2)
+  _heap_probe("compile:before_call_profile_metadata")
   cg = codegen.enable_call_profile_metadata(cg)
+  _heap_probe("compile:call_profile_metadata_done")
 
+  _heap_probe("compile:before_prepare_program")
   prep = codegen.prepare_program_for_objects(cg, load.program)
   if typeof(prep) != "array" or len(prep) < 3 then
     print "CompileError: failed to prepare object-code pipeline"
@@ -3967,6 +4528,8 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   if typeof(st.used_helpers) == "array" then helper_union = st.used_helpers end if
   module_obj_paths_b = t.arr_chunk_new(128)
   support_path = _tmp_obj_path(tmp_dir, "000", input_abs, "support")
+  module_object_seq = 1
+  module_fn_chunk_size = 2
 
   visited = load.visited
   if typeof(visited) != "array" or len(visited) <= 0 then
@@ -3981,53 +4544,55 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
 
   for mi = 0 to len(visited) - 1
     module_file = visited[mi]
-    mod_cg = codegen.clone_for_object(cg, true)
-    if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
-      print "CompileError: failed to clone module codegen state"
-      return 2
-    end if
-    mod_cg.state.label_id = cg.state.label_id
-
     mrec = _module_init_rec_for_file(module_init_recs, module_file)
-    entry_label = ""
     if typeof(mrec) == "array" and len(mrec) >= 5 then
       entry_label = _coerce_name(mrec[2])
+      mod_cg = codegen.clone_for_object(cg, true)
+      if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
+        print "CompileError: failed to clone module codegen state"
+        return 2
+      end if
+      mod_cg.state.label_id = cg.state.label_id
       mod_cg = codegen.emit_module_init_object(mod_cg, mrec)
-    end if
-    mod_cg = codegen.emit_module_functions(mod_cg, module_file)
-
-    mst = mod_cg.state
-    if typeof(mst) != "struct" then
-      print "CompileError: invalid module codegen state for " + module_file
-      return 2
-    end if
-    if typeof(mst.diagnostics) == "array" and len(mst.diagnostics) > 0 then
-      for di = 0 to len(mst.diagnostics) - 1
-        msg = mst.diagnostics[di]
-        if typeof(msg) != "string" then msg = "" + msg end if
-        print "CompileError: " + msg
-      end for
-      return 2
+      fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, module_file, entry_label, mod_cg, cg.state, helper_union, module_obj_paths_b)
+      if fin[0] != 0 then
+        print "CompileError: " + fin[1]
+        return fin[0]
+      end if
+      helper_union = fin[2]
+      module_obj_paths_b = fin[3]
+      cg.state.label_id = fin[4]
+      module_object_seq = module_object_seq + 1
+      mod_cg = 0
+      fin = 0
+      gc_collect()
     end if
 
-    helper_union = _merge_string_arrays(helper_union, mst.used_helpers)
-    mod_obj = _mlo_from_state_delta("module", module_file, entry_label, mst, cg.state)
-    mod_obj.data_labels = _mlo_strip_shared_runtime_data_labels(mod_obj.data_labels)
-    mod_obj = _mlo_namespace_object(mod_obj, "objm_" + mi, true)
-    helper_union = _collect_internal_helper_targets(helper_union, mod_obj.asm_patches)
-    helper_union = _collect_internal_helper_targets(helper_union, mod_obj.rdata_patches)
-    helper_union = _collect_internal_helper_targets(helper_union, mod_obj.data_patches)
-    mod_path = _tmp_obj_path(tmp_dir, "" + (mi + 1), module_file, "module")
-    wr_mod = _write_mlo_file(mod_path, mod_obj)
-    if typeof(wr_mod) == "error" then
-      msg = "writeAllBytes failed"
-      if typeof(wr_mod.message) == "string" then msg = wr_mod.message end if
-      print "CompileError: " + msg + " (" + mod_path + ")"
-      return 2
-    end if
-    module_obj_paths_b = t.arr_chunk_push(module_obj_paths_b, mod_path)
+    fn_entries = codegen.module_function_entries(cg, module_file)
+    fn_start = 0
+    while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
+      mod_cg = codegen.clone_for_object(cg, true)
+      if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
+        print "CompileError: failed to clone module codegen state"
+        return 2
+      end if
+      mod_cg.state.label_id = cg.state.label_id
+      mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, module_fn_chunk_size)
+      fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, module_file, "", mod_cg, cg.state, helper_union, module_obj_paths_b)
+      if fin[0] != 0 then
+        print "CompileError: " + fin[1]
+        return fin[0]
+      end if
+      helper_union = fin[2]
+      module_obj_paths_b = fin[3]
+      cg.state.label_id = fin[4]
+      module_object_seq = module_object_seq + 1
+      fn_start = fn_start + module_fn_chunk_size
+      mod_cg = 0
+      fin = 0
+      gc_collect()
+    end while
 
-    cg.state.label_id = mst.label_id
     if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
       for ri = 0 to len(module_init_recs) - 1
         r = module_init_recs[ri]
@@ -4044,8 +4609,15 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
         load.parsed_modules = _parsed_module_set(load.parsed_modules, module_file, "", [])
       end if
     end if
-    if ((mi + 1) % 8) == 0 then
-      gc_collect()
+    // Module object emission creates large transient asm/rdata/patch arrays.
+    // Drop those roots immediately; waiting several modules can exhaust the
+    // 2GB runtime heap while self-compiling the compiler's codegen modules.
+    mod_cg = 0
+    mrec = 0
+    fn_entries = 0
+    pm = 0
+    gc_collect()
+    if ((mi + 1) % 4) == 0 then
       _heap_probe("compile:module_" + (mi + 1))
     end if
   end for
@@ -4086,15 +4658,29 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   end if
 
   load.source = ""
+  load.program = []
   load.aliases = []
   load.sources = []
   load.visited = []
   load.parsed_modules = []
   load.diagnostics = []
   module_init_recs = []
-  gc_collect()
+  module_obj_paths_b = 0
+  module_obj_paths = []
+  support_obj = 0
+  wr_sup = 0
+  helper_union = []
+  prep = 0
+  st = 0
+  cg = 0
+  load = 0
   _heap_probe("compile:pre_link_gc")
 
+  if _link_should_use_fresh_process(obj_paths) then
+    gc_collect()
+    fresh_link = _link_obj_dir_in_fresh_process(input_abs, tmp_dir, output_exe, subsystem, runtime_config)
+    if fresh_link != -1 then return fresh_link end if
+  end if
   return _link_mlo_files(obj_paths, output_exe, subsystem)
 end function
 
@@ -4154,6 +4740,7 @@ function run_cli(args)
   end if
 
   runtime_config = _collect_runtime_config(args)
+  gc_set_limit(_compiler_gc_limit_from_config(runtime_config))
   call_profile = _has_flag(args, "--profile-calls")
   trace_calls = _has_flag(args, "--trace-calls")
   ss = _get_subsystem(args)

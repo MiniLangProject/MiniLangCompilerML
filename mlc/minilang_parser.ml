@@ -14,6 +14,23 @@ struct Token
   pos,
 end struct
 
+function _tok_text_part(v)
+  tv = typeof(v)
+  if tv == "string" then return v end if
+  if tv == "int" then return "" + v end if
+  if tv == "bool" then return "" + v end if
+  if tv == "float" then return "" + v end if
+  if tv == "void" then return "void" end if
+  return "<value>"
+end function
+
+function _tok_desc(tok)
+  if typeof(tok) != "struct" then return "<token>" end if
+  k = try(tok.kind)
+  v = try(tok.value)
+  return _tok_text_part(k) + ":" + _tok_text_part(v)
+end function
+
 struct ParserChunkTail
   data,
   used,
@@ -551,7 +568,7 @@ end function
 
 function tokenize(code)
   if typeof(code) != "string" then
-    return ParseError("tokenize expects source string", 0, "")
+    return ParseError("tokenize expects source string, got " + _tok_text_part(code), 0, "")
   end if
 
   token_chunks = []
@@ -1101,7 +1118,7 @@ function _parse_primary()
     return Var("Var", t.value, sp, _filename)
   end if
 
-  _set_error("Unexpected expression: " + t.kind + ":" + t.value, t.pos)
+  _set_error("Unexpected expression: " + _tok_desc(t), t.pos)
 end function
 
 function _match_number_has_dot(text)
@@ -1650,652 +1667,748 @@ function _parse_stmt()
   t = _peek()
 
   if t.kind == "KW" and t.value == "package" then
-    if _func_depth > 0 or _ns_depth > 0 then
-      _set_error("'package' is only allowed at top level", t.pos)
-      return
-    end if
-    if _seen_package then
-      _set_error("'package' may only appear once per file", t.pos)
-      return
-    end if
-    if _seen_nonpackage_toplevel_stmt then
-      _set_error("'package' must be the first statement in the file", t.pos)
-      return
-    end if
-    _seen_package = true
-    _advance()
-    name = _parse_dotted_name()
-    if _has_error() then return end if
-    return NamespaceDecl("NamespaceDecl", name, start_pos, _filename)
+    return _parse_stmt_package(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "namespace" then
-    return _parse_namespace_def(start_pos)
+    return _parse_stmt_namespace(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "import" then
-    if _func_depth > 0 or _ns_depth > 0 then
-      _set_error("'import' is only allowed at top level", t.pos)
-      return
-    end if
-    _advance()
-    module_name = 0
-    path = ""
-    if _peek().kind == "STRING" then
-      st = _advance()
-      path = _decode_string_token(st)
-      if _has_error() then return end if
-    else
-      module_name = _parse_dotted_name()
-      if _has_error() then return end if
-      path = _replaceDotsWithSlash(module_name) + ".ml"
-    end if
-    alias = 0
-    if _peek().kind == "KW" and _peek().value == "as" then
-      _advance()
-      a = _expect_kind("IDENT")
-      if _has_error() then return end if
-      alias = a.value
-    end if
-    return Import("Import", path, alias, module_name, start_pos, _filename)
+    return _parse_stmt_import(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "const" then
-    _advance()
-    n = _expect_kind("IDENT")
-    if _has_error() then return end if
-    _expect_value("OP", "=")
-    if _has_error() then return end if
-    e = _parse_expr(0)
-    if _has_error() then return end if
-    return ConstDecl("ConstDecl", n.value, e, start_pos, _filename)
+    return _parse_stmt_const(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "print" then
-    _advance()
-    e = _parse_expr(0)
-    if _has_error() then return end if
-    return Print("Print", e, start_pos, _filename)
+    return _parse_stmt_print(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "break" then
-    _advance()
-    if _peek().kind == "NUMBER" and not _match_number_has_dot(_peek().value) then
-      nraw = _advance().value
-      n = _parse_int_literal(nraw)
-      if typeof(n) != "int" then n = 1 end if
-      if n < 1 then n = 1 end if
-      return Break("Break", n, start_pos, _filename)
-    end if
-    return Break("Break", 1, start_pos, _filename)
+    return _parse_stmt_break(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "continue" then
-    _advance()
-    return Continue("Continue", start_pos, _filename)
+    return _parse_stmt_continue(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "global" then
-    if _func_depth <= 0 then
-      _set_error("'global' is only allowed inside functions", t.pos)
-      return
-    end if
-    _advance()
-    n0 = _expect_kind("IDENT")
-    if _has_error() then return end if
-    names_chunks = []
-    names_tail = []
-    appn0 = _chunked_push(names_chunks, names_tail, n0.value, 16)
-    names_chunks = appn0[0]
-    names_tail = appn0[1]
-    while _match_kind("COMMA")
-      if _peek().kind == "NL" or _peek().kind == "SEMI" or _peek().kind == "EOF" then
-        break
-      end if
-      ni = _expect_kind("IDENT")
-      if _has_error() then return end if
-      appn = _chunked_push(names_chunks, names_tail, ni.value, 16)
-      names_chunks = appn[0]
-      names_tail = appn[1]
-    end while
-    return GlobalDecl("GlobalDecl", _chunked_finish(names_chunks, names_tail), start_pos, _filename)
+    return _parse_stmt_global(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "return" then
-    _advance()
-    nxt = _peek()
-    if nxt.kind == "NL" or nxt.kind == "SEMI" or nxt.kind == "EOF" then
-      return Return("Return", 0, start_pos, _filename)
-    end if
-    if nxt.kind == "KW" and(nxt.value == "end" or nxt.value == "else" or nxt.value == "case" or nxt.value == "default") then
-      return Return("Return", 0, start_pos, _filename)
-    end if
-    e = _parse_expr(0)
-    if _has_error() then return end if
-    return Return("Return", e, start_pos, _filename)
+    return _parse_stmt_return(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "extern" then
-    if _func_depth > 0 then
-      _set_error("'extern' is only allowed at top-level / inside namespace", t.pos)
-      return
-    end if
-    _advance()
-
-    if _peek().kind == "KW" and _peek().value == "struct" then
-      _advance()
-      nm = _expect_kind("IDENT")
-      if _has_error() then return end if
-      _expect_block_nl()
-      fields_chunks = []
-      fields_tail = []
-      field_tys_chunks = []
-      field_tys_tail = []
-      while not _is_end_of("struct")
-        _skip_stmt_seps()
-        if _is_end_of("struct") then break end if
-        if _peek().kind == "EOF" then
-          _set_error("extern struct ended unexpectedly (missing 'end struct'?)", _peek().pos)
-          return
-        end if
-        fn = _expect_kind("IDENT")
-        if _has_error() then return end if
-        _expect_value("KW", "as")
-        if _has_error() then return end if
-        ty_tok = _peek()
-        if ty_tok.kind != "IDENT" and ty_tok.kind != "KW" then
-          _set_error("extern struct field expects typename after 'as'", ty_tok.pos)
-          return
-        end if
-        fty = _advance().value
-        appf = _chunked_push(fields_chunks, fields_tail, fn.value, 16)
-        fields_chunks = appf[0]
-        fields_tail = appf[1]
-        appty = _chunked_push(field_tys_chunks, field_tys_tail, fty, 16)
-        field_tys_chunks = appty[0]
-        field_tys_tail = appty[1]
-        _expect_block_nl()
-      end while
-      _expect_end_of("struct")
-      if _has_error() then return end if
-      return StructDef("StructDef", nm.value, _chunked_finish(fields_chunks, fields_tail), [], _chunked_finish(field_tys_chunks, field_tys_tail), start_pos, _filename)
-    end if
-
-    _expect_value("KW", "function")
-    if _has_error() then return end if
-    nm = _expect_kind("IDENT")
-    if _has_error() then return end if
-    _expect_kind("LPAREN")
-    if _has_error() then return end if
-    params = _parse_extern_param_list("RPAREN")
-    if _has_error() then return end if
-
-    if not(_peek().kind == "KW" and _peek().value == "from") then
-      _set_error("extern function expects 'from \"...\"'", _peek().pos)
-      return
-    end if
-    _advance()
-
-    dll_tok = _expect_kind("STRING")
-    if _has_error() then return end if
-    dll = _decode_string_token(dll_tok)
-    if _has_error() then return end if
-
-    sym_name = 0
-    if _peek().kind == "KW" and _peek().value == "symbol" then
-      _advance()
-      st = _expect_kind("STRING")
-      if _has_error() then return end if
-      sym_name = _decode_string_token(st)
-      if _has_error() then return end if
-    end if
-
-    ret_ty = "int"
-    if _peek().kind == "KW" and _peek().value == "returns" then
-      _advance()
-      rt = _peek()
-      if rt.kind != "IDENT" and rt.kind != "KW" then
-        _set_error("returns expects typename", rt.pos)
-        return
-      end if
-      ret_ty = _advance().value
-    end if
-
-    return ExternFunctionDef("ExternFunctionDef", nm.value, params, dll, sym_name, ret_ty, start_pos, _filename)
+    return _parse_stmt_extern(start_pos, t)
   end if
 
   if t.kind == "KW" and t.value == "struct" then
+    return _parse_stmt_struct(start_pos, t)
+  end if
+
+  if t.kind == "KW" and t.value == "enum" then
+    return _parse_stmt_enum(start_pos, t)
+  end if
+
+  if t.kind == "KW" and t.value == "function" then
+    return _parse_stmt_function(start_pos, t)
+  end if
+
+  if t.kind == "KW" and t.value == "loop" then
+    return _parse_stmt_loop(start_pos, t)
+  end if
+
+  if t.kind == "KW" and t.value == "switch" then
+    return _parse_stmt_switch(start_pos, t)
+  end if
+
+  if t.kind == "KW" and t.value == "if" then
+    return _parse_stmt_if(start_pos, t)
+  end if
+
+  if t.kind == "KW" and t.value == "while" then
+    return _parse_stmt_while(start_pos, t)
+  end if
+
+  if t.kind == "KW" and t.value == "for" then
+    return _parse_stmt_for(start_pos, t)
+  end if
+
+  if t.kind == "IDENT" then
+    return _parse_stmt_ident(start_pos, t)
+  end if
+
+  _set_error("Unknown statement: " + _tok_desc(t), t.pos)
+end function
+
+function _parse_stmt_package(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  if _func_depth > 0 or _ns_depth > 0 then
+    _set_error("'package' is only allowed at top level", t.pos)
+    return
+  end if
+  if _seen_package then
+    _set_error("'package' may only appear once per file", t.pos)
+    return
+  end if
+  if _seen_nonpackage_toplevel_stmt then
+    _set_error("'package' must be the first statement in the file", t.pos)
+    return
+  end if
+  _seen_package = true
+  _advance()
+  name = _parse_dotted_name()
+  if _has_error() then return end if
+  return NamespaceDecl("NamespaceDecl", name, start_pos, _filename)
+end function
+
+function _parse_stmt_namespace(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  return _parse_namespace_def(start_pos)
+end function
+
+function _parse_stmt_import(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  if _func_depth > 0 or _ns_depth > 0 then
+    _set_error("'import' is only allowed at top level", t.pos)
+    return
+  end if
+  _advance()
+  module_name = 0
+  path = ""
+  if _peek().kind == "STRING" then
+    st = _advance()
+    path = _decode_string_token(st)
+    if _has_error() then return end if
+  else
+    module_name = _parse_dotted_name()
+    if _has_error() then return end if
+    path = _replaceDotsWithSlash(module_name) + ".ml"
+  end if
+  alias = 0
+  if _peek().kind == "KW" and _peek().value == "as" then
+    _advance()
+    a = _expect_kind("IDENT")
+    if _has_error() then return end if
+    alias = a.value
+  end if
+  return Import("Import", path, alias, module_name, start_pos, _filename)
+end function
+
+function _parse_stmt_const(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  n = _expect_kind("IDENT")
+  if _has_error() then return end if
+  _expect_value("OP", "=")
+  if _has_error() then return end if
+  e = _parse_expr(0)
+  if _has_error() then return end if
+  return ConstDecl("ConstDecl", n.value, e, start_pos, _filename)
+end function
+
+function _parse_stmt_print(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  e = _parse_expr(0)
+  if _has_error() then return end if
+  return Print("Print", e, start_pos, _filename)
+end function
+
+function _parse_stmt_break(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  if _peek().kind == "NUMBER" and not _match_number_has_dot(_peek().value) then
+    nraw = _advance().value
+    n = _parse_int_literal(nraw)
+    if typeof(n) != "int" then n = 1 end if
+    if n < 1 then n = 1 end if
+    return Break("Break", n, start_pos, _filename)
+  end if
+  return Break("Break", 1, start_pos, _filename)
+end function
+
+function _parse_stmt_continue(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  return Continue("Continue", start_pos, _filename)
+end function
+
+function _parse_stmt_global(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  if _func_depth <= 0 then
+    _set_error("'global' is only allowed inside functions", t.pos)
+    return
+  end if
+  _advance()
+  n0 = _expect_kind("IDENT")
+  if _has_error() then return end if
+  names_chunks = []
+  names_tail = []
+  appn0 = _chunked_push(names_chunks, names_tail, n0.value, 16)
+  names_chunks = appn0[0]
+  names_tail = appn0[1]
+  while _match_kind("COMMA")
+    if _peek().kind == "NL" or _peek().kind == "SEMI" or _peek().kind == "EOF" then
+      break
+    end if
+    ni = _expect_kind("IDENT")
+    if _has_error() then return end if
+    appn = _chunked_push(names_chunks, names_tail, ni.value, 16)
+    names_chunks = appn[0]
+    names_tail = appn[1]
+  end while
+  return GlobalDecl("GlobalDecl", _chunked_finish(names_chunks, names_tail), start_pos, _filename)
+end function
+
+function _parse_stmt_return(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  nxt = _peek()
+  if nxt.kind == "NL" or nxt.kind == "SEMI" or nxt.kind == "EOF" then
+    return Return("Return", 0, start_pos, _filename)
+  end if
+  if nxt.kind == "KW" and(nxt.value == "end" or nxt.value == "else" or nxt.value == "case" or nxt.value == "default") then
+    return Return("Return", 0, start_pos, _filename)
+  end if
+  e = _parse_expr(0)
+  if _has_error() then return end if
+  return Return("Return", e, start_pos, _filename)
+end function
+
+function _parse_stmt_extern(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  if _func_depth > 0 then
+    _set_error("'extern' is only allowed at top-level / inside namespace", t.pos)
+    return
+  end if
+  _advance()
+
+  if _peek().kind == "KW" and _peek().value == "struct" then
     _advance()
     nm = _expect_kind("IDENT")
     if _has_error() then return end if
-    if _peek().kind == "KW" and _peek().value == "are" then
-      _advance()
-    end if
     _expect_block_nl()
-
     fields_chunks = []
     fields_tail = []
-    methods_chunks = []
-    methods_tail = []
+    field_tys_chunks = []
+    field_tys_tail = []
     while not _is_end_of("struct")
       _skip_stmt_seps()
       if _is_end_of("struct") then break end if
       if _peek().kind == "EOF" then
-        _set_error("struct ended unexpectedly (missing 'end struct'?)", _peek().pos)
+        _set_error("extern struct ended unexpectedly (missing 'end struct'?)", _peek().pos)
         return
       end if
-
-      if _peek().kind == "KW" and(_peek().value == "function" or _peek().value == "static") then
-        mpos = _peek().pos
-        is_static = false
-        if _peek().value == "static" then
-          is_static = true
-          _advance()
-          _skip_newlines()
-          _expect_value("KW", "function")
-          if _has_error() then return end if
-        else
-          _advance()
-        end if
-
-        is_inline = false
-        if _peek().kind == "KW" and _peek().value == "inline" then
-          is_inline = true
-          _advance()
-        end if
-
-        mn = _expect_kind("IDENT")
-        if _has_error() then return end if
-        _expect_kind("LPAREN")
-        if _has_error() then return end if
-        mp = _parse_ident_list("RPAREN")
-        if _has_error() then return end if
-        _expect_block_nl()
-        _func_depth = _func_depth + 1
-        mb = _parse_block_until_end("function", mpos)
-        _func_depth = _func_depth - 1
-        if _has_error() then return end if
-        _expect_end_of("function")
-        if _has_error() then return end if
-        appm = _chunked_push(methods_chunks, methods_tail, FunctionDef("FunctionDef", mn.value, mp, mb, is_static, is_inline, [], [], [], [], [], 0, [], [], [], [], false, mpos, _filename), 16)
-        methods_chunks = appm[0]
-        methods_tail = appm[1]
-        continue
-      end if
-
-      f = _expect_kind("IDENT")
+      fn = _expect_kind("IDENT")
       if _has_error() then return end if
-      appf0 = _chunked_push(fields_chunks, fields_tail, f.value, 16)
-      fields_chunks = appf0[0]
-      fields_tail = appf0[1]
-      while _match_kind("COMMA")
-        if _peek().kind == "NL" then
-          nxt = _peek_non_nl()
-          if nxt.kind != "IDENT" then break end if
-          _skip_newlines()
-        end if
-        if _peek().kind != "IDENT" then break end if
-        fi = _expect_kind("IDENT")
-        if _has_error() then return end if
-        appf = _chunked_push(fields_chunks, fields_tail, fi.value, 16)
-        fields_chunks = appf[0]
-        fields_tail = appf[1]
-      end while
+      _expect_value("KW", "as")
+      if _has_error() then return end if
+      ty_tok = _peek()
+      if ty_tok.kind != "IDENT" and ty_tok.kind != "KW" then
+        _set_error("extern struct field expects typename after 'as'", ty_tok.pos)
+        return
+      end if
+      fty = _advance().value
+      appf = _chunked_push(fields_chunks, fields_tail, fn.value, 16)
+      fields_chunks = appf[0]
+      fields_tail = appf[1]
+      appty = _chunked_push(field_tys_chunks, field_tys_tail, fty, 16)
+      field_tys_chunks = appty[0]
+      field_tys_tail = appty[1]
       _expect_block_nl()
     end while
-
     _expect_end_of("struct")
     if _has_error() then return end if
-    return StructDef(
-      "StructDef",
-      nm.value,
-      _chunked_finish(fields_chunks, fields_tail),
-      _chunked_finish(methods_chunks, methods_tail),
-      [],
-      start_pos,
-      _filename
-    )
+    return StructDef("StructDef", nm.value, _chunked_finish(fields_chunks, fields_tail), [], _chunked_finish(field_tys_chunks, field_tys_tail), start_pos, _filename)
   end if
 
-  if t.kind == "KW" and t.value == "enum" then
+  _expect_value("KW", "function")
+  if _has_error() then return end if
+  nm = _expect_kind("IDENT")
+  if _has_error() then return end if
+  _expect_kind("LPAREN")
+  if _has_error() then return end if
+  params = _parse_extern_param_list("RPAREN")
+  if _has_error() then return end if
+
+  if not(_peek().kind == "KW" and _peek().value == "from") then
+    _set_error("extern function expects 'from \"...\"'", _peek().pos)
+    return
+  end if
+  _advance()
+
+  dll_tok = _expect_kind("STRING")
+  if _has_error() then return end if
+  dll = _decode_string_token(dll_tok)
+  if _has_error() then return end if
+
+  sym_name = 0
+  if _peek().kind == "KW" and _peek().value == "symbol" then
     _advance()
-    nm = _expect_kind("IDENT")
+    st = _expect_kind("STRING")
     if _has_error() then return end if
-    if _peek().kind == "KW" and _peek().value == "are" then
-      _advance()
+    sym_name = _decode_string_token(st)
+    if _has_error() then return end if
+  end if
+
+  ret_ty = "int"
+  if _peek().kind == "KW" and _peek().value == "returns" then
+    _advance()
+    rt = _peek()
+    if rt.kind != "IDENT" and rt.kind != "KW" then
+      _set_error("returns expects typename", rt.pos)
+      return
     end if
-    _expect_block_nl()
-
-    variants_chunks = []
-    variants_tail = []
-    values_chunks = []
-    values_tail = []
-    while not _is_end_of("enum")
-      _skip_stmt_seps()
-      if _is_end_of("enum") then break end if
-      if _peek().kind == "EOF" then
-        _set_error("enum ended unexpectedly (missing 'end enum'?)", _peek().pos)
-        return
-      end if
-      vn = _expect_kind("IDENT")
-      if _has_error() then return end if
-      vv = void
-      if _match_value("OP", "=") then
-        vv = _parse_expr(0)
-        if _has_error() then return end if
-      end if
-      appv0 = _chunked_push(variants_chunks, variants_tail, vn.value, 32)
-      variants_chunks = appv0[0]
-      variants_tail = appv0[1]
-      appval0 = _chunked_push(values_chunks, values_tail, vv, 32)
-      values_chunks = appval0[0]
-      values_tail = appval0[1]
-
-      while _match_kind("COMMA")
-        if _peek().kind == "NL" then
-          nxt = _peek_non_nl()
-          if nxt.kind != "IDENT" then break end if
-          _skip_newlines()
-        end if
-        if _peek().kind != "IDENT" then break end if
-        vn2 = _expect_kind("IDENT")
-        if _has_error() then return end if
-        vv2 = void
-        if _match_value("OP", "=") then
-          vv2 = _parse_expr(0)
-          if _has_error() then return end if
-        end if
-        appv = _chunked_push(variants_chunks, variants_tail, vn2.value, 32)
-        variants_chunks = appv[0]
-        variants_tail = appv[1]
-        appval = _chunked_push(values_chunks, values_tail, vv2, 32)
-        values_chunks = appval[0]
-        values_tail = appval[1]
-      end while
-      _expect_block_nl()
-    end while
-
-    _expect_end_of("enum")
-    if _has_error() then return end if
-    return EnumDef(
-      "EnumDef",
-      nm.value,
-      _chunked_finish(variants_chunks, variants_tail),
-      _chunked_finish(values_chunks, values_tail),
-      start_pos,
-      _filename
-    )
+    ret_ty = _advance().value
   end if
 
-  if t.kind == "KW" and t.value == "function" then
-    _advance()
-    is_inline = false
-    if _peek().kind == "KW" and _peek().value == "inline" then
-      is_inline = true
-      _advance()
-    end if
-    nm = _expect_kind("IDENT")
-    if _has_error() then return end if
-    _expect_kind("LPAREN")
-    if _has_error() then return end if
-    params = _parse_ident_list("RPAREN")
-    if _has_error() then return end if
-    _expect_block_nl()
-    _func_depth = _func_depth + 1
-    body = _parse_block_until_end("function", start_pos)
-    _func_depth = _func_depth - 1
-    if _has_error() then return end if
-    _expect_end_of("function")
-    if _has_error() then return end if
-  return FunctionDef("FunctionDef", nm.value, params, body, false, is_inline, [], [], [], [], [], 0, [], [], [], [], false, start_pos, _filename)
-  end if
+  return ExternFunctionDef("ExternFunctionDef", nm.value, params, dll, sym_name, ret_ty, start_pos, _filename)
+end function
 
-  if t.kind == "KW" and t.value == "loop" then
-    global _i
+function _parse_stmt_struct(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  nm = _expect_kind("IDENT")
+  if _has_error() then return end if
+  if _peek().kind == "KW" and _peek().value == "are" then
     _advance()
-    _expect_block_nl()
-    body_chunks = []
-    body_tail = []
+  end if
+  _expect_block_nl()
+
+  fields_chunks = []
+  fields_tail = []
+  methods_chunks = []
+  methods_tail = []
+  while not _is_end_of("struct")
     _skip_stmt_seps()
-    while true
-      if _peek().kind == "KW" and _peek().value == "while" then
-        save_i = _i
+    if _is_end_of("struct") then break end if
+    if _peek().kind == "EOF" then
+      _set_error("struct ended unexpectedly (missing 'end struct'?)", _peek().pos)
+      return
+    end if
+
+    if _peek().kind == "KW" and(_peek().value == "function" or _peek().value == "static") then
+      mpos = _peek().pos
+      is_static = false
+      if _peek().value == "static" then
+        is_static = true
         _advance()
-        cond = _parse_expr(0)
+        _skip_newlines()
+        _expect_value("KW", "function")
         if _has_error() then return end if
-        _skip_stmt_seps()
-        if _is_end_of("loop") then
-          _expect_end_of("loop")
-          if _has_error() then return end if
-          return DoWhile("DoWhile", _chunked_finish(body_chunks, body_tail), cond, start_pos, _filename)
-        end if
-        _i = save_i
+      else
+        _advance()
       end if
 
+      is_inline = false
+      if _peek().kind == "KW" and _peek().value == "inline" then
+        is_inline = true
+        _advance()
+      end if
+
+      mn = _expect_kind("IDENT")
+      if _has_error() then return end if
+      _expect_kind("LPAREN")
+      if _has_error() then return end if
+      mp = _parse_ident_list("RPAREN")
+      if _has_error() then return end if
+      _expect_block_nl()
+      _func_depth = _func_depth + 1
+      mb = _parse_block_until_end("function", mpos)
+      _func_depth = _func_depth - 1
+      if _has_error() then return end if
+      _expect_end_of("function")
+      if _has_error() then return end if
+      appm = _chunked_push(methods_chunks, methods_tail, FunctionDef("FunctionDef", mn.value, mp, mb, is_static, is_inline, [], [], [], [], [], 0, [], [], [], [], false, mpos, _filename), 16)
+      methods_chunks = appm[0]
+      methods_tail = appm[1]
+      continue
+    end if
+
+    f = _expect_kind("IDENT")
+    if _has_error() then return end if
+    appf0 = _chunked_push(fields_chunks, fields_tail, f.value, 16)
+    fields_chunks = appf0[0]
+    fields_tail = appf0[1]
+    while _match_kind("COMMA")
+      if _peek().kind == "NL" then
+        nxt = _peek_non_nl()
+        if nxt.kind != "IDENT" then break end if
+        _skip_newlines()
+      end if
+      if _peek().kind != "IDENT" then break end if
+      fi = _expect_kind("IDENT")
+      if _has_error() then return end if
+      appf = _chunked_push(fields_chunks, fields_tail, fi.value, 16)
+      fields_chunks = appf[0]
+      fields_tail = appf[1]
+    end while
+    _expect_block_nl()
+  end while
+
+  _expect_end_of("struct")
+  if _has_error() then return end if
+  return StructDef(
+    "StructDef",
+    nm.value,
+    _chunked_finish(fields_chunks, fields_tail),
+    _chunked_finish(methods_chunks, methods_tail),
+    [],
+    start_pos,
+    _filename
+  )
+end function
+
+function _parse_stmt_enum(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  nm = _expect_kind("IDENT")
+  if _has_error() then return end if
+  if _peek().kind == "KW" and _peek().value == "are" then
+    _advance()
+  end if
+  _expect_block_nl()
+
+  variants_chunks = []
+  variants_tail = []
+  values_chunks = []
+  values_tail = []
+  while not _is_end_of("enum")
+    _skip_stmt_seps()
+    if _is_end_of("enum") then break end if
+    if _peek().kind == "EOF" then
+      _set_error("enum ended unexpectedly (missing 'end enum'?)", _peek().pos)
+      return
+    end if
+    vn = _expect_kind("IDENT")
+    if _has_error() then return end if
+    vv = void
+    if _match_value("OP", "=") then
+      vv = _parse_expr(0)
+      if _has_error() then return end if
+    end if
+    appv0 = _chunked_push(variants_chunks, variants_tail, vn.value, 32)
+    variants_chunks = appv0[0]
+    variants_tail = appv0[1]
+    appval0 = _chunked_push(values_chunks, values_tail, vv, 32)
+    values_chunks = appval0[0]
+    values_tail = appval0[1]
+
+    while _match_kind("COMMA")
+      if _peek().kind == "NL" then
+        nxt = _peek_non_nl()
+        if nxt.kind != "IDENT" then break end if
+        _skip_newlines()
+      end if
+      if _peek().kind != "IDENT" then break end if
+      vn2 = _expect_kind("IDENT")
+      if _has_error() then return end if
+      vv2 = void
+      if _match_value("OP", "=") then
+        vv2 = _parse_expr(0)
+        if _has_error() then return end if
+      end if
+      appv = _chunked_push(variants_chunks, variants_tail, vn2.value, 32)
+      variants_chunks = appv[0]
+      variants_tail = appv[1]
+      appval = _chunked_push(values_chunks, values_tail, vv2, 32)
+      values_chunks = appval[0]
+      values_tail = appval[1]
+    end while
+    _expect_block_nl()
+  end while
+
+  _expect_end_of("enum")
+  if _has_error() then return end if
+  return EnumDef(
+    "EnumDef",
+    nm.value,
+    _chunked_finish(variants_chunks, variants_tail),
+    _chunked_finish(values_chunks, values_tail),
+    start_pos,
+    _filename
+  )
+end function
+
+function _parse_stmt_function(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  is_inline = false
+  if _peek().kind == "KW" and _peek().value == "inline" then
+    is_inline = true
+    _advance()
+  end if
+  nm = _expect_kind("IDENT")
+  if _has_error() then return end if
+  _expect_kind("LPAREN")
+  if _has_error() then return end if
+  params = _parse_ident_list("RPAREN")
+  if _has_error() then return end if
+  _expect_block_nl()
+  _func_depth = _func_depth + 1
+  body = _parse_block_until_end("function", start_pos)
+  _func_depth = _func_depth - 1
+  if _has_error() then return end if
+  _expect_end_of("function")
+  if _has_error() then return end if
+  return FunctionDef("FunctionDef", nm.value, params, body, false, is_inline, [], [], [], [], [], 0, [], [], [], [], false, start_pos, _filename)
+end function
+
+function _parse_stmt_loop(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  global _i
+  _advance()
+  _expect_block_nl()
+  body_chunks = []
+  body_tail = []
+  _skip_stmt_seps()
+  while true
+    if _peek().kind == "KW" and _peek().value == "while" then
+      save_i = _i
+      _advance()
+      cond = _parse_expr(0)
+      if _has_error() then return end if
+      _skip_stmt_seps()
       if _is_end_of("loop") then
         _expect_end_of("loop")
         if _has_error() then return end if
-        _expect_value("KW", "while")
-        if _has_error() then return end if
-        cond = _parse_expr(0)
-        if _has_error() then return end if
         return DoWhile("DoWhile", _chunked_finish(body_chunks, body_tail), cond, start_pos, _filename)
       end if
+      _i = save_i
+    end if
 
-      if _peek().kind == "EOF" then
-        _set_error("loop ended unexpectedly (missing 'end loop'?)", _peek().pos)
-        return
+    if _is_end_of("loop") then
+      _expect_end_of("loop")
+      if _has_error() then return end if
+      _expect_value("KW", "while")
+      if _has_error() then return end if
+      cond = _parse_expr(0)
+      if _has_error() then return end if
+      return DoWhile("DoWhile", _chunked_finish(body_chunks, body_tail), cond, start_pos, _filename)
+    end if
+
+    if _peek().kind == "EOF" then
+      _set_error("loop ended unexpectedly (missing 'end loop'?)", _peek().pos)
+      return
+    end if
+
+    st = _parse_stmt()
+    if _has_error() then return end if
+    appb = _chunked_push(body_chunks, body_tail, st, 64)
+    body_chunks = appb[0]
+    body_tail = appb[1]
+    _skip_stmt_seps()
+  end while
+end function
+
+function _parse_stmt_switch(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  ex = _parse_expr(0)
+  if _has_error() then return end if
+  _expect_block_nl()
+  cases_chunks = []
+  cases_tail = []
+  default_body =[]
+
+  while true
+    if _peek().kind == "KW" and _peek().value == "case" then
+      case_pos = _peek().pos
+      _advance()
+
+      if _peek().kind == "KW" and _peek().value == "default" then
+        _advance()
+        _expect_block_nl()
+        default_body = _parse_block_until_end("case", case_pos)
+        if _has_error() then return end if
+        _expect_end_of("case")
+        if _has_error() then return end if
+        _skip_stmt_seps()
+        continue
       end if
 
-      st = _parse_stmt()
+      first = _parse_expr(0)
       if _has_error() then return end if
-      appb = _chunked_push(body_chunks, body_tail, st, 64)
-      body_chunks = appb[0]
-      body_tail = appb[1]
-      _skip_stmt_seps()
-    end while
-  end if
 
-  if t.kind == "KW" and t.value == "switch" then
-    _advance()
-    ex = _parse_expr(0)
-    if _has_error() then return end if
-    _expect_block_nl()
-    cases_chunks = []
-    cases_tail = []
-    default_body =[]
-
-    while true
-      if _peek().kind == "KW" and _peek().value == "case" then
-        case_pos = _peek().pos
+      if _peek().kind == "KW" and _peek().value == "to" then
         _advance()
-
-        if _peek().kind == "KW" and _peek().value == "default" then
-          _advance()
-          _expect_block_nl()
-          default_body = _parse_block_until_end("case", case_pos)
-          if _has_error() then return end if
-          _expect_end_of("case")
-          if _has_error() then return end if
-          _skip_stmt_seps()
-          continue
-        end if
-
-        first = _parse_expr(0)
+        end_expr = _parse_expr(0)
         if _has_error() then return end if
-
-        if _peek().kind == "KW" and _peek().value == "to" then
-          _advance()
-          end_expr = _parse_expr(0)
-          if _has_error() then return end if
-          _expect_block_nl()
-          body = _parse_block_until_end("case", case_pos)
-          if _has_error() then return end if
-          _expect_end_of("case")
-          if _has_error() then return end if
-          appcr = _chunked_push(cases_chunks, cases_tail, SwitchCase("SwitchCase", "range", [], first, end_expr, body, case_pos, _filename), 32)
-          cases_chunks = appcr[0]
-          cases_tail = appcr[1]
-          _skip_stmt_seps()
-          continue
-        end if
-
-        vals_chunks = []
-        vals_tail = []
-        appv0 = _chunked_push(vals_chunks, vals_tail, first, 16)
-        vals_chunks = appv0[0]
-        vals_tail = appv0[1]
-        while _match_kind("COMMA")
-          if _peek().kind == "NL" then
-            nxt = _peek_non_nl()
-            if not _is_case_value_continuation_start(nxt) then
-              break
-            end if
-            _skip_newlines()
-          end if
-          v = _parse_expr(0)
-          if _has_error() then return end if
-          appv = _chunked_push(vals_chunks, vals_tail, v, 16)
-          vals_chunks = appv[0]
-          vals_tail = appv[1]
-        end while
-
         _expect_block_nl()
         body = _parse_block_until_end("case", case_pos)
         if _has_error() then return end if
         _expect_end_of("case")
         if _has_error() then return end if
-        appcv = _chunked_push(
-          cases_chunks,
-          cases_tail,
-          SwitchCase("SwitchCase", "values", _chunked_finish(vals_chunks, vals_tail), 0, 0, body, case_pos, _filename),
-          32
-        )
-        cases_chunks = appcv[0]
-        cases_tail = appcv[1]
+        appcr = _chunked_push(cases_chunks, cases_tail, SwitchCase("SwitchCase", "range", [], first, end_expr, body, case_pos, _filename), 32)
+        cases_chunks = appcr[0]
+        cases_tail = appcr[1]
         _skip_stmt_seps()
         continue
       end if
 
-      break
-    end while
-
-    _expect_end_of("switch")
-    if _has_error() then return end if
-    return Switch("Switch", ex, _chunked_finish(cases_chunks, cases_tail), default_body, start_pos, _filename)
-  end if
-
-  if t.kind == "KW" and t.value == "if" then
-    _advance()
-    cond = _parse_expr(0)
-    if _has_error() then return end if
-    _expect_value("KW", "then")
-    if _has_error() then return end if
-    then_body = _parse_block_until(["else"], "if", start_pos)
-    if _has_error() then return end if
-
-    elifs_chunks = []
-    elifs_tail = []
-    else_body =[]
-    while _peek().kind == "KW" and _peek().value == "else"
-      _advance()
-      if _peek().kind == "KW" and _peek().value == "if" then
-        _advance()
-        ec = _parse_expr(0)
+      vals_chunks = []
+      vals_tail = []
+      appv0 = _chunked_push(vals_chunks, vals_tail, first, 16)
+      vals_chunks = appv0[0]
+      vals_tail = appv0[1]
+      while _match_kind("COMMA")
+        if _peek().kind == "NL" then
+          nxt = _peek_non_nl()
+          if not _is_case_value_continuation_start(nxt) then
+            break
+          end if
+          _skip_newlines()
+        end if
+        v = _parse_expr(0)
         if _has_error() then return end if
-        _expect_value("KW", "then")
-        if _has_error() then return end if
-        eb = _parse_block_until(["else"], "if", start_pos)
-        if _has_error() then return end if
-        appe = _chunked_push(elifs_chunks, elifs_tail, [ec, eb], 16)
-        elifs_chunks = appe[0]
-        elifs_tail = appe[1]
-        continue
-      end if
-      else_body = _parse_block_until([], "if", start_pos)
-      if _has_error() then return end if
-      break
-    end while
+        appv = _chunked_push(vals_chunks, vals_tail, v, 16)
+        vals_chunks = appv[0]
+        vals_tail = appv[1]
+      end while
 
-    _expect_end_of("if")
-    if _has_error() then return end if
-    return If("If", cond, then_body, _chunked_finish(elifs_chunks, elifs_tail), else_body, start_pos, _filename)
-  end if
-
-  if t.kind == "KW" and t.value == "while" then
-    _advance()
-    cond = _parse_expr(0)
-    if _has_error() then return end if
-    _expect_block_nl()
-    body = _parse_block_until_end("while", start_pos)
-    if _has_error() then return end if
-    _expect_end_of("while")
-    if _has_error() then return end if
-    return While("While", cond, body, start_pos, _filename)
-  end if
-
-  if t.kind == "KW" and t.value == "for" then
-    _advance()
-    if _peek().kind == "KW" and _peek().value == "each" then
-      _advance()
-      vn = _expect_kind("IDENT")
-      if _has_error() then return end if
-      _expect_value("KW", "in")
-      if _has_error() then return end if
-      it = _parse_expr(0)
-      if _has_error() then return end if
       _expect_block_nl()
-      body = _parse_block_until_end("for", start_pos)
+      body = _parse_block_until_end("case", case_pos)
       if _has_error() then return end if
-      _expect_end_of("for")
+      _expect_end_of("case")
       if _has_error() then return end if
-      return ForEach("ForEach", vn.value, it, body, start_pos, _filename)
+      appcv = _chunked_push(
+        cases_chunks,
+        cases_tail,
+        SwitchCase("SwitchCase", "values", _chunked_finish(vals_chunks, vals_tail), 0, 0, body, case_pos, _filename),
+        32
+      )
+      cases_chunks = appcv[0]
+      cases_tail = appcv[1]
+      _skip_stmt_seps()
+      continue
     end if
+
+    break
+  end while
+
+  _expect_end_of("switch")
+  if _has_error() then return end if
+  return Switch("Switch", ex, _chunked_finish(cases_chunks, cases_tail), default_body, start_pos, _filename)
+end function
+
+function _parse_stmt_if(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  cond = _parse_expr(0)
+  if _has_error() then return end if
+  _expect_value("KW", "then")
+  if _has_error() then return end if
+  then_body = _parse_block_until(["else"], "if", start_pos)
+  if _has_error() then return end if
+
+  elifs_chunks = []
+  elifs_tail = []
+  else_body =[]
+  while _peek().kind == "KW" and _peek().value == "else"
+    _advance()
+    if _peek().kind == "KW" and _peek().value == "if" then
+      _advance()
+      ec = _parse_expr(0)
+      if _has_error() then return end if
+      _expect_value("KW", "then")
+      if _has_error() then return end if
+      eb = _parse_block_until(["else"], "if", start_pos)
+      if _has_error() then return end if
+      appe = _chunked_push(elifs_chunks, elifs_tail, [ec, eb], 16)
+      elifs_chunks = appe[0]
+      elifs_tail = appe[1]
+      continue
+    end if
+    else_body = _parse_block_until([], "if", start_pos)
+    if _has_error() then return end if
+    break
+  end while
+
+  _expect_end_of("if")
+  if _has_error() then return end if
+  return If("If", cond, then_body, _chunked_finish(elifs_chunks, elifs_tail), else_body, start_pos, _filename)
+end function
+
+function _parse_stmt_while(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  cond = _parse_expr(0)
+  if _has_error() then return end if
+  _expect_block_nl()
+  body = _parse_block_until_end("while", start_pos)
+  if _has_error() then return end if
+  _expect_end_of("while")
+  if _has_error() then return end if
+  return While("While", cond, body, start_pos, _filename)
+end function
+
+function _parse_stmt_for(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  if _peek().kind == "KW" and _peek().value == "each" then
+    _advance()
     vn = _expect_kind("IDENT")
     if _has_error() then return end if
-    _expect_value("OP", "=")
+    _expect_value("KW", "in")
     if _has_error() then return end if
-    st = _parse_expr(0)
-    if _has_error() then return end if
-    _expect_value("KW", "to")
-    if _has_error() then return end if
-    en = _parse_expr(0)
+    it = _parse_expr(0)
     if _has_error() then return end if
     _expect_block_nl()
     body = _parse_block_until_end("for", start_pos)
     if _has_error() then return end if
     _expect_end_of("for")
     if _has_error() then return end if
-    return For("For", vn.value, st, en, body, start_pos, _filename)
+    return ForEach("ForEach", vn.value, it, body, start_pos, _filename)
   end if
+  vn = _expect_kind("IDENT")
+  if _has_error() then return end if
+  _expect_value("OP", "=")
+  if _has_error() then return end if
+  st = _parse_expr(0)
+  if _has_error() then return end if
+  _expect_value("KW", "to")
+  if _has_error() then return end if
+  en = _parse_expr(0)
+  if _has_error() then return end if
+  _expect_block_nl()
+  body = _parse_block_until_end("for", start_pos)
+  if _has_error() then return end if
+  _expect_end_of("for")
+  if _has_error() then return end if
+  return For("For", vn.value, st, en, body, start_pos, _filename)
+end function
 
-  if t.kind == "IDENT" then
-    expr = _parse_postfix()
+function _parse_stmt_ident(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  expr = _parse_postfix()
+  if _has_error() then return end if
+  if _match_value("OP", "=") then
+    rhs = _parse_expr(0)
     if _has_error() then return end if
-    if _match_value("OP", "=") then
-      rhs = _parse_expr(0)
-      if _has_error() then return end if
-      if expr.node_kind == "Var" then
-        return Assign("Assign", expr.name, rhs, start_pos, _filename)
-      end if
-      if expr.node_kind == "Member" then
-        return SetMember("SetMember", expr.target, expr.name, rhs, start_pos, _filename)
-      end if
-      if expr.node_kind == "Index" then
-        return SetIndex("SetIndex", expr.target, expr.index, rhs, start_pos, _filename)
-      end if
-      _set_error("Invalid assignment target (lvalue)", start_pos)
-      return
+    if expr.node_kind == "Var" then
+      return Assign("Assign", expr.name, rhs, start_pos, _filename)
     end if
-    if expr.node_kind == "Call" then
-      return ExprStmt("ExprStmt", expr, start_pos, _filename)
+    if expr.node_kind == "Member" then
+      return SetMember("SetMember", expr.target, expr.name, rhs, start_pos, _filename)
     end if
-    _set_error("Only assignments or function calls are allowed as a statement", start_pos)
+    if expr.node_kind == "Index" then
+      return SetIndex("SetIndex", expr.target, expr.index, rhs, start_pos, _filename)
+    end if
+    _set_error("Invalid assignment target (lvalue)", start_pos)
     return
   end if
-
-  _set_error("Unknown statement: " + t.kind + ":" + t.value, t.pos)
+  if expr.node_kind == "Call" then
+    return ExprStmt("ExprStmt", expr, start_pos, _filename)
+  end if
+  _set_error("Only assignments or function calls are allowed as a statement", start_pos)
+  return
 end function
+
 
 function _parse_stmt_recover(stop_keywords, end_type)
   global _i
