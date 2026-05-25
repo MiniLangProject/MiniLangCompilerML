@@ -1,9 +1,9 @@
 ﻿# MiniLang (ML) - Documentation
 
-MiniLang (`.ml`) is a small, dynamically typed language that compiles to a native Windows x64 console executable (PE32+) via the self-hosted Win64 compiler tool (`bin/mlc_selfhost.exe`).
+MiniLang (`.ml`) is a small, dynamically typed language that compiles to a native Windows x64 console executable (PE32+) via the self-hosted Win64 compiler tool (`build/mlc_win64.exe`).
 
 
-This self-hosted repository intentionally contains no Python source files.
+The checked-in compiler in `build/mlc_win64.exe` is self-hosted and can rebuild itself with `build.ps1`. This repository intentionally contains no Python source files.
 
 ---
 
@@ -33,8 +33,9 @@ This self-hosted repository intentionally contains no Python source files.
   - [13.1 Stdlib modules (std.*)](#131-stdlib-modules-std)
   - [13.2 Builtins: basics](#132-builtins-basics)
   - [13.3 Bytes / Encoding / File I/O](#133-bytes--encoding--file-io)
-  - [13.4 Heap / GC debug](#134-heap--gc-debug-native-compiler)
-- [14. extern](#14-extern-native-compiler)
+  - [13.4 Heap / GC debug](#134-heap--gc-debug)
+  - [13.5 Call profiling](#135-call-profiling-optional)
+- [14. extern](#14-extern)
 - [15. Error handling: `error` & `try`](#15-error-handling-error--try)
 - [16. Syntax Reference (short)](#16-syntax-reference-short)
 - [17. Examples](#17-examples)
@@ -94,13 +95,13 @@ end function
 
 ### Compile to native Windows x64
 
-```bash
-./bin/mlc_selfhost.exe input.ml output.exe [options]
+```powershell
+.\build\mlc_win64.exe input.ml output.exe [options]
+```
 
 Notes:
 - Flags can appear before or after the positional arguments.
-- On non-Windows hosts you can still compile, but running the resulting `.exe` requires Wine.
-```
+- The compiler targets Windows x64 PE32+ console executables. On non-Windows hosts, running the resulting `.exe` requires Wine.
 
 Common options:
 
@@ -132,7 +133,7 @@ Common options:
 - `--profile-calls` instrument user functions with call counters; enables `callStats()`
 - `--trace-calls` print each entered function name to stderr (runtime trace)
 
-Tip: `./bin/mlc_selfhost.exe --help` prints the full option list.
+Tip: `.\build\mlc_win64.exe --help` prints a short usage summary.
 
 Notes (current implementation):
 - Targets Windows x64 console (PE32+).
@@ -149,29 +150,29 @@ There is a small auto-formatter written in MiniLang: `tools/mlfmt.ml`.
 
 Compile it once:
 
-```bash
-./bin/mlc_selfhost.exe tools/mlfmt.ml mlfmt.exe -I . -I Minilang
+```powershell
+.\build\mlc_win64.exe .\tools\mlfmt.ml .\build\mlfmt.exe -I .
 ```
 
 Format a single file:
 
-```bash
-mlfmt.exe src.ml --inplace
-mlfmt.exe src.ml out.ml --indent 2 --max-blank 2
+```powershell
+.\build\mlfmt.exe src.ml --inplace
+.\build\mlfmt.exe src.ml out.ml --indent 2 --max-blank 2
 ```
 
 Format a whole tree (recursive, **in-place**):
 
-```bash
-mlfmt.exe .
+```powershell
+.\build\mlfmt.exe .
 ```
 
 Insert an Apache 2.0 header (only if missing):
 
-```bash
-mlfmt.exe . --apache "Authorname"
+```powershell
+.\build\mlfmt.exe . --apache "Authorname"
 # or:
-mlfmt.exe . --author "Authorname"
+.\build\mlfmt.exe . --author "Authorname"
 ```
 
 Notes:
@@ -182,24 +183,52 @@ Notes:
 - The formatter is intentionally conservative (it does not change program semantics).
 
 
-### Run
+### Build the compiler itself
 
-```bash
-./output.exe [args...]
+Use `build.ps1` to rebuild `build/mlc_win64.exe` with the compiler that is already in `build/`:
+
+```powershell
+.\build.ps1
+```
+
+Useful variants:
+
+```powershell
+# Build to build\mlc_win64.next.exe without replacing the current compiler.
+.\build.ps1 -NoReplace
+
+# Skip the post-build smoke test.
+.\build.ps1 -SkipSmoke
+
+# Use a different bootstrap compiler or output path.
+.\build.ps1 -Compiler .\build\mlc_win64.exe -Output .\build\mlc_win64.exe
+```
+
+Notes:
+- The script stages the self-host build in a short temporary directory and then moves the finished executable into `build/`.
+- By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
+- If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
+
+### Run compiled programs
+
+```powershell
+.\output.exe [args...]
 ```
 
 Running tests:
 
-```bash
-./scripts/run_tests.ps1
+```powershell
+.\scripts\run_tests.ps1
 # optional: explicit compiler path
-./scripts/run_tests.ps1 -Compiler ./bin/mlc_selfhost.exe
+.\scripts\run_tests.ps1 -Compiler .\build\mlc_win64.exe
 ```
 
 Notes:
 - The test runner compiles a set of `.ml` programs to Windows `.exe` files and executes them.
 - On Windows, `.exe` runs natively; on non-Windows you need `wine` to execute the produced binaries.
-- `--only PAT` filters by substring, `--verbose` prints full stdout/stderr, and `--allow-skip` exits with code 0 even if some tests were skipped (e.g. no Wine).
+- Full logs are written to `build/test-logs/`; temporary test binaries are removed unless `-KeepArtifacts` is passed.
+- `-ShowCompilerProgress` keeps the compiler's `[phase]`, `[obj]`, and `[link]` progress lines visible on the console.
+- `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 
 
 ---
@@ -337,7 +366,7 @@ arr = [1, 2, 3]
 See [13.3](#133-bytes--encoding--file-io) for details and file / encoding examples.
 
 ### void
-`void` is the â€œno valueâ€ literal.
+`void` is the "no value" literal.
 
 You get `void` when a function ends without `return`, or explicitly via `return void`. It is a real runtime value, so it can be assigned:
 
@@ -409,7 +438,7 @@ Rules:
   Typical `constexpr` expressions include literals, arithmetic/bitwise operations on constexpr values, references to other `const`s, and enum values.
 - Inside **functions**, the initializer may be any expression, but the name is still write-once.
 
-Note: `const` makes the **binding** immutable (you canâ€™t reassign the name). It does not deep-freeze objects like arrays/bytes.
+Note: `const` makes the **binding** immutable (you can't reassign the name). It does not deep-freeze objects like arrays/bytes.
 
 ### What counts as a statement?
 Allowed standalone statements are:
@@ -882,7 +911,7 @@ Native compiler:
 - Functions are first-class values (you can store them in variables, pass them around, and call indirectly).
 - Nested functions + closures are supported (captured vars are boxed and stored in an environment frame).
   - Current limitation: shadowing of a **captured** name is rejected by the compiler.
-- Reading a name that has never been assigned in any visible scope is a compile error (â€œundefined variableâ€).
+- Reading a name that has never been assigned in any visible scope is a compile error ("undefined variable").
 - Writing to a global from inside a function requires an explicit `global` declaration.
   - Unqualified names resolve to the active `package` / `namespace` context of the file.
   - If the global does not exist yet (no prior top-level initialization), the compiler creates it automatically and initializes it to `void`.
@@ -1054,22 +1083,22 @@ import foo.bar   // resolves to "foo/bar.ml"
 
 Example with an include root:
 
-```bash
-./bin/mlc_selfhost.exe main.ml out.exe -I src
+```powershell
+.\build\mlc_win64.exe main.ml out.exe -I src
 ```
 
 You can add multiple search roots by repeating the flag. The compiler also always treats the **directory of the entry file** as an implicit import root.
 
-```bash
+```powershell
 # repeat -I / --import-path (recommended)
-./bin/mlc_selfhost.exe main.ml out.exe -I src -I std -I vendor
+.\build\mlc_win64.exe main.ml out.exe -I src -I std -I vendor
 ```
 
 Notes:
 - `-I` is repeatable. The current CLI does **not** split platform path lists like `src;std;vendor` automatically.
 
 Rules:
-- Paths are resolved relative to the importing fileâ€™s directory (absolute paths are also allowed).
+- Paths are resolved relative to the importing file's directory (absolute paths are also allowed).
 - If the file is not found there, the compiler also searches the include roots in order: **entry file directory (implicit)** first, then the `-I/--import-path` directories (in the order provided).
 - If an import matches multiple files across the search paths, compilation fails with an **ambiguous import** error listing the matches.
 - Diagnostics prefer short, stable paths (relative to the entry file directory) when possible.
@@ -1083,7 +1112,7 @@ Rules:
 - Imported top-level global assignments are compiled as internal **module initialization** code. They run automatically before `main(args)` and each module-init block runs at most once.
 - Side-effectful top-level statements other than global assignments are still rejected in imported modules (for example `print`, top-level `if/while/for`, or arbitrary expression statements).
 - Harmless import cycles are supported, and self-imports are ignored. Cycles that create unsafe cross-module initialization reads are diagnosed at runtime during module initialization.
-- `import ... as <alias>` is supported: it creates a compile-time alias for the imported moduleâ€™s `package` name, so you can write e.g. `g.add()` instead of `geom.vec.add()`. The imported file must declare `package ...`.
+- `import ... as <alias>` is supported: it creates a compile-time alias for the imported module's `package` name, so you can write e.g. `g.add()` instead of `geom.vec.add()`. The imported file must declare `package ...`.
 - Alias names must be valid identifiers and must not be reserved (`try`, `error`).
 - If an imported file declares `package foo.bar`, its location must match that package when resolved via a stable root (importing directory or `-I` root): the file should be found as `foo/bar.ml` under that root. (Absolute-path imports skip this check.)
 
@@ -1096,7 +1125,7 @@ A file can declare its *package name* once at the very top:
 package foo.bar
 ```
 
-This is used by the native compilerâ€™s import system (for `import ... as <alias>` and for verifying that a moduleâ€™s file path matches its declared package when resolved via an import root).
+This is used by the native compiler's import system (for `import ... as <alias>` and for verifying that a module's file path matches its declared package when resolved via an import root).
 
 Notes:
 - `package` must be the **first** statement in the file (before `import`, `namespace`, `function`, etc.).
@@ -1141,14 +1170,14 @@ import std.time as t
 import std.fs as fs
 ```
 
-The stdlib is compiled together with your program (there is no separate link step). Most â€œsystemsâ€ features are **Windows-oriented** because the native backend targets Windows x64.
+The stdlib is compiled together with your program (there is no separate link step). Most "systems" features are **Windows-oriented** because the native backend targets Windows x64.
 
 Common modules (subset; evolves over time):
 
-- **std.core**: small helpers (e.g. `min/max/clamp`, â€¦)
+- **std.core**: small helpers (e.g. `min/max/clamp`, ...)
 - **std.assert**: assertions for tests and small programs
-- **std.string**: string utilities (`trim`, `split`, `join`, `replaceAll`, â€¦)
-- **std.bytes**: bytes helpers (`concat`, `equals`, `ctEquals` (constant-time-ish), â€¦)
+- **std.string**: string utilities (`trim`, `split`, `join`, `replaceAll`, ...)
+- **std.bytes**: bytes helpers (`concat`, `equals`, `ctEquals` (constant-time-ish), ...)
 - **std.encoding.hex**, **std.encoding.base64**: encoding helpers
 - **std.array**, **std.sort**, **std.random**, **std.math**, **std.fmt**
 - **std.time**: monotonic `ticks()` / `sleep(ms)`, Win32 wall-clock wrappers `std.time.win32.GetLocalTime()` / `GetSystemTime()` (returns `SystemTime`), plus `Date/Time/DateTime` helpers
@@ -1158,7 +1187,7 @@ Common modules (subset; evolves over time):
 There is no separate `std.result` module anymore. MiniLang stdlib code uses the native `error(...)` propagation model plus `try(...)` where explicit handling is needed.
 - **std.ds.\***: stack/queue/hashmap/set
 
-Stdlib APIs that can fail (I/O, networking, parsing, â€¦) use MiniLang's native `error(...)` system. In practice this means a function either returns its normal value or an `error` value that automatically propagates unless you intercept it with `try(...)`.
+Stdlib APIs that can fail (I/O, networking, parsing, ...) use MiniLang's native `error(...)` system. In practice this means a function either returns its normal value or an `error` value that automatically propagates unless you intercept it with `try(...)`.
 
 ```ml
 import std.fs as fs
@@ -1259,7 +1288,7 @@ See **Chapter 15** for full details.
 
 ### 13.3 Bytes / Encoding / File I/O
 
-Native compiler backend: **bytes() / byteBuffer() supported**. File I/O is provided via the stdlib module `std.fs` (see â€œFile I/Oâ€ below).
+Native compiler backend: **bytes() / byteBuffer() supported**. File I/O is provided via the stdlib module `std.fs` (see "File I/O" below).
 
 #### bytes(...) / byteBuffer(...)
 Creates a mutable `bytes` buffer.
@@ -1424,7 +1453,7 @@ Returns the number of blocks currently in the free-list.
 Runs the mark/sweep collector and returns `void`.
 
 Notes (when does GC run?):
-- The GC runs **automatically** when an allocation cannot be satisfied and the heap canâ€™t grow further; the runtime triggers a `fn_gc_collect` once and retries the allocation.
+- The GC runs **automatically** when an allocation cannot be satisfied and the heap can't grow further; the runtime triggers a `fn_gc_collect` once and retries the allocation.
 - You can also trigger it manually via `gc_collect()`.
 
 Notes:
@@ -1477,22 +1506,22 @@ Supported ABI types (inputs):
 - `int` / `i64` / `u64` / `i32` / `u32`
 - `bool` (accepts `bool` or `int` at the call site)
 - `ptr` (accepts `ptr`, `int`, or `void`; `void` becomes `NULL`)
-- `cstr` (MiniLang `string` â†’ `char*` UTF-8; `void` becomes `NULL`)
-- `wstr` (MiniLang `string` â†’ `wchar_t*` UTF-16LE; `void` becomes `NULL`)
-- `bytes` (MiniLang `bytes` â†’ pointer to the payload; `void` becomes `NULL`)
+- `cstr` (MiniLang `string` -> `char*` UTF-8; `void` becomes `NULL`)
+- `wstr` (MiniLang `string` -> `wchar_t*` UTF-16LE; `void` becomes `NULL`)
+- `bytes` (MiniLang `bytes` -> pointer to the payload; `void` becomes `NULL`)
 
 Supported return types:
 - `void`
 - `int` / `i64` / `u64` / `i32` / `u32` / `ptr`
 - `bool`
-- `cstr` (reads a NUL-terminated `char*` and converts to a MiniLang `string`; `NULL` â†’ `void`)
-- `wstr` (reads a NUL-terminated `wchar_t*` and converts to a MiniLang `string`; `NULL` â†’ `void`)
+- `cstr` (reads a NUL-terminated `char*` and converts to a MiniLang `string`; `NULL` -> `void`)
+- `wstr` (reads a NUL-terminated `wchar_t*` and converts to a MiniLang `string`; `NULL` -> `void`)
 
 Notes:
 - Arity mismatches are a **compile error**.
 - Type mismatches at runtime currently return `void` (no exceptions yet).
 - `wstr` arguments use a fixed temporary UTF-16 buffer. Very long strings may fail and return `void`.
-- If the DLL or symbol canâ€™t be resolved, Windows will usually refuse to start the program (loader error) because imports are resolved by the OS loader.
+- If the DLL or symbol can't be resolved, Windows will usually refuse to start the program (loader error) because imports are resolved by the OS loader.
 
 Example: MessageBox
 
