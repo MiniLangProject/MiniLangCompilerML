@@ -187,6 +187,18 @@ function _get_flag_value(args, flag)
   return ""
 end function
 
+function _progress_phase(msg)
+  print "[phase] " + msg
+end function
+
+function _progress_obj(msg)
+  print "[obj] " + msg
+end function
+
+function _progress_link(msg)
+  print "[link] " + msg
+end function
+
 function inline _startsWith(text, pref)
   if typeof(text) != "string" or typeof(pref) != "string" then return false end if
   if len(pref) > len(text) then return false end if
@@ -1578,6 +1590,14 @@ function _compiler_gc_limit_from_config(runtime_config)
     if compiler_gc_limit > (256 << 20) then compiler_gc_limit = 256 << 20 end if
   end if
   return compiler_gc_limit
+end function
+
+function _fresh_link_gc_limit_from_config(runtime_config)
+  limit = _compiler_gc_limit_from_config(runtime_config)
+  link_limit = 128 << 20
+  if limit <= 0 then return link_limit end if
+  if limit > link_limit then return link_limit end if
+  return limit
 end function
 
 function _parse_subsystem_value(v)
@@ -4029,8 +4049,12 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     return 2
   end if
 
+  _progress_phase("linking")
+  _progress_link("objects=" + len(obj_paths) + " output=" + output_exe)
+  _progress_link("collecting sections, labels and imports")
   for oi = 0 to len(obj_paths) - 1
     obj_path = obj_paths[oi]
+    _progress_link("read object " + (oi + 1) + "/" + len(obj_paths) + ": " + obj_path)
     ro = _read_mlo_file_for_layout(obj_path)
     if typeof(ro) == "error" then
       msg = "failed to read MiniLang object file"
@@ -4140,6 +4164,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     end if
   end for
 
+  _progress_link("building combined sections")
   text_buf = _concat_bytes_parts(text_parts_b)
   rdata_buf = _concat_bytes_parts(rdata_parts_b)
   data_buf = _concat_bytes_parts(data_parts_b)
@@ -4176,6 +4201,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   p = pe.layout(p)
   _heap_probe("link:pe_ready")
+  _progress_link("PE layout ready")
 
   text_rva = p.sections[0].virt_addr
   rdata_rva = p.sections[1].virt_addr
@@ -4284,6 +4310,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   end if
   labels = t.arr_chunk_finish(labels_b)
   _heap_probe("link:labels_done")
+  _progress_link("labels resolved")
 
   entry_rva = t.fastmap_get(label_map, _label_key(entry_label), -1)
   if typeof(entry_rva) != "int" or entry_rva < 0 then
@@ -4317,6 +4344,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   buf = text_buf
   if typeof(patch_file_recs) == "array" and len(patch_file_recs) > 0 then
+    _progress_link("applying patches")
     patch_index = 0
     for ri = 0 to len(patch_file_recs) - 1
       rec = patch_file_recs[ri]
@@ -4343,6 +4371,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     end for
   end if
   _heap_probe("link:patches_done")
+  _progress_link("patches applied")
 
   tx = p.sections[0]
   tx.data = buf
@@ -4356,6 +4385,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   exe = pe.build(p)
   _heap_probe("link:pe_built")
+  _progress_link("writing executable " + output_exe)
   wr = fs.writeAllBytes(output_exe, exe)
   if typeof(wr) == "error" then
     msg = "writeAllBytes failed"
@@ -4389,7 +4419,7 @@ function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem
   cmd = cmd + " --link-obj-dir " + _cmd_quote_arg(obj_dir)
   cmd = cmd + " --subsystem " + _subsystem_cli_name(subsystem)
 
-  compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
+  compiler_gc_limit = _fresh_link_gc_limit_from_config(runtime_config)
   if typeof(compiler_gc_limit) == "int" and compiler_gc_limit > 0 then
     cmd = cmd + " --gc-limit " + compiler_gc_limit
   end if
@@ -4397,7 +4427,10 @@ function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem
     cmd = cmd + " --dump-labels " + _cmd_quote_arg(_dump_labels_path)
   end if
 
-  print "Linking in fresh compiler process..."
+  _progress_phase("linking in fresh compiler process")
+  _progress_link("object dir=" + obj_dir)
+  _progress_link("output=" + output_exe)
+  _progress_link("fresh linker gc-limit=" + compiler_gc_limit)
   rc = _wsystem(cmd)
   if typeof(rc) != "int" then
     print "CompileError: failed to run link subprocess"
@@ -4439,6 +4472,7 @@ function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg
   end if
 
   module_obj_paths_b = t.arr_chunk_push(module_obj_paths_b, mod_path)
+  _progress_obj("wrote " + mod_path)
   label_id = mst.label_id
   mod_obj = 0
   mst = 0
@@ -4452,11 +4486,15 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
   gc_set_limit(compiler_gc_limit)
   _heap_probe("compile:start")
+  _progress_phase("compile")
+  _progress_obj("input=" + input_ml)
+  _progress_obj("output=" + output_exe)
   if _mem_probe_enabled then
     runtime_config = _cfg_set(runtime_config, "cg_mem_probe", true)
   end if
   input_abs = _path_abspath(input_ml)
   if input_abs == "" then input_abs = input_ml end if
+  _progress_phase("loading modules")
   load = _load_program_for_codegen(input_abs, include_dirs, keep_going, max_errors)
   _heap_probe("compile:load_program_done")
   if len(load.diagnostics) > 0 then
@@ -4469,8 +4507,10 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     return 2
   end if
 
+  _progress_phase("collecting extern declarations")
   extern_sigs = collect_extern_sigs(load.program)
   _heap_probe("compile:extern_sigs_done")
+  _progress_phase("initializing code generator")
   _heap_probe("compile:before_new_codegen")
   cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
   _heap_probe("compile:new_codegen_done")
@@ -4488,6 +4528,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   cg = codegen.enable_call_profile_metadata(cg)
   _heap_probe("compile:call_profile_metadata_done")
 
+  _progress_phase("planning object pipeline")
   _heap_probe("compile:before_prepare_program")
   prep = codegen.prepare_program_for_objects(cg, load.program)
   if typeof(prep) != "array" or len(prep) < 3 then
@@ -4522,6 +4563,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     print "CompileError: failed to clean object tmp dir: " + tmp_dir
     return 2
   end if
+  _progress_obj("object dir=" + tmp_dir)
 
   main_name = _find_main_name(st)
   helper_union = []
@@ -4542,8 +4584,10 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   // collected and later reused as unrelated compiler objects.
   _heap_probe("compile:post_plan_gc")
 
+  _progress_phase("emitting module objects")
   for mi = 0 to len(visited) - 1
     module_file = visited[mi]
+    _progress_obj("module " + (mi + 1) + "/" + len(visited) + ": " + module_file)
     mrec = _module_init_rec_for_file(module_init_recs, module_file)
     if typeof(mrec) == "array" and len(mrec) >= 5 then
       entry_label = _coerce_name(mrec[2])
@@ -4622,6 +4666,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     end if
   end for
 
+  _progress_phase("emitting support object")
   cg.state.used_helpers = helper_union
   cg = codegen.emit_entry_object(cg, module_init_recs, max_call_args_main, main_name)
   cg = codegen.emit_extern_stubs(cg)
@@ -4650,12 +4695,15 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     print "CompileError: " + msg + " (" + support_path + ")"
     return 2
   end if
+  _progress_obj("wrote " + support_path)
 
   obj_paths = [support_path]
   module_obj_paths = t.arr_chunk_finish(module_obj_paths_b)
   if typeof(module_obj_paths) == "array" and len(module_obj_paths) > 0 then
     obj_paths = obj_paths + module_obj_paths
   end if
+  _progress_phase("object emission complete")
+  _progress_obj("objects=" + len(obj_paths))
 
   load.source = ""
   load.program = []
@@ -4681,6 +4729,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
     fresh_link = _link_obj_dir_in_fresh_process(input_abs, tmp_dir, output_exe, subsystem, runtime_config)
     if fresh_link != -1 then return fresh_link end if
   end if
+  _progress_phase("linking in current compiler process")
   return _link_mlo_files(obj_paths, output_exe, subsystem)
 end function
 
@@ -4689,6 +4738,8 @@ function compile_to_exe(input_ml, output_exe)
 end function
 
 function link_obj_dir_to_exe(obj_dir, output_exe, subsystem)
+  _progress_phase("link object directory")
+  _progress_link("object dir=" + obj_dir)
   obj_paths = _collect_mlo_paths_from_dir(obj_dir)
   if typeof(obj_paths) == "error" then
     msg = "failed to enumerate object files"
