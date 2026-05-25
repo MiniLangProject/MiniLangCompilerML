@@ -278,10 +278,15 @@ function _seed_rdata(cg)
   cg.rdata = d.rdata_add_obj_string(cg.rdata, "obj_empty_string", "")
 
   cg.rdata = d.rdata_pad_align(cg.rdata, 16)
-  char_objs = bytes(0)
+  char_pages = t.byte_pages_new()
   for i = 0 to 255
-    char_objs = char_objs + t.u32(c.OBJ_STRING) + t.u32(1) + bytes(1, i) + bytes(1, 0) + bytes(6, 0)
+    char_pages = t.byte_pages_append(char_pages, t.u32(c.OBJ_STRING))
+    char_pages = t.byte_pages_append(char_pages, t.u32(1))
+    char_pages = t.byte_pages_append(char_pages, bytes(1, i))
+    char_pages = t.byte_pages_append(char_pages, bytes(1, 0))
+    char_pages = t.byte_pages_append(char_pages, bytes(6, 0))
   end for
+  char_objs = t.byte_pages_to_bytes(char_pages)
   cg.rdata = d.rdata_add_bytes(cg.rdata, "obj_char_table", char_objs)
 
   cg.rdata = d.rdata_add_obj_string(cg.rdata, "obj_type_int", "int")
@@ -989,13 +994,21 @@ end function
 
 function push_cold_block_scope(state)
   if typeof(state._cold_block_stack) != "array" then state._cold_block_stack = [] end if
-  state._cold_block_stack = state._cold_block_stack +[[]]
+  state._cold_block_stack = state._cold_block_stack +[t.arr_chunk_new(64)]
   return state
+end function
+
+function _cold_block_frame_items(frame)
+  if typeof(frame) == "struct" and typeof(frame.chunks) == "array" then
+    return t.arr_chunk_finish(frame)
+  end if
+  if typeof(frame) == "array" then return frame end if
+  return []
 end function
 
 function pop_cold_block_scope(state)
   if typeof(state._cold_block_stack) != "array" or len(state._cold_block_stack) <= 0 then return [] end if
-  outv = state._cold_block_stack[len(state._cold_block_stack) - 1]
+  outv = _cold_block_frame_items(state._cold_block_stack[len(state._cold_block_stack) - 1])
   if len(state._cold_block_stack) <= 1 then
     state._cold_block_stack = []
   else
@@ -1012,35 +1025,36 @@ function defer_cold_block(state, label, emitter)
   if typeof(state._cold_block_stack) != "array" or len(state._cold_block_stack) <= 0 then return false end if
   if typeof(label) != "string" or label == "" then return false end if
   frame = state._cold_block_stack[len(state._cold_block_stack) - 1]
-  if typeof(frame) != "array" then frame = [] end if
-  frame = frame +[NamedAny(label, emitter)]
+  if typeof(frame) == "struct" and typeof(frame.chunks) == "array" then
+    frame = t.arr_chunk_push(frame, NamedAny(label, emitter))
+  else
+    b = t.arr_chunk_new(64)
+    if typeof(frame) == "array" and len(frame) > 0 then
+      for i = 0 to len(frame) - 1
+        b = t.arr_chunk_push(b, frame[i])
+      end for
+    end if
+    frame = t.arr_chunk_push(b, NamedAny(label, emitter))
+  end if
   state._cold_block_stack[len(state._cold_block_stack) - 1] = frame
   return true
 end function
 
 function emit_deferred_cold_blocks(state)
   if typeof(state._cold_block_stack) != "array" or len(state._cold_block_stack) <= 0 then return state end if
-  blocks = state._cold_block_stack[len(state._cold_block_stack) - 1]
-  if typeof(blocks) != "array" then return state end if
-  while len(blocks) > 0
-    it = blocks[0]
+  frame_idx = len(state._cold_block_stack) - 1
+  blocks = _cold_block_frame_items(state._cold_block_stack[frame_idx])
+  if typeof(blocks) != "array" or len(blocks) <= 0 then return state end if
+  for bi = 0 to len(blocks) - 1
+    it = blocks[bi]
     if typeof(it) == "struct" then
       state.asm = a.mark(state.asm, it.key)
       if typeof(it.value) == "function" then
         state = it.value(state)
       end if
     end if
-    if len(blocks) <= 1 then
-      blocks = []
-    else
-      nxt = []
-      for i = 1 to len(blocks) - 1
-        nxt = nxt +[blocks[i]]
-      end for
-      blocks = nxt
-    end if
-  end while
-  state._cold_block_stack[len(state._cold_block_stack) - 1] = blocks
+  end for
+  state._cold_block_stack[frame_idx] = t.arr_chunk_new(64)
   return state
 end function
 
@@ -1435,50 +1449,35 @@ function _helper_supported(lbl)
   return false
 end function
 
-function _emit_helper_by_label(state, lbl)
+function _emit_helper_by_label_group0(state, lbl)
   if lbl == "fn_cpu_init" then return rt.emit_cpu_init_function(state) end if
-  if lbl == "fn_int_to_dec" then return rt.emit_int_to_dec_function(state) end if
-  if lbl == "fn_strlen" then return rt.emit_strlen_function(state) end if
   if lbl == "fn_alloc" then return mem.emit_alloc_function(state) end if
-  if lbl == "fn_init_argvw" then return rt.emit_init_argvw_function(state) end if
-  if lbl == "fn_build_args" then return rt.emit_build_args_function(state) end if
-  if lbl == "fn_incref" then return mem.emit_incref_function(state) end if
-  if lbl == "fn_decref" then return mem.emit_decref_function(state) end if
-  if lbl == "fn_input" then return bal.emit_input_function(state) end if
-  if lbl == "fn_toNumber" then return rt.emit_toNumber_function(state) end if
-  if lbl == "fn_toFloat" then return rt.emit_toFloat_function(state) end if
-  if lbl == "fn_typeof" then return rt.emit_typeof_function(state) end if
-  if lbl == "fn_typeName" then return rt.emit_typeName_function(state) end if
-  if lbl == "fn_unhandled_error_exit" then return rt.emit_unhandled_error_exit_function(state) end if
-  if lbl == "fn_heap_count" then return mem.emit_heap_count_function(state) end if
-  if lbl == "fn_heap_bytes_used" then return mem.emit_heap_bytes_used_function(state) end if
-  if lbl == "fn_heap_bytes_committed" then return mem.emit_heap_bytes_committed_function(state) end if
-  if lbl == "fn_heap_bytes_reserved" then return mem.emit_heap_bytes_reserved_function(state) end if
-  if lbl == "fn_heap_free_bytes" then return mem.emit_heap_free_bytes_function(state) end if
-  if lbl == "fn_heap_free_blocks" then return mem.emit_heap_free_blocks_function(state) end if
   if lbl == "fn_heap_grow" then return mem.emit_heap_grow_function(state) end if
   if lbl == "fn_gc_collect" then return mem.emit_gc_collect_function(state) end if
+  if lbl == "fn_copy_bytes" then return rt.emit_copy_bytes_function(state) end if
+  if lbl == "fn_fill_bytes" then return rt.emit_fill_bytes_function(state) end if
+  if lbl == "fn_fill_qwords" then return rt.emit_fill_qwords_function(state) end if
   if lbl == "fn_mem_eq_bytes" then return rt.emit_mem_eq_bytes_function(state) end if
   if lbl == "fn_bytes_hash" then return rt.emit_bytes_hash_function(state) end if
   if lbl == "fn_string_hash" then return rt.emit_string_hash_function(state) end if
+  return state
+end function
+
+function _emit_helper_by_label_group1(state, lbl)
   if lbl == "fn_bytes_startswith" then return rt.emit_bytes_startswith_function(state) end if
   if lbl == "fn_bytes_endswith" then return rt.emit_bytes_endswith_function(state) end if
   if lbl == "fn_bytes_indexof" then return rt.emit_bytes_indexof_function(state) end if
   if lbl == "fn_bytes_lastindexof" then return rt.emit_bytes_lastindexof_function(state) end if
   if lbl == "fn_bytes_compare" then return rt.emit_bytes_compare_function(state) end if
-  if lbl == "fn_scan_nul_bytes" then return rt.emit_scan_nul_bytes_function(state) end if
-  if lbl == "fn_scan_byte2_bytes" then return rt.emit_scan_byte2_bytes_function(state) end if
-  if lbl == "fn_scan_nul_wchars" then return rt.emit_scan_nul_wchars_function(state) end if
-  if lbl == "fn_copy_bytes" then return rt.emit_copy_bytes_function(state) end if
-  if lbl == "fn_fill_bytes" then return rt.emit_fill_bytes_function(state) end if
-  if lbl == "fn_fill_qwords" then return rt.emit_fill_qwords_function(state) end if
-  if lbl == "fn_box_float" then return bal.emit_box_float_function(state) end if
-  if lbl == "fn_value_to_string" then return bal.emit_value_to_string_function(state) end if
   if lbl == "fn_str_eq" then return rt.emit_string_eq_function(state) end if
   if lbl == "fn_string_slice" then return bal.emit_string_slice_function(state) end if
   if lbl == "fn_string_indexof" then return bal.emit_string_indexof_function(state) end if
   if lbl == "fn_string_lastindexof" then return bal.emit_string_lastindexof_function(state) end if
   if lbl == "fn_string_startswith" then return bal.emit_string_startswith_function(state) end if
+  return state
+end function
+
+function _emit_helper_by_label_group2(state, lbl)
   if lbl == "fn_string_endswith" then return bal.emit_string_endswith_function(state) end if
   if lbl == "fn_string_repeat" then return bal.emit_string_repeat_function(state) end if
   if lbl == "fn_string_ltrim_ascii" then return bal.emit_string_ltrim_ascii_function(state) end if
@@ -1489,28 +1488,83 @@ function _emit_helper_by_label(state, lbl)
   if lbl == "fn_string_to_lower_ascii" then return bal.emit_string_to_lower_ascii_function(state) end if
   if lbl == "fn_string_to_upper_ascii" then return bal.emit_string_to_upper_ascii_function(state) end if
   if lbl == "fn_string_eq_ignore_case_ascii" then return bal.emit_string_eq_ignore_case_ascii_function(state) end if
+  return state
+end function
+
+function _emit_helper_by_label_group3(state, lbl)
   if lbl == "fn_string_join" then return bal.emit_string_join_function(state) end if
-  if lbl == "fn_val_eq" then return rt.emit_value_eq_function(state) end if
+  if lbl == "fn_bytes_eq" then return bal.emit_bytes_eq_function(state) end if
+  if lbl == "fn_box_float" then return bal.emit_box_float_function(state) end if
+  if lbl == "fn_value_to_string" then return bal.emit_value_to_string_function(state) end if
   if lbl == "fn_add_string" then return bal.emit_string_add_function(state) end if
   if lbl == "fn_add_array" then return bal.emit_array_add_function(state) end if
-  if lbl == "fn_bytes_alloc" then return bal.emit_bytes_alloc_function(state) end if
   if lbl == "fn_add_bytes" then return bal.emit_bytes_add_function(state) end if
-  if lbl == "fn_bytes_eq" then return bal.emit_bytes_eq_function(state) end if
+  if lbl == "fn_toNumber" then return rt.emit_toNumber_function(state) end if
+  if lbl == "fn_toFloat" then return rt.emit_toFloat_function(state) end if
+  if lbl == "fn_typeof" then return rt.emit_typeof_function(state) end if
+  return state
+end function
+
+function _emit_helper_by_label_group4(state, lbl)
+  if lbl == "fn_typeName" then return rt.emit_typeName_function(state) end if
+  if lbl == "fn_int_to_dec" then return rt.emit_int_to_dec_function(state) end if
+  if lbl == "fn_strlen" then return rt.emit_strlen_function(state) end if
   if lbl == "fn_decode" then return bal.emit_decode_function(state) end if
   if lbl == "fn_decodeZ" then return bal.emit_decodeZ_function(state) end if
   if lbl == "fn_decode16Z" then return bal.emit_decode16Z_function(state) end if
   if lbl == "fn_hex" then return bal.emit_hex_function(state) end if
   if lbl == "fn_fromHex" then return bal.emit_fromHex_function(state) end if
   if lbl == "fn_slice" then return bal.emit_slice_function(state) end if
-  if lbl == "fn_callStats" then return rt.emit_callStats_function(state) end if
   if lbl == "fn_builtin_len" then return rt.emit_builtin_len_function(state) end if
+  return state
+end function
+
+function _emit_helper_by_label_group5(state, lbl)
   if lbl == "fn_builtin_input" then return rt.emit_builtin_input_function(state) end if
   if lbl == "fn_builtin_copyBytes" then return rt.emit_builtin_copyBytes_function(state) end if
   if lbl == "fn_builtin_copyStringBytes" then return rt.emit_builtin_copyStringBytes_function(state) end if
   if lbl == "fn_builtin_fillBytes" then return rt.emit_builtin_fillBytes_function(state) end if
   if lbl == "fn_builtin_gc_collect" then return rt.emit_builtin_gc_collect_function(state) end if
   if lbl == "fn_builtin_gc_set_limit" then return rt.emit_builtin_gc_set_limit_function(state) end if
+  if lbl == "fn_build_args" then return rt.emit_build_args_function(state) end if
+  if lbl == "fn_init_argvw" then return rt.emit_init_argvw_function(state) end if
+  if lbl == "fn_incref" then return mem.emit_incref_function(state) end if
+  if lbl == "fn_decref" then return mem.emit_decref_function(state) end if
   return state
+end function
+
+function _emit_helper_by_label_group6(state, lbl)
+  if lbl == "fn_callStats" then return rt.emit_callStats_function(state) end if
+  if lbl == "fn_heap_count" then return mem.emit_heap_count_function(state) end if
+  if lbl == "fn_heap_bytes_used" then return mem.emit_heap_bytes_used_function(state) end if
+  if lbl == "fn_heap_bytes_committed" then return mem.emit_heap_bytes_committed_function(state) end if
+  if lbl == "fn_heap_bytes_reserved" then return mem.emit_heap_bytes_reserved_function(state) end if
+  if lbl == "fn_heap_free_bytes" then return mem.emit_heap_free_bytes_function(state) end if
+  if lbl == "fn_heap_free_blocks" then return mem.emit_heap_free_blocks_function(state) end if
+  if lbl == "fn_unhandled_error_exit" then return rt.emit_unhandled_error_exit_function(state) end if
+  return state
+end function
+
+function _emit_helper_by_label_other(state, lbl)
+  if lbl == "fn_input" then return bal.emit_input_function(state) end if
+  if lbl == "fn_scan_nul_bytes" then return rt.emit_scan_nul_bytes_function(state) end if
+  if lbl == "fn_scan_byte2_bytes" then return rt.emit_scan_byte2_bytes_function(state) end if
+  if lbl == "fn_scan_nul_wchars" then return rt.emit_scan_nul_wchars_function(state) end if
+  if lbl == "fn_val_eq" then return rt.emit_value_eq_function(state) end if
+  if lbl == "fn_bytes_alloc" then return bal.emit_bytes_alloc_function(state) end if
+  return state
+end function
+
+function _emit_helper_by_label(state, lbl)
+  rank = _helper_rank(lbl)
+  if rank < 10 then return _emit_helper_by_label_group0(state, lbl) end if
+  if rank < 20 then return _emit_helper_by_label_group1(state, lbl) end if
+  if rank < 30 then return _emit_helper_by_label_group2(state, lbl) end if
+  if rank < 40 then return _emit_helper_by_label_group3(state, lbl) end if
+  if rank < 50 then return _emit_helper_by_label_group4(state, lbl) end if
+  if rank < 60 then return _emit_helper_by_label_group5(state, lbl) end if
+  if rank < 1048576 then return _emit_helper_by_label_group6(state, lbl) end if
+  return _emit_helper_by_label_other(state, lbl)
 end function
 
 function _helper_rank(lbl)

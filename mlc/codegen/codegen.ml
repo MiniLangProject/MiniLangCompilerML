@@ -351,6 +351,20 @@ function emit_module_functions(cg, module_file)
   return cg
 end function
 
+function module_function_entries(cg, module_file)
+  if typeof(cg) != "struct" then return [] end if
+  if typeof(cg.state) != "struct" then return [] end if
+  return stmt.module_function_entries(cg.state, module_file)
+end function
+
+function emit_module_function_entries(cg, entries, start_index, count)
+  if typeof(cg) != "struct" then return cg end if
+  if typeof(cg.state) != "struct" then return cg end if
+  st = stmt.emit_module_function_entries(cg.state, entries, start_index, count)
+  cg.state = st
+  return cg
+end function
+
 function emit_extern_stubs(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if

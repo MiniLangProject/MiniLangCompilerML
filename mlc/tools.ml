@@ -154,16 +154,25 @@ function _fm_probe_slot(mapv, key)
 end function
 
 function _fm_insert_no_resize(mapv, key, value)
+  used_arr = mapv.used
+  keys_arr = mapv.keys
+  vals_arr = mapv.values
+  if typeof(used_arr) != "array" then return mapv end if
+  if typeof(keys_arr) != "array" then return mapv end if
+  if typeof(vals_arr) != "array" then return mapv end if
   p = _fm_probe_slot(mapv, key)
   idx = p[0]
   found = p[1]
   if idx < 0 then return mapv end if
   if found == false then
-    mapv.used[idx] = 1
-    mapv.keys[idx] = key
+    used_arr[idx] = 1
+    keys_arr[idx] = key
     mapv.size = mapv.size + 1
   end if
-  mapv.values[idx] = value
+  vals_arr[idx] = value
+  mapv.used = used_arr
+  mapv.keys = keys_arr
+  mapv.values = vals_arr
   return mapv
 end function
 
@@ -563,6 +572,13 @@ function _chunks_paged_push(chunks, chunk)
   if typeof(t) == "array" then t = _arr_tail_from_array(t, 256) end if
   if typeof(t) != "struct" or typeof(t.data) != "array" then t = _arr_tail_new(256) end if
   if typeof(t.used) != "int" or t.used < 0 then t.used = 0 end if
+  if len(t.data) < 256 then
+    if t.used > len(t.data) then t.used = len(t.data) end if
+    if t.used > 0 then
+      pages = pages + [_arr_tail_to_array(t)]
+    end if
+    t = _arr_tail_new(256)
+  end if
 
   if t.used >= 256 then
     pages = pages + [_arr_tail_to_array(t)]
@@ -636,6 +652,13 @@ function arr_chunked_push(chunks, tail, value, cap)
 
   if typeof(t.cap) != "int" or t.cap <= 0 then t.cap = ccap end if
   if typeof(t.used) != "int" or t.used < 0 then t.used = 0 end if
+  if len(t.data) < ccap then
+    if t.used > len(t.data) then t.used = len(t.data) end if
+    if t.used > 0 then
+      chunks = _chunks_push_chunk(chunks, _arr_tail_to_array(t))
+    end if
+    t = _arr_tail_new(ccap)
+  end if
   if t.cap != ccap then
     if t.used > 0 then
       chunks = _chunks_push_chunk(chunks, _arr_tail_to_array(t))
@@ -643,7 +666,7 @@ function arr_chunked_push(chunks, tail, value, cap)
     t = _arr_tail_new(ccap)
   end if
 
-  if t.used >= ccap then
+  if t.used >= ccap or t.used >= len(t.data) then
     chunks = _chunks_push_chunk(chunks, _arr_tail_to_array(t))
     t = _arr_tail_new(ccap)
   end if

@@ -8,7 +8,7 @@ const MEM_PAGE_SIZE = 0x1000
 const MEM_RESERVE_GRANULARITY = 0x10000
 const HEAP_SIZE_DEFAULT = 0x02000000
 const HEAP_COMMIT_DEFAULT = HEAP_SIZE_DEFAULT
-const HEAP_RESERVE_DEFAULT = 1024 * 1024 * 1024 * 2
+const HEAP_RESERVE_DEFAULT = 1024 * 1024 * 1024 * 4
 const HEAP_RESERVE_MIN = HEAP_SIZE_DEFAULT
 const HEAP_GROW_MIN = 0x01000000
 const ALLOC_MIN_SPLIT = 32
@@ -156,7 +156,7 @@ function emit_heap_init(state, heap_size)
   end if
 
   if typeof(reserve_bytes) != "int" or reserve_bytes <= 0 then
-    reserve_bytes = toNumber("2147483648")
+    reserve_bytes = toNumber("4294967296")
     if typeof(reserve_bytes) != "int" or reserve_bytes <= 0 then
       reserve_bytes = HEAP_SIZE_DEFAULT
     end if

@@ -235,7 +235,9 @@ function _emit_make_error_const(state, code, message)
   if typeof(code) == "int" then err_code = code end if
   msg = "" + message
 
-  lbl = "objstr_" + len(state.rdata.labels)
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  lbl = "objstr_" + lid
   state.rdata = d.rdata_add_obj_string(state.rdata, lbl, msg)
 
   state.asm = a.mov_rcx_imm32(state.asm, 48)
@@ -532,12 +534,16 @@ function cg_set_const_binding_value(state, name, pyv)
             if typeof(enc) == "int" then
               b.const_value_encoded = enc
             else
-              lbl = "cflt_" + len(state.rdata.labels)
+              lid_cv = state.label_id
+              state.label_id = state.label_id + 1
+              lbl = "cflt_" + lid_cv
               state.rdata = d.rdata_add_obj_float(state.rdata, lbl, pyv)
               b.const_value_label = lbl
             end if
           else if typeof(pyv) == "string" then
-            lbl2 = "cstr_" + len(state.rdata.labels)
+            lid_cv2 = state.label_id
+            state.label_id = state.label_id + 1
+            lbl2 = "cstr_" + lid_cv2
             state.rdata = d.rdata_add_obj_string(state.rdata, lbl2, pyv)
             b.const_value_label = lbl2
           end if

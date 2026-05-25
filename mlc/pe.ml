@@ -72,9 +72,7 @@ end function
 
 function _bytes_write_at(dst, offset, src)
   if len(src) <= 0 then return dst end if
-  for i = 0 to len(src) - 1
-    dst[offset + i] = src[i]
-  end for
+  copyBytes(dst, offset, src, 0, len(src))
   return dst
 end function
 
@@ -331,8 +329,7 @@ function build(pe)
     for i = 0 to len(pe.sections) - 1
       sec = pe.sections[i]
       if sec.raw_size <= 0 then continue end if
-      blob = _bytes_ljust(sec.data, sec.raw_size)
-      image = _bytes_write_at(image, sec.raw_addr, blob)
+      image = _bytes_write_at(image, sec.raw_addr, sec.data)
     end for
   end if
 

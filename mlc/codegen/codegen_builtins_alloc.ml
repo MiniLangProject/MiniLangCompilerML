@@ -980,9 +980,9 @@ function emit_string_add_function(state)
   l_s2_convert = "addstr_s2_convert_" + lid
   l_s2_ready = "addstr_s2_ready_" + lid
 
-  lbl_msg_uns = "objstr_" + len(state.rdata.labels)
+  lbl_msg_uns = "objstr_uns_" + lid
   state.rdata = d.rdata_add_obj_string(state.rdata, lbl_msg_uns, "Cannot stringify unsupported value for string concatenation")
-  lbl_msg_void = "objstr_" + len(state.rdata.labels)
+  lbl_msg_void = "objstr_void_" + lid
   state.rdata = d.rdata_add_obj_string(state.rdata, lbl_msg_void, "Cannot stringify void for string concatenation")
 
   state.asm = a.mark(state.asm, "fn_add_string")
