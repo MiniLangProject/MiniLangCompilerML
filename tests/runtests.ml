@@ -272,6 +272,7 @@ function main(args)
   if _test_adv(compiler_path, repo_root, "py_ns_struct_optional", "tests/ported_py/test_ns_struct_optional/main_geom.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_extern_namespaced", "tests/ported_py/test_extern_namespaced/extern_ns.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_extern_value_runtime", "tests/ported_py/test_extern_value_runtime/extern_value_runtime.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test_adv(compiler_path, repo_root, "py_extern_double_abi", "tests/ported_py/test_extern_double_abi/extern_double_abi.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_callable_values_runtime", "tests/ported_py/test_callable_values_runtime/callable_values_runtime.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_call_profile", "tests/ported_py/test_call_profile_counts/call_profile_counts.ml", "run_ok", "--profile-calls", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_trace_calls", "tests/ported_py/test_trace_calls_preserves_params/trace_calls_params.ml", "run_ok", "--trace-calls", "") then pass = pass + 1 else fail = fail + 1 end if
