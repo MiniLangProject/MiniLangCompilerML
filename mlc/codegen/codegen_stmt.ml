@@ -2897,6 +2897,10 @@ function _analysis_builtin_has(name)
   if nm == "array" then return true end if
   if nm == "bytes" then return true end if
   if nm == "byteBuffer" then return true end if
+  if nm == "nativeBytesPtr" then return true end if
+  if nm == "nativeRawValue" then return true end if
+  if nm == "nativeValueFromRaw" then return true end if
+  if nm == "nativeCallback" then return true end if
   return exprmod._builtin_label(nm) != ""
 end function
 

@@ -328,6 +328,109 @@ function inline _next_lid(state)
   return lid
 end function
 
+function _native_callback_resolve_user_fn(state, ex)
+  qn = _expr_to_qualname(state, ex)
+  if qn == "" then return "" end if
+  qn = _apply_import_alias(state, qn)
+  if typeof(_user_function_get(state, qn)) == "struct" then return qn end if
+  cands = _qname_with_prefixes(state, qn)
+  if typeof(cands) == "array" and len(cands) > 0 then
+    for i = 0 to len(cands) - 1
+      cand = _coerce_name(cands[i])
+      if cand == "" then continue end if
+      if typeof(_user_function_get(state, cand)) == "struct" then return cand end if
+    end for
+  end if
+  return ""
+end function
+
+function _emit_native_callback_ret_lresult(state, l_zero, l_done)
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+  state.asm = a.and_r64_imm(state.asm, "r11", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_INT)
+  state.asm = a.jcc(state.asm, "e", l_zero + "_int")
+  state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_BOOL)
+  state.asm = a.jcc(state.asm, "e", l_zero + "_bool")
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_zero + "_int")
+  state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_zero + "_bool")
+  state.asm = a.shr_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.jmp(state.asm, l_done)
+  return state
+end function
+
+function _emit_native_callback_wndproc(state, fn_qn)
+  fn = _user_function_get(state, fn_qn)
+  if typeof(fn) != "struct" then
+    state.diagnostics = state.diagnostics + ["nativeCallback: unknown function '" + fn_qn + "'"]
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return state
+  end if
+  ar = 0
+  if typeof(fn.params) == "array" then ar = len(fn.params) end if
+  if ar != 4 then
+    state.diagnostics = state.diagnostics + ["nativeCallback: wndproc callback '" + fn_qn + "' must accept exactly 4 parameters"]
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return state
+  end if
+
+  lid = _next_lid(state)
+  cb_lbl = "native_cb_wndproc_" + lid
+  after_lbl = "native_cb_after_" + lid
+  ret_zero_lbl = "native_cb_ret_" + lid
+  ret_done_lbl = "native_cb_ret_done_" + lid
+
+  state.asm = a.lea_rax_rip(state.asm, cb_lbl)
+  state.asm = a.shl_rax_imm8(state.asm, 3)
+  state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+  state.asm = a.jmp(state.asm, after_lbl)
+
+  state.asm = a.mark(state.asm, cb_lbl)
+  state.asm = a.push_reg(state.asm, "rbx")
+  state.asm = a.push_reg(state.asm, "rbp")
+  state.asm = a.push_reg(state.asm, "rsi")
+  state.asm = a.push_reg(state.asm, "rdi")
+  state.asm = a.push_reg(state.asm, "r12")
+  state.asm = a.push_reg(state.asm, "r13")
+  state.asm = a.push_reg(state.asm, "r14")
+  state.asm = a.push_reg(state.asm, "r15")
+  state.asm = a.sub_rsp_imm8(state.asm, 40)
+
+  // Convert WNDPROC(HWND, UINT, WPARAM, LPARAM) to MiniLang int values.
+  state.asm = a.shl_r64_imm8(state.asm, "rcx", 3)
+  state.asm = a.or_r64_imm8(state.asm, "rcx", c.TAG_INT)
+  state.asm = a.shl_r64_imm8(state.asm, "rdx", 3)
+  state.asm = a.or_r64_imm8(state.asm, "rdx", c.TAG_INT)
+  state.asm = a.shl_r64_imm8(state.asm, "r8", 3)
+  state.asm = a.or_r64_imm8(state.asm, "r8", c.TAG_INT)
+  state.asm = a.shl_r64_imm8(state.asm, "r9", 3)
+  state.asm = a.or_r64_imm8(state.asm, "r9", c.TAG_INT)
+  state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+  state.asm = a.call(state.asm, "fn_user_" + fn_qn)
+
+  state = _emit_native_callback_ret_lresult(state, ret_zero_lbl, ret_done_lbl)
+
+  state.asm = a.mark(state.asm, ret_done_lbl)
+  state.asm = a.add_rsp_imm8(state.asm, 40)
+  state.asm = a.pop_reg(state.asm, "r15")
+  state.asm = a.pop_reg(state.asm, "r14")
+  state.asm = a.pop_reg(state.asm, "r13")
+  state.asm = a.pop_reg(state.asm, "r12")
+  state.asm = a.pop_reg(state.asm, "rdi")
+  state.asm = a.pop_reg(state.asm, "rsi")
+  state.asm = a.pop_reg(state.asm, "rbp")
+  state.asm = a.pop_reg(state.asm, "rbx")
+  state.asm = a.ret(state.asm)
+
+  state.asm = a.mark(state.asm, after_lbl)
+  return state
+end function
+
 function inline _alias_lookup(alias_map, key)
   if typeof(alias_map) == "struct" then
     v0 = t.fastmap_get(alias_map, key, "")
@@ -3132,6 +3235,99 @@ function _emit_expr_call(state, expr)
 end function
 
 function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, nargs)
+  // Builtin nativeBytesPtr(bytes) -> native pointer to the bytes payload.
+  if (callee == "nativeBytesPtr" or raw_name == "nativeBytesPtr") then
+    if nargs != 1 then
+      state.diagnostics = state.diagnostics +["nativeBytesPtr() expects 1 argument"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_int(0))
+      return [state, true]
+    end if
+    state = cg_emit_expr(state, call_args[0])
+    lid_nb = _next_lid(state)
+    l_ok_nb = "native_bytes_ptr_ok_" + lid_nb
+    l_null_nb = "native_bytes_ptr_null_" + lid_nb
+    l_done_nb = "native_bytes_ptr_done_" + lid_nb
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.and_r64_imm(state.asm, "r11", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_null_nb)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "rax", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "r11d", c.OBJ_BYTES)
+    state.asm = a.jcc(state.asm, "ne", l_null_nb)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rax", "rax", 8)
+    state.asm = a.jmp(state.asm, l_ok_nb)
+    state.asm = a.mark(state.asm, l_null_nb)
+    state.asm = a.xor_eax_eax(state.asm)
+    state.asm = a.mark(state.asm, l_ok_nb)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.mark(state.asm, l_done_nb)
+    return [state, true]
+  end if
+
+  // Builtin nativeRawValue(value) -> MiniLang int containing the raw tagged value.
+  if (callee == "nativeRawValue" or raw_name == "nativeRawValue") then
+    if nargs != 1 then
+      state.diagnostics = state.diagnostics +["nativeRawValue() expects 1 argument"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    state = cg_emit_expr(state, call_args[0])
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    return [state, true]
+  end if
+
+  // Builtin nativeValueFromRaw(int) -> MiniLang value represented by that raw word.
+  if (callee == "nativeValueFromRaw" or raw_name == "nativeValueFromRaw") then
+    if nargs != 1 then
+      state.diagnostics = state.diagnostics +["nativeValueFromRaw() expects 1 argument"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    state = cg_emit_expr(state, call_args[0])
+    lid_nv = _next_lid(state)
+    l_ok_nv = "native_value_from_raw_ok_" + lid_nv
+    l_done_nv = "native_value_from_raw_done_" + lid_nv
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.and_r64_imm(state.asm, "r11", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "e", l_ok_nv)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.jmp(state.asm, l_done_nv)
+    state.asm = a.mark(state.asm, l_ok_nv)
+    state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+    state.asm = a.mark(state.asm, l_done_nv)
+    return [state, true]
+  end if
+
+  // Builtin nativeCallback(fn, "wndproc") -> native function pointer.
+  if (callee == "nativeCallback" or raw_name == "nativeCallback") then
+    if nargs != 2 then
+      state.diagnostics = state.diagnostics +["nativeCallback() expects 2 arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    fn_qn = _native_callback_resolve_user_fn(state, call_args[0])
+    if fn_qn == "" then
+      state.diagnostics = state.diagnostics +["nativeCallback: first argument must be a top-level MiniLang function"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    mode_cv = _opt_try_const_value(state, call_args[1])
+    mode = ""
+    if typeof(mode_cv) == "struct" and mode_cv.ok and typeof(mode_cv.value) == "string" then
+      mode = s.toLowerAscii(mode_cv.value)
+    end if
+    if mode == "wndproc" or mode == "wndProc" then
+      state = _emit_native_callback_wndproc(state, fn_qn)
+      return [state, true]
+    end if
+    state.diagnostics = state.diagnostics +["nativeCallback: unsupported callback ABI '" + mode + "'"]
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return [state, true]
+  end if
+
   // Builtin toNumber(x)
   if (callee == "toNumber" or raw_name == "toNumber") and nargs == 1 then
     state = cg_emit_expr(state, call_args[0])
@@ -5023,6 +5219,10 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
         if special_qn == "input" or special_qn == "decode" or special_qn == "decodeZ" or special_qn == "decode16Z" then is_special = true end if
         if special_qn == "slice" or special_qn == "copyBytes" or special_qn == "fillBytes" then is_special = true end if
         if special_qn == "hex" or special_qn == "fromHex" or special_qn == "error" then is_special = true end if
+        if special_qn == "nativeBytesPtr" then is_special = true end if
+        if special_qn == "nativeRawValue" then is_special = true end if
+        if special_qn == "nativeValueFromRaw" then is_special = true end if
+        if special_qn == "nativeCallback" then is_special = true end if
         if special_qn == "gc_collect" or special_qn == "gc_set_limit" or special_qn == "callStats" then is_special = true end if
         if special_qn == "heap_count" or special_qn == "heap_bytes_used" or special_qn == "heap_free_bytes" or special_qn == "heap_free_blocks" then is_special = true end if
         if special_qn == "heap_bytes_committed" or special_qn == "heap_bytes_reserved" then is_special = true end if
