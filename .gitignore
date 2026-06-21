@@ -1,5 +1,6 @@
 build/test-bin/
 build/test-logs/
 build/tmp/
+build/mlc_win64.before-*.exe
 tests/_rt_*.exe
 tests/tmp/

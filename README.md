@@ -1539,6 +1539,37 @@ extern function GetTickCount() from "kernel32.dll" returns u32
 print GetTickCount()
 ```
 
+### Native callbacks
+
+`nativeBytesPtr(bytes)` returns a native pointer to the payload of a MiniLang
+`bytes` value. The result is represented as a MiniLang `int` so it can be passed
+to `ptr` extern parameters or stored in native interop structures. For non-bytes
+arguments it returns a null pointer value.
+
+`nativeRawValue(value)` returns a MiniLang `int` containing the raw tagged
+MiniLang value. `nativeValueFromRaw(int)` performs the inverse conversion.
+These are low-level interop helpers for native APIs that store an opaque
+application value and later return it unchanged.
+
+`nativeCallback(fn, "wndproc")` returns a native Win64 callback pointer for a top-level MiniLang function.
+The supported mode currently targets Win32 `WNDPROC` callbacks:
+
+```ml
+extern function CallWindowProcW(prev as ptr, hwnd as ptr, msg as u32, wParam as ptr, lParam as ptr) from "user32.dll" symbol "CallWindowProcW" returns ptr
+
+function myWndProc(hwnd, msg, wParam, lParam)
+  return msg
+end function
+
+cb = nativeCallback(myWndProc, "wndproc")
+print CallWindowProcW(cb, 0, 1024, 0, 0)
+```
+
+Rules:
+- The first argument must be a top-level MiniLang function.
+- `"wndproc"` callbacks must accept exactly four parameters: `hwnd`, `msg`, `wParam`, `lParam`.
+- The callback return value is converted back to native `LRESULT`; `int` and `bool` are supported, other values return `0`.
+
 ### extern struct (experimental)
 
 The frontend also accepts `extern struct` declarations to describe an ABI layout:
