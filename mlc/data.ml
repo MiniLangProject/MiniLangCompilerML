@@ -140,6 +140,10 @@ function _buf_used(db)
   return 0
 end function
 
+function rdata_used(rb)
+  return _buf_used(rb)
+end function
+
 function _buf_ensure(db, need)
   if typeof(db.data) != "bytes" then db.data = bytes(0) end if
   cap = len(db.data)
@@ -195,6 +199,16 @@ end function
 
 function data_add_abs64_patch(db, offset, target)
   db.patches = db.patches +[DataPatch(offset, target, "abs64")]
+  return db
+end function
+
+function data_pad_align(db, align)
+  if align <= 0 then return db end if
+  used = _buf_used(db)
+  pad = (-used) % align
+  if pad > 0 then
+    db = _buf_append(db, bytes(pad, 0))
+  end if
   return db
 end function
 
@@ -261,7 +275,9 @@ end function
 function rdata_add_bytes_unique(rb, name, raw)
   off = _buf_used(rb)
   rb = _buf_append(rb, raw)
-  rb.labels = _upsert_range_label(rb.labels, name, off, len(raw))
+  // The caller promises a fresh label. Avoid the otherwise quadratic
+  // duplicate-name scan for large generated static-object tables.
+  rb.labels = rb.labels + [DataRangeLabel(name, off, len(raw))]
   return rb
 end function
 
@@ -352,6 +368,12 @@ end function
 function rdata_add_obj_string(rb, name, text)
   payload = bytes(text)
 
+  hit = _find_pool_entry(rb.pool_obj_string, payload)
+  if typeof(hit) == "struct" then
+    rb.labels = _upsert_range_label(rb.labels, name, hit.offset, hit.length)
+    return rb
+  end if
+
   rb = rdata_pad_align(rb, 8)
   off = _buf_used(rb)
   rb = _buf_append(rb, t.u32(c.OBJ_STRING))
@@ -365,8 +387,36 @@ function rdata_add_obj_string(rb, name, text)
   return rb
 end function
 
+function rdata_add_obj_string_unique(rb, name, text)
+  payload = bytes(text)
+
+  hit = _find_pool_entry(rb.pool_obj_string, payload)
+  if typeof(hit) == "struct" then
+    rb.labels = rb.labels + [DataRangeLabel(name, hit.offset, hit.length)]
+    return rb
+  end if
+
+  rb = rdata_pad_align(rb, 8)
+  off = _buf_used(rb)
+  rb = _buf_append(rb, t.u32(c.OBJ_STRING))
+  rb = _buf_append(rb, t.u32(len(payload)))
+  rb = _buf_append(rb, payload)
+  rb = _buf_append(rb, bytes(1, 0))
+  ln = _buf_used(rb) - off
+
+  rb.labels = rb.labels + [DataRangeLabel(name, off, ln)]
+  rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln))
+  return rb
+end function
+
 function rdata_add_obj_float(rb, name, value)
   packed = _float_to_f64le(value)
+
+  hit = _find_pool_entry(rb.pool_obj_float, packed)
+  if typeof(hit) == "struct" then
+    rb.labels = _upsert_range_label(rb.labels, name, hit.offset, hit.length)
+    return rb
+  end if
 
   rb = rdata_pad_align(rb, 8)
   off = _buf_used(rb)

@@ -183,6 +183,9 @@ function emit_program(cg, program)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
   st = core.cg_core_init(cg.state)
+  // Break the expr<->stmt module cycle with an explicit function-value hook.
+  // Inline expression expansion can now emit the callee's full statement body.
+  st._inline_param_stack = stmt.cg_emit_stmt
   st = stmt.emit_program(st, program)
   cg.state = st
   return cg
@@ -281,7 +284,7 @@ function _clone_state_for_object(base, seed_runtime)
   st._expr_temp_reg_live_by_reg = []
   st._expr_temp_reg_reserved = []
   st._cold_block_stack = []
-  st._inline_param_stack = []
+  st._inline_param_stack = stmt.cg_emit_stmt
   st._inline_call_stack = []
   st.ext_widebuf_labels = base.ext_widebuf_labels
   st.decl_site_bindings = []

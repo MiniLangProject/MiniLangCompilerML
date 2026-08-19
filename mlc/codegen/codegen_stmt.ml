@@ -181,16 +181,16 @@ function _user_function_get_node(state, qname)
 end function
 
 function _user_function_keys_sorted(state)
-  keys = []
+  keys_b = t.arr_chunk_new(128)
   arr = state.user_functions
-  if typeof(arr) != "array" or len(arr) <= 0 then return keys end if
+  if typeof(arr) != "array" or len(arr) <= 0 then return [] end if
   for i = 0 to len(arr) - 1
     it = arr[i]
     if typeof(it) == "array" and len(it) == 2 and typeof(it[0]) == "string" and it[0] != "" then
-      keys = keys + [it[0]]
+      keys_b = t.arr_chunk_push(keys_b, it[0])
     end if
   end for
-  return _sort_names(keys)
+  return _sort_names(t.arr_chunk_finish(keys_b))
 end function
 
 function _nested_function_get_by_codegen_name(state, code_name)
@@ -205,16 +205,16 @@ function _nested_function_get_by_codegen_name(state, code_name)
 end function
 
 function _nested_function_codegen_names_sorted(state)
-  keys = []
+  keys_b = t.arr_chunk_new(64)
   arr = state.nested_user_functions
-  if typeof(arr) != "array" or len(arr) <= 0 then return keys end if
+  if typeof(arr) != "array" or len(arr) <= 0 then return [] end if
   for i = 0 to len(arr) - 1
     nf = arr[i]
     if typeof(nf) != "struct" then continue end if
     code_name = _fn_codegen_name(state, nf)
-    if code_name != "" then keys = keys + [code_name] end if
+    if code_name != "" then keys_b = t.arr_chunk_push(keys_b, code_name) end if
   end for
-  return _sort_names(keys)
+  return _sort_names(t.arr_chunk_finish(keys_b))
 end function
 
 function _prepare_qualify_cache(cache, min_cap)
@@ -455,6 +455,32 @@ function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   return state
 end function
 
+function _foreach_store_dword_eax(state, name)
+  b = scope.cg_resolve_binding(state, name)
+  if typeof(b) != "struct" then return state end if
+  if b.kind == "param" or b.kind == "local" then
+    state.asm = a.mov_membase_disp_r32(state.asm, "rsp", b.offset, "eax")
+  else
+    if b.kind == "global" then
+      state.asm = a.mov_rip_dword_eax(state.asm, b.label)
+    end if
+  end if
+  return state
+end function
+
+function _foreach_load_dword_eax(state, name)
+  b = scope.cg_resolve_binding(state, name)
+  if typeof(b) != "struct" then return state end if
+  if b.kind == "param" or b.kind == "local" then
+    state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", b.offset)
+  else
+    if b.kind == "global" then
+      state.asm = a.mov_eax_rip_dword(state.asm, b.label)
+    end if
+  end if
+  return state
+end function
+
 function inline _breakctx_make(kind, break_label, continue_label, break_depth, continue_depth)
   return [kind, break_label, continue_label, break_depth, continue_depth]
 end function
@@ -575,8 +601,8 @@ function _emit_switch_stmt(state, stmt)
         if typeof(stmt.default_body) == "array" and len(stmt.default_body) > 0 then miss_lbl = l_default end if
         tbl_lbl = "switch_jtbl_" + sid
         state.rdata = d.rdata_pad_align(state.rdata, 8)
+        tbl_off = d.rdata_used(state.rdata)
         state.rdata = d.rdata_add_bytes_unique(state.rdata, tbl_lbl, bytes(8 * span, 0))
-        tbl_off = _rdata_label_offset(state.rdata, tbl_lbl)
         if tbl_off >= 0 then
           for ti = 0 to span - 1
             key = min_v + ti
@@ -626,6 +652,7 @@ function _emit_switch_stmt(state, stmt)
       if typeof(cs.kind) == "string" and cs.kind == "values" then
         vals = []
         if typeof(cs.values) == "array" then vals = cs.values end if
+        state = core.reserve_expr_temp_regs(state, ["r12"])
         if len(vals) > 0 then
           for j = 0 to len(vals) - 1
             l_val_next = "switch_val_next_" + sid + "_" + i + "_" + j
@@ -639,16 +666,20 @@ function _emit_switch_stmt(state, stmt)
             state.asm = a.mark(state.asm, l_val_next)
           end for
         end if
+        state = core.release_expr_temp_regs(state, ["r12"])
         state.asm = a.jmp(state.asm, l_next)
       else
         if typeof(cs.kind) == "string" and cs.kind == "range" then
+          rng_off = core.alloc_expr_temps(state, 16)
+          lo_off = rng_off
+          hi_off = rng_off + 8
           state = exprmod.cg_emit_expr(state, cs.range_start)
-          state.asm = a.mov_rsp_disp32_rax(state.asm, 0x1B0)
+          state.asm = a.mov_rsp_disp32_rax(state.asm, lo_off)
           state = exprmod.cg_emit_expr(state, cs.range_end)
-          state.asm = a.mov_rsp_disp32_rax(state.asm, 0x1B8)
+          state.asm = a.mov_rsp_disp32_rax(state.asm, hi_off)
 
-          state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x1B0)
-          state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x1B8)
+          state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", lo_off)
+          state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", hi_off)
 
           state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
           state.asm = a.and_r64_imm(state.asm, "r8", 7)
@@ -679,6 +710,7 @@ function _emit_switch_stmt(state, stmt)
           state.asm = a.cmp_r64_r64(state.asm, "rax", "r11")
           state.asm = a.jcc(state.asm, "g", l_next)
           state.asm = a.jmp(state.asm, l_hit)
+          state = core.free_expr_temps(state, 16)
         else
           state.asm = a.jmp(state.asm, l_next)
         end if
@@ -820,12 +852,8 @@ function cg_emit_stmt(state, stmt)
   end if
 
   if k == "NamespaceDef" then
-    old_pref = state.current_qname_prefix
-    state.current_qname_prefix = _join_qname(old_pref, _coerce_name(stmt.name))
-    state = scope.cg_scope_enter(state)
-    state = _emit_stmt_list(state, stmt.body)
-    state = scope.cg_scope_leave(state, true)
-    state.current_qname_prefix = old_pref
+    // Namespace bodies are flattened into qualified runtime statements by
+    // _flatten_runtime; the namespace node itself is compile-time only.
     return state
   end if
 
@@ -882,15 +910,8 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.lea_rdx_rip(state.asm, "fn_user_" + code_name)
     state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rdx")
     if need_parent then
-      env_root = state.current_env_root_off
-      if typeof(env_root) == "int" and env_root > 0 then
-        state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", env_root)
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r10")
-      else
-        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r15")
-      end if
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r15")
     end if
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
     state = scope.emit_store_var_scoped(state, local_name, stmt)
     return state
   end if
@@ -923,6 +944,12 @@ function cg_emit_stmt(state, stmt)
           break
         end if
         tv0 = _opt_try_truthy(state, cs0[0])
+        if typeof(tv0) == "bool" and tv0 == true then
+          state = scope.cg_scope_enter(state)
+          state = _emit_stmt_list(state, cs0[1])
+          state = scope.cg_scope_leave(state, true)
+          return state
+        end if
         if typeof(tv0) == "bool" and tv0 == false then
           start_idx = if_ci + 1
           continue
@@ -1026,6 +1053,7 @@ function cg_emit_stmt(state, stmt)
     if typeof(bct) != "struct" then
       state = scope.declare_global_binding_root(state, qn_c, stmt, true, stmt.expr)
     end if
+    state = scope.materialize_global_binding_root(state, qn_c)
 
     if cv.ok == false then
       state.diagnostics = state.diagnostics + ["const '" + qn_c + "' is not constexpr-evaluable"]
@@ -1721,10 +1749,13 @@ function cg_emit_stmt(state, stmt)
 
     state = exprmod.cg_emit_expr(state, stmt.iterable)
     state = scope.emit_store_var_scoped(state, it_name, stmt)
-    state.asm = a.mov_rax_imm64(state.asm, 0)
+    state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
     state = scope.emit_store_var_scoped(state, i_name, stmt)
+    state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
     state = scope.emit_store_var_scoped(state, len_name, stmt)
+    state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
     state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
+    state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
     state = scope.emit_store_var_scoped(state, base_ptr_name, stmt)
 
     state = scope.emit_load_var_scoped(state, it_name)
@@ -1741,62 +1772,64 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.jmp(state.asm, l_end_fe)
 
     state.asm = a.mark(state.asm, l_setup_arr_fe)
-    state = scope.emit_load_var_scoped(state, it_name)
-    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 4)
     state.asm = a.mov_r32_r32(state.asm, "eax", "edx")
-    state = scope.emit_store_var_scoped(state, len_name, stmt)
+    state = _foreach_store_dword_eax(state, len_name)
     state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r14", 8)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
     state = scope.emit_store_var_scoped(state, base_ptr_name, stmt)
     state.asm = a.lea_rax_rip(state.asm, l_top_arr_fe)
     state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
     state.asm = a.jmp(state.asm, l_top_arr_fe)
 
     state.asm = a.mark(state.asm, l_setup_bytes_fe)
-    state = scope.emit_load_var_scoped(state, it_name)
-    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 4)
     state.asm = a.mov_r32_r32(state.asm, "eax", "edx")
-    state = scope.emit_store_var_scoped(state, len_name, stmt)
+    state = _foreach_store_dword_eax(state, len_name)
     state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r14", 8)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
     state = scope.emit_store_var_scoped(state, base_ptr_name, stmt)
     state.asm = a.lea_rax_rip(state.asm, l_top_bytes_fe)
     state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
     state.asm = a.jmp(state.asm, l_top_bytes_fe)
 
     state.asm = a.mark(state.asm, l_setup_str_fe)
-    state = scope.emit_load_var_scoped(state, it_name)
-    state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 4)
     state.asm = a.mov_r32_r32(state.asm, "eax", "edx")
-    state = scope.emit_store_var_scoped(state, len_name, stmt)
+    state = _foreach_store_dword_eax(state, len_name)
     state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r14", 8)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
     state = scope.emit_store_var_scoped(state, base_ptr_name, stmt)
     state.asm = a.lea_rax_rip(state.asm, l_top_str_fe)
     state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
     state.asm = a.jmp(state.asm, l_top_str_fe)
 
     state.asm = a.mark(state.asm, l_top_arr_fe)
-    state = scope.emit_load_var_scoped(state, i_name)
+    state = _foreach_load_dword_eax(state, i_name)
     state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
-    state = scope.emit_load_var_scoped(state, len_name)
+    state = _foreach_load_dword_eax(state, len_name)
     state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
     state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_end_fe)
     state = scope.emit_load_var_scoped(state, base_ptr_name)
+    state.asm = a.sar_rax_imm8(state.asm, 3)
     state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r14", "rcx", 8, 0)
     state = scope.emit_store_var_scoped(state, vname_fe, stmt)
     state.asm = a.jmp(state.asm, l_body_fe)
 
     state.asm = a.mark(state.asm, l_top_bytes_fe)
-    state = scope.emit_load_var_scoped(state, i_name)
+    state = _foreach_load_dword_eax(state, i_name)
     state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
-    state = scope.emit_load_var_scoped(state, len_name)
+    state = _foreach_load_dword_eax(state, len_name)
     state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
     state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_end_fe)
     state = scope.emit_load_var_scoped(state, base_ptr_name)
+    state.asm = a.sar_rax_imm8(state.asm, 3)
     state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r64_r64(state.asm, "rax", "r14")
     state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
@@ -1807,27 +1840,21 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.jmp(state.asm, l_body_fe)
 
     state.asm = a.mark(state.asm, l_top_str_fe)
-    state = scope.emit_load_var_scoped(state, i_name)
+    state = _foreach_load_dword_eax(state, i_name)
     state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
-    state = scope.emit_load_var_scoped(state, len_name)
+    state = _foreach_load_dword_eax(state, len_name)
     state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
     state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
     state.asm = a.jcc(state.asm, "ge", l_end_fe)
     state = scope.emit_load_var_scoped(state, base_ptr_name)
+    state.asm = a.sar_rax_imm8(state.asm, 3)
     state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
     state.asm = a.mov_r64_r64(state.asm, "rax", "r14")
     state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
     state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
-    state.asm = a.mov_membase_disp_r8(state.asm, "rsp", 0x20, "al")
-    state.asm = a.mov_rcx_imm32(state.asm, 10)
-    state.asm = a.call(state.asm, "fn_alloc")
-    state.asm = a.mov_r11_rax(state.asm)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRING, false)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 1, false)
-    state.asm = a.mov_r8_membase_disp(state.asm, "al", "rsp", 0x20)
-    state.asm = a.mov_membase_disp_r8(state.asm, "r11", 8, "al")
-    state.asm = a.mov_membase_disp_imm8(state.asm, "r11", 9, 0)
-    state.asm = a.mov_rax_r11(state.asm)
+    state.asm = a.lea_r11_rip(state.asm, "obj_char_table")
+    state.asm = a.shl_rax_imm8(state.asm, 4)
+    state.asm = a.add_r64_r64(state.asm, "rax", "r11")
     state = scope.emit_store_var_scoped(state, vname_fe, stmt)
 
     state.asm = a.mark(state.asm, l_body_fe)
@@ -1836,11 +1863,11 @@ function cg_emit_stmt(state, stmt)
     state = scope.cg_scope_leave(state, true)
 
     state.asm = a.mark(state.asm, l_cont_fe)
-    state = scope.emit_load_var_scoped(state, i_name)
+    state = _foreach_load_dword_eax(state, i_name)
     state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
     state.asm = a.inc_r32(state.asm, "ecx")
     state.asm = a.mov_r32_r32(state.asm, "eax", "ecx")
-    state = scope.emit_store_var_scoped(state, i_name, stmt)
+    state = _foreach_store_dword_eax(state, i_name)
     state = scope.emit_load_var_scoped(state, top_ptr_name)
     state.asm = a.jmp_r64(state.asm, "rax")
 
@@ -2728,26 +2755,69 @@ end function
 function _sort_names(vals)
   if typeof(vals) == "struct" then vals = _name_set_to_array(vals) end if
   if typeof(vals) != "array" or len(vals) <= 1 then return vals end if
-  arr = []
+  arr_b = t.arr_chunk_new(64)
   for i = 0 to len(vals) - 1
     if typeof(vals[i]) == "string" and vals[i] != "" then
-      arr = _arr_add_unique(arr, vals[i])
+      arr_b = t.arr_chunk_push(arr_b, vals[i])
     end if
   end for
+  arr = t.arr_chunk_finish(arr_b)
   n = len(arr)
   if n <= 1 then return arr end if
-  for i = 0 to n - 2
-    for j = 0 to n - 2 - i
-      a = arr[j]
-      b = arr[j + 1]
-      if _string_gt(a, b) then
-        tmp = arr[j]
-        arr[j] = arr[j + 1]
-        arr[j + 1] = tmp
-      end if
-    end for
+
+  // Bottom-up merge sort keeps Python's lexical ordering while avoiding the
+  // old quadratic bubble sort. Duplicate removal is done after sorting, so it
+  // is linear rather than another quadratic pre-pass.
+  tmp = array(n, "")
+  width = 1
+  while width < n
+    left = 0
+    while left < n
+      mid = left + width
+      if mid > n then mid = n end if
+      right = left + width + width
+      if right > n then right = n end if
+      ai = left
+      bi = mid
+      oi = left
+      while ai < mid and bi < right
+        if _string_gt(arr[ai], arr[bi]) then
+          tmp[oi] = arr[bi]
+          bi = bi + 1
+        else
+          tmp[oi] = arr[ai]
+          ai = ai + 1
+        end if
+        oi = oi + 1
+      end while
+      while ai < mid
+        tmp[oi] = arr[ai]
+        ai = ai + 1
+        oi = oi + 1
+      end while
+      while bi < right
+        tmp[oi] = arr[bi]
+        bi = bi + 1
+        oi = oi + 1
+      end while
+      ci = left
+      while ci < right
+        arr[ci] = tmp[ci]
+        ci = ci + 1
+      end while
+      left = left + width + width
+    end while
+    width = width + width
+  end while
+
+  unique_b = t.arr_chunk_new(64)
+  prev = ""
+  for i = 0 to n - 1
+    cur = arr[i]
+    if i == 0 or cur != prev then unique_b = t.arr_chunk_push(unique_b, cur) end if
+    prev = cur
   end for
-  return arr
+  return t.arr_chunk_finish(unique_b)
 end function
 
 function _id_label_pair_id(it)
@@ -4006,63 +4076,69 @@ function _closure_analyze_function_rec(state, fn_node, outer_scopes)
   globals_decl = info[1]
   nested = info[2]
 
-  body_stmts = fn_node.body
-  if typeof(body_stmts) != "array" then body_stmts = [] end if
-  uses = _closure_collect_uses(body_stmts)
-  writes = _closure_collect_writes(body_stmts)
-
-  params_set = _name_set_new(16)
-  if typeof(fn_node.params) == "array" and len(fn_node.params) > 0 then
-    for pi = 0 to len(fn_node.params) - 1
-      pn = _coerce_name(fn_node.params[pi])
-      if pn != "" then params_set = _name_set_add(params_set, pn) end if
-    end for
-  end if
-  read_before_write = _closure_collect_read_before_first_write(body_stmts, params_set)
-
   captures = _name_set_new(16)
   capture_depth = t.fastmap_new(16)
 
-  write_names = _name_set_to_array(writes)
-  if len(write_names) > 0 and len(outer_scopes) > 0 then
-    for i = 0 to len(write_names) - 1
-      name = write_names[i]
-      if typeof(name) != "string" or name == "" then continue end if
-      if _name_set_has(params_set, name) then continue end if
-      if _name_set_has(globals_decl, name) then continue end if
-      if _has_dot_name(name) then continue end if
-      if _name_set_has(read_before_write, name) == false then continue end if
-      for d = 0 to len(outer_scopes) - 1
-        oscope = outer_scopes[d]
-        if _name_set_has(oscope, name) then
-          locals_set = _name_set_remove(locals_set, name)
-          captures = _name_set_add(captures, name)
-          capture_depth = _map_int_set(capture_depth, name, d + 1)
-          break
-        end if
-      end for
-    end for
-  end if
+  // A top-level function has no enclosing function scope, so it cannot capture
+  // anything.  The use/write/read-before-write walks only feed capture
+  // resolution; avoid those three full AST traversals for the overwhelmingly
+  // common top-level case.  Nested functions still take the complete path.
+  if len(outer_scopes) > 0 then
+    body_stmts = fn_node.body
+    if typeof(body_stmts) != "array" then body_stmts = [] end if
+    uses = _closure_collect_uses(body_stmts)
+    writes = _closure_collect_writes(body_stmts)
 
-  uw = _name_set_union(uses, writes)
-  uw_names = _name_set_to_array(uw)
-  if len(uw_names) > 0 and len(outer_scopes) > 0 then
-    for i = 0 to len(uw_names) - 1
-      nm = uw_names[i]
-      if typeof(nm) != "string" or nm == "" then continue end if
-      if _name_set_has(locals_set, nm) then continue end if
-      if _name_set_has(globals_decl, nm) then continue end if
-      if _has_dot_name(nm) then continue end if
-      if _name_set_has(captures, nm) then continue end if
-      for d2 = 0 to len(outer_scopes) - 1
-        os2 = outer_scopes[d2]
-        if _name_set_has(os2, nm) then
-          captures = _name_set_add(captures, nm)
-          capture_depth = _map_int_set(capture_depth, nm, d2 + 1)
-          break
-        end if
+    params_set = _name_set_new(16)
+    if typeof(fn_node.params) == "array" and len(fn_node.params) > 0 then
+      for pi = 0 to len(fn_node.params) - 1
+        pn = _coerce_name(fn_node.params[pi])
+        if pn != "" then params_set = _name_set_add(params_set, pn) end if
       end for
-    end for
+    end if
+    read_before_write = _closure_collect_read_before_first_write(body_stmts, params_set)
+
+    write_names = _name_set_to_array(writes)
+    if len(write_names) > 0 then
+      for i = 0 to len(write_names) - 1
+        name = write_names[i]
+        if typeof(name) != "string" or name == "" then continue end if
+        if _name_set_has(params_set, name) then continue end if
+        if _name_set_has(globals_decl, name) then continue end if
+        if _has_dot_name(name) then continue end if
+        if _name_set_has(read_before_write, name) == false then continue end if
+        for d = 0 to len(outer_scopes) - 1
+          oscope = outer_scopes[d]
+          if _name_set_has(oscope, name) then
+            locals_set = _name_set_remove(locals_set, name)
+            captures = _name_set_add(captures, name)
+            capture_depth = _map_int_set(capture_depth, name, d + 1)
+            break
+          end if
+        end for
+      end for
+    end if
+
+    uw = _name_set_union(uses, writes)
+    uw_names = _name_set_to_array(uw)
+    if len(uw_names) > 0 then
+      for i = 0 to len(uw_names) - 1
+        nm = uw_names[i]
+        if typeof(nm) != "string" or nm == "" then continue end if
+        if _name_set_has(locals_set, nm) then continue end if
+        if _name_set_has(globals_decl, nm) then continue end if
+        if _has_dot_name(nm) then continue end if
+        if _name_set_has(captures, nm) then continue end if
+        for d2 = 0 to len(outer_scopes) - 1
+          os2 = outer_scopes[d2]
+          if _name_set_has(os2, nm) then
+            captures = _name_set_add(captures, nm)
+            capture_depth = _map_int_set(capture_depth, nm, d2 + 1)
+            break
+          end if
+        end for
+      end for
+    end if
   end if
 
   fn_node._ml_locals = _sort_names(locals_set)
@@ -5480,16 +5556,41 @@ function _declare_top_level_global_bindings(state, program)
     st = program[i]
     if typeof(st) != "struct" then continue end if
     k = _coerce_name(st.node_kind)
-    if k != "ConstDecl" and k != "Assign" then continue end if
+    // Only constants need an early root binding for the fixed-point constexpr
+    // pass below.  Predeclaring ordinary assignments changes lexical shadowing:
+    // a later top-level `x = ...` would otherwise capture an earlier block's
+    // `x = ...` instead of creating the distinct binding used by Python.
+    if k != "ConstDecl" then continue end if
     qn = _coerce_name(st.name)
     if qn == "" then continue end if
     existing = scope.resolve_binding(state, qn)
     if typeof(existing) == "struct" and existing.kind == "global" then continue end if
-    if k == "ConstDecl" then
-      state = scope.declare_global_binding_root(state, qn, st, true, st.expr)
-    else
-      state = scope.declare_global_binding_root(state, qn, st, false, 0)
+    state = scope.declare_const_binding_root_deferred(state, qn, st, st.expr)
+  end for
+  return state
+end function
+
+function _declare_object_top_level_global_bindings(state, program)
+  // Function objects are emitted from independent state clones. Predeclare
+  // every module-level storage slot on the shared base state so those clones
+  // can resolve globals without depending on a previously emitted module-init
+  // clone. The monolithic path deliberately keeps its source-order behavior.
+  if typeof(program) != "array" or len(program) <= 0 then return state end if
+  for i = 0 to len(program) - 1
+    st = program[i]
+    if typeof(st) != "struct" then continue end if
+    k = _coerce_name(st.node_kind)
+    if k != "Assign" and k != "ConstDecl" then continue end if
+    qn = _coerce_name(st.name)
+    if qn == "" then continue end if
+    existing = scope.resolve_binding(state, qn)
+    if typeof(existing) == "struct" and existing.kind == "global" then
+      if typeof(existing.label) != "string" or existing.label == "" then
+        state = scope.materialize_global_binding_root(state, qn)
+      end if
+      continue
     end if
+    state = scope.declare_global_binding_root(state, qn, st, k == "ConstDecl", try(st.expr))
   end for
   return state
 end function
@@ -5527,7 +5628,7 @@ function _precompute_top_level_const_bindings(state, program)
 
       cv = exprmod.cg_expr_try_const_value(state, st.expr)
       if cv.ok then
-        state = scope.cg_set_const_binding_value(state, qn, cv.value)
+        state = scope.cg_precompute_const_binding_value(state, qn, cv.value)
         progress = true
       end if
     end for
@@ -5790,7 +5891,9 @@ function _emit_program_via_objects(state, program)
   main_name = _program_main_name(state)
 
   state = emit_entry_object(state, module_init_recs, max_call_args_main, main_name)
-  state = _emit_program_module_inits_all(state, module_init_recs)
+  if _heap_cfg_get_bool(state, "cg_object_pipeline", false) then
+    state = _emit_program_module_inits_all(state, module_init_recs)
+  end if
   module_init_recs = []
   state = _emit_program_functions_all(state)
   state = _clear_program_function_state(state)
@@ -5867,8 +5970,8 @@ function _emit_static_callable_objects(state)
       state.label_id = state.label_id + 1
       obj_lbl = "obj_fn_static_" + lid_obj
       state.rdata = d.rdata_pad_align(state.rdata, 8)
+      off = d.rdata_used(state.rdata)
       state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_FUNCTION) + t.u32(arity) + bytes(8, 0))
-      off = _rdata_label_offset(state.rdata, obj_lbl)
       if off >= 0 then
         state.rdata = d.rdata_add_abs64_patch(state.rdata, off + 8, "fn_user_" + fn_qn)
         state.function_static_obj_labels = _strpair_set(state.function_static_obj_labels, fn_qn, obj_lbl)
@@ -5917,8 +6020,8 @@ function _emit_static_callable_objects(state)
       state.label_id = state.label_id + 1
       obj_lbl = "obj_builtin_static_" + lid_obj
       state.rdata = d.rdata_pad_align(state.rdata, 8)
+      off = d.rdata_used(state.rdata)
       state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_BUILTIN) + t.u32(min_a) + t.u32(max_a) + t.u32(0) + bytes(8, 0))
-      off = _rdata_label_offset(state.rdata, obj_lbl)
       if off >= 0 then
         state.rdata = d.rdata_add_abs64_patch(state.rdata, off + 16, blbl)
         state.builtin_static_obj_labels = _strpair_set(state.builtin_static_obj_labels, bname, obj_lbl)
@@ -5964,8 +6067,8 @@ function _emit_static_callable_objects(state)
       state.label_id = state.label_id + 1
       obj_lbl = "obj_extern_static_" + lid_obj
       state.rdata = d.rdata_pad_align(state.rdata, 8)
+      off = d.rdata_used(state.rdata)
       state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_BUILTIN) + t.u32(arity) + t.u32(arity) + t.u32(0) + bytes(8, 0))
-      off = _rdata_label_offset(state.rdata, obj_lbl)
       if off >= 0 then
         state.rdata = d.rdata_add_abs64_patch(state.rdata, off + 16, stub_lbl)
         state.extern_static_obj_labels = _strpair_set(state.extern_static_obj_labels, qn, obj_lbl)
@@ -6263,10 +6366,10 @@ function prepare_program_for_objects(state, program)
       state._global_owner_file = _strpair_set(state._global_owner_file, pst_name, pst_file)
     end for
   end if
-  state = _declare_top_level_global_bindings(state, program)
-  state = _precompute_top_level_const_bindings(state, program)
-  state = _mem_probe(state, "owner_map_done")
 
+  // Explicit `global` declarations inside functions are hoisted before module
+  // guard slots, just like the Python backend. Ordinary top-level assignments
+  // are still discovered after the guards.
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
     for sfi = 0 to len(state.user_functions) - 1
       uf_scan = state.user_functions[sfi]
@@ -6284,14 +6387,30 @@ function prepare_program_for_objects(state, program)
   end if
   state = _mem_probe(state, "func_globals_bound")
 
+  module_init_recs = []
+  if _heap_cfg_get_bool(state, "cg_object_pipeline", false) == false then
+    // Python's monolithic backend reserves module guard slots before globals
+    // discovered during top-level emission. Preserve that deterministic data
+    // order so RIP patches and complete PE bytes match across compilers.
+    mir_early = _build_module_init_recs(state, program)
+    state = mir_early[0]
+    module_init_recs = mir_early[1]
+  end if
+  state = _declare_top_level_global_bindings(state, program)
+  state = _precompute_top_level_const_bindings(state, program)
+  state = _mem_probe(state, "owner_map_done")
+
   if _heap_cfg_get_bool(state, "cg_semantic_pass", false) then
     state = _check_program_semantics(state, program)
     state = _mem_probe(state, "semantic_done")
   end if
 
-  mir = _build_module_init_recs(state, program)
-  state = mir[0]
-  module_init_recs = mir[1]
+  if _heap_cfg_get_bool(state, "cg_object_pipeline", false) then
+    mir = _build_module_init_recs(state, program)
+    state = mir[0]
+    module_init_recs = mir[1]
+    state = _declare_object_top_level_global_bindings(state, program)
+  end if
   state = _mem_probe(state, "module_init_recs_done")
 
   max_call_args_main = max_calls_stmts(state, program)
@@ -6340,13 +6459,51 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
 
   state = core.push_cold_block_scope(state)
   if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
-    for mri = 0 to len(module_init_recs) - 1
-      mr = module_init_recs[mri]
-      if typeof(mr) != "array" or len(mr) < 5 then continue end if
-      fn_lbl2 = _coerce_name(mr[2])
-      if fn_lbl2 == "" then continue end if
-      state.asm = a.call(state.asm, fn_lbl2)
-    end for
+    if _heap_cfg_get_bool(state, "cg_object_pipeline", false) then
+      for mri = 0 to len(module_init_recs) - 1
+        mr = module_init_recs[mri]
+        if typeof(mr) != "array" or len(mr) < 5 then continue end if
+        fn_lbl2 = _coerce_name(mr[2])
+        if fn_lbl2 == "" then continue end if
+        state.asm = a.call(state.asm, fn_lbl2)
+      end for
+    else
+      // Match the Python backend's monolithic layout: top-level module bodies
+      // execute inline in the entry frame. The .mlo pipeline retains separate
+      // callable module-init objects for memory-bounded cross-module linking.
+      for mri = 0 to len(module_init_recs) - 1
+        mr = module_init_recs[mri]
+        if typeof(mr) != "array" or len(mr) < 5 then continue end if
+        mfile = _coerce_name(mr[0])
+        mstmts = mr[1]
+        fn_lbl2 = _coerce_name(mr[2])
+        flag_lbl2 = _coerce_name(mr[3])
+        status_lbl2 = _coerce_name(mr[4])
+        if fn_lbl2 == "" or flag_lbl2 == "" or status_lbl2 == "" then continue end if
+        done_lbl2 = fn_lbl2 + "_done"
+        state.asm = a.mov_rax_rip_qword(state.asm, flag_lbl2)
+        state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+        state.asm = a.jcc(state.asm, "ne", done_lbl2)
+        state.asm = a.mov_r64_imm64(state.asm, "rax", 1)
+        state.asm = a.mov_rip_qword_rax(state.asm, flag_lbl2)
+        state.asm = a.mov_r64_imm64(state.asm, "rax", 1)
+        state.asm = a.mov_rip_qword_rax(state.asm, status_lbl2)
+        old_module_active = state._module_init_active
+        old_module_file = state._module_init_active_file
+        state._module_init_active = true
+        state._module_init_active_file = mfile
+        if typeof(mstmts) == "array" and len(mstmts) > 0 then
+          for msi = 0 to len(mstmts) - 1
+            state = cg_emit_stmt(state, mstmts[msi])
+          end for
+        end if
+        state._module_init_active = old_module_active
+        state._module_init_active_file = old_module_file
+        state.asm = a.mov_r64_imm64(state.asm, "rax", 2)
+        state.asm = a.mov_rip_qword_rax(state.asm, status_lbl2)
+        state.asm = a.mark(state.asm, done_lbl2)
+      end for
+    end if
   end if
   state = _mem_probe(state, "top_level_done")
 
@@ -6490,10 +6647,10 @@ function emit_module_init_object(state, module_rec)
   state.label_id = state.label_id + 1
   lbl_sc = "dbg_mod_sc_" + dbg_lid
   lbl_fn = "dbg_mod_fn_" + dbg_lid
-  state.rdata = d.rdata_add_obj_string(state.rdata, lbl_sc, dbg_script)
+  state.rdata = d.rdata_add_obj_string_unique(state.rdata, lbl_sc, dbg_script)
   state.asm = a.lea_rax_rip(state.asm, lbl_sc)
   state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_script")
-  state.rdata = d.rdata_add_obj_string(state.rdata, lbl_fn, dbg_func)
+  state.rdata = d.rdata_add_obj_string_unique(state.rdata, lbl_fn, dbg_func)
   state.asm = a.lea_rax_rip(state.asm, lbl_fn)
   state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_func")
 
@@ -6804,11 +6961,11 @@ function emit_user_function(state, fn_node)
   lbl_sc = "dbg_sc_" + dbg_lid
   lbl_fn = "dbg_fn_" + dbg_lid
 
-  state.rdata = d.rdata_add_obj_string(state.rdata, lbl_sc, dbg_script)
+  state.rdata = d.rdata_add_obj_string_unique(state.rdata, lbl_sc, dbg_script)
   state.asm = a.lea_rax_rip(state.asm, lbl_sc)
   state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_script")
 
-  state.rdata = d.rdata_add_obj_string(state.rdata, lbl_fn, dbg_func)
+  state.rdata = d.rdata_add_obj_string_unique(state.rdata, lbl_fn, dbg_func)
   state.asm = a.lea_rax_rip(state.asm, lbl_fn)
   state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_func")
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
@@ -6952,7 +7109,9 @@ function emit_user_function(state, fn_node)
         state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_BOX, false)
         state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, 0, false)
         state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "r12")
-        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", soff, "r11")
+        // RAX still holds the box pointer.  Store from the same register as the
+        // Python backend so the generated instruction stream is identical.
+        state.asm = a.mov_rsp_disp32_rax(state.asm, soff)
       end for
     end if
 
@@ -6967,11 +7126,11 @@ function emit_user_function(state, fn_node)
 
     state.asm = a.mov_rcx_imm32(state.asm, env_size)
     state.asm = a.call(state.asm, "fn_alloc")
-    state.asm = a.mov_r64_r64(state.asm, "r15", "rax")
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r15", 0, env_obj_type, false)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r15", 4, env_n, false)
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, env_obj_type, false)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, env_n, false)
     if has_parent_env then
-      state.asm = a.mov_membase_disp_r64(state.asm, "r15", 8, "r14")
+      state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "r14")
     end if
 
     if env_n > 0 then
@@ -6980,11 +7139,11 @@ function emit_user_function(state, fn_node)
         soff2 = _map_int_get(slot_off, snm3, -1)
         if soff2 < 0 then continue end if
         state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", soff2)
-        state.asm = a.mov_membase_disp_r64(state.asm, "r15", slot_base + esi2 * 8, "r10")
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", slot_base + esi2 * 8, "r10")
       end for
     end if
 
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r15")
+    state.asm = a.mov_r64_r64(state.asm, "r15", "r11")
     state.asm = a.mov_rsp_disp32_rax(state.asm, env_root_off)
   else
     state.asm = a.mov_r64_imm64(state.asm, "r15", t.enc_void())

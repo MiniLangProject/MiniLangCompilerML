@@ -69,7 +69,7 @@ function Invoke-LinkFallback {
   Write-Host "Object dir: $objDir"
   Write-Host "Objects:    $mloCount"
 
-  & $CompilerPath $EntryPath $StageExePath "--link-obj-dir" $objDir "--subsystem" "console" "--gc-limit" "64m"
+  & $CompilerPath $EntryPath $StageExePath "--link-obj-dir" $objDir "--subsystem" "console" "--gc-limit" "1536m"
   $linkExit = $LASTEXITCODE
   if ($linkExit -ne 0) {
     throw "Fallback link failed with exit code $linkExit"
@@ -116,10 +116,11 @@ $buildArgs = @(
   $stageOutput,
   "-I", $Root,
   "--heap-reserve", "4g",
-  "--heap-commit", "512m",
+  "--heap-commit", "2g",
   "--heap-shrink",
-  "--heap-shrink-min", "128m",
-  "--gc-limit", "384m"
+  "--heap-shrink-min", "256m",
+  "--gc-limit", "1536m",
+  "--object-pipeline"
 )
 if (-not $NoBootstrapProbe) {
   $buildArgs += "--mem-probe"

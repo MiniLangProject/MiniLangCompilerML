@@ -1,13 +1,22 @@
 extern function RtlMoveMemory(dest as ptr, src as bytes, count as int) from "kernel32.dll" symbol "RtlMoveMemory" returns ptr
 
+function ok(cond, label)
+  if cond then
+    print label + " [OK]"
+  else
+    print label + " [FAIL]"
+  end if
+end function
+
 function main(args)
+  print "=== NATIVE BYTES PTR ==="
   dst = bytes(4, 0)
   src = bytes("ABCD")
   p = nativeBytesPtr(dst)
-  if typeof(p) != "int" then return 1 end if
-  if p == 0 then return 2 end if
+  ok(typeof(p) == "int", "nativeBytesPtr returns int")
+  ok(p != 0, "nativeBytesPtr non-null")
   RtlMoveMemory(p, src, 4)
-  if decode(dst) != "ABCD" then return 3 end if
-  if nativeBytesPtr("not bytes") != 0 then return 4 end if
-  return 0
+  ok(decode(dst) == "ABCD", "nativeBytesPtr payload write")
+  ok(nativeBytesPtr("not bytes") == 0, "nativeBytesPtr rejects non-bytes")
+  print "=== DONE ==="
 end function

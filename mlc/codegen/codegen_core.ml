@@ -488,6 +488,11 @@ end function
 function _pretty_script(state, p)
   if typeof(p) != "string" or p == "" then return "<script>" end if
   rp = s.replaceAll(p, "\\", "/")
+  std_marker = "/std/"
+  std_at = s.lastIndexOf(rp, std_marker)
+  if std_at >= 0 then
+    return s.substr(rp, std_at + 1, len(rp) - std_at - 1)
+  end if
   rr = ""
   if typeof(state) == "struct" and typeof(state.filename) == "string" and state.filename != "" then
     rr = s.replaceAll(state.filename, "\\", "/")
@@ -506,7 +511,11 @@ function _pretty_script(state, p)
   end if
   if rr != "" and s.startsWith(rp, rr + "/") then
     rel = s.substr(rp, len(rr) + 1, len(rp) - len(rr) - 1)
-    if rel != "" then return rel end if
+    if rel != "" then
+      rel_std_at = s.lastIndexOf(rel, std_marker)
+      if rel_std_at >= 0 then return s.substr(rel, rel_std_at + 1, len(rel) - rel_std_at - 1) end if
+      return rel
+    end if
   end if
   return rp
 end function

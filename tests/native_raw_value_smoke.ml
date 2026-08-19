@@ -1,10 +1,19 @@
+function ok(cond, label)
+  if cond then
+    print label + " [OK]"
+  else
+    print label + " [FAIL]"
+  end if
+end function
+
 function main(args)
+  print "=== NATIVE RAW VALUE ==="
   b = bytes("x")
   raw = nativeRawValue(b)
-  if typeof(raw) != "int" then return 1 end if
-  if raw == 0 then return 2 end if
+  ok(typeof(raw) == "int", "nativeRawValue returns int")
+  ok(raw != 0, "nativeRawValue non-zero")
   b2 = nativeValueFromRaw(raw)
-  if b2 != b then return 3 end if
-  if nativeValueFromRaw("not raw") is void == false then return 4 end if
-  return 0
+  ok(b2 == b, "nativeValueFromRaw roundtrip")
+  ok(nativeValueFromRaw("not raw") is void, "nativeValueFromRaw rejects non-int")
+  print "=== DONE ==="
 end function

@@ -201,6 +201,7 @@ function main(args)
   if _test(compiler_path, repo_root, "native_bytes_ptr_smoke", "tests\\native_bytes_ptr_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_raw_value_smoke", "tests\\native_raw_value_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_callback_wndproc_smoke", "tests\\native_callback_wndproc_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "global_function_rebind", "tests\\global_function_rebind.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "asm_opcodes_golden_smoke", "tests\\test_asm_opcodes.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
 
   // Existing ns/import framework tests
@@ -233,6 +234,7 @@ function main(args)
   if _test_adv(compiler_path, repo_root, "py_import_as_alias", "tests/ported_py/test_import_as_alias/main_import_as.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_import_mod_pkg_mismatch", "tests/ported_py/test_import_module_package_mismatch/main_import_mod.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_import_pkg_path_mismatch", "tests/ported_py/test_import_package_path_mismatch/main_import_path_pkg_mismatch.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test_adv(compiler_path, repo_root, "py_import_alias_file_skips_pkg_path", "tests/ported_py/test_import_alias_file_skips_package_path_check/main_alias_file.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_import_include_noI", "tests/ported_py/test_import_include_paths/main_import_I.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_import_include_withI", "tests/ported_py/test_import_include_paths/main_import_I.ml", "run_rc5", flag_inc_ok, "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_import_ambig_local_ok", "tests/ported_py/test_import_ambiguous_include_paths/main_import_ambig.ml", "run_rc5", "", "") then pass = pass + 1 else fail = fail + 1 end if
@@ -276,6 +278,10 @@ function main(args)
   if _test_adv(compiler_path, repo_root, "py_extern_namespaced", "tests/ported_py/test_extern_namespaced/extern_ns.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_extern_value_runtime", "tests/ported_py/test_extern_value_runtime/extern_value_runtime.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_extern_double_abi", "tests/ported_py/test_extern_double_abi/extern_double_abi.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test_adv(compiler_path, repo_root, "extern_abi_valid", "tests/extern_abi_validation_valid.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test_adv(compiler_path, repo_root, "extern_abi_bad_field", "tests/extern_abi_validation_bad_field.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test_adv(compiler_path, repo_root, "extern_abi_bad_out_order", "tests/extern_abi_validation_bad_out_order.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test_adv(compiler_path, repo_root, "extern_abi_bad_param", "tests/extern_abi_validation_bad_param.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_callable_values_runtime", "tests/ported_py/test_callable_values_runtime/callable_values_runtime.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_call_profile", "tests/ported_py/test_call_profile_counts/call_profile_counts.ml", "run_ok", "--profile-calls", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_trace_calls", "tests/ported_py/test_trace_calls_preserves_params/trace_calls_params.ml", "run_ok", "--trace-calls", "") then pass = pass + 1 else fail = fail + 1 end if

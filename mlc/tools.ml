@@ -56,58 +56,49 @@ function _fm_hash_any(key)
     return 0
   end if
 
+  // These builtins execute the same FNV-1a loop in the native runtime without
+  // allocating a converted byte copy for every map access.  FastMap capacities
+  // are powers of two, so the historical 31-bit mask preserves identical slots.
+  if typeof(key) == "bytes" then return bytesHash(key) & 0x7FFFFFFF end if
+  if typeof(key) == "string" then return stringHash(key) & 0x7FFFFFFF end if
+
   bs = bytes(0)
-  if typeof(key) == "bytes" then
-    bs = key
+  txt = ""
+  if typeof(key) == "struct" then
+    node_kind = try(key.node_kind)
+    if typeof(node_kind) == "string" then txt = node_kind end if
+    kind = try(key.kind)
+    if txt == "" and typeof(kind) == "string" then txt = kind end if
+    name = try(key.name)
+    if typeof(name) == "string" and name != "" then
+      if txt != "" then txt = txt + ":" end if
+      txt = txt + name
+    end if
+    key_name = try(key.key)
+    if txt == "" and typeof(key_name) == "string" then txt = key_name end if
+    filename = try(key._filename)
+    if typeof(filename) == "string" and filename != "" then
+      if txt != "" then txt = txt + "@" end if
+      txt = txt + filename
+      pos = try(key._pos)
+      if typeof(pos) == "int" then txt = txt + ":" + pos end if
+    end if
+    value = try(key.value)
+    if txt == "" and typeof(value) == "string" then txt = value end if
+    if txt == "" then txt = "struct" end if
   else
-    txt = ""
-    if typeof(key) == "string" then
-      txt = key
+    if typeof(key) == "array" then
+      txt = "array:" + len(key)
     else
-      if typeof(key) == "struct" then
-        node_kind = try(key.node_kind)
-        if typeof(node_kind) == "string" then txt = node_kind end if
-        kind = try(key.kind)
-        if txt == "" and typeof(kind) == "string" then txt = kind end if
-        name = try(key.name)
-        if typeof(name) == "string" and name != "" then
-          if txt != "" then txt = txt + ":" end if
-          txt = txt + name
-        end if
-        key_name = try(key.key)
-        if txt == "" and typeof(key_name) == "string" then txt = key_name end if
-        filename = try(key._filename)
-        if typeof(filename) == "string" and filename != "" then
-          if txt != "" then txt = txt + "@" end if
-          txt = txt + filename
-          pos = try(key._pos)
-          if typeof(pos) == "int" then txt = txt + ":" + pos end if
-        end if
-        value = try(key.value)
-        if txt == "" and typeof(value) == "string" then txt = value end if
-        if txt == "" then txt = "struct" end if
+      if typeof(key) == "void" then
+        txt = "void"
       else
-        if typeof(key) == "array" then
-          txt = "array:" + len(key)
-        else
-          if typeof(key) == "void" then
-            txt = "void"
-          else
-            txt = typeof(key)
-          end if
-        end if
+        txt = typeof(key)
       end if
     end if
-    bs = bytes(txt)
   end if
-  h = 2166136261
-  if len(bs) > 0 then
-    for i = 0 to len(bs) - 1
-      h = h ^ bs[i]
-      h = (h * 16777619) & 0x7FFFFFFF
-    end for
-  end if
-  return h
+  bs = bytes(txt)
+  return bytesHash(bs) & 0x7FFFFFFF
 end function
 
 function _fm_is_valid(mapv)
@@ -160,19 +151,28 @@ function _fm_insert_no_resize(mapv, key, value)
   if typeof(used_arr) != "array" then return mapv end if
   if typeof(keys_arr) != "array" then return mapv end if
   if typeof(vals_arr) != "array" then return mapv end if
-  p = _fm_probe_slot(mapv, key)
-  idx = p[0]
-  found = p[1]
-  if idx < 0 then return mapv end if
-  if found == false then
-    used_arr[idx] = 1
-    keys_arr[idx] = key
-    mapv.size = mapv.size + 1
-  end if
-  vals_arr[idx] = value
-  mapv.used = used_arr
-  mapv.keys = keys_arr
-  mapv.values = vals_arr
+  mask = mapv.cap - 1
+  idx = _fm_hash_any(key) & mask
+  steps = 0
+  while steps < mapv.cap
+    if used_arr[idx] == 0 then
+      used_arr[idx] = 1
+      keys_arr[idx] = key
+      vals_arr[idx] = value
+      mapv.size = mapv.size + 1
+      mapv.used = used_arr
+      mapv.keys = keys_arr
+      mapv.values = vals_arr
+      return mapv
+    end if
+    if keys_arr[idx] == key then
+      vals_arr[idx] = value
+      mapv.values = vals_arr
+      return mapv
+    end if
+    idx = (idx + 1) & mask
+    steps = steps + 1
+  end while
   return mapv
 end function
 
@@ -198,17 +198,30 @@ end function
 
 function fastmap_get(mapv, key, defaultv)
   if _fm_is_valid(mapv) == false then return defaultv end if
-  p = _fm_probe_slot(mapv, key)
-  idx = p[0]
-  found = p[1]
-  if idx < 0 or found == false then return defaultv end if
-  return mapv.values[idx]
+  mask = mapv.cap - 1
+  idx = _fm_hash_any(key) & mask
+  steps = 0
+  while steps < mapv.cap
+    if mapv.used[idx] == 0 then return defaultv end if
+    if mapv.keys[idx] == key then return mapv.values[idx] end if
+    idx = (idx + 1) & mask
+    steps = steps + 1
+  end while
+  return defaultv
 end function
 
 function fastmap_has(mapv, key)
   if _fm_is_valid(mapv) == false then return false end if
-  p = _fm_probe_slot(mapv, key)
-  return p[0] >= 0 and p[1]
+  mask = mapv.cap - 1
+  idx = _fm_hash_any(key) & mask
+  steps = 0
+  while steps < mapv.cap
+    if mapv.used[idx] == 0 then return false end if
+    if mapv.keys[idx] == key then return true end if
+    idx = (idx + 1) & mask
+    steps = steps + 1
+  end while
+  return false
 end function
 
 function fastmap_size(mapv)

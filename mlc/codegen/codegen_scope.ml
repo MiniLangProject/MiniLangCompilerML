@@ -520,6 +520,12 @@ function cg_set_const_binding_value(state, name, pyv)
       while j >= 0
         b = fr[j]
         if typeof(b) == "struct" and b.name == name then
+          already_materialized = false
+          if typeof(b.const_value_encoded) != "void" then already_materialized = true end if
+          if typeof(b.const_value_label) == "string" and b.const_value_label != "" then already_materialized = true end if
+          if b.const_initialized and b.const_value_py == pyv and already_materialized then
+            return state
+          end if
           b.is_const = true
           b.const_initialized = true
           b.const_value_py = pyv
@@ -555,6 +561,47 @@ function cg_set_const_binding_value(state, name, pyv)
             fmi = sis[i]
             fmi = t.fastmap_set(fmi, b.name, b)
             sis[i] = fmi
+            state.scope_index_stack = sis
+          end if
+          return state
+        end if
+        j = j - 1
+      end while
+    end if
+    i = i - 1
+  end while
+  return state
+end function
+
+function cg_precompute_const_binding_value(state, name, pyv)
+  // Record a fixed-point constexpr result without allocating .rdata yet.
+  // Materialization is intentionally deferred to declaration/first use so
+  // constant objects retain source-order layout like the Python backend.
+  if typeof(name) != "string" then return state end if
+  ss = state.scope_stack
+  if typeof(ss) != "array" or len(ss) <= 0 then return state end if
+
+  i = len(ss) - 1
+  while i >= 0
+    fr = ss[i]
+    if typeof(fr) == "array" and len(fr) > 0 then
+      j = len(fr) - 1
+      while j >= 0
+        b = fr[j]
+        if typeof(b) == "struct" and b.name == name then
+          b.is_const = true
+          b.const_initialized = true
+          b.const_value_py = pyv
+          b.const_value_encoded = void
+          b.const_value_label = ""
+          fr[j] = b
+          ss[i] = fr
+          state.scope_stack = ss
+          sis = state.scope_index_stack
+          if typeof(sis) == "array" and i >= 0 and i < len(sis) then
+            fm = sis[i]
+            fm = t.fastmap_set(fm, b.name, b)
+            sis[i] = fm
             state.scope_index_stack = sis
           end if
           return state
@@ -786,6 +833,144 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
     sds[0] = rsd
     state.scope_declared_index_stack = sds
   end if
+  state.global_slots = _append_unique(state.global_slots, b.label)
+  state.globals = _append_unique(state.globals, b)
+  return state
+end function
+
+function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
+  // Forward constexpr evaluation needs the binding before runtime emission,
+  // but allocating its .data slot here would move every constant ahead of
+  // ordinary source-order globals.  Keep only the lexical binding until the
+  // ConstDecl itself is emitted.
+  nm = _coerce_name(name)
+  if nm == "" then return state end if
+  if _check_reserved_ident(state, nm, decl_node) == false then return state end if
+
+  if typeof(state.scope_stack) != "array" or len(state.scope_stack) <= 0 then
+    state.scope_stack =[[]]
+  end if
+  if typeof(state.scope_declared) != "array" or len(state.scope_declared) <= 0 then
+    state.scope_declared =[[]]
+  end if
+  if typeof(state.scope_index_stack) != "array" or len(state.scope_index_stack) <= 0 then
+    state.scope_index_stack = [t.fastmap_new(128)]
+  end if
+  if typeof(state.scope_declared_index_stack) != "array" or len(state.scope_declared_index_stack) <= 0 then
+    state.scope_declared_index_stack = [t.fastmap_new(128)]
+  end if
+
+  root = state.scope_stack[0]
+  if typeof(root) != "array" then root = [] end if
+  existing = t.fastmap_get(state.scope_index_stack[0], nm, 0)
+  if typeof(existing) != "struct" then
+    existing = _frame_last_binding(root, nm)
+  end if
+  if typeof(existing) == "struct" and existing.kind == "global" then
+    return state
+  end if
+
+  bid = cg_next_binding_id(state)
+  b = VarBinding(
+  bid,
+  nm,
+  "global",
+  "",
+  0,
+  0,
+  false,
+  -1,
+  -1,
+  decl_node,
+  true,
+  const_expr,
+  false,
+  void,
+  void,
+  ""
+  )
+
+  ss = state.scope_stack
+  sd = state.scope_declared
+  rf = ss[0]
+  if typeof(rf) != "array" then rf = [] end if
+  rf = rf + [b]
+  ss[0] = rf
+  rd = sd[0]
+  if typeof(rd) != "array" then rd = [] end if
+  rd = rd + [b]
+  sd[0] = rd
+  state.scope_stack = ss
+  state.scope_declared = sd
+
+  sis = state.scope_index_stack
+  sis[0] = t.fastmap_set(sis[0], nm, b)
+  state.scope_index_stack = sis
+  sds = state.scope_declared_index_stack
+  sds[0] = t.fastmap_set(sds[0], nm, b)
+  state.scope_declared_index_stack = sds
+  return state
+end function
+
+function materialize_global_binding_root(state, name)
+  // Allocate a deferred global slot exactly when its declaration is reached.
+  nm = _coerce_name(name)
+  if nm == "" then return state end if
+  if typeof(state.scope_stack) != "array" or len(state.scope_stack) <= 0 then return state end if
+
+  ss = state.scope_stack
+  root = ss[0]
+  if typeof(root) != "array" then return state end if
+  found = -1
+  b = void
+  i = len(root) - 1
+  while i >= 0
+    candidate = root[i]
+    if typeof(candidate) == "struct" and candidate.name == nm and candidate.kind == "global" then
+      found = i
+      b = candidate
+      break
+    end if
+    i = i - 1
+  end while
+  if found < 0 or typeof(b) != "struct" then return state end if
+  if typeof(b.label) == "string" and b.label != "" then return state end if
+
+  b.label = "g_" + _sanitize_ident(nm) + "_" + b.id
+  if typeof(state.data) == "struct" and _has_data_label(state.data.labels, b.label) == false then
+    state.data = d.data_add_u64(state.data, b.label, t.enc_void())
+  end if
+  root[found] = b
+  ss[0] = root
+  state.scope_stack = ss
+
+  sd = state.scope_declared
+  if typeof(sd) == "array" and len(sd) > 0 and typeof(sd[0]) == "array" then
+    rd = sd[0]
+    j = len(rd) - 1
+    while j >= 0
+      db = rd[j]
+      if typeof(db) == "struct" and db.id == b.id then
+        rd[j] = b
+        break
+      end if
+      j = j - 1
+    end while
+    sd[0] = rd
+    state.scope_declared = sd
+  end if
+
+  sis = state.scope_index_stack
+  if typeof(sis) == "array" and len(sis) > 0 then
+    sis[0] = t.fastmap_set(sis[0], nm, b)
+    state.scope_index_stack = sis
+  end if
+  sds = state.scope_declared_index_stack
+  if typeof(sds) == "array" and len(sds) > 0 then
+    sds[0] = t.fastmap_set(sds[0], nm, b)
+    state.scope_declared_index_stack = sds
+  end if
+
   state.global_slots = _append_unique(state.global_slots, b.label)
   state.globals = _append_unique(state.globals, b)
   return state
@@ -1027,6 +1212,13 @@ function emit_load_var_scoped(state, name)
     return state
   end if
   if b.is_const and b.const_initialized then
+    const_ready = typeof(b.const_value_encoded) == "int"
+    if typeof(b.const_value_label) == "string" and b.const_value_label != "" then const_ready = true end if
+    if const_ready == false then
+      bname_materialize = b.name
+      state = cg_set_const_binding_value(state, bname_materialize, b.const_value_py)
+      b = resolve_binding(state, bname_materialize)
+    end if
     if typeof(b.const_value_encoded) == "int" then
       state.asm = a.mov_rax_imm64(state.asm, b.const_value_encoded)
       return state
@@ -1129,6 +1321,35 @@ function emit_store_var_scoped(state, name, node)
   if typeof(b) != "struct" then
     state.diagnostics = state.diagnostics + ["Undefined variable '" + nm + "'"]
     return state
+  end if
+
+  // Inline bodies have no separate function-layout pass. Allocate new local
+  // slots lazily in the caller's rooted expression-temp area, matching the
+  // Python backend's inline expansion.
+  inline_active = typeof(state._inline_call_stack) == "array" and len(state._inline_call_stack) > 0
+  if inline_active and (b.kind == "param" or b.kind == "local") and (typeof(b.offset) != "int" or b.offset <= 0) then
+    if b.boxed or b.kind == "capture" or (typeof(b.capture_index) == "int" and b.capture_index >= 0) then
+      state.diagnostics = state.diagnostics + ["inline expansion: captured/boxed variable '" + nm + "' is not supported"]
+      return state
+    end if
+    top_inline = state.expr_temp_top
+    if typeof(top_inline) != "int" then top_inline = 0 end if
+    base_inline = state.expr_temp_base
+    if typeof(base_inline) != "int" then base_inline = 0 end if
+    max_inline = state.expr_temp_max
+    if typeof(max_inline) != "int" then max_inline = 0 end if
+    if top_inline + 8 > max_inline then
+      state.diagnostics = state.diagnostics + ["Expression temp overflow (increase expr_temp_max)"]
+      return state
+    end if
+    b.offset = base_inline + top_inline
+    state.expr_temp_top = top_inline + 8
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", b.offset, t.enc_void(), true)
+    if typeof(state._current_root_rec_off) == "int" and state._current_root_rec_off >= 0 then
+      static_qwords_inline = state._current_root_static_qwords
+      if typeof(static_qwords_inline) != "int" then static_qwords_inline = 0 end if
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", state._current_root_rec_off + 16, static_qwords_inline + state.expr_temp_top / 8, true)
+    end if
   end if
 
   if b.is_const then

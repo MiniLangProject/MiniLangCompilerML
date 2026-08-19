@@ -1,6 +1,7 @@
 package mlc.compiler
 import std.fs as fs
 import std.string as s
+import std.string_builder as sb
 import mlc.frontend as frontend
 import mlc.minilang_parser as parser
 import mlc.codegen.codegen as codegen
@@ -148,6 +149,14 @@ _path_norm_cache = []
 _front_visited_set = []
 _front_resolve_cache = []
 _pe_state_keepalive = 0
+_object_pipeline_enabled = false
+_asm_listing_enabled = false
+_asm_listing_path = ""
+_asm_show_addr = true
+_asm_show_bytes = true
+_asm_show_code = true
+_asm_dump_data = false
+_asm_dump_pe = false
 
 function _build_line_starts(source)
   if typeof(source) != "string" then return [0] end if
@@ -173,6 +182,11 @@ function _usage()
   print "  --self-frontcheck-keep-going"
   print "Debug:"
   print "  --mem-probe"
+  print "Listings:"
+  print "  --asm [--asm-out <path>] [--asm-cols addr,opcodes,code]"
+  print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
+  print "Build internals:"
+  print "  --object-pipeline    use the memory-bounded .mlo pipeline (self-builds)"
 end function
 
 function _get_flag_value(args, flag)
@@ -1212,8 +1226,12 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
 
       declared_pkg = _module_get_package(modules, rr.resolved)
       expected_pkg = _expected_package_for_file(rr.resolved, rr.resolved_kind, rr.resolved_root)
+      // An aliased explicit file import is a code-behind import: the alias is
+      // the compile-time package name, so the file need not live in a
+      // package-shaped directory tree. Module imports still enforce it.
+      alias_for_file_import = typeof(st.alias) == "string" and st.alias != "" and typeof(st.module) != "string"
 
-      if declared_pkg != "" and expected_pkg != "" and declared_pkg != expected_pkg then
+      if declared_pkg != "" and expected_pkg != "" and declared_pkg != expected_pkg and alias_for_file_import == false then
         diags = _add_diag_from_stmt(
         diags,
         "CompileError",
@@ -1594,7 +1612,9 @@ end function
 
 function _fresh_link_gc_limit_from_config(runtime_config)
   limit = _compiler_gc_limit_from_config(runtime_config)
-  link_limit = 128 << 20
+  // Linking a self-host build keeps combined sections and a million-label
+  // index alive at once.  A 128 MiB cap guarantees repeated full collections.
+  link_limit = 1536 << 20
   if limit <= 0 then return link_limit end if
   if limit > link_limit then return link_limit end if
   return limit
@@ -2731,15 +2751,23 @@ function _link_target_obj_index(name)
 end function
 
 function _link_target_obj_index_num(name)
-  idx = _link_target_obj_index(name)
-  if idx == "" then return -1 end if
+  if typeof(name) != "string" or s.startsWith(name, "objm_") == false then return -1 end if
   acc = 0
-  for i = 0 to len(idx) - 1
-    c = _char_code_local(idx[i])
-    if c < 48 or c > 57 then return -1 end if
-    acc = (acc * 10) + (c - 48)
-  end for
-  return acc
+  saw = false
+  i = 5
+  while i < len(name)
+    ch = name[i]
+    if ch == "_" and i + 1 < len(name) and name[i + 1] == "_" then
+      if saw then return acc end if
+      return -1
+    end if
+    digit = s.indexOf("0123456789", ch, 0)
+    if typeof(digit) != "int" or digit < 0 or digit > 9 then return -1 end if
+    acc = (acc * 10) + digit
+    saw = true
+    i = i + 1
+  end while
+  return -1
 end function
 
 function _link_obj_label_map_set(obj_index_map, name, value)
@@ -3398,6 +3426,13 @@ function _link_resolve_patch_target_cached(label_map, target_cache, obj_index_ma
   return [label_map, target_cache, trg]
 end function
 
+function _link_direct_patch_target(label_map, obj_index_map, target)
+  if s.startsWith(target, "objm_") then
+    return _link_obj_label_map_get(obj_index_map, target, -1)
+  end if
+  return t.fastmap_get(label_map, target, -1)
+end function
+
 function _link_local_label_add(local_label_map, local_labels_b, name, value)
   nm = _label_key(name)
   if nm == "" then return [local_label_map, local_labels_b] end if
@@ -3553,9 +3588,12 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   rbss = _objreader_read_u32(rd)
   if typeof(rbss) == "error" then return [2, label_map, patch_index] end if
   rd = rbss[0]
-  local_scan = _link_scan_local_labels(raw, obj_text_off, obj_rdata_off, obj_data_off, obj_bss_off, text_rva, rdata_rva, data_rva, bss_rva)
-  local_label_map = local_scan[0]
-  local_labels = local_scan[1]
+  // Current MLO objects namespace every private label (objm_N__*) and all of
+  // those labels are already in the combined map.  Avoid decoding and hashing
+  // the full local label table a second time; legacy resolution paths below are
+  // still available on a genuine map miss.
+  local_label_map = t.fastmap_new(16)
+  local_labels = []
   last_target = ""
   last_value = -1
   target_cache_cap = 4096
@@ -3596,10 +3634,16 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       if pt_target == last_target then
         trg = last_value
       else
-        rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
-        label_map = rr[0]
-        target_cache = rr[1]
-        trg = rr[2]
+        // Nearly all streamed patches reference an exact, already-namespaced
+        // label.  Resolve that without allocating the multi-value fallback
+        // result or populating a redundant per-file cache.
+        trg = _link_direct_patch_target(label_map, obj_index_map, pt_target)
+        if typeof(trg) != "int" or trg < 0 then
+          rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
+          label_map = rr[0]
+          target_cache = rr[1]
+          trg = rr[2]
+        end if
         last_target = pt_target
         last_value = trg
       end if
@@ -3614,11 +3658,10 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       end if
       src_next = text_rva + abs_off + 4
       disp = trg - src_next
-      b4 = t.u32(disp)
-      buf[abs_off] = b4[0]
-      buf[abs_off + 1] = b4[1]
-      buf[abs_off + 2] = b4[2]
-      buf[abs_off + 3] = b4[3]
+      buf[abs_off] = disp & 0xFF
+      buf[abs_off + 1] = (disp >> 8) & 0xFF
+      buf[abs_off + 2] = (disp >> 16) & 0xFF
+      buf[abs_off + 3] = (disp >> 24) & 0xFF
       patch_index = patch_index + 1
     end for
   end if
@@ -3651,10 +3694,13 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       if pt_target == last_target then
         trg = last_value
       else
-        rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
-        label_map = rr[0]
-        target_cache = rr[1]
-        trg = rr[2]
+        trg = _link_direct_patch_target(label_map, obj_index_map, pt_target)
+        if typeof(trg) != "int" or trg < 0 then
+          rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
+          label_map = rr[0]
+          target_cache = rr[1]
+          trg = rr[2]
+        end if
         last_target = pt_target
         last_value = trg
       end if
@@ -3703,10 +3749,13 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       if pt_target == last_target then
         trg = last_value
       else
-        rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
-        label_map = rr[0]
-        target_cache = rr[1]
-        trg = rr[2]
+        trg = _link_direct_patch_target(label_map, obj_index_map, pt_target)
+        if typeof(trg) != "int" or trg < 0 then
+          rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
+          label_map = rr[0]
+          target_cache = rr[1]
+          trg = rr[2]
+        end if
         last_target = pt_target
         last_value = trg
       end if
@@ -3814,6 +3863,21 @@ function _extern_symbol_default(qname)
   return _last_segment_after_dot(qname)
 end function
 
+function _abi_param_type_supported(ty)
+  t0 = s.toLowerAscii(s.trim(ty))
+  return t0 == "int" or t0 == "i64" or t0 == "u64" or t0 == "i32" or t0 == "u32" or t0 == "i16" or t0 == "u16" or t0 == "i8" or t0 == "u8" or t0 == "double" or t0 == "bool" or t0 == "ptr" or t0 == "pointer" or t0 == "cstr" or t0 == "cstring" or t0 == "wstr" or t0 == "wstring" or t0 == "void" or t0 == "none" or t0 == "bytes" or t0 == "buffer" or t0 == "bytebuffer"
+end function
+
+function _abi_return_type_supported(ty)
+  t0 = s.toLowerAscii(s.trim(ty))
+  return t0 == "void" or t0 == "none" or t0 == "bool" or t0 == "int" or t0 == "i64" or t0 == "u64" or t0 == "i32" or t0 == "u32" or t0 == "i16" or t0 == "u16" or t0 == "i8" or t0 == "u8" or t0 == "double" or t0 == "ptr" or t0 == "pointer" or t0 == "cstr" or t0 == "wstr"
+end function
+
+function _extern_struct_field_type_supported(ty)
+  t0 = s.toLowerAscii(s.trim(ty))
+  return t0 == "i8" or t0 == "u8" or t0 == "i16" or t0 == "u16" or t0 == "i32" or t0 == "u32" or t0 == "i64" or t0 == "u64" or t0 == "int" or t0 == "bool" or t0 == "ptr" or t0 == "pointer"
+end function
+
 function _collect_file_package_prefixes(program)
   acc = []
   cur_file = ""
@@ -3856,6 +3920,100 @@ function _collect_file_package_prefixes(program)
   end for
 
   return acc
+end function
+
+function _collect_extern_structs_walk(stmts, prefix, current_file, file_prefixes, names)
+  if typeof(names) != "array" then names = [] end if
+  if typeof(stmts) != "array" or len(stmts) <= 0 then return names end if
+  cur_file = current_file
+  pref = prefix
+  for i = 0 to len(stmts) - 1
+    st = stmts[i]
+    if typeof(st) != "struct" then continue end if
+    sf = _st_file(st)
+    if sf == "" then sf = cur_file end if
+    if cur_file == "" or (sf != "" and _path_eq(sf, cur_file) == false) then
+      cur_file = sf
+      pref = prefix
+      fk = cur_file
+      if fk == "" then fk = "<entry>" end if
+      p0 = _alias_get(file_prefixes, fk)
+      if p0 != "" then pref = p0 end if
+    end if
+    if st.node_kind == "NamespaceDecl" then
+      nsd = _coerce_name(st.name)
+      if nsd != "" then pref = nsd + "." end if
+      continue
+    end if
+    if st.node_kind == "NamespaceDef" then
+      ns = _coerce_name(st.name)
+      sub_pref = pref
+      if ns != "" then sub_pref = pref + ns + "." end if
+      names = _collect_extern_structs_walk(st.body, sub_pref, cur_file, file_prefixes, names)
+      if typeof(names) == "error" then return names end if
+      continue
+    end if
+    if st.node_kind != "StructDef" or typeof(st._extern_field_types) != "array" or len(st._extern_field_types) <= 0 then
+      continue
+    end if
+    if typeof(st.fields) != "array" or len(st.fields) != len(st._extern_field_types) then
+      return error(1, "extern struct " + st.name + ": field/type count mismatch")
+    end if
+    for fi = 0 to len(st._extern_field_types) - 1
+      fty = st._extern_field_types[fi]
+      if _extern_struct_field_type_supported(fty) == false then
+        return error(1, "extern struct " + st.name + ": unsupported field type '" + fty + "'")
+      end if
+    end for
+    qn = pref + st.name
+    if _array_contains(names, qn) then return error(1, "Duplicate extern struct declaration: " + qn) end if
+    names = names + [qn]
+  end for
+  return names
+end function
+
+function collect_extern_structs(program)
+  prefixes = _collect_file_package_prefixes(program)
+  return _collect_extern_structs_walk(program, "", "", prefixes, [])
+end function
+
+function validate_extern_sigs(extern_sigs, extern_struct_names)
+  if typeof(extern_sigs) != "array" or len(extern_sigs) <= 0 then return "" end if
+  for si = 0 to len(extern_sigs) - 1
+    sig = extern_sigs[si]
+    if typeof(sig) != "struct" then continue end if
+    if typeof(sig.dll) != "string" or s.trim(sig.dll) == "" then
+      return "extern function " + sig.qname + " missing DLL name"
+    end if
+    seen_out = false
+    if typeof(sig.params) == "array" and len(sig.params) > 0 then
+      for pi = 0 to len(sig.params) - 1
+        p = sig.params[pi]
+        if typeof(p) != "struct" then continue end if
+        ty = ""
+        if typeof(p.ty) == "string" then ty = p.ty end if
+        if s.trim(ty) == "" then return "extern function " + sig.qname + ": missing ABI type for parameter #" + (pi + 1) end if
+        is_out = typeof(p.is_out) == "bool" and p.is_out
+        if is_out then
+          seen_out = true
+          if _abi_param_type_supported(ty) == false and _array_contains(extern_struct_names, ty) == false then
+            return "extern function " + sig.qname + ": unsupported out parameter type '" + ty + "'"
+          end if
+        else
+          if seen_out then return "extern function " + sig.qname + ": out-parameters must appear at the end of the parameter list" end if
+          if _abi_param_type_supported(ty) == false then
+            return "extern function " + sig.qname + ": unsupported ABI type '" + ty + "'"
+          end if
+        end if
+      end for
+    end if
+    ret_ty = sig.ret_ty
+    if typeof(ret_ty) != "string" or s.trim(ret_ty) == "" then ret_ty = "void" end if
+    if _abi_return_type_supported(ret_ty) == false then
+      return "extern function " + sig.qname + ": unsupported return type '" + ret_ty + "'"
+    end if
+  end for
+  return ""
 end function
 
 function _collect_extern_sigs_walk(stmts, prefix, current_file, file_prefixes, acc)
@@ -4148,7 +4306,10 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     end if
 
     patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
-    obj_label_recs_b = t.arr_chunk_push(obj_label_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
+    // Keep the already-decoded labels with the layout record.  Patch fallback
+    // resolution must not reopen and decode the same MLO file for every cache
+    // miss.
+    obj_label_recs_b = t.arr_chunk_push(obj_label_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off, obj.asm_labels, obj.rdata_labels, obj.data_labels, obj.bss_labels])
 
     imports = _mlo_merge_imports(imports, obj.imports)
     text_off = text_obj_off + len(obj.text)
@@ -4156,9 +4317,6 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     data_off = data_obj_off + len(obj.data)
     bss_off = bss_obj_off + obj.bss_size
 
-    if (oi % 8) == 0 then
-      gc_collect()
-    end if
     if (oi % 32) == 0 then
       _heap_probe("link:obj_" + oi)
     end if
@@ -4170,6 +4328,17 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   data_buf = _concat_bytes_parts(data_parts_b)
   patch_file_recs = t.arr_chunk_finish(patch_file_recs_b)
   obj_label_recs = t.arr_chunk_finish(obj_label_recs_b)
+
+  // The combined buffers now own the section contents.  Release the per-file
+  // byte chunks and layout temporaries before building the million-label index.
+  text_parts_b = 0
+  rdata_parts_b = 0
+  data_parts_b = 0
+  patch_file_recs_b = 0
+  obj_label_recs_b = 0
+  obj = 0
+  ro = 0
+  gc_collect()
 
   p = pe.newPEBuilder()
   p.subsystem = subsystem
@@ -4213,7 +4382,10 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   data_labels = t.arr_chunk_finish(data_labels_b)
   bss_labels = t.arr_chunk_finish(bss_labels_b)
 
-  label_map = t.fastmap_new(65536)
+  // Public labels are a much smaller set than the namespaced private labels.
+  // Keep private symbols sharded per object so no multi-million-slot map is
+  // initialized or scanned by the runtime.
+  label_map = t.fastmap_new(262144)
   obj_index_map = []
   obj_index_lists = []
   if typeof(obj_label_recs) == "array" and len(obj_label_recs) > 0 then
@@ -4312,6 +4484,20 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   _heap_probe("link:labels_done")
   _progress_link("labels resolved")
 
+  // Address maps and the compact public fallback list now contain everything
+  // patching needs.  The combined MloLabel wrappers duplicate the label records
+  // retained in obj_label_recs, so drop them before streaming 3M+ patches.
+  text_labels = 0
+  rdata_labels = 0
+  data_labels = 0
+  bss_labels = 0
+  text_labels_b = 0
+  rdata_labels_b = 0
+  data_labels_b = 0
+  bss_labels_b = 0
+  labels_b = 0
+  gc_collect()
+
   entry_rva = t.fastmap_get(label_map, _label_key(entry_label), -1)
   if typeof(entry_rva) != "int" or entry_rva < 0 then
     entry_rva = t.fastmap_get(label_map, _label_key("__ml_entry"), -1)
@@ -4323,19 +4509,19 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   p.entry_rva = entry_rva
 
   if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
-    dump = ""
-    dump = dump + "[section] .text raw=" + len(text_buf) + "\n"
-    dump = dump + "[section] .rdata raw=" + len(rdata_buf) + "\n"
-    dump = dump + "[section] .data raw=" + len(data_buf) + "\n"
+    dump_builder = sb.StringBuilder.withCapacity(1048576)
+    dump_builder.appendLine("[section] .text raw=" + len(text_buf))
+    dump_builder.appendLine("[section] .rdata raw=" + len(rdata_buf))
+    dump_builder.appendLine("[section] .data raw=" + len(data_buf))
     if typeof(labels) == "array" and len(labels) > 0 then
       for li = 0 to len(labels) - 1
         lbi = labels[li]
         if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
-          dump = dump + "[label] " + lbi.key + " " + lbi.value + "\n"
+          dump_builder.appendLine("[label] " + lbi.key + " " + lbi.value)
         end if
       end for
     end if
-    wrdump = fs.writeAllText(_dump_labels_path, dump)
+    wrdump = fs.writeAllText(_dump_labels_path, dump_builder.toString())
     if typeof(wrdump) == "error" then
       print "CompileError: writeAllText failed for label dump: " + _dump_labels_path
       return 2
@@ -4364,7 +4550,9 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       if apr[0] != 0 then return apr[0] end if
       label_map = apr[1]
       patch_index = apr[2]
-      if ((ri + 1) % 8) == 0 then
+      // Streamed patching keeps only the current raw object alive.  Full GC is
+      // intentionally rare because the million-entry label map is live.
+      if ((ri + 1) % 128) == 0 then
         gc_collect()
       end if
       _heap_probe("link:patch_obj_" + (ri + 1))
@@ -4385,6 +4573,11 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   exe = pe.build(p)
   _heap_probe("link:pe_built")
+  listing_result = _write_asm_listing_if_enabled(output_exe, p, buf, rdata_buf, data_buf, idsec.data)
+  if typeof(listing_result) == "error" then
+    print "CompileError: failed to write assembly listing"
+    return 2
+  end if
   _progress_link("writing executable " + output_exe)
   wr = fs.writeAllBytes(output_exe, exe)
   if typeof(wr) == "error" then
@@ -4477,12 +4670,532 @@ function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg
   mod_obj = 0
   mst = 0
   wr_mod = 0
-  gc_collect()
+  // The caller owns collection cadence across emitted objects.  Collecting
+  // here forced a full-heap scan after every two-function compiler chunk.
   return [0, "", helper_union, module_obj_paths_b, label_id]
 end function
 
-function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
+  global _pe_state_keepalive
+  compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
+  gc_set_limit(compiler_gc_limit)
+  _heap_probe("compile:start")
+  if _mem_probe_enabled then
+    runtime_config = _cfg_set(runtime_config, "cg_mem_probe", true)
+  end if
+  input_abs = _path_abspath(input_ml)
+  if input_abs == "" then input_abs = input_ml end if
+  load = _load_program_for_codegen(input_abs, include_dirs, keep_going, max_errors)
+  _heap_probe("compile:load_program_done")
+  if len(load.diagnostics) > 0 then
+    for i = 0 to len(load.diagnostics) - 1
+      _print_diag(load.diagnostics[i])
+    end for
+    if len(load.diagnostics) >= max_errors then
+      print "Note: stopped after " + len(load.diagnostics) + " diagnostics (max-errors)."
+    end if
+    return 2
+  end if
+
+  extern_sigs = collect_extern_sigs(load.program)
+  _heap_probe("compile:extern_sigs_done")
+  extern_struct_names = collect_extern_structs(load.program)
+  if typeof(extern_struct_names) == "error" then
+    print "CompileError: " + extern_struct_names.message
+    return 2
+  end if
+  extern_validation = validate_extern_sigs(extern_sigs, extern_struct_names)
+  if extern_validation != "" then
+    print "CompileError: " + extern_validation
+    return 2
+  end if
+  cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
+  if typeof(cg) == "struct" and typeof(cg.state) == "struct" then
+    cg.state.dbg_line_starts = load.sources
+    cg.state.heap_config = runtime_config
+    cg.state.call_profile = call_profile
+    cg.state.trace_calls = trace_calls
+    cg.state.is_windows_subsystem = (subsystem == 2)
+  end if
+  // The monolithic/default path needs the same synthetic callStat metadata as
+  // the object pipeline before member access is planned.
+  cg = codegen.enable_call_profile_metadata(cg)
+  cg = codegen.emit_program(cg, load.program)
+  _heap_probe("compile:codegen_done")
+  st = cg.state
+  _pe_state_keepalive = st
+  load.program = []
+  load.source = ""
+  load.aliases = []
+  load.sources = []
+  load.diagnostics = []
+  if _mem_probe_enabled then
+    gc_collect()
+    st = _pe_state_keepalive
+  end if
+  _heap_probe("compile:post_load_release")
+  if typeof(st) != "struct" then
+    print "CompileError: codegen returned invalid state"
+    return 2
+  end if
+  if typeof(st.diagnostics) == "array" and len(st.diagnostics) > 0 then
+    for di = 0 to len(st.diagnostics) - 1
+      msg = st.diagnostics[di]
+      if typeof(msg) != "string" then msg = "" + msg end if
+      print "CompileError: " + msg
+    end for
+    return 2
+  end if
+  asm_labels = []
+  patches = []
+  if typeof(st.asm) == "struct" then
+    asm_labels = a.get_labels(st.asm)
+    patches = a.get_patches(st.asm)
+    st.asm.labels = []
+    st.asm.labels_chunks = []
+    st.asm.labels_tail = []
+    st.asm.patches_chunks = []
+    st.asm.patches_tail = []
+    st.asm.calls_chunks = []
+    st.asm.calls_tail = []
+    st.asm.before_call_live_temps = []
+    st.asm.peephole_last_jump = []
+  end if
+  st = _compact_codegen_state_for_pe(st)
+  _pe_state_keepalive = st
+  st = _pe_state_keepalive
+  load = 0
+  cg = 0
+  gc_collect()
+  st = _pe_state_keepalive
+  if typeof(st.asm) == "struct" then
+    st.asm = a.materialize(st.asm)
+  end if
+  if typeof(st.asm) != "struct" or typeof(st.asm.buf) != "bytes" or len(st.asm.buf) <= 0 then
+    print "CompileError: native backend emitted empty .text section (compiler port incomplete for this input)."
+    return 2
+  end if
+
+  text_buf = st.asm.buf
+  if typeof(st.asm.size) == "int" and st.asm.size >= 0 and st.asm.size <= len(text_buf) then
+    text_buf = slice(text_buf, 0, st.asm.size)
+  end if
+  if typeof(text_buf) != "bytes" or len(text_buf) <= 0 then
+    print "CompileError: native backend emitted empty code buffer."
+    return 2
+  end if
+
+  rdata_buf = st.rdata.data
+  if typeof(st.rdata.used) == "int" and st.rdata.used >= 0 and st.rdata.used <= len(rdata_buf) then
+    rdata_buf = slice(rdata_buf, 0, st.rdata.used)
+  end if
+
+  data_buf = st.data.data
+  if typeof(st.data.used) == "int" and st.data.used >= 0 and st.data.used <= len(data_buf) then
+    data_buf = slice(data_buf, 0, st.data.used)
+  end if
+
+  // Replace oversized backing buffers with compact slices before PE assembly.
+  if typeof(st.asm) == "struct" then
+    st.asm.buf = text_buf
+    st.asm.size = len(text_buf)
+    if typeof(st.asm.chunk_pages) == "array" then st.asm.chunk_pages = [] end if
+    if typeof(st.asm.chunk_tail) == "array" or typeof(st.asm.chunk_tail) == "struct" then st.asm.chunk_tail = [] end if
+    // Keep labels/patches until relocation patching is done below.
+    if typeof(st.asm.calls_chunks) == "array" then st.asm.calls_chunks = [] end if
+    if typeof(st.asm.calls_tail) == "array" or typeof(st.asm.calls_tail) == "struct" then st.asm.calls_tail = [] end if
+    st.asm.buf_valid = true
+  end if
+  if typeof(st.rdata) == "struct" then
+    st.rdata.data = rdata_buf
+    st.rdata.used = len(rdata_buf)
+  end if
+  if typeof(st.data) == "struct" then
+    st.data.data = data_buf
+    st.data.used = len(data_buf)
+  end if
+  if _mem_probe_enabled then
+    gc_collect()
+  end if
+  _heap_probe("compile:buffers_compacted")
+
+  p = pe.newPEBuilder()
+  p.subsystem = subsystem
+  p = pe.add_section(p, ".text", text_buf, 0x60000020)
+  p = pe.add_section(p, ".rdata", rdata_buf, 0x40000040)
+  p = pe.add_section(p, ".data", data_buf, 0xC0000040)
+  p = pe.add_section(p, ".bss", bytes(0), 0xC0000080)
+  p = pe.add_section(p, ".idata", bytes(0), 0xC0000040)
+
+  if len(p.sections) > 3 then
+    bs = p.sections[3]
+    if typeof(st.bss) == "struct" and typeof(st.bss.size) == "int" then
+      bs.virt_size = st.bss.size
+    else
+      bs.virt_size = 0
+    end if
+    p.sections[3] = bs
+  end if
+
+  p = pe.layout(p)
+
+  imports = _imports_to_pe_imports(st.imports)
+  st.imports = []
+  if len(p.sections) <= 4 then
+    print "CompileError: internal section layout error (.idata missing)"
+    return 2
+  end if
+
+  idsec = p.sections[4]
+  idr = pe.build_idata(imports, idsec.virt_addr)
+  idsec.data = idr.data
+  p.sections[4] = idsec
+  p.import_rva = idr.import_dir_rva
+  p.import_size = idr.idata_total_size
+
+  p = pe.layout(p)
+  _heap_probe("compile:pe_ready")
+
+  text_rva = p.sections[0].virt_addr
+  rdata_rva = p.sections[1].virt_addr
+  data_rva = p.sections[2].virt_addr
+  bss_rva = p.sections[3].virt_addr
+  p.entry_rva = text_rva
+
+  labels_chunks = []
+  labels_tail = []
+  if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
+    for i = 0 to len(asm_labels) - 1
+      lb = asm_labels[i]
+      if typeof(lb) == "struct" and typeof(lb.name) == "string" and typeof(lb.pos) == "int" then
+        if _mem_probe_enabled then
+          print "[dbg][label] " + lb.name + " " + lb.pos
+        end if
+        app_lb = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb.name, text_rva + lb.pos), 1024)
+        labels_chunks = app_lb[0]
+        labels_tail = app_lb[1]
+      end if
+    end for
+  end if
+  if typeof(st.rdata) == "struct" and typeof(st.rdata.labels) == "array" and len(st.rdata.labels) > 0 then
+    for i = 0 to len(st.rdata.labels) - 1
+      lb2 = st.rdata.labels[i]
+      if typeof(lb2) == "struct" and typeof(lb2.name) == "string" and typeof(lb2.offset) == "int" then
+        app_lb2 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb2.name, rdata_rva + lb2.offset), 1024)
+        labels_chunks = app_lb2[0]
+        labels_tail = app_lb2[1]
+      end if
+    end for
+  end if
+  if typeof(st.data) == "struct" and typeof(st.data.labels) == "array" and len(st.data.labels) > 0 then
+    for i = 0 to len(st.data.labels) - 1
+      lb3 = st.data.labels[i]
+      if typeof(lb3) == "struct" and typeof(lb3.name) == "string" and typeof(lb3.offset) == "int" then
+        app_lb3 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb3.name, data_rva + lb3.offset), 1024)
+        labels_chunks = app_lb3[0]
+        labels_tail = app_lb3[1]
+      end if
+    end for
+  end if
+  if typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" and len(st.bss.labels) > 0 then
+    for i = 0 to len(st.bss.labels) - 1
+      lb4 = st.bss.labels[i]
+      if typeof(lb4) == "struct" and typeof(lb4.name) == "string" and typeof(lb4.offset) == "int" then
+        app_lb4 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb4.name, bss_rva + lb4.offset), 1024)
+        labels_chunks = app_lb4[0]
+        labels_tail = app_lb4[1]
+      end if
+    end for
+  end if
+  if typeof(idr.iat_symbols) == "array" and len(idr.iat_symbols) > 0 then
+    for i = 0 to len(idr.iat_symbols) - 1
+      it = idr.iat_symbols[i]
+      if typeof(it) != "struct" then continue end if
+      if typeof(it.func) != "string" or typeof(it.rva) != "int" then continue end if
+      if _label_get_chunked(labels_chunks, labels_tail, "iat_" + it.func, -1) < 0 then
+        app_lb5 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + it.func, it.rva), 1024)
+        labels_chunks = app_lb5[0]
+        labels_tail = app_lb5[1]
+      end if
+      if typeof(it.dll) == "string" then
+        app_lb6 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + _dll_base(it.dll) + "_" + it.func, it.rva), 1024)
+        labels_chunks = app_lb6[0]
+        labels_tail = app_lb6[1]
+      end if
+    end for
+  end if
+  imports = []
+  labels = t.arr_chunked_finish(labels_chunks, labels_tail)
+  label_map = t.fastmap_new((len(labels) * 2) + 64)
+  if typeof(labels) == "array" and len(labels) > 0 then
+    for li = 0 to len(labels) - 1
+      lbi = labels[li]
+      if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
+        label_map = t.fastmap_set(label_map, lbi.key, lbi.value)
+      end if
+    end for
+  end if
+
+  if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
+    dump_builder = sb.StringBuilder.withCapacity(1048576)
+    dump_builder.appendLine("[section] .text raw=" + len(text_buf))
+    dump_builder.appendLine("[section] .rdata raw=" + len(rdata_buf))
+    dump_builder.appendLine("[section] .data raw=" + len(data_buf))
+    if typeof(st.emitted_helpers) == "array" and len(st.emitted_helpers) > 0 then
+      for hi = 0 to len(st.emitted_helpers) - 1
+        h = st.emitted_helpers[hi]
+        if typeof(h) == "string" then
+          dump_builder.appendLine("[helper] " + hi + " " + h)
+        end if
+      end for
+    end if
+    if typeof(labels) == "array" and len(labels) > 0 then
+      for li = 0 to len(labels) - 1
+        lbi = labels[li]
+        if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
+          dump_builder.appendLine("[label] " + lbi.key + " " + lbi.value)
+        end if
+      end for
+    end if
+    wrdump = fs.writeAllText(_dump_labels_path, dump_builder.toString())
+    if typeof(wrdump) == "error" then
+      print "CompileError: writeAllText failed for label dump: " + _dump_labels_path
+      return 2
+    end if
+  end if
+
+  buf = text_buf
+  if typeof(patches) == "array" and len(patches) > 0 then
+    for i = 0 to len(patches) - 1
+      pt = patches[i]
+      if typeof(pt) != "struct" then continue end if
+      if typeof(pt.target) != "string" or typeof(pt.pos) != "int" then continue end if
+
+      trg = t.fastmap_get(label_map, pt.target, -1)
+      if typeof(trg) != "int" then trg = -1 end if
+      if trg < 0 then
+        // Safety fallback: tolerate non-fastmap label containers during transition.
+        trg = _label_get(labels, pt.target, -1)
+      end if
+      if trg < 0 then
+        print "CompileError: unknown patch target: " + pt.target
+        return 2
+      end if
+      if pt.pos < 0 or pt.pos + 3 >= len(buf) then
+        print "CompileError: invalid patch position for: " + pt.target
+        return 2
+      end if
+
+      if pt.kind != "rip32" and pt.kind != "rel32" then
+        print "CompileError: unknown patch kind: " + pt.kind
+        return 2
+      end if
+
+      src_next = text_rva + pt.pos + 4
+      disp = trg - src_next
+      b4 = t.u32(disp)
+      buf[pt.pos] = b4[0]
+      buf[pt.pos + 1] = b4[1]
+      buf[pt.pos + 2] = b4[2]
+      buf[pt.pos + 3] = b4[3]
+    end for
+  end if
+
+  patch_sets = [[rdata_buf, st.rdata.patches], [data_buf, st.data.patches]]
+  for psi = 0 to len(patch_sets) - 1
+    pack = patch_sets[psi]
+    if typeof(pack) != "array" or len(pack) < 2 then continue end if
+    blob = pack[0]
+    dpatches = pack[1]
+    if typeof(blob) != "bytes" then continue end if
+    if typeof(dpatches) != "array" or len(dpatches) <= 0 then
+      if psi == 0 then
+        rdata_buf = blob
+      else
+        data_buf = blob
+      end if
+      continue
+    end if
+
+    for j = 0 to len(dpatches) - 1
+      pt2 = dpatches[j]
+      if typeof(pt2) != "struct" then continue end if
+      if typeof(pt2.target) != "string" or typeof(pt2.offset) != "int" then continue end if
+
+      trg2 = t.fastmap_get(label_map, pt2.target, -1)
+      if typeof(trg2) != "int" then trg2 = -1 end if
+      if trg2 < 0 then
+        trg2 = _label_get(labels, pt2.target, -1)
+      end if
+      if trg2 < 0 then
+        print "CompileError: unknown data patch target: " + pt2.target
+        return 2
+      end if
+      if pt2.kind != "abs64" then
+        print "CompileError: unknown data patch kind: " + pt2.kind
+        return 2
+      end if
+      if pt2.offset < 0 or pt2.offset + 7 >= len(blob) then
+        print "CompileError: invalid data patch position for: " + pt2.target
+        return 2
+      end if
+
+      target_va = p.image_base + trg2
+      b8 = t.u64(target_va)
+      for bi = 0 to 7
+        blob[pt2.offset + bi] = b8[bi]
+      end for
+    end for
+
+    if psi == 0 then
+      rdata_buf = blob
+    else
+      data_buf = blob
+    end if
+  end for
+
+  if typeof(st.asm) == "struct" then
+    st.asm.buf = buf
+  end if
+  if typeof(st.rdata) == "struct" then
+    st.rdata.data = rdata_buf
+  end if
+  if typeof(st.data) == "struct" then
+    st.data.data = data_buf
+  end if
+  asm_labels = []
+  patches = []
+  labels = []
+  label_map = t.fastmap_new(16)
+  if typeof(st.rdata) == "struct" then
+    st.rdata.labels = []
+    st.rdata.patches = []
+  end if
+  if typeof(st.data) == "struct" then
+    st.data.labels = []
+    st.data.patches = []
+  end if
+  if typeof(st.bss) == "struct" then
+    st.bss.labels = []
+  end if
+  if typeof(idr) == "struct" then
+    idr.iat_symbols = []
+  end if
+
+  tx = p.sections[0]
+  tx.data = st.asm.buf
+  p.sections[0] = tx
+  rd = p.sections[1]
+  rd.data = st.rdata.data
+  p.sections[1] = rd
+  dt = p.sections[2]
+  dt.data = st.data.data
+  p.sections[2] = dt
+
+  exe = pe.build(p)
+  _heap_probe("compile:pe_built")
+  listing_result = _write_asm_listing_if_enabled(output_exe, p, st.asm.buf, st.rdata.data, st.data.data, idsec.data)
+  if typeof(listing_result) == "error" then
+    print "CompileError: failed to write assembly listing"
+    return 2
+  end if
+  wr = fs.writeAllBytes(output_exe, exe)
+  if typeof(wr) == "error" then
+    msg = "writeAllBytes failed"
+    if typeof(wr.message) == "string" then msg = wr.message end if
+    print "CompileError: " + msg
+    return 2
+  end if
+
+  _pe_state_keepalive = 0
+
+  print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler)"
+  return 0
+end function
+
+function _hex_u32_fixed(value)
+  digits = "0123456789ABCDEF"
+  v = value & 0xFFFFFFFF
+  out_text = ""
+  shift = 28
+  while shift >= 0
+    out_text = out_text + digits[(v >> shift) & 15]
+    shift = shift - 4
+  end while
+  return out_text
+end function
+
+function _asm_default_path(output_exe)
+  if _endsWith(output_exe, ".exe") then
+    return s.substr(output_exe, 0, len(output_exe) - 4) + ".asm"
+  end if
+  return output_exe + ".asm"
+end function
+
+function _asm_db_text(hex_text)
+  out_text = "db "
+  i = 0
+  first = true
+  while i + 1 < len(hex_text)
+    if first == false then out_text = out_text + "," end if
+    out_text = out_text + "0x" + hex_text[i] + hex_text[i + 1]
+    first = false
+    i = i + 2
+  end while
+  return out_text
+end function
+
+function _asm_append_section(bld, name, buf, rva)
+  bld.appendLine("; section " + name + " RVA=0x" + _hex_u32_fixed(rva) + " size=" + len(buf))
+  off = 0
+  while off < len(buf)
+    take = 16
+    if off + take > len(buf) then take = len(buf) - off end if
+    hx = hex(slice(buf, off, take))
+    line = ""
+    if _asm_show_addr then line = line + _hex_u32_fixed(rva + off) end if
+    if _asm_show_bytes then
+      if line != "" then line = line + "  " end if
+      line = line + hx
+    end if
+    if _asm_show_code then
+      if line != "" then line = line + "  " end if
+      line = line + _asm_db_text(hx)
+    end if
+    bld.appendLine(line)
+    off = off + take
+  end while
+  bld.appendLine("")
+end function
+
+function _write_asm_listing_if_enabled(output_exe, peb, text_buf, rdata_buf, data_buf, idata_buf)
+  if _asm_listing_enabled == false then return true end if
+  out_path = _asm_listing_path
+  if out_path == "" then out_path = _asm_default_path(output_exe) end if
+  bld = sb.StringBuilder.withCapacity(len(text_buf) * 4 + 4096)
+  bld.appendLine("; MiniLang native x64 PE listing")
+  if _asm_dump_pe then
+    bld.appendLine("; image-base=0x" + _hex_u32_fixed(peb.image_base))
+    bld.appendLine("; entry-rva=0x" + _hex_u32_fixed(peb.entry_rva))
+    bld.appendLine("; sections=" + len(peb.sections))
+    bld.appendLine("")
+  end if
+  _asm_append_section(bld, ".text", text_buf, peb.sections[0].virt_addr)
+  if _asm_dump_data then
+    _asm_append_section(bld, ".rdata", rdata_buf, peb.sections[1].virt_addr)
+    _asm_append_section(bld, ".data", data_buf, peb.sections[2].virt_addr)
+    _asm_append_section(bld, ".idata", idata_buf, peb.sections[4].virt_addr)
+  end if
+  wr = fs.writeAllText(out_path, bld.toString())
+  if typeof(wr) == "error" then return wr end if
+  print "OK: wrote " + out_path
+  return true
+end function
+
+function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  global _dump_labels_path
+  runtime_config = _cfg_set(runtime_config, "cg_object_pipeline", true)
   compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
   gc_set_limit(compiler_gc_limit)
   _heap_probe("compile:start")
@@ -4510,6 +5223,16 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   _progress_phase("collecting extern declarations")
   extern_sigs = collect_extern_sigs(load.program)
   _heap_probe("compile:extern_sigs_done")
+  extern_struct_names = collect_extern_structs(load.program)
+  if typeof(extern_struct_names) == "error" then
+    print "CompileError: " + extern_struct_names.message
+    return 2
+  end if
+  extern_validation = validate_extern_sigs(extern_sigs, extern_struct_names)
+  if extern_validation != "" then
+    print "CompileError: " + extern_validation
+    return 2
+  end if
   _progress_phase("initializing code generator")
   _heap_probe("compile:before_new_codegen")
   cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
@@ -4571,7 +5294,10 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   module_obj_paths_b = t.arr_chunk_new(128)
   support_path = _tmp_obj_path(tmp_dir, "000", input_abs, "support")
   module_object_seq = 1
-  module_fn_chunk_size = 2
+  // Most modules benefit from wider chunks that amortize state cloning, GC,
+  // serialization, and file I/O. The three backend-heavy modules contain
+  // several thousand-line functions, so they use tighter chunks below.
+  module_fn_chunk_size = 8
 
   visited = load.visited
   if typeof(visited) != "array" or len(visited) <= 0 then
@@ -4609,10 +5335,15 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
       module_object_seq = module_object_seq + 1
       mod_cg = 0
       fin = 0
-      gc_collect()
+      if (module_object_seq % 8) == 0 then gc_collect() end if
     end if
 
     fn_entries = codegen.module_function_entries(cg, module_file)
+    fn_chunk_size = module_fn_chunk_size
+    if s.endsWith(module_file, "codegen_builtins_alloc.ml") then fn_chunk_size = 4 end if
+    if s.endsWith(module_file, "codegen_expr.ml") or s.endsWith(module_file, "codegen_stmt.ml") or s.endsWith(module_file, "compiler.ml") then
+      fn_chunk_size = 2
+    end if
     fn_start = 0
     while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
       mod_cg = codegen.clone_for_object(cg, true)
@@ -4621,7 +5352,7 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
         return 2
       end if
       mod_cg.state.label_id = cg.state.label_id
-      mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, module_fn_chunk_size)
+      mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, fn_chunk_size)
       fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, module_file, "", mod_cg, cg.state, helper_union, module_obj_paths_b)
       if fin[0] != 0 then
         print "CompileError: " + fin[1]
@@ -4631,10 +5362,10 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
       module_obj_paths_b = fin[3]
       cg.state.label_id = fin[4]
       module_object_seq = module_object_seq + 1
-      fn_start = fn_start + module_fn_chunk_size
+      fn_start = fn_start + fn_chunk_size
       mod_cg = 0
       fin = 0
-      gc_collect()
+      if (module_object_seq % 8) == 0 then gc_collect() end if
     end while
 
     if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
@@ -4733,6 +5464,13 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   return _link_mlo_files(obj_paths, output_exe, subsystem)
 end function
 
+function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  if _object_pipeline_enabled then
+    return compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  end if
+  return compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+end function
+
 function compile_to_exe(input_ml, output_exe)
   return compile_to_exe_opts(input_ml, output_exe, [], false, 20, [], false, false, 3)
 end function
@@ -4753,8 +5491,50 @@ end function
 function run_cli(args)
   global _mem_probe_enabled
   global _dump_labels_path
+  global _object_pipeline_enabled
+  global _asm_listing_enabled
+  global _asm_listing_path
+  global _asm_show_addr
+  global _asm_show_bytes
+  global _asm_show_code
+  global _asm_dump_data
+  global _asm_dump_pe
   _mem_probe_enabled = _has_flag(args, "--mem-probe")
   _dump_labels_path = _get_flag_value(args, "--dump-labels")
+  _object_pipeline_enabled = _has_flag(args, "--object-pipeline")
+  _asm_listing_enabled = _has_flag(args, "--asm") and _has_flag(args, "--no-asm") == false
+  _asm_listing_path = _get_flag_value(args, "--asm-out")
+  _asm_show_addr = true
+  _asm_show_bytes = true
+  _asm_show_code = true
+  asm_cols = _get_flag_value(args, "--asm-cols")
+  if asm_cols != "" then
+    _asm_show_addr = false
+    _asm_show_bytes = false
+    _asm_show_code = false
+    col_parts = s.split(asm_cols, ",")
+    for ci = 0 to len(col_parts) - 1
+      col = s.toLowerAscii(s.trim(col_parts[ci]))
+      if col == "addr" or col == "address" or col == "a" then
+        _asm_show_addr = true
+      else if col == "opcodes" or col == "bytes" or col == "b" or col == "opc" then
+        _asm_show_bytes = true
+      else if col == "code" or col == "asm" or col == "text" or col == "c" then
+        _asm_show_code = true
+      else if col != "" then
+        print "CompileError: unknown --asm-cols token: " + col
+        return 2
+      end if
+    end for
+  end if
+  if _has_flag(args, "--asm-no-addr") then _asm_show_addr = false end if
+  if _has_flag(args, "--asm-no-opcodes") then _asm_show_bytes = false end if
+  if _has_flag(args, "--asm-no-code") then _asm_show_code = false end if
+  if _asm_show_addr == false and _asm_show_bytes == false and _asm_show_code == false then
+    _asm_show_code = true
+  end if
+  _asm_dump_data = _has_flag(args, "--asm-data")
+  _asm_dump_pe = _has_flag(args, "--asm-pe")
   if len(args) < 2 then
     _usage()
     return 1

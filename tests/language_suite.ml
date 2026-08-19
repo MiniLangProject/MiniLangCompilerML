@@ -1883,6 +1883,8 @@ print "=== ERROR + try() ==="
 // value-enum: `is` should work (membership check)
 vx = VColor.red
 assertEq(vx is VColor, true, "value-enum: is VColor")
+vmixed = Mixed.Z
+assertEq(vmixed is Mixed, true, "value-enum: string member is Mixed")
 
 // enum equality extensions: ordinal comparisons + cross-enum
 a = EOne.A

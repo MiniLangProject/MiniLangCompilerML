@@ -180,6 +180,33 @@ try {
   $runnerArgs = @($Compiler) + $effectiveCompilerArgs
   $results += Invoke-NativeStep "run ML test harness" $runnerExe $runnerArgs
 
+  $listingSrc = Join-Path $Root "tests\native_raw_value_smoke.ml"
+  $listingExe = Join-Path $script:ResolvedArtifactsDir "asm_listing_smoke.exe"
+  $listingPath = Join-Path $script:ResolvedArtifactsDir "asm_listing_smoke.asm"
+  $listingArgs = @(
+    $listingSrc, $listingExe, "-I", $Root,
+    "--asm", "--asm-out", $listingPath, "--asm-data", "--asm-pe"
+  ) + $effectiveCompilerArgs
+  $results += Invoke-NativeStep "compile assembly listing smoke" $Compiler $listingArgs
+  if ($results[-1].ExitCode -eq 0) {
+    $listingOk = Test-Path -LiteralPath $listingPath
+    if ($listingOk) {
+      $listingText = Get-Content -LiteralPath $listingPath -Raw
+      $listingOk = $listingText.Contains(".text") -and
+                   $listingText.Contains(".rdata") -and
+                   $listingText.Contains(".idata")
+    }
+    $listingResult = [pscustomobject]@{
+      Name = "verify assembly listing contents"
+      ExitCode = $(if ($listingOk) { 0 } else { 1 })
+      Seconds = 0.0
+    }
+    $results += $listingResult
+    $listingLabel = if ($listingOk) { "[PASS]" } else { "[FAIL]" }
+    Write-Host ($listingLabel + " assembly listing contents")
+    Write-LogLine ($listingLabel + " assembly listing contents")
+  }
+
   if (-not $SkipRepros) {
     $repros = @(
       "tests\psprites_repro.ml",

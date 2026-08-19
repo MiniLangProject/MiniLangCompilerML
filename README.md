@@ -2,8 +2,12 @@
 
 MiniLang (`.ml`) is a small, dynamically typed language that compiles to a native Windows x64 console executable (PE32+) via the self-hosted Win64 compiler tool (`build/mlc_win64.exe`).
 
-
-The checked-in compiler in `build/mlc_win64.exe` is self-hosted and can rebuild itself with `build.ps1`. This repository intentionally contains no Python source files.
+The compiler implementation is written entirely in MiniLang and can rebuild
+itself with `build.ps1`. The checked-in bootstrap executable is currently built
+from the same MiniLang sources by the Python reference compiler; this repository
+intentionally contains no Python source files. See
+[Compiler parity and self-hosting](COMPILER_PARITY.md) for the exact bootstrap,
+self-build and target-output guarantees.
 
 ---
 
@@ -40,6 +44,7 @@ The checked-in compiler in `build/mlc_win64.exe` is self-hosted and can rebuild 
 - [16. Syntax Reference (short)](#16-syntax-reference-short)
 - [17. Examples](#17-examples)
 - [Native compiler status](#native-compiler-status)
+- [Compiler parity and self-hosting](#compiler-parity-and-self-hosting)
 
 ---
 
@@ -206,6 +211,7 @@ Useful variants:
 
 Notes:
 - The script stages the self-host build in a short temporary directory and then moves the finished executable into `build/`.
+- Self-builds use the memory-bounded `.mlo` object pipeline. This is intentional: a monolithic self-build of the current compiler exceeds the configured 4 GiB MiniLang heap.
 - By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 
@@ -229,6 +235,20 @@ Notes:
 - Full logs are written to `build/test-logs/`; temporary test binaries are removed unless `-KeepArtifacts` is passed.
 - `-ShowCompilerProgress` keeps the compiler's `[phase]`, `[obj]`, and `[link]` progress lines visible on the console.
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
+
+### Compiler parity and self-hosting
+
+For identical source files, include roots and compiler options, the normal
+monolithic path of this compiler and the Python reference compiler emit
+byte-identical PE files. The checked language suite, AES KAT and native
+raw-value smoke programs all match by SHA-256.
+
+The compiler executables themselves differ because the production self-build
+uses the MiniLang-only `.mlo` object pipeline. A compiler built through that
+pipeline nevertheless produced the same byte-identical language-suite target
+as the Python-bootstrap-built compiler. Exact hashes, test counts, boundaries
+and reproduction commands are recorded in
+[COMPILER_PARITY.md](COMPILER_PARITY.md).
 
 
 ---
@@ -533,7 +553,14 @@ Newlines may appear after operators (see [3.1](#31-newlines--statement-separator
 ```ml
 a = [1, 2, 3]
 b = ["x", "y"]
+c = array(4)         // [void, void, void, void]
+d = array(3, "hi")   // ["hi", "hi", "hi"]
 ```
+
+`array(size[, fill])` initializes a new array with `size` elements.
+If `fill` is omitted, elements are initialized with `void`.
+Invalid `size` (non-int, negative, or too large) returns a runtime `error`
+(catchable via `try(...)`).
 
 ### Multiline literals + trailing commas
 
@@ -1114,7 +1141,7 @@ Rules:
 - Harmless import cycles are supported, and self-imports are ignored. Cycles that create unsafe cross-module initialization reads are diagnosed at runtime during module initialization.
 - `import ... as <alias>` is supported: it creates a compile-time alias for the imported module's `package` name, so you can write e.g. `g.add()` instead of `geom.vec.add()`. The imported file must declare `package ...`.
 - Alias names must be valid identifiers and must not be reserved (`try`, `error`).
-- If an imported file declares `package foo.bar`, its location must match that package when resolved via a stable root (importing directory or `-I` root): the file should be found as `foo/bar.ml` under that root. (Absolute-path imports skip this check.)
+- If an imported file declares `package foo.bar`, its location must match that package when resolved via a stable root (importing directory or `-I` root): the file should be found as `foo/bar.ml` under that root. Absolute-path imports and aliased explicit file imports (`import "path/file.ml" as X`) skip this location check, which is useful for code-behind files.
 
 
 ### package (top-level only)

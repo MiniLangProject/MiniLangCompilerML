@@ -472,11 +472,53 @@ function materialize(asm)
 end function
 
 function _emit32(asm, x)
-  return _emit(asm, t.u32(x))
+  dst = asm.size
+  need = dst + 4
+  asm = _ensure_capacity(asm, need)
+  ci = dst >> 16
+  off = dst & 0xFFFF
+  if off <= 0xFFFC then
+    ch = _chunk_get(asm, ci)
+    ch[off] = x & 0xFF
+    ch[off + 1] = (x >> 8) & 0xFF
+    ch[off + 2] = (x >> 16) & 0xFF
+    ch[off + 3] = (x >> 24) & 0xFF
+    asm = _chunk_set(asm, ci, ch)
+    asm.size = need
+    asm.buf_valid = false
+    return asm
+  end if
+  asm = _emit8(asm, x & 0xFF)
+  asm = _emit8(asm, (x >> 8) & 0xFF)
+  asm = _emit8(asm, (x >> 16) & 0xFF)
+  return _emit8(asm, (x >> 24) & 0xFF)
 end function
 
 function _emit64(asm, x)
-  return _emit(asm, t.u64(x))
+  dst = asm.size
+  need = dst + 8
+  asm = _ensure_capacity(asm, need)
+  ci = dst >> 16
+  off = dst & 0xFFFF
+  if off <= 0xFFF8 then
+    ch = _chunk_get(asm, ci)
+    ch[off] = x & 0xFF
+    ch[off + 1] = (x >> 8) & 0xFF
+    ch[off + 2] = (x >> 16) & 0xFF
+    ch[off + 3] = (x >> 24) & 0xFF
+    ch[off + 4] = (x >> 32) & 0xFF
+    ch[off + 5] = (x >> 40) & 0xFF
+    ch[off + 6] = (x >> 48) & 0xFF
+    ch[off + 7] = (x >> 56) & 0xFF
+    asm = _chunk_set(asm, ci, ch)
+    asm.size = need
+    asm.buf_valid = false
+    return asm
+  end if
+  for i = 0 to 7
+    asm = _emit8(asm, (x >> (i * 8)) & 0xFF)
+  end for
+  return asm
 end function
 
 function pos(asm)

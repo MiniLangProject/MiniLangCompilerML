@@ -13,6 +13,17 @@ struct ConstEvalResult
   value,
 end struct
 
+struct InlineStats
+  cost,
+  stmt_count,
+  call_count,
+  branch_count,
+  max_call_args,
+  has_loop,
+  has_switch,
+  has_nested_fn,
+end struct
+
 _F64_POS_HALF_BITS = 4602678819172646912
 
 function inline _opt_truthy(v)
@@ -1040,6 +1051,14 @@ function cg_emit_expr(state, expr)
     return state
   end if
 
+  // Constant folding must precede the node-kind dispatch. Keeping it after the
+  // known expression cases made it unreachable for every foldable AST node
+  // (notably unary literals and constant arithmetic), unlike the Python backend.
+  cv = cg_expr_try_const_value(state, expr)
+  if cv.ok then
+    return _opt_emit_const_value(state, cv.value)
+  end if
+
   if k == "Num" then
     return _emit_expr_num(state, expr)
   end if
@@ -1086,11 +1105,6 @@ function cg_emit_expr(state, expr)
 
   if k == "ArrayLit" then
     return _emit_expr_array_lit(state, expr)
-  end if
-
-  cv = cg_expr_try_const_value(state, expr)
-  if cv.ok then
-    return _opt_emit_const_value(state, cv.value)
   end if
 
   return _emit_expr_unsupported(state, expr, k)
@@ -1267,11 +1281,12 @@ function _emit_expr_is_type(state, expr)
   vem = _named_array_get(state.value_enum_values, ty_q)
   if typeof(vem) == "array" and len(vem) > 0 then
     state = cg_emit_expr(state, expr.expr)
+    off_v = core.alloc_expr_temps(state, 8)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, off_v)
     fid_v = _next_lid(state)
     l_true_v = "is_ve_true_" + fid_v
     l_false_v = "is_ve_false_" + fid_v
     l_done_v = "is_ve_done_" + fid_v
-    any_cmp_v = false
 
     for vi_v = 0 to len(vem) - 1
       it_v = vem[vi_v]
@@ -1286,34 +1301,38 @@ function _emit_expr_is_type(state, expr)
       if vn_v == "" then continue end if
       qmem_v = ty_q + "." + vn_v
       cv_v = _resolve_const_value(state, qmem_v)
-      if cv_v.ok == false then continue end if
 
-      if typeof(cv_v.value) == "bool" then
-        state.asm = a.cmp_r64_imm(state.asm, "rax", t.enc_bool(cv_v.value))
-        state.asm = a.jcc(state.asm, "e", l_true_v)
-        any_cmp_v = true
-        continue
+      if cv_v.ok and typeof(cv_v.value) == "bool" then
+        state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_bool(cv_v.value))
+      else
+        if cv_v.ok and typeof(cv_v.value) == "int" then
+          state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_int(cv_v.value))
+        else
+          if cv_v.ok and typeof(cv_v.value) == "string" then
+            lbl_ve = "cstr_ve_" + len(state.rdata.labels)
+            state.rdata = d.rdata_add_obj_string(state.rdata, lbl_ve, cv_v.value)
+            state.asm = a.lea_rdx_rip(state.asm, lbl_ve)
+          else
+            state = scope.emit_load_var_scoped(state, qmem_v)
+            state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+          end if
+        end if
       end if
-      if typeof(cv_v.value) == "int" then
-        state.asm = a.cmp_r64_imm(state.asm, "rax", t.enc_int(cv_v.value))
-        state.asm = a.jcc(state.asm, "e", l_true_v)
-        any_cmp_v = true
-        continue
-      end if
+
+      state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", off_v)
+      state.asm = a.call(state.asm, "fn_val_eq")
+      state.asm = a.cmp_r64_imm(state.asm, "rax", t.enc_bool(true))
+      state.asm = a.jcc(state.asm, "e", l_true_v)
     end for
 
-    if any_cmp_v then
-      state.asm = a.jmp(state.asm, l_false_v)
-    else
-      state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
-      state.asm = a.jmp(state.asm, l_done_v)
-    end if
+    state.asm = a.jmp(state.asm, l_false_v)
     state.asm = a.mark(state.asm, l_true_v)
     state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
     state.asm = a.jmp(state.asm, l_done_v)
     state.asm = a.mark(state.asm, l_false_v)
     state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
     state.asm = a.mark(state.asm, l_done_v)
+    state = core.free_expr_temps(state, 8)
     if neg then
       state.asm = a.xor_r64_imm8(state.asm, "rax", 8)
     end if
@@ -3091,6 +3110,25 @@ function _emit_expr_call(state, expr)
 
       cands_dyn = t.arr_chunk_finish(cand_b)
       if typeof(cands_dyn) == "array" and len(cands_dyn) > 0 then
+        fid_dyn = _next_lid(state)
+        l_fail_dyn = "mcall_fail_" + fid_dyn
+        l_done_dyn = "mcall_done_" + fid_dyn
+        l_ic_try1_dyn = "mcall_ic_try1_" + fid_dyn
+        l_ic_miss_dyn = "mcall_ic_miss_" + fid_dyn
+        cache_sid0_lbl_dyn = "mcall_ic_sid0_" + fid_dyn
+        cache_pad0_lbl_dyn = "mcall_ic_sid0pad_" + fid_dyn
+        cache_code0_lbl_dyn = "mcall_ic_code0_" + fid_dyn
+        cache_sid1_lbl_dyn = "mcall_ic_sid1_" + fid_dyn
+        cache_pad1_lbl_dyn = "mcall_ic_sid1pad_" + fid_dyn
+        cache_code1_lbl_dyn = "mcall_ic_code1_" + fid_dyn
+        state.data = d.data_pad_align(state.data, 8)
+        state.data = d.data_add_u32(state.data, cache_sid0_lbl_dyn, 0xFFFFFFFF)
+        state.data = d.data_add_u32(state.data, cache_pad0_lbl_dyn, 0)
+        state.data = d.data_add_u64(state.data, cache_code0_lbl_dyn, 0)
+        state.data = d.data_add_u32(state.data, cache_sid1_lbl_dyn, 0xFFFFFFFF)
+        state.data = d.data_add_u32(state.data, cache_pad1_lbl_dyn, 0)
+        state.data = d.data_add_u64(state.data, cache_code1_lbl_dyn, 0)
+
         base_dyn = core.alloc_expr_temps(state, total_dyn * 8)
         if typeof(base_dyn) != "int" or base_dyn <= 0 then
           base_dyn = 0x300
@@ -3136,11 +3174,6 @@ function _emit_expr_call(state, expr)
           end for
         end if
 
-        fid_dyn = _next_lid(state)
-        l_ok_dyn = "mcall_ok_" + fid_dyn
-        l_fail_dyn = "mcall_fail_" + fid_dyn
-        l_done_dyn = "mcall_done_" + fid_dyn
-
         // Receiver must be struct ptr.
         state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_dyn)
         state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
@@ -3153,31 +3186,70 @@ function _emit_expr_call(state, expr)
         // Keep argument registers intact (rdx carries arg1); use r10d for dispatch id.
         state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
 
+        // Small polymorphic inline cache: primary + secondary struct_id/code pair.
+        state.asm = a.mov_eax_rip_dword(state.asm, cache_sid0_lbl_dyn)
+        state.asm = a.cmp_r32_r32(state.asm, "r10d", "eax")
+        state.asm = a.jcc(state.asm, "ne", l_ic_try1_dyn)
+        state.asm = a.mov_rax_rip_qword(state.asm, cache_code0_lbl_dyn)
+        state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+        state.asm = a.jcc(state.asm, "e", l_ic_try1_dyn)
+        state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+        state.asm = a.call_rax(state.asm)
+        state.asm = a.jmp(state.asm, l_done_dyn)
+
+        state.asm = a.mark(state.asm, l_ic_try1_dyn)
+        state.asm = a.mov_eax_rip_dword(state.asm, cache_sid1_lbl_dyn)
+        state.asm = a.cmp_r32_r32(state.asm, "r10d", "eax")
+        state.asm = a.jcc(state.asm, "ne", l_ic_miss_dyn)
+        state.asm = a.mov_rax_rip_qword(state.asm, cache_code1_lbl_dyn)
+        state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+        state.asm = a.jcc(state.asm, "e", l_ic_miss_dyn)
+        state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+        state.asm = a.call_rax(state.asm)
+        state.asm = a.jmp(state.asm, l_done_dyn)
+
+        state.asm = a.mark(state.asm, l_ic_miss_dyn)
         for ci_dyn = 0 to len(cands_dyn) - 1
           c_dyn = cands_dyn[ci_dyn]
           sid_dyn2 = -1
-          fnq_dyn2 = ""
           if typeof(c_dyn) == "array" and len(c_dyn) >= 2 then
             if typeof(c_dyn[0]) == "int" then sid_dyn2 = c_dyn[0] end if
-            fnq_dyn2 = _coerce_name(c_dyn[1])
           end if
-          if sid_dyn2 < 0 or fnq_dyn2 == "" then continue end if
-          l_next_dyn = "mcall_next_" + fid_dyn + "_" + ci_dyn
+          if sid_dyn2 < 0 then continue end if
+          l_case_dyn = "mcall_case_" + fid_dyn + "_" + sid_dyn2
           state.asm = a.cmp_r32_imm(state.asm, "r10d", sid_dyn2)
-          state.asm = a.jcc(state.asm, "ne", l_next_dyn)
+          state.asm = a.jcc(state.asm, "e", l_case_dyn)
+        end for
+        state.asm = a.jmp(state.asm, l_fail_dyn)
+
+        for ci_dyn2 = 0 to len(cands_dyn) - 1
+          c_dyn2 = cands_dyn[ci_dyn2]
+          sid_dyn3 = -1
+          fnq_dyn3 = ""
+          if typeof(c_dyn2) == "array" and len(c_dyn2) >= 2 then
+            if typeof(c_dyn2[0]) == "int" then sid_dyn3 = c_dyn2[0] end if
+            fnq_dyn3 = _coerce_name(c_dyn2[1])
+          end if
+          if sid_dyn3 < 0 or fnq_dyn3 == "" then continue end if
+          l_case_dyn2 = "mcall_case_" + fid_dyn + "_" + sid_dyn3
+          state.asm = a.mark(state.asm, l_case_dyn2)
+          state.asm = a.mov_eax_rip_dword(state.asm, cache_sid0_lbl_dyn)
+          state.asm = a.mov_rip_dword_eax(state.asm, cache_sid1_lbl_dyn)
+          state.asm = a.mov_rax_rip_qword(state.asm, cache_code0_lbl_dyn)
+          state.asm = a.mov_rip_qword_rax(state.asm, cache_code1_lbl_dyn)
+          state.asm = a.mov_r32_r32(state.asm, "eax", "r10d")
+          state.asm = a.mov_rip_dword_eax(state.asm, cache_sid0_lbl_dyn)
+          state.asm = a.lea_rax_rip(state.asm, "fn_user_" + fnq_dyn3)
+          state.asm = a.mov_rip_qword_rax(state.asm, cache_code0_lbl_dyn)
           state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
-          state.asm = a.call(state.asm, "fn_user_" + fnq_dyn2)
-          state.asm = a.jmp(state.asm, l_ok_dyn)
-          state.asm = a.mark(state.asm, l_next_dyn)
+          state.asm = a.call(state.asm, "fn_user_" + fnq_dyn3)
+          state.asm = a.jmp(state.asm, l_done_dyn)
         end for
 
         state.asm = a.mark(state.asm, l_fail_dyn)
         state = _emit_make_error_const(state, c.ERR_METHOD_NOT_FOUND, "No matching method '" + mname_dyn + "' for receiver")
-        state = _emit_auto_errprop(state)
-        state.asm = a.jmp(state.asm, l_done_dyn)
-
-        state.asm = a.mark(state.asm, l_ok_dyn)
         state.asm = a.mark(state.asm, l_done_dyn)
+        state = _emit_auto_errprop(state)
         if dyn_stack_save_count > 0 then
           for ssi_dyn2 = 0 to dyn_stack_save_count - 1
             state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", dyn_stack_save_off + ssi_dyn2 * 8)
@@ -3188,6 +3260,11 @@ function _emit_expr_call(state, expr)
           end if
         end if
         state = core.free_expr_temps(state, total_dyn * 8)
+        if total_dyn > 4 then
+          for clear_dyn = 4 to total_dyn - 1
+            state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x20 + (clear_dyn - 4) * 8, t.enc_void(), true)
+          end for
+        end if
         return state
       end if
     end if
@@ -3235,6 +3312,15 @@ function _emit_expr_call(state, expr)
 end function
 
 function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, nargs)
+  // Native string/bytes helpers use the same compact ABI path as the Python
+  // compiler.  Keeping this ahead of generic value-call dispatch is important:
+  // these names are compiler intrinsics, not rebindable MiniLang functions.
+  native_helper = _emit_native_value_helper_call(state, callee, raw_name, call_args, nargs)
+  if typeof(native_helper) == "array" and len(native_helper) >= 2 then
+    state = native_helper[0]
+    if native_helper[1] == true then return [state, true] end if
+  end if
+
   // Builtin nativeBytesPtr(bytes) -> native pointer to the bytes payload.
   if (callee == "nativeBytesPtr" or raw_name == "nativeBytesPtr") then
     if nargs != 1 then
@@ -5177,8 +5263,146 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
   return [state, false]
 end function
 
-function _direct_user_call_enabled(qname)
-  return true
+function _emit_native_value_helper_call(state, callee, raw_name, call_args, nargs)
+  nm = callee
+  if raw_name != "" then nm = raw_name end if
+  lbl = ""
+  arity = 0
+
+  if nm == "stringSlice" then
+    lbl = "fn_string_slice"
+    arity = 3
+  end if
+  if nm == "bytesStartsWith" then
+    lbl = "fn_bytes_startswith"
+    arity = 2
+  end if
+  if nm == "bytesHash" then
+    lbl = "fn_bytes_hash"
+    arity = 1
+  end if
+  if nm == "stringHash" then
+    lbl = "fn_string_hash"
+    arity = 1
+  end if
+  if nm == "str" then
+    lbl = "fn_value_to_string"
+    arity = 1
+  end if
+  if nm == "bytesEndsWith" then
+    lbl = "fn_bytes_endswith"
+    arity = 2
+  end if
+  if nm == "bytesIndexOf" then
+    lbl = "fn_bytes_indexof"
+    arity = 3
+  end if
+  if nm == "bytesLastIndexOf" then
+    lbl = "fn_bytes_lastindexof"
+    arity = 2
+  end if
+  if nm == "bytesCompare" then
+    lbl = "fn_bytes_compare"
+    arity = 2
+  end if
+  if nm == "stringIndexOf" then
+    lbl = "fn_string_indexof"
+    arity = 3
+  end if
+  if nm == "stringLastIndexOf" then
+    lbl = "fn_string_lastindexof"
+    arity = 2
+  end if
+  if nm == "stringStartsWith" then
+    lbl = "fn_string_startswith"
+    arity = 2
+  end if
+  if nm == "stringEndsWith" then
+    lbl = "fn_string_endswith"
+    arity = 2
+  end if
+  if nm == "stringRepeat" then
+    lbl = "fn_string_repeat"
+    arity = 2
+  end if
+  if nm == "stringTrimLeftAscii" then
+    lbl = "fn_string_ltrim_ascii"
+    arity = 1
+  end if
+  if nm == "stringTrimRightAscii" then
+    lbl = "fn_string_rtrim_ascii"
+    arity = 1
+  end if
+  if nm == "stringTrimAscii" then
+    lbl = "fn_string_trim_ascii"
+    arity = 1
+  end if
+  if nm == "stringIsBlankAscii" then
+    lbl = "fn_string_is_blank_ascii"
+    arity = 1
+  end if
+  if nm == "stringReverse" then
+    lbl = "fn_string_reverse"
+    arity = 1
+  end if
+  if nm == "stringToLowerAscii" then
+    lbl = "fn_string_to_lower_ascii"
+    arity = 1
+  end if
+  if nm == "stringToUpperAscii" then
+    lbl = "fn_string_to_upper_ascii"
+    arity = 1
+  end if
+  if nm == "stringEqualsIgnoreCaseAscii" then
+    lbl = "fn_string_eq_ignore_case_ascii"
+    arity = 2
+  end if
+  if nm == "stringJoin" then
+    lbl = "fn_string_join"
+    arity = 2
+  end if
+
+  if lbl == "" or nargs != arity then return [state, false] end if
+
+  if arity == 1 then
+    state = cg_emit_expr(state, call_args[0])
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.call(state.asm, lbl)
+    return [state, true]
+  end if
+
+  tmp_off = core.alloc_expr_temps(state, arity * 8)
+  for i = 0 to arity - 1
+    state = cg_emit_expr(state, call_args[i])
+    state.asm = a.mov_rsp_disp32_rax(state.asm, tmp_off + i * 8)
+  end for
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", tmp_off)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_off + 8)
+  if arity == 3 then
+    state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_off + 16)
+  end if
+  state.asm = a.call(state.asm, lbl)
+  state = core.free_expr_temps(state, arity * 8)
+  return [state, true]
+end function
+
+function _expr_heap_cfg_bool(state, key, defaultv)
+  if typeof(state) != "struct" or typeof(state.heap_config) != "array" or len(state.heap_config) <= 0 then return defaultv end if
+  for ci = 0 to len(state.heap_config) - 1
+    it = state.heap_config[ci]
+    if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "string" and it[0] == key then
+      if typeof(it[1]) == "bool" then return it[1] end if
+      return defaultv
+    end if
+  end for
+  return defaultv
+end function
+
+function _direct_user_call_enabled(state, qname)
+  // Keep the old unguarded fast path available for controlled experiments,
+  // but do not use it by default: a top-level function binding can legally be
+  // rebound at runtime.  The guarded path below preserves that behaviour.
+  return _expr_heap_cfg_bool(state, "cg_unguarded_direct_user_calls", false)
 end function
 
 function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime)
@@ -5200,7 +5424,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
       skip_fn = _user_function_get(state, skip_qn)
       if typeof(skip_fn) == "struct" then
         skip_bind = scope.cg_resolve_binding(state, skip_qn)
-        if (typeof(skip_bind) != "struct" or skip_bind.kind == "global") and _direct_user_call_enabled(skip_qn) then
+        if (typeof(skip_bind) != "struct" or skip_bind.kind == "global") and _direct_user_call_enabled(state, skip_qn) then
           direct_user_global = true
           direct_user_name = skip_qn
         end if
@@ -5299,6 +5523,18 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     if handled_generic_builtin[1] then return state end if
   end if
 
+  inline_name = callee
+  if inline_name == "" then inline_name = raw_name end if
+  inline_fn = _user_function_get(state, inline_name)
+  if typeof(inline_fn) == "struct" and typeof(try(inline_fn.is_inline)) == "bool" and inline_fn.is_inline and _inline_call_eligible(inline_fn) then
+    inline_binding = scope.cg_resolve_binding(state, inline_name)
+    if typeof(inline_binding) != "struct" or inline_binding.kind == "global" then
+      state = _emit_inline_call(state, inline_name, call_args)
+      state = _emit_auto_errprop(state)
+      return state
+    end if
+  end if
+
   scallee = callee
   sid = _state_struct_id_get(state, scallee, 0)
   if sid == 0 and raw_name != "" and raw_name != scallee then
@@ -5355,18 +5591,6 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
       return state
     end if
 
-    arg_base_struct = 0
-    arg_base_struct_ok = false
-    if nargs > 0 then
-      arg_base_struct = core.alloc_expr_temps(state, nargs * 8)
-      arg_base_struct_ok = typeof(arg_base_struct) == "int" and arg_base_struct > 0
-      if not arg_base_struct_ok then arg_base_struct = 0x300 end if
-      for fi_eval = 0 to nargs - 1
-        state = cg_emit_expr(state, call_args[fi_eval])
-        state.asm = a.mov_membase_disp_r64(state.asm, "rsp", arg_base_struct + fi_eval * 8, "rax")
-      end for
-    end if
-
     state.asm = a.mov_rcx_imm32(state.asm, 8 + nargs * 8)
     state.asm = a.call(state.asm, "fn_alloc")
     base_struct = core.alloc_expr_temps(state, 8)
@@ -5378,14 +5602,13 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, sid, false)
     if nargs > 0 then
       for fi = 0 to nargs - 1
-        state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", arg_base_struct + fi * 8)
+        state = cg_emit_expr(state, call_args[fi])
         state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_struct)
         state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + fi * 8, "rax")
       end for
     end if
     state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base_struct)
     if base_struct_ok then state = core.free_expr_temps(state, 8) end if
-    if arg_base_struct_ok then state = core.free_expr_temps(state, nargs * 8) end if
     return state
   end if
 
@@ -5494,9 +5717,17 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
             state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
             return state
           end if
-          // User-function guarded devirtualization is temporarily disabled in the
-          // selfhost object pipeline. Cross-module direct rel32 calls are not yet
-          // reliable here, while the generic function-object dispatch is correct.
+          // Guarded devirtualization preserves runtime rebinding semantics.  Object
+          // units deliberately stay on generic dispatch because cross-module rel32
+          // calls are not representable by the current .mlo relocation format.
+          if _expr_heap_cfg_bool(state, "cg_object_pipeline", false) == false then
+            obj_lbl_dg = _strpair_get(state.function_static_obj_labels, dg_name)
+            if obj_lbl_dg != "" then
+              direct_guard_obj_lbl = obj_lbl_dg
+              direct_guard_call_lbl = "fn_user_" + dg_name
+              direct_guard_builtin_nargs = false
+            end if
+          end if
         else
           sp_code = ""
           sp_min = 0
@@ -7172,7 +7403,296 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   return state
 end function
 
+function _inline_collect_expr_stats(ex, stats)
+  if typeof(ex) != "struct" then return 0 end if
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Num" or k == "Str" or k == "Bool" or k == "VoidLit" or k == "Var" then return 1 end if
+  if k == "ArrayLit" then
+    cost = 4
+    items = try(ex.items)
+    if typeof(items) == "array" and len(items) > 0 then
+      for i = 0 to len(items) - 1
+        cost = cost + _inline_collect_expr_stats(items[i], stats)
+      end for
+    end if
+    return cost
+  end if
+  if k == "Unary" then return 2 + _inline_collect_expr_stats(try(ex.right), stats) end if
+  if k == "Bin" then return 3 + _inline_collect_expr_stats(try(ex.left), stats) + _inline_collect_expr_stats(try(ex.right), stats) end if
+  if k == "IsType" then return 3 + _inline_collect_expr_stats(try(ex.expr), stats) end if
+  if k == "Call" then
+    stats.call_count = stats.call_count + 1
+    args = try(ex.args)
+    if typeof(args) != "array" then args = [] end if
+    if len(args) > stats.max_call_args then stats.max_call_args = len(args) end if
+    cost2 = 12 + _inline_collect_expr_stats(try(ex.callee), stats)
+    if len(args) > 0 then
+      for i2 = 0 to len(args) - 1
+        cost2 = cost2 + _inline_collect_expr_stats(args[i2], stats)
+      end for
+    end if
+    return cost2
+  end if
+  if k == "Index" then return 5 + _inline_collect_expr_stats(try(ex.target), stats) + _inline_collect_expr_stats(try(ex.index), stats) end if
+  if k == "Member" then return 4 + _inline_collect_expr_stats(try(ex.target), stats) end if
+  return 8
+end function
+
+function _inline_collect_stmt_list_stats(stmts, stats)
+  cost = 0
+  if typeof(stmts) != "array" or len(stmts) <= 0 then return cost end if
+  for si = 0 to len(stmts) - 1
+    cost = cost + _inline_collect_stmt_stats(stmts[si], stats)
+  end for
+  return cost
+end function
+
+function _inline_collect_stmt_stats(st, stats)
+  if typeof(st) != "struct" then return 0 end if
+  k = _coerce_name(try(st.node_kind))
+  if k == "GlobalDecl" then return 0 end if
+  stats.stmt_count = stats.stmt_count + 1
+  if k == "Assign" or k == "ConstDecl" or k == "ExprStmt" then return 2 + _inline_collect_expr_stats(try(st.expr), stats) end if
+  if k == "Print" then return 4 + _inline_collect_expr_stats(try(st.expr), stats) end if
+  if k == "Return" then return 1 + _inline_collect_expr_stats(try(st.expr), stats) end if
+  if k == "SetMember" then return 6 + _inline_collect_expr_stats(try(st.obj), stats) + _inline_collect_expr_stats(try(st.expr), stats) end if
+  if k == "SetIndex" then return 7 + _inline_collect_expr_stats(try(st.target), stats) + _inline_collect_expr_stats(try(st.index), stats) + _inline_collect_expr_stats(try(st.expr), stats) end if
+  if k == "If" then
+    elifs = try(st.elifs)
+    if typeof(elifs) != "array" then elifs = [] end if
+    else_body = try(st.else_body)
+    if typeof(else_body) != "array" then else_body = [] end if
+    stats.branch_count = stats.branch_count + 1 + len(elifs)
+    if len(else_body) > 0 then stats.branch_count = stats.branch_count + 1 end if
+    cost3 = 8 + _inline_collect_expr_stats(try(st.cond), stats)
+    cost3 = cost3 + _inline_collect_stmt_list_stats(try(st.then_body), stats)
+    if len(elifs) > 0 then
+      for ei = 0 to len(elifs) - 1
+        el = elifs[ei]
+        if typeof(el) == "array" and len(el) >= 2 then
+          cost3 = cost3 + 4 + _inline_collect_expr_stats(el[0], stats)
+          cost3 = cost3 + _inline_collect_stmt_list_stats(el[1], stats)
+        end if
+      end for
+    end if
+    cost3 = cost3 + _inline_collect_stmt_list_stats(else_body, stats)
+    return cost3
+  end if
+  if k == "While" or k == "DoWhile" or k == "For" then
+    stats.has_loop = true
+    cost4 = 48
+    if k == "While" or k == "DoWhile" then cost4 = cost4 + _inline_collect_expr_stats(try(st.cond), stats) end if
+    if k == "For" then
+      cost4 = cost4 + _inline_collect_expr_stats(try(st.start), stats)
+      cost4 = cost4 + _inline_collect_expr_stats(try(st.end_expr), stats)
+    end if
+    return cost4 + _inline_collect_stmt_list_stats(try(st.body), stats)
+  end if
+  if k == "ForEach" or k == "ForEachArray" or k == "ForEachString" then
+    stats.has_loop = true
+    return 48 + _inline_collect_expr_stats(try(st.iterable), stats) + _inline_collect_stmt_list_stats(try(st.body), stats)
+  end if
+  if k == "Switch" then
+    stats.has_switch = true
+    cost5 = 56 + _inline_collect_expr_stats(try(st.expr), stats)
+    cases = try(st.cases)
+    if typeof(cases) == "array" and len(cases) > 0 then
+      for ci = 0 to len(cases) - 1
+        cs = cases[ci]
+        if typeof(cs) != "struct" then continue end if
+        vals = try(cs.values)
+        if typeof(vals) == "array" and len(vals) > 0 then
+          for vi = 0 to len(vals) - 1
+            cost5 = cost5 + _inline_collect_expr_stats(vals[vi], stats)
+          end for
+        else
+          cost5 = cost5 + _inline_collect_expr_stats(try(cs.range_start), stats)
+          cost5 = cost5 + _inline_collect_expr_stats(try(cs.range_end), stats)
+        end if
+        cost5 = cost5 + _inline_collect_stmt_list_stats(try(cs.body), stats)
+      end for
+    end if
+    cost5 = cost5 + _inline_collect_stmt_list_stats(try(st.default_body), stats)
+    return cost5
+  end if
+  if k == "FunctionDef" then
+    stats.has_nested_fn = true
+    return 64
+  end if
+  if k == "Break" or k == "Continue" then return 1 end if
+  return 6
+end function
+
+function _inline_call_eligible(fn)
+  if typeof(fn) != "struct" then return false end if
+  stats = InlineStats(0, 0, 0, 0, 0, false, false, false)
+  body = try(fn.body)
+  if typeof(body) != "array" then body = [] end if
+  stats.cost = _inline_collect_stmt_list_stats(body, stats)
+  params = try(fn.params)
+  if typeof(params) == "array" then stats.cost = stats.cost + len(params) end if
+  if stats.has_loop or stats.has_switch or stats.has_nested_fn then return false end if
+  if stats.stmt_count > 8 or stats.call_count > 2 or stats.branch_count > 2 or stats.cost > 64 then return false end if
+  return true
+end function
+
 function _emit_inline_call(state, callee, args)
+  fn = _user_function_get(state, callee)
+  if typeof(fn) != "struct" then
+    state.diagnostics = state.diagnostics + ["Unknown inline function '" + callee + "'"]
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return state
+  end if
+
+  if typeof(state._inline_call_stack) != "array" then state._inline_call_stack = [] end if
+  if len(state._inline_call_stack) > 0 then
+    for ri = 0 to len(state._inline_call_stack) - 1
+      if state._inline_call_stack[ri] == callee then
+        state.diagnostics = state.diagnostics + ["inline recursion is not supported: " + callee]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+    end for
+  end if
+
+  env_slots = try(fn._ml_env_slots)
+  captures = try(fn._ml_captures)
+  boxed = try(fn._ml_boxed)
+  if (typeof(try(fn._ml_env_hop)) == "bool" and fn._ml_env_hop) or (typeof(env_slots) == "array" and len(env_slots) > 0) or (typeof(captures) == "array" and len(captures) > 0) or (typeof(boxed) == "array" and len(boxed) > 0) then
+    state.diagnostics = state.diagnostics + ["inline function '" + callee + "' cannot use closures or boxed variables"]
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return state
+  end if
+
+  params = try(fn.params)
+  if typeof(params) != "array" then params = [] end if
+  if typeof(args) != "array" then args = [] end if
+  if len(args) != len(params) then
+    state.diagnostics = state.diagnostics + ["Function " + callee + " expects " + len(params) + " args, got " + len(args)]
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return state
+  end if
+
+  base_top = state.expr_temp_top
+  if typeof(base_top) != "int" then base_top = 0 end if
+  param_base = 0
+  if len(params) > 0 then param_base = core.alloc_expr_temps(state, len(params) * 8) end if
+  if len(args) > 0 then
+    for ai = 0 to len(args) - 1
+      state = cg_emit_expr(state, args[ai])
+      state.asm = a.mov_rsp_disp32_rax(state.asm, param_base + ai * 8)
+    end for
+  end if
+
+  l_end = "inline_end_" + _next_lid(state)
+
+  saved_in_fn = state.in_function
+  saved_ret = state.func_ret_label
+  saved_scope_stack = state.scope_stack
+  saved_scope_declared = state.scope_declared
+  saved_scope_index_stack = state.scope_index_stack
+  saved_scope_declared_index_stack = state.scope_declared_index_stack
+  saved_decl_site = state.decl_site_bindings
+  saved_fn_locals = state.function_locals
+  saved_fn_local_ids = state.function_local_ids
+  saved_func_globals = state.func_globals
+  saved_func_global_map = state.func_global_map
+  saved_func_global_map_index = state.func_global_map_index
+  saved_qpref = state.current_qname_prefix
+  saved_filepref = state.current_file_prefix
+  saved_boxed = state.current_fn_boxed_names
+  saved_env_index = state.current_fn_env_index
+  saved_param_names = try(state.current_fn_param_names)
+
+  base_globals = []
+  if typeof(saved_scope_stack) == "array" and len(saved_scope_stack) > 0 then base_globals = saved_scope_stack[0] end if
+  base_scope_index = t.fastmap_new(128)
+  if typeof(saved_scope_index_stack) == "array" and len(saved_scope_index_stack) > 0 then base_scope_index = saved_scope_index_stack[0] end if
+  base_decl_index = t.fastmap_new(128)
+  if typeof(saved_scope_declared_index_stack) == "array" and len(saved_scope_declared_index_stack) > 0 then base_decl_index = saved_scope_declared_index_stack[0] end if
+
+  state.scope_stack = [base_globals, []]
+  state.scope_declared = [[], []]
+  state.scope_index_stack = [base_scope_index, t.fastmap_new(128)]
+  state.scope_declared_index_stack = [base_decl_index, t.fastmap_new(128)]
+  state.decl_site_bindings = t.fastmap_new(128)
+  state.function_locals = []
+  state.function_local_ids = t.fastmap_new(64)
+  state.func_globals = []
+  state.func_global_map = []
+  state.func_global_map_index = t.fastmap_new(64)
+  state.current_fn_boxed_names = []
+  state.current_fn_env_index = []
+  state.current_fn_param_names = params
+  state.in_function = true
+  state.func_ret_label = l_end
+
+  dot = -1
+  for qi = len(callee) - 1 to 0
+    if callee[qi] == "." then
+      dot = qi
+      break
+    end if
+  end for
+  if dot >= 0 then
+    state.current_qname_prefix = s.substr(callee, 0, dot + 1)
+  else
+    state.current_qname_prefix = ""
+  end if
+  fn_file = try(fn._filename)
+  if typeof(fn_file) == "string" and fn_file != "" then
+    fp = _strpair_get(state.file_prefix_map, fn_file)
+    if fp != "" then state.current_file_prefix = fp end if
+  end if
+
+  if len(params) > 0 then
+    for pi = 0 to len(params) - 1
+      state = scope.bind_param(state, _coerce_name(params[pi]), param_base + pi * 8, fn)
+    end for
+  end if
+
+  state._inline_call_stack = state._inline_call_stack + [callee]
+  emitter = state._inline_param_stack
+  body = try(fn.body)
+  if typeof(body) != "array" then body = [] end if
+  if typeof(emitter) != "function" then
+    state.diagnostics = state.diagnostics + ["Internal error: inline statement emitter is unavailable"]
+  else
+    if len(body) > 0 then
+      for bi = 0 to len(body) - 1
+        state = emitter(state, body[bi])
+      end for
+    end if
+  end if
+  if len(state._inline_call_stack) > 1 then
+    state._inline_call_stack = slice(state._inline_call_stack, 0, len(state._inline_call_stack) - 1)
+  else
+    state._inline_call_stack = []
+  end if
+
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.mark(state.asm, l_end)
+
+  state.in_function = saved_in_fn
+  state.func_ret_label = saved_ret
+  state.scope_stack = saved_scope_stack
+  state.scope_declared = saved_scope_declared
+  state.scope_index_stack = saved_scope_index_stack
+  state.scope_declared_index_stack = saved_scope_declared_index_stack
+  state.decl_site_bindings = saved_decl_site
+  state.function_locals = saved_fn_locals
+  state.function_local_ids = saved_fn_local_ids
+  state.func_globals = saved_func_globals
+  state.func_global_map = saved_func_global_map
+  state.func_global_map_index = saved_func_global_map_index
+  state.current_qname_prefix = saved_qpref
+  state.current_file_prefix = saved_filepref
+  state.current_fn_boxed_names = saved_boxed
+  state.current_fn_env_index = saved_env_index
+  state.current_fn_param_names = saved_param_names
+
+  delta = state.expr_temp_top - base_top
+  if delta > 0 then state = core.free_expr_temps(state, delta) end if
   return state
 end function
 
