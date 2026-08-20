@@ -16,7 +16,10 @@ const THREAD_TMP0 = 56
 const THREAD_NEXT = 120
 const THREAD_GC_STATE = 128
 const THREAD_ALLOC_CURSOR = 136
-const THREAD_CONTEXT_SIZE = 144
+const THREAD_ARG = 144
+const THREAD_LOGICAL_ID = 152
+const THREAD_ARITY = 160
+const THREAD_CONTEXT_SIZE = 168
 
 const THREAD_CREATED = 0
 const THREAD_RUNNING = 1
@@ -92,6 +95,9 @@ function emit_sync_init(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_NEXT, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_GC_STATE, GC_THREAD_RUNNING, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ALLOC_CURSOR, 0, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARG, t.enc_void(), true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_LOGICAL_ID, t.enc_void(), true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARITY, 0, false)
   state.asm = a.mov_rip_qword_rax(state.asm, "thread_contexts_head")
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_requested")
@@ -451,8 +457,10 @@ end function
 function emit_thread_new_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_thread_new")
-  state.asm = a.sub_rsp_imm8(state.asm, 0x48)
+  state.asm = a.sub_rsp_imm8(state.asm, 0x58)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x38, "rcx")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x40, "rdx")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x48, "r8")
   state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
   state.asm = a.mov_r32_imm32(state.asm, "edx", THREAD_CONTEXT_SIZE)
   state.asm = a.mov_r8d_imm32(state.asm, 0x3000)
@@ -475,6 +483,11 @@ function emit_thread_new_function(state)
   end for
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_GC_STATE, GC_THREAD_INACTIVE, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ALLOC_CURSOR, 0, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARG, t.enc_void(), true)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x48)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rax", THREAD_LOGICAL_ID, "r11")
+  state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "rsp", 0x40)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rax", THREAD_ARITY, "r11d")
   state.asm = a.lea_rax_rip(state.asm, "gc_coord_monitor")
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_EnterCriticalSection")
@@ -490,7 +503,7 @@ function emit_thread_new_function(state)
   state.asm = a.call_rax(state.asm)
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x30)
   state.asm = a.mark(state.asm, l_done)
-  state.asm = a.add_rsp_imm8(state.asm, 0x48)
+  state.asm = a.add_rsp_imm8(state.asm, 0x58)
   state.asm = a.ret(state.asm)
   return state
 end function
@@ -502,12 +515,17 @@ function emit_thread_start_function(state)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x30, "rcx")
   lid = _new_label_id(state)
   l_not_created = "thstart_not_created_" + lid
+  l_wrong_arity = "thstart_wrong_arity_" + lid
   l_create_fail = "thstart_create_fail_" + lid
   l_done = "thstart_done_" + lid
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_STATUS)
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CREATED)
   state.asm = a.jcc(state.asm, "ne", l_not_created)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_ARITY)
+  state.asm = a.cmp_r32_r32(state.asm, "eax", "r8d")
+  state.asm = a.jcc(state.asm, "ne", l_wrong_arity)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STOP, 0, false)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rcx", THREAD_ARG, "rdx")
   state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STATUS, THREAD_RUNNING, false)
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "rax")
@@ -530,6 +548,8 @@ function emit_thread_start_function(state)
   state.asm = a.mark(state.asm, l_create_fail)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_STATUS, THREAD_FAILED, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_ARG, t.enc_void(), true)
+  state.asm = a.mark(state.asm, l_wrong_arity)
   state.asm = a.mark(state.asm, l_not_created)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
   state.asm = a.mark(state.asm, l_done)
@@ -624,6 +644,46 @@ function emit_thread_id_function(state)
   return state
 end function
 
+function emit_thread_logical_id_function(state)
+  state.asm = a.mark(state.asm, "fn_thread_logical_id")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rcx", THREAD_LOGICAL_ID)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_thread_set_logical_id_function(state)
+  state.asm = a.mark(state.asm, "fn_thread_set_logical_id")
+  lid = _new_label_id(state)
+  l_false = "thsetid_false_" + lid
+  l_done = "thsetid_done_" + lid
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_STATUS)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CREATED)
+  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rcx", THREAD_LOGICAL_ID, "rdx")
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
+  state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_false)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_thread_result_function(state)
+  state.asm = a.mark(state.asm, "fn_thread_result")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rcx", THREAD_RESULT)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+function emit_thread_current_logical_id_function(state)
+  state.asm = a.mark(state.asm, "fn_thread_current_logical_id")
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", THREAD_LOGICAL_ID)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
 function emit_thread_status_function(state)
   names = ["obj_thread_created", "obj_thread_running", "obj_thread_stop_requested", "obj_thread_completed", "obj_thread_stopped", "obj_thread_failed"]
   values = ["Created", "Running", "StopRequested", "Completed", "Stopped", "Failed"]
@@ -673,6 +733,8 @@ function emit_thread_close_function(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_HANDLE, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_CODE, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_RESULT, t.enc_void(), true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_ARG, t.enc_void(), true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_LOGICAL_ID, t.enc_void(), true)
   for i = 0 to 7
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TMP0 + i * 8, t.enc_void(), true)
   end for
@@ -735,6 +797,9 @@ function emit_thread_entry_function(state)
 
   state.asm = a.call(state.asm, "fn_gc_native_leave")
   state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "r12", THREAD_ARG)
+  // The callee parameter slot becomes the precise root before its first poll.
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r12", THREAD_ARG, t.enc_void(), true)
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r12", THREAD_CODE)
   state.asm = a.call_rax(state.asm)
   state.asm = a.mov_membase_disp_r64(state.asm, "r12", THREAD_RESULT, "rax")

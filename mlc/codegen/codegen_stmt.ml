@@ -3452,6 +3452,7 @@ function _analysis_builtin_has(name)
   if nm == "try" then return true end if
   if nm == "Thread" then return true end if
   if nm == "threadStopRequested" then return true end if
+  if nm == "threadLogicalId" then return true end if
   if nm == "threadSleep" then return true end if
   if nm == "array" then return true end if
   if nm == "bytes" then return true end if
@@ -7545,7 +7546,6 @@ function emit_user_function(state, fn_node)
 
   state = mem.emit_gc_clear_root_slots(state, root_base, root_top)
   state = mem.emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
-  state = th.emit_gc_safepoint_poll(state)
   // Incoming closure environment is passed in r10.
   state.asm = a.mov_r64_r64(state.asm, "r14", "r10")
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
@@ -7610,6 +7610,8 @@ function emit_user_function(state, fn_node)
       end if
     end for
   end if
+  // Publish incoming managed arguments before the first safepoint.
+  state = th.emit_gc_safepoint_poll(state)
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
     print "[mem][cg] fn_stage name=" + code_name + " stage=params_done"
   end if

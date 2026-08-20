@@ -1228,7 +1228,7 @@ function _canonical_type_name(raw_ty)
 end function
 
 function _is_allowed_type_name(ty)
-  return ty == "int" or ty == "float" or ty == "bool" or ty == "string" or ty == "array" or ty == "bytes" or ty == "function" or ty == "struct" or ty == "enum" or ty == "error" or ty == "void" or ty == "unknown"
+  return ty == "int" or ty == "float" or ty == "bool" or ty == "string" or ty == "array" or ty == "bytes" or ty == "function" or ty == "struct" or ty == "enum" or ty == "error" or ty == "thread" or ty == "void" or ty == "unknown"
 end function
 
 function _parse_expr(min_prec)

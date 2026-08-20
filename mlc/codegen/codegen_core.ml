@@ -1433,6 +1433,10 @@ function _helper_supported(lbl)
   if lbl == "fn_thread_join" then return true end if
   if lbl == "fn_thread_alive" then return true end if
   if lbl == "fn_thread_id" then return true end if
+  if lbl == "fn_thread_logical_id" then return true end if
+  if lbl == "fn_thread_set_logical_id" then return true end if
+  if lbl == "fn_thread_current_logical_id" then return true end if
+  if lbl == "fn_thread_result" then return true end if
   if lbl == "fn_thread_status" then return true end if
   if lbl == "fn_thread_close" then return true end if
   if lbl == "fn_thread_stop_requested" then return true end if
@@ -1511,6 +1515,10 @@ function _emit_helper_by_label_group0(state, lbl)
   if lbl == "fn_thread_join" then return th.emit_thread_join_function(state) end if
   if lbl == "fn_thread_alive" then return th.emit_thread_alive_function(state) end if
   if lbl == "fn_thread_id" then return th.emit_thread_id_function(state) end if
+  if lbl == "fn_thread_logical_id" then return th.emit_thread_logical_id_function(state) end if
+  if lbl == "fn_thread_set_logical_id" then return th.emit_thread_set_logical_id_function(state) end if
+  if lbl == "fn_thread_current_logical_id" then return th.emit_thread_current_logical_id_function(state) end if
+  if lbl == "fn_thread_result" then return th.emit_thread_result_function(state) end if
   if lbl == "fn_thread_status" then return th.emit_thread_status_function(state) end if
   if lbl == "fn_thread_close" then return th.emit_thread_close_function(state) end if
   if lbl == "fn_thread_stop_requested" then return th.emit_thread_stop_requested_function(state) end if
@@ -1622,12 +1630,12 @@ end function
 
 function _emit_helper_by_label(state, lbl)
   rank = _helper_rank(lbl)
-  if rank < 31 then return _emit_helper_by_label_group0(state, lbl) end if
-  if rank < 41 then return _emit_helper_by_label_group1(state, lbl) end if
-  if rank < 51 then return _emit_helper_by_label_group2(state, lbl) end if
-  if rank < 61 then return _emit_helper_by_label_group3(state, lbl) end if
-  if rank < 71 then return _emit_helper_by_label_group4(state, lbl) end if
-  if rank < 81 then return _emit_helper_by_label_group5(state, lbl) end if
+  if rank < 35 then return _emit_helper_by_label_group0(state, lbl) end if
+  if rank < 45 then return _emit_helper_by_label_group1(state, lbl) end if
+  if rank < 55 then return _emit_helper_by_label_group2(state, lbl) end if
+  if rank < 65 then return _emit_helper_by_label_group3(state, lbl) end if
+  if rank < 75 then return _emit_helper_by_label_group4(state, lbl) end if
+  if rank < 85 then return _emit_helper_by_label_group5(state, lbl) end if
   if rank < 1048576 then return _emit_helper_by_label_group6(state, lbl) end if
   return _emit_helper_by_label_other(state, lbl)
 end function
@@ -1637,7 +1645,9 @@ function _helper_rank(lbl)
     "fn_cpu_init", "fn_gc_safepoint", "fn_gc_native_enter", "fn_gc_native_leave",
     "fn_gc_managed_exit", "fn_heap_enter", "fn_heap_leave", "fn_gc_world_stop", "fn_gc_world_resume",
     "fn_sync_enter", "fn_sync_leave", "fn_thread_new", "fn_thread_start",
-    "fn_thread_stop", "fn_thread_join", "fn_thread_alive", "fn_thread_id", "fn_thread_status",
+    "fn_thread_stop", "fn_thread_join", "fn_thread_alive", "fn_thread_id",
+    "fn_thread_logical_id", "fn_thread_set_logical_id", "fn_thread_current_logical_id",
+    "fn_thread_result", "fn_thread_status",
     "fn_thread_close", "fn_thread_stop_requested", "fn_thread_entry", "fn_thread_alloc",
     "fn_alloc", "fn_heap_grow", "fn_gc_collect", "fn_copy_bytes", "fn_fill_bytes",
     "fn_fill_qwords", "fn_mem_eq_bytes", "fn_bytes_hash", "fn_string_hash", "fn_bytes_startswith",

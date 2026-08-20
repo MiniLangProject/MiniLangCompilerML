@@ -3342,7 +3342,10 @@ function _emit_expr_call(state, expr)
     helper_th = ""
     min_args_th = 0
     max_args_th = 0
-    if mname_th == "Start" then helper_th = "fn_thread_start" end if
+    if mname_th == "Start" then
+      helper_th = "fn_thread_start"
+      max_args_th = 1
+    end if
     if mname_th == "Stop" then helper_th = "fn_thread_stop" end if
     if mname_th == "Join" then
       helper_th = "fn_thread_join"
@@ -3351,6 +3354,13 @@ function _emit_expr_call(state, expr)
     if mname_th == "Status" then helper_th = "fn_thread_status" end if
     if mname_th == "IsAlive" then helper_th = "fn_thread_alive" end if
     if mname_th == "Id" then helper_th = "fn_thread_id" end if
+    if mname_th == "LogicalId" then helper_th = "fn_thread_logical_id" end if
+    if mname_th == "SetLogicalId" then
+      helper_th = "fn_thread_set_logical_id"
+      min_args_th = 1
+      max_args_th = 1
+    end if
+    if mname_th == "Result" then helper_th = "fn_thread_result" end if
     if mname_th == "Close" then helper_th = "fn_thread_close" end if
     if helper_th != "" then
       if nargs < min_args_th or nargs > max_args_th then
@@ -3385,6 +3395,18 @@ function _emit_expr_call(state, expr)
       state.asm = a.cmp_r32_imm(state.asm, "r11d", c.OBJ_THREAD)
       state.asm = a.jcc(state.asm, "ne", l_fail_th)
 
+      if mname_th == "Start" then
+        if nargs == 1 then
+          state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base_th + 8)
+          state.asm = a.mov_r32_imm32(state.asm, "r8d", 1)
+        else
+          state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_void())
+          state.asm = a.xor_r32_r32(state.asm, "r8d", "r8d")
+        end if
+      end if
+      if mname_th == "SetLogicalId" then
+        state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base_th + 8)
+      end if
       if mname_th == "Join" then
         if nargs == 1 then
           state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base_th + 8)
@@ -3613,11 +3635,11 @@ function _emit_expr_call(state, expr)
     end if
   end if
 
-  // Thread(function): create a real OS thread object whose worker gets its own
-  // isolated arena. Thread entry points are capture-free, top-level, zero-arg functions.
+  // Thread(function[, logicalId]): create a real OS thread over the shared heap.
+  // Entry points are capture-free, top-level functions with zero or one parameter.
   if callee == "Thread" or raw_name == "Thread" then
-    if nargs != 1 then
-      state.diagnostics = state.diagnostics + ["Thread expects exactly 1 function, got " + nargs]
+    if nargs < 1 or nargs > 2 then
+      state.diagnostics = state.diagnostics + ["Thread expects 1 function and an optional logical id, got " + nargs + " arguments"]
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       return state
     end if
@@ -3631,8 +3653,10 @@ function _emit_expr_call(state, expr)
       return state
     end if
     params_th = try(fn_def_th.params)
-    if typeof(params_th) == "array" and len(params_th) != 0 then
-      state.diagnostics = state.diagnostics + ["Thread entry function '" + fn_qn_th + "' must have zero parameters"]
+    entry_arity_th = 0
+    if typeof(params_th) == "array" then entry_arity_th = len(params_th) end if
+    if entry_arity_th > 1 then
+      state.diagnostics = state.diagnostics + ["Thread entry function '" + fn_qn_th + "' must have zero or one parameter"]
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       return state
     end if
@@ -3642,8 +3666,15 @@ function _emit_expr_call(state, expr)
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       return state
     end if
+    if nargs == 2 then
+      state = cg_emit_expr(state, call_args[1])
+      state.asm = a.mov_r64_r64(state.asm, "r8", "rax")
+    else
+      state.asm = a.mov_r64_imm64(state.asm, "r8", t.enc_void())
+    end if
     state.asm = a.lea_rax_rip(state.asm, "fn_user_" + fn_qn_th)
     state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.mov_r32_imm32(state.asm, "edx", entry_arity_th)
     state.asm = a.call(state.asm, "fn_thread_new")
     return state
   end if
@@ -3655,6 +3686,16 @@ function _emit_expr_call(state, expr)
       return state
     end if
     state.asm = a.call(state.asm, "fn_thread_stop_requested")
+    return state
+  end if
+
+  if callee == "threadLogicalId" or raw_name == "threadLogicalId" then
+    if nargs != 0 then
+      state.diagnostics = state.diagnostics + ["threadLogicalId expects no arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    state.asm = a.call(state.asm, "fn_thread_current_logical_id")
     return state
   end if
 
