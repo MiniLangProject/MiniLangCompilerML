@@ -336,6 +336,14 @@ function emit_gc_clear_root_slots(state, root_base, root_top)
   root_count = (root_top - root_base) / 8
   if root_count <= 0 then return state end if
 
+  // Avoid the register-save/counting loop for tiny leaf frames.
+  if root_count <= 4 then
+    for i = 0 to root_count - 1
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", root_base + i * 8, t.enc_void(), true)
+    end for
+    return state
+  end if
+
   lid = state.label_id
   state.label_id = state.label_id + 1
   l_loop = "gcclr_loop_" + lid

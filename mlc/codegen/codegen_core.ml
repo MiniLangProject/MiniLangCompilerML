@@ -110,6 +110,10 @@ struct CgState
   _cold_block_stack,
   _inline_param_stack,
   _inline_call_stack,
+  _inline_emitted_bytes,
+  known_int_names,
+  inline_only_functions,
+  pruned_inline_functions,
   ext_widebuf_labels,
   decl_site_bindings,
   function_local_ids,
@@ -462,6 +466,10 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   [],
   [],
   [],
+  [],
+  [],
+  [],
+  t.fastmap_new(128),
   [],
   [],
   [],
@@ -824,16 +832,8 @@ function free_expr_temps(state, size)
   end if
   if sz > top then sz = top end if
 
-  base = state.expr_temp_base
-  if typeof(base) != "int" then base = 0 end if
-  start = base + top - sz
-
-  off = start
-  while off < start + sz
-    state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", off, t.enc_void(), true)
-    off = off + 8
-  end while
-
+  // Slots above the new published root count are invisible to the collector.
+  // Reallocation initializes them before growing the count again.
   state.expr_temp_top = top - sz
   if state.expr_temp_top <= 0 then state.expr_temp_top = 0 end if
   state = _sync_expr_temp_root_count(state)

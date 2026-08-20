@@ -1673,6 +1673,18 @@ function cg_emit_stmt(state, stmt)
       return state
     end if
 
+    const_start_f = _opt_try_const_int(state, stmt.start)
+    const_end_f = _opt_try_const_int(state, stmt.end_expr)
+    const_bounds_f = typeof(const_start_f) == "int" and typeof(const_end_f) == "int"
+    const_step_f = 0
+    if const_bounds_f then
+      if const_start_f <= const_end_f then
+        const_step_f = 1
+      else
+        const_step_f = -1
+      end if
+    end if
+
     state = scope.cg_scope_enter(state)
     // For-loop variable is a fresh declaration in loop scope (Python parity).
     state = scope.declare_fresh_binding(state, qv, stmt, bind_kind_for)
@@ -1705,22 +1717,26 @@ function cg_emit_stmt(state, stmt)
     state.break_stack = state.break_stack + [_breakctx_make("loop", l_end_f, l_cont_f, depth_for_outer, depth_for_loop)]
 
     end_ex_f = stmt.end_expr
-    state = exprmod.cg_emit_expr(state, end_ex_f)
-    state = scope.emit_store_var_scoped(state, end_name_f, stmt)
+    if const_bounds_f == false then
+      state = exprmod.cg_emit_expr(state, end_ex_f)
+      state = scope.emit_store_var_scoped(state, end_name_f, stmt)
+    end if
 
     // step = (start <= end) ? +1 : -1  (encoded int)
-    state = scope.emit_load_var_scoped(state, qv)
-    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-    state = scope.emit_load_var_scoped(state, end_name_f)
-    state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
-    state.asm = a.jcc(state.asm, "ge", l_step_pos_f)
-    state.asm = a.mov_rax_imm64(state.asm, t.enc_int(-1))
-    state = scope.emit_store_var_scoped(state, step_name_f, stmt)
-    state.asm = a.jmp(state.asm, l_step_done_f)
-    state.asm = a.mark(state.asm, l_step_pos_f)
-    state.asm = a.mov_rax_imm64(state.asm, t.enc_int(1))
-    state = scope.emit_store_var_scoped(state, step_name_f, stmt)
-    state.asm = a.mark(state.asm, l_step_done_f)
+    if const_bounds_f == false then
+      state = scope.emit_load_var_scoped(state, qv)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state = scope.emit_load_var_scoped(state, end_name_f)
+      state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.jcc(state.asm, "ge", l_step_pos_f)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_int(-1))
+      state = scope.emit_store_var_scoped(state, step_name_f, stmt)
+      state.asm = a.jmp(state.asm, l_step_done_f)
+      state.asm = a.mark(state.asm, l_step_pos_f)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_int(1))
+      state = scope.emit_store_var_scoped(state, step_name_f, stmt)
+      state.asm = a.mark(state.asm, l_step_done_f)
+    end if
 
     state.asm = a.mark(state.asm, l_top_f)
     state = scope.cg_scope_enter(state)
@@ -1730,16 +1746,34 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.mark(state.asm, l_cont_f)
     state = th.emit_gc_safepoint_poll(state)
     state = scope.emit_load_var_scoped(state, qv)
-    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-    state = scope.emit_load_var_scoped(state, end_name_f)
-    state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+    if const_bounds_f then
+      encoded_end_f = t.enc_int(const_end_f)
+      if encoded_end_f >= -2147483648 and encoded_end_f <= 2147483647 then
+        state.asm = a.cmp_r64_imm(state.asm, "rax", encoded_end_f)
+      else
+        state.asm = a.mov_r64_imm64(state.asm, "r10", encoded_end_f)
+        state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+      end if
+    else
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state = scope.emit_load_var_scoped(state, end_name_f)
+      state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+    end if
     state.asm = a.jcc(state.asm, "e", l_end_f)
 
     state = scope.emit_load_var_scoped(state, qv)
-    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-    state = scope.emit_load_var_scoped(state, step_name_f)
-    state.asm = a.add_r64_r64(state.asm, "rax", "r10")
-    state.asm = a.sub_rax_imm8(state.asm, 1)
+    if const_step_f == 1 then
+      state.asm = a.add_rax_imm8(state.asm, 8)
+    else
+      if const_step_f == -1 then
+        state.asm = a.sub_rax_imm8(state.asm, 8)
+      else
+        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+        state = scope.emit_load_var_scoped(state, step_name_f)
+        state.asm = a.add_r64_r64(state.asm, "rax", "r10")
+        state.asm = a.sub_rax_imm8(state.asm, 1)
+      end if
+    end if
     state = scope.emit_store_var_scoped(state, qv, stmt)
     state.asm = a.jmp(state.asm, l_top_f)
 
@@ -2185,6 +2219,395 @@ function _opt_try_const_int(state, ex)
   if r.ok == false then return void end if
   if typeof(r.value) != "int" then return void end if
   return r.value
+end function
+
+function _intflow_map_add(items, name, value)
+  if typeof(items) != "array" then items = [] end if
+  if typeof(name) != "string" or name == "" then return items end if
+  if len(items) > 0 then
+    for i = 0 to len(items) - 1
+      rec = items[i]
+      if typeof(rec) == "array" and len(rec) >= 2 and rec[0] == name then
+        vals = rec[1]
+        if typeof(vals) != "array" then vals = [] end if
+        rec[1] = vals + [value]
+        items[i] = rec
+        return items
+      end if
+    end for
+  end if
+  return items + [[name, [value]]]
+end function
+
+function _intflow_map_get(items, name)
+  if typeof(items) != "array" or len(items) <= 0 then return [] end if
+  for i = 0 to len(items) - 1
+    rec = items[i]
+    if typeof(rec) == "array" and len(rec) >= 2 and rec[0] == name then
+      if typeof(rec[1]) == "array" then return rec[1] end if
+      return []
+    end if
+  end for
+  return []
+end function
+
+function _intflow_const_int(state, ex)
+  if typeof(ex) != "struct" then return [false, 0] end if
+  cv = exprmod.cg_expr_try_const_value(state, ex)
+  if typeof(cv) == "struct" and cv.ok and typeof(cv.value) == "int" then
+    return [true, cv.value]
+  end if
+  return [false, 0]
+end function
+
+function _intflow_expr_is_int(state, ex, known)
+  if typeof(ex) != "struct" then return false end if
+  cv = _intflow_const_int(state, ex)
+  if cv[0] then return true end if
+
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Var" then
+    return _arr_has(known, _coerce_name(try(ex.name)))
+  end if
+  if k == "Unary" then
+    op_u = _coerce_name(try(ex.op))
+    if op_u != "-" and op_u != "~" then return false end if
+    return _intflow_expr_is_int(state, try(ex.right), known)
+  end if
+  if k == "Bin" then
+    op_b = _coerce_name(try(ex.op))
+    if op_b == "+" or op_b == "-" or op_b == "*" or op_b == "&" or op_b == "|" or op_b == "^" then
+      return _intflow_expr_is_int(state, try(ex.left), known) and _intflow_expr_is_int(state, try(ex.right), known)
+    end if
+    if op_b == "%" then
+      rv_m = _intflow_const_int(state, try(ex.right))
+      return rv_m[0] and rv_m[1] != 0 and _intflow_expr_is_int(state, try(ex.left), known)
+    end if
+    if op_b == "<<" or op_b == ">>" then
+      rv_s = _intflow_const_int(state, try(ex.right))
+      return rv_s[0] and rv_s[1] >= 0 and _intflow_expr_is_int(state, try(ex.left), known)
+    end if
+  end if
+  return false
+end function
+
+function _infer_known_int_names(state, fn_node)
+  if typeof(fn_node) != "struct" then return [] end if
+  assignments = []
+  loop_bounds = []
+  loop_names = []
+  normal_names = []
+  excluded = []
+
+  params = try(fn_node.params)
+  if typeof(params) == "array" and len(params) > 0 then
+    for i = 0 to len(params) - 1 excluded = _arr_add_unique(excluded, _coerce_name(params[i])) end for
+  end if
+  boxed = try(fn_node._ml_boxed)
+  if typeof(boxed) == "array" and len(boxed) > 0 then
+    for i = 0 to len(boxed) - 1 excluded = _arr_add_unique(excluded, _coerce_name(boxed[i])) end for
+  end if
+  captures = try(fn_node._ml_captures)
+  if typeof(captures) == "array" and len(captures) > 0 then
+    for i = 0 to len(captures) - 1 excluded = _arr_add_unique(excluded, _coerce_name(captures[i])) end for
+  end if
+  globals = try(fn_node._ml_globals_declared)
+  if typeof(globals) == "array" and len(globals) > 0 then
+    for i = 0 to len(globals) - 1 excluded = _arr_add_unique(excluded, _coerce_name(globals[i])) end for
+  end if
+
+  stack = []
+  body = try(fn_node.body)
+  if typeof(body) == "array" then stack = body + [] end if
+  stack_pos = 0
+  while stack_pos < len(stack)
+    st = stack[stack_pos]
+    stack_pos = stack_pos + 1
+    if typeof(st) != "struct" then continue end if
+    k = _coerce_name(try(st.node_kind))
+    if k == "FunctionDef" then continue end if
+    if k == "GlobalDecl" then
+      names_g = try(st.names)
+      if typeof(names_g) == "array" and len(names_g) > 0 then
+        for gi = 0 to len(names_g) - 1 excluded = _arr_add_unique(excluded, _coerce_name(names_g[gi])) end for
+      end if
+      continue
+    end if
+    if k == "Assign" or k == "SynchronizedDecl" then
+      nm = _coerce_name(try(st.name))
+      if nm != "" and s.contains(nm, ".") == false then
+        assignments = _intflow_map_add(assignments, nm, try(st.expr))
+        normal_names = _arr_add_unique(normal_names, nm)
+      end if
+    end if
+    if k == "For" then
+      nm_f = _coerce_name(try(st.var))
+      if nm_f != "" then
+        loop_names = _arr_add_unique(loop_names, nm_f)
+        loop_bounds = _intflow_map_add(loop_bounds, nm_f, [try(st.start), try(st.end_expr)])
+      end if
+    end if
+    if _is_foreach_stmt(st) then
+      excluded = _arr_add_unique(excluded, _foreach_var_name(st))
+    end if
+    kids = _scan_stmt_children(st)
+    if typeof(kids) == "array" and len(kids) > 0 then stack = stack + kids end if
+  end while
+
+  if len(loop_names) > 0 then
+    for i = 0 to len(loop_names) - 1
+      if _arr_has(normal_names, loop_names[i]) then excluded = _arr_add_unique(excluded, loop_names[i]) end if
+    end for
+  end if
+
+  candidates = []
+  if len(assignments) > 0 then
+    for i = 0 to len(assignments) - 1 candidates = _arr_add_unique(candidates, assignments[i][0]) end for
+  end if
+  if len(loop_bounds) > 0 then
+    for i = 0 to len(loop_bounds) - 1 candidates = _arr_add_unique(candidates, loop_bounds[i][0]) end for
+  end if
+  if len(excluded) > 0 and len(candidates) > 0 then
+    kept0 = []
+    for i = 0 to len(candidates) - 1
+      if _arr_has(excluded, candidates[i]) == false then kept0 = kept0 + [candidates[i]] end if
+    end for
+    candidates = kept0
+  end if
+
+  changed = true
+  while changed
+    changed = false
+    kept = []
+    if len(candidates) > 0 then
+      for i = 0 to len(candidates) - 1
+        nm_c = candidates[i]
+        ok = true
+        vals_a = _intflow_map_get(assignments, nm_c)
+        if len(vals_a) > 0 then
+          for j = 0 to len(vals_a) - 1
+            if _intflow_expr_is_int(state, vals_a[j], candidates) == false then ok = false end if
+          end for
+        end if
+        vals_l = _intflow_map_get(loop_bounds, nm_c)
+        if ok and len(vals_l) > 0 then
+          for j = 0 to len(vals_l) - 1
+            pair = vals_l[j]
+            if typeof(pair) != "array" or len(pair) < 2 then
+              ok = false
+            else
+              if _intflow_expr_is_int(state, pair[0], candidates) == false or _intflow_expr_is_int(state, pair[1], candidates) == false then ok = false end if
+            end if
+          end for
+        end if
+        if ok then
+          kept = kept + [nm_c]
+        else
+          changed = true
+        end if
+      end for
+    end if
+    candidates = kept
+  end while
+  return candidates
+end function
+
+function _inline_ref_resolve(state, ex, owner, inline_names)
+  hits = []
+  raw = _member_qname(ex)
+  if raw == "" then return hits end if
+  raw = exprmod._apply_import_alias(state, raw)
+  cands = [raw]
+  if s.contains(raw, ".") == false then
+    oqn = ""
+    if typeof(owner) == "struct" then oqn = _coerce_name(try(owner.name)) end if
+    pref = _qname_parent_prefix(oqn)
+    if pref != "" then cands = cands + [pref + raw] end if
+    ofile = ""
+    if typeof(owner) == "struct" then ofile = _st_file(owner) end if
+    if ofile == "" and typeof(ex) == "struct" then ofile = _st_file(ex) end if
+    fpref = ""
+    if ofile != "" then fpref = _strpair_get(state.file_prefix_map, ofile) end if
+    if fpref != "" then cands = cands + [fpref + raw] end if
+    suffix = "." + raw
+    if len(inline_names) > 0 then
+      for i = 0 to len(inline_names) - 1
+        qn = inline_names[i]
+        if s.endsWith(qn, suffix) then cands = cands + [qn] end if
+      end for
+    end if
+  end if
+  if len(cands) > 0 then
+    for i = 0 to len(cands) - 1
+      if _arr_has(inline_names, cands[i]) then hits = _arr_add_unique(hits, cands[i]) end if
+    end for
+  end if
+  return hits
+end function
+
+function _inline_scan_expr_uses(state, ex, owner, inline_names, address_taken)
+  if typeof(ex) != "struct" then return address_taken end if
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Var" or k == "Member" then
+    hits = _inline_ref_resolve(state, ex, owner, inline_names)
+    if len(hits) > 0 then
+      for i = 0 to len(hits) - 1 address_taken = _arr_add_unique(address_taken, hits[i]) end for
+    else
+      if k == "Member" then address_taken = _inline_scan_expr_uses(state, try(ex.target), owner, inline_names, address_taken) end if
+    end if
+    return address_taken
+  end if
+  if k == "Call" then
+    cal = try(ex.callee)
+    hits_c = _inline_ref_resolve(state, cal, owner, inline_names)
+    if len(hits_c) != 1 then
+      address_taken = _inline_scan_expr_uses(state, cal, owner, inline_names, address_taken)
+    end if
+    args = try(ex.args)
+    if typeof(args) == "array" and len(args) > 0 then
+      for i = 0 to len(args) - 1 address_taken = _inline_scan_expr_uses(state, args[i], owner, inline_names, address_taken) end for
+    end if
+    return address_taken
+  end if
+
+  child = try(ex.left)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = try(ex.right)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = try(ex.expr)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = try(ex.target)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = try(ex.index)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = try(ex.start)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = try(ex.end_expr)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = try(ex.iterable)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = try(ex.obj)
+  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  items = try(ex.items)
+  if typeof(items) == "array" and len(items) > 0 then
+    for i = 0 to len(items) - 1 address_taken = _inline_scan_expr_uses(state, items[i], owner, inline_names, address_taken) end for
+  end if
+  return address_taken
+end function
+
+function _inline_scan_stmt_uses(state, stmts, owner, inline_names, address_taken)
+  if typeof(stmts) != "array" or len(stmts) <= 0 then return address_taken end if
+  for si = 0 to len(stmts) - 1
+    st = stmts[si]
+    if typeof(st) != "struct" then continue end if
+    k = _coerce_name(try(st.node_kind))
+    if k == "FunctionDef" then
+      if typeof(try(st._ml_parent_fn)) == "struct" then
+        address_taken = _inline_scan_stmt_uses(state, try(st.body), st, inline_names, address_taken)
+      end if
+      continue
+    end if
+    address_taken = _inline_scan_expr_uses(state, try(st.expr), owner, inline_names, address_taken)
+    address_taken = _inline_scan_expr_uses(state, try(st.cond), owner, inline_names, address_taken)
+    address_taken = _inline_scan_expr_uses(state, try(st.target), owner, inline_names, address_taken)
+    address_taken = _inline_scan_expr_uses(state, try(st.index), owner, inline_names, address_taken)
+    address_taken = _inline_scan_expr_uses(state, try(st.start), owner, inline_names, address_taken)
+    address_taken = _inline_scan_expr_uses(state, try(st.end_expr), owner, inline_names, address_taken)
+    address_taken = _inline_scan_expr_uses(state, try(st.iterable), owner, inline_names, address_taken)
+    address_taken = _inline_scan_expr_uses(state, try(st.obj), owner, inline_names, address_taken)
+
+    if k == "If" then
+      address_taken = _inline_scan_stmt_uses(state, try(st.then_body), owner, inline_names, address_taken)
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
+        for ei = 0 to len(elifs) - 1
+          eb = elifs[ei]
+          if typeof(eb) == "array" and len(eb) >= 2 then
+            address_taken = _inline_scan_expr_uses(state, eb[0], owner, inline_names, address_taken)
+            address_taken = _inline_scan_stmt_uses(state, eb[1], owner, inline_names, address_taken)
+          end if
+        end for
+      end if
+      address_taken = _inline_scan_stmt_uses(state, try(st.else_body), owner, inline_names, address_taken)
+    else
+      if k == "Switch" then
+        cases = try(st.cases)
+        if typeof(cases) == "array" and len(cases) > 0 then
+          for ci = 0 to len(cases) - 1
+            cs = cases[ci]
+            vals = try(cs.values)
+            if typeof(vals) == "array" and len(vals) > 0 then
+              for vi = 0 to len(vals) - 1 address_taken = _inline_scan_expr_uses(state, vals[vi], owner, inline_names, address_taken) end for
+            end if
+            address_taken = _inline_scan_expr_uses(state, try(cs.range_start), owner, inline_names, address_taken)
+            address_taken = _inline_scan_expr_uses(state, try(cs.range_end), owner, inline_names, address_taken)
+            address_taken = _inline_scan_stmt_uses(state, try(cs.body), owner, inline_names, address_taken)
+          end for
+        end if
+        address_taken = _inline_scan_stmt_uses(state, try(st.default_body), owner, inline_names, address_taken)
+      else
+        address_taken = _inline_scan_stmt_uses(state, try(st.body), owner, inline_names, address_taken)
+      end if
+    end if
+  end for
+  return address_taken
+end function
+
+function _analyze_inline_only_functions(state, program)
+  if state.call_profile then return [] end if
+  if _heap_cfg_get_bool(state, "cg_object_pipeline", false) then return [] end if
+  inline_names = []
+  names = _user_function_keys_sorted(state)
+  if len(names) > 0 then
+    for i = 0 to len(names) - 1
+      fn = _user_function_get_node(state, names[i])
+      if typeof(fn) != "struct" then continue end if
+      if typeof(try(fn.is_inline)) != "bool" or fn.is_inline == false then continue end if
+      if exprmod._inline_call_eligible(fn) == false then continue end if
+      if names[i] == "main" then continue end if
+      inline_names = inline_names + [names[i]]
+    end for
+  end if
+  if len(inline_names) <= 0 then return [] end if
+
+  // Struct methods are addressed by the dynamic dispatcher.
+  if typeof(state.struct_methods) == "array" and len(state.struct_methods) > 0 then
+    for i = 0 to len(state.struct_methods) - 1
+      rec = state.struct_methods[i]
+      vals = 0
+      if typeof(rec) == "struct" then vals = try(rec.values) end if
+      if typeof(rec) == "array" and len(rec) >= 2 then vals = rec[1] end if
+      if typeof(vals) == "array" and len(vals) > 0 then
+        for j = 0 to len(vals) - 1
+          qn = ""
+          if typeof(vals[j]) == "struct" then qn = _coerce_name(try(vals[j].value)) end if
+          if typeof(vals[j]) == "array" and len(vals[j]) >= 2 then qn = _coerce_name(vals[j][1]) end if
+          if qn != "" then inline_names = _arr_remove_value(inline_names, qn) end if
+        end for
+      end if
+    end for
+  end if
+
+  address_taken = _inline_scan_stmt_uses(state, program, 0, inline_names, [])
+  if len(names) > 0 then
+    for i = 0 to len(names) - 1
+      fn = _user_function_get_node(state, names[i])
+      if typeof(fn) == "struct" then address_taken = _inline_scan_stmt_uses(state, try(fn.body), fn, inline_names, address_taken) end if
+    end for
+  end if
+  if typeof(state.nested_user_functions) == "array" and len(state.nested_user_functions) > 0 then
+    for i = 0 to len(state.nested_user_functions) - 1
+      fn = state.nested_user_functions[i]
+      if typeof(fn) == "struct" then address_taken = _inline_scan_stmt_uses(state, try(fn.body), fn, inline_names, address_taken) end if
+    end for
+  end if
+  kept = []
+  if len(inline_names) > 0 then
+    for i = 0 to len(inline_names) - 1
+      if _arr_has(address_taken, inline_names[i]) == false then kept = kept + [inline_names[i]] end if
+    end for
+  end if
+  return kept
 end function
 
 function _owner_for(st)
@@ -5922,6 +6345,20 @@ end function
 
 function _emit_program_functions_all(state)
   entries = _all_function_entries(state)
+  pending = []
+  if typeof(state.inline_only_functions) == "array" then pending = state.inline_only_functions + [] end if
+  regular_b = t.arr_chunk_new(128)
+  if typeof(entries) == "array" and len(entries) > 0 then
+    for ei0 = 0 to len(entries) - 1
+      ent0 = entries[ei0]
+      defer0 = false
+      if typeof(ent0) == "array" and len(ent0) >= 2 and ent0[0] == 0 then
+        defer0 = _arr_has(pending, ent0[1])
+      end if
+      if defer0 == false then regular_b = t.arr_chunk_push(regular_b, ent0) end if
+    end for
+  end if
+  entries = t.arr_chunk_finish(regular_b)
   state = _mem_probe(state, "user_fn_emit_start")
   i = 0
   total = len(entries)
@@ -5935,6 +6372,54 @@ function _emit_program_functions_all(state)
       gc_collect()
     end if
   end while
+
+  while len(pending) > 0
+    patches0 = a.get_patches(state.asm)
+    needed = []
+    for pi0 = 0 to len(pending) - 1
+      nm0 = pending[pi0]
+      used0 = 0
+      if typeof(state._inline_emitted_bytes) == "struct" then
+        used0 = t.fastmap_get(state._inline_emitted_bytes, nm0, 0)
+        if typeof(used0) != "int" then used0 = 0 end if
+      end if
+      has_patch0 = false
+      target0 = "fn_user_" + nm0
+      if typeof(patches0) == "array" and len(patches0) > 0 then
+        for pj0 = 0 to len(patches0) - 1
+          pp0 = patches0[pj0]
+          if typeof(pp0) == "struct" and _coerce_name(try(pp0.target)) == target0 then has_patch0 = true end if
+        end for
+      end if
+      if used0 <= 0 or has_patch0 then needed = needed + [nm0] end if
+    end for
+    if len(needed) <= 0 then break end if
+    for ni0 = 0 to len(needed) - 1
+      nm1 = needed[ni0]
+      state = emit_module_function_entries(state, [[0, nm1]], 0, 1)
+      pending = _arr_remove_value(pending, nm1)
+    end for
+  end while
+
+  if len(pending) > 0 and typeof(state.rdata.patches) == "array" then
+    kept_patches = []
+    if len(state.rdata.patches) > 0 then
+      for rpi0 = 0 to len(state.rdata.patches) - 1
+        rp0 = state.rdata.patches[rpi0]
+        drop0 = false
+        if typeof(rp0) == "struct" then
+          rt0 = _coerce_name(try(rp0.target))
+          if s.startsWith(rt0, "fn_user_") then
+            rnm0 = s.substr(rt0, 8, len(rt0) - 8)
+            if _arr_has(pending, rnm0) then drop0 = true end if
+          end if
+        end if
+        if drop0 == false then kept_patches = kept_patches + [rp0] end if
+      end for
+    end if
+    state.rdata.patches = kept_patches
+  end if
+  state.pruned_inline_functions = pending
   state = _mem_probe(state, "user_fn_emit_done")
   return state
 end function
@@ -6418,6 +6903,8 @@ function prepare_program_for_objects(state, program)
   state = _mem_probe(state, "pre_flatten")
   state.synchronized_globals = []
   program = _flatten_runtime(state, program)
+  state.inline_only_functions = _analyze_inline_only_functions(state, program)
+  state.pruned_inline_functions = []
   state = _mem_probe(state, "flatten_done")
 
   state._global_owner_file = t.fastmap_new(256)
@@ -6495,7 +6982,6 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
   if out_reserve < 8 then out_reserve = 8 end if
   state.call_temp_base = t.align_up(0x20 + out_reserve, 16)
   call_temp_bytes = max_call_args_main * 8
-  if call_temp_bytes < 0x40 then call_temp_bytes = 0x40 end if
   call_temp_bytes = t.align_up(call_temp_bytes, 16)
   state.expr_temp_base = state.call_temp_base + call_temp_bytes
   state.expr_temp_top = 0
@@ -6651,7 +7137,6 @@ function emit_module_init_object(state, module_rec)
   local_base = t.align_up(0x20 + out_reserve + dbg_save_size, 16)
   call_temp_base = local_base
   call_temp_bytes = max_call_args * 8
-  if call_temp_bytes < 0x40 then call_temp_bytes = 0x40 end if
   call_temp_bytes = t.align_up(call_temp_bytes, 16)
   expr_temp_base = call_temp_base + call_temp_bytes
   frame_end = expr_temp_base + state.expr_temp_max
@@ -6671,6 +7156,7 @@ function emit_module_init_object(state, module_rec)
   old_expr_top = state.expr_temp_top
   old_root_rec_off = state._current_root_rec_off
   old_root_static_qwords = state._current_root_static_qwords
+  old_known_int_names = state.known_int_names
   old_scope_stack = state.scope_stack
   old_scope_declared = state.scope_declared
   old_scope_index_stack = state.scope_index_stack
@@ -6691,6 +7177,7 @@ function emit_module_init_object(state, module_rec)
   state.expr_temp_top = 0
   state._current_root_rec_off = root_rec_off
   state._current_root_static_qwords = (root_top - root_base) / 8
+  state.known_int_names = []
   state.scope_stack = [base_globals]
   state.scope_declared = [[]]
   state.scope_index_stack = [base_global_index]
@@ -6777,6 +7264,7 @@ function emit_module_init_object(state, module_rec)
   state.expr_temp_top = old_expr_top
   state._current_root_rec_off = old_root_rec_off
   state._current_root_static_qwords = old_root_static_qwords
+  state.known_int_names = old_known_int_names
   state.scope_stack = old_scope_stack
   state.scope_declared = old_scope_declared
   state.scope_index_stack = old_scope_index_stack
@@ -6893,7 +7381,6 @@ function emit_user_function(state, fn_node)
   call_temp_base = params_base
   if typeof(fn_node.params) == "array" then call_temp_base = params_base + len(fn_node.params) * 8 end if
   call_temp_bytes = max_call_args * 8
-  if call_temp_bytes < 0x40 then call_temp_bytes = 0x40 end if
   call_temp_bytes = t.align_up(call_temp_bytes, 16)
   expr_temp_base = call_temp_base + call_temp_bytes
   frame_end = expr_temp_base + state.expr_temp_max
@@ -6933,6 +7420,7 @@ function emit_user_function(state, fn_node)
   old_expr_top = state.expr_temp_top
   old_root_rec_off = state._current_root_rec_off
   old_root_static_qwords = state._current_root_static_qwords
+  old_known_int_names = state.known_int_names
   old_boxed_names = state.current_fn_boxed_names
   old_env_index = state.current_fn_env_index
   old_env_root = state.current_env_root_off
@@ -6970,6 +7458,7 @@ function emit_user_function(state, fn_node)
   state.expr_temp_top = 0
   state._current_root_rec_off = root_rec_off
   state._current_root_static_qwords = (root_top - root_base) / 8
+  state.known_int_names = _infer_known_int_names(state, fn_node)
   state.current_fn_boxed_names = boxed_names
   state.current_fn_env_index = env_index
   state.current_env_root_off = env_root_off
@@ -7348,6 +7837,7 @@ function emit_user_function(state, fn_node)
   state.expr_temp_top = old_expr_top
   state._current_root_rec_off = old_root_rec_off
   state._current_root_static_qwords = old_root_static_qwords
+  state.known_int_names = old_known_int_names
   state.current_fn_boxed_names = old_boxed_names
   state.current_fn_env_index = old_env_index
   state.current_env_root_off = old_env_root

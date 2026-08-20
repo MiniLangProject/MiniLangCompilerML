@@ -287,6 +287,10 @@ function _clone_state_for_object(base, seed_runtime)
   st._cold_block_stack = []
   st._inline_param_stack = stmt.cg_emit_stmt
   st._inline_call_stack = []
+  st._inline_emitted_bytes = t.fastmap_new(128)
+  st.known_int_names = []
+  st.inline_only_functions = []
+  st.pruned_inline_functions = []
   st.ext_widebuf_labels = base.ext_widebuf_labels
   st.decl_site_bindings = []
   st.function_local_ids = []

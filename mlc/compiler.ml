@@ -1715,6 +1715,10 @@ function _compact_codegen_state_for_pe(st)
   st._cold_block_stack = []
   st._inline_param_stack = []
   st._inline_call_stack = []
+  st._inline_emitted_bytes = t.fastmap_new(128)
+  st.known_int_names = []
+  st.inline_only_functions = []
+  st.pruned_inline_functions = []
   st._global_owner_file = []
   st._module_init_status_labels = []
   st.ext_widebuf_labels = []

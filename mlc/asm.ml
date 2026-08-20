@@ -28,6 +28,7 @@ struct AsmBuilder
   buf_valid,
   before_call_live_temps,
   tracked_helpers,
+  label_pos_map,
   peephole_last_jump,
 end struct
 
@@ -74,7 +75,7 @@ end function
 
 function newAsmBuilder()
   cs = 65536
-  return AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], [])
+  return AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], t.fastmap_new(256), [])
 end function
 
 function get_patches(asm)
@@ -770,6 +771,8 @@ function mark(asm, name)
   asm.peephole_last_jump = []
   asm.labels = []
   asm = _label_push(asm, AsmLabel(name, pos(asm)))
+  if typeof(asm.label_pos_map) != "struct" then asm.label_pos_map = t.fastmap_new(256) end if
+  asm.label_pos_map = t.fastmap_set(asm.label_pos_map, name, pos(asm))
   return asm
 end function
 
@@ -815,6 +818,20 @@ function nop(asm)
 end function
 
 function jmp(asm, label)
+  target = -1
+  if typeof(asm.label_pos_map) == "struct" then
+    target = t.fastmap_get(asm.label_pos_map, label, -1)
+    if typeof(target) != "int" then target = -1 end if
+  end if
+  if target >= 0 then
+    disp8 = target -(pos(asm) + 2)
+    if disp8 >= -128 and disp8 <= 127 then
+      asm = _emit8(asm, 0xEB)
+      asm = _emit8(asm, disp8)
+      return asm
+    end if
+  end if
+
   start = pos(asm)
   asm = _emit8(asm, 0xE9)
   p = pos(asm)
@@ -852,6 +869,21 @@ function jcc(asm, cc, label)
   if cc == "o" then op = 0x80 end if
   if cc == "no" then op = 0x81 end if
   if op < 0 then return asm end if
+
+  target = -1
+  if typeof(asm.label_pos_map) == "struct" then
+    target = t.fastmap_get(asm.label_pos_map, label, -1)
+    if typeof(target) != "int" then target = -1 end if
+  end if
+  if target >= 0 then
+    disp8 = target -(pos(asm) + 2)
+    if disp8 >= -128 and disp8 <= 127 then
+      asm = _emit8(asm, 0x70 | (op & 0x0F))
+      asm = _emit8(asm, disp8)
+      return asm
+    end if
+  end if
+
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, op)
   start = pos(asm) - 2

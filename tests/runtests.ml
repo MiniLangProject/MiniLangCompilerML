@@ -177,6 +177,72 @@ function _test(compiler_path, repo_root, name, src_rel, mode, extra_flags)
   return true
 end function
 
+function _label_function_block(labels, fn_name)
+  marker = "[label] fn_user_" + fn_name + " "
+  start = s.indexOf(labels, marker, 0)
+  if start < 0 then return "" end if
+  next_start = s.indexOf(labels, "\n[label] fn_user_", start + len(marker))
+  if next_start < 0 then return s.substr(labels, start, len(labels) - start) end if
+  return s.substr(labels, start, next_start - start)
+end function
+
+function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
+  name = "codegen_optimizations"
+  src_abs = _path_join(repo_root, "tests\\codegen_optimizations.ml")
+  out_abs = _path_join(repo_root, "tests\\_rt_codegen_optimizations.exe")
+  labels_abs = _path_join(repo_root, "tests\\_rt_codegen_optimizations.labels")
+  if fs.exists(src_abs) == false then
+    print "[FAIL] " + name + " (missing source)"
+    return false
+  end if
+  if fs.exists(out_abs) then fs.delete(out_abs) end if
+  if fs.exists(labels_abs) then fs.delete(labels_abs) end if
+
+  mode_flags = "--dump-labels " + _q(labels_abs)
+  rc_compile = _run_compile(compiler_path, src_abs, out_abs, repo_root, extra_flags, mode_flags)
+  if rc_compile != 0 then
+    print "[FAIL] " + name + " (compile rc=" + rc_compile + ")"
+    return false
+  end if
+  rc_run = _run_exe(out_abs, "")
+  if rc_run != 0 then
+    print "[FAIL] " + name + " (runtime rc=" + rc_run + ")"
+    return false
+  end if
+
+  labels = fs.readAllText(labels_abs)
+  if typeof(labels) != "string" then
+    print "[FAIL] " + name + " (missing label dump)"
+    return false
+  end if
+  if s.contains(labels, "[label] fn_user_pruned_add ") then
+    print "[FAIL] " + name + " (direct-only inline body was not pruned)"
+    return false
+  end if
+  if s.contains(labels, "[label] fn_user_kept_add ") == false or s.contains(labels, "[label] fn_user_budget_add ") == false then
+    print "[FAIL] " + name + " (required inline fallback body is missing)"
+    return false
+  end if
+
+  leaf_labels = _label_function_block(labels, "leaf_frame")
+  if leaf_labels == "" or s.contains(leaf_labels, "gcclr_loop_") then
+    print "[FAIL] " + name + " (tiny root frame did not use straight-line clearing)"
+    return false
+  end if
+  loop_labels = _label_function_block(labels, "const_loop")
+  if loop_labels == "" or s.contains(loop_labels, "for_top_") == false then
+    print "[FAIL] " + name + " (constant loop was not emitted)"
+    return false
+  end if
+  if s.contains(loop_labels, "__for_end_") or s.contains(loop_labels, "__for_step_") then
+    print "[FAIL] " + name + " (constant loop retained dynamic end/step state)"
+    return false
+  end if
+
+  print "[PASS] " + name
+  return true
+end function
+
 function main(args)
   if typeof(args) != "array" or len(args) < 1 then
     print "Usage: runtests.exe <compiler.exe> [extra compiler args...]"
@@ -207,6 +273,7 @@ function main(args)
   if _test(compiler_path, repo_root, "thread_invalid_entry", "tests\\thread_invalid_entry.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_invalid_synchronized_local", "tests\\thread_invalid_synchronized_local.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "asm_opcodes_golden_smoke", "tests\\test_asm_opcodes.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test_codegen_optimizations(compiler_path, repo_root, extra_flags) then pass = pass + 1 else fail = fail + 1 end if
 
   // Existing ns/import framework tests
   if _test(compiler_path, repo_root, "ns_basic", "tests\\ns_import_tests\\cases\\basic\\main.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

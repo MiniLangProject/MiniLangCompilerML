@@ -1857,6 +1857,176 @@ function _emit_expr_unary(state, expr)
   return state
 end function
 
+function _intflow_name_has(arr, name)
+  if typeof(arr) != "array" or len(arr) <= 0 then return false end if
+  for i = 0 to len(arr) - 1
+    if arr[i] == name then return true end if
+  end for
+  return false
+end function
+
+function _opt_expr_known_int(state, ex)
+  if typeof(ex) != "struct" then return false end if
+  cv = cg_expr_try_const_value(state, ex)
+  if typeof(cv) == "struct" and cv.ok and typeof(cv.value) == "int" then return true end if
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Var" then
+    nm = _coerce_name(try(ex.name))
+    if _intflow_name_has(state.known_int_names, nm) == false then return false end if
+    b = scope.cg_resolve_binding(state, nm)
+    if typeof(b) != "struct" then return false end if
+    if b.kind != "local" and b.kind != "param" then return false end if
+    if typeof(b.boxed) == "bool" and b.boxed then return false end if
+    return true
+  end if
+  if k == "Unary" then
+    op_u = _coerce_name(try(ex.op))
+    if op_u != "-" and op_u != "~" then return false end if
+    return _opt_expr_known_int(state, try(ex.right))
+  end if
+  if k == "Bin" then
+    op_b = _coerce_name(try(ex.op))
+    if op_b == "+" or op_b == "-" or op_b == "*" or op_b == "%" or op_b == "&" or op_b == "|" or op_b == "^" or op_b == "<<" or op_b == ">>" then
+      return _opt_expr_known_int(state, try(ex.left)) and _opt_expr_known_int(state, try(ex.right))
+    end if
+  end if
+  return false
+end function
+
+function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
+  if op == "+" then
+    if rhs_ok and rhs_const == 1 then
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.add_rax_imm8(state.asm, 8)
+    else
+      if rhs_ok and rhs_const == -1 then
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+        state.asm = a.sub_rax_imm8(state.asm, 8)
+      else
+        if lhs_ok and lhs_const == 1 then
+          state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+          state.asm = a.add_rax_imm8(state.asm, 8)
+        else
+          if lhs_ok and lhs_const == -1 then
+            state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+            state.asm = a.sub_rax_imm8(state.asm, 8)
+          else
+            state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+            state.asm = a.add_r64_r64(state.asm, "rax", "r11")
+            state.asm = a.sub_rax_imm8(state.asm, 1)
+          end if
+        end if
+      end if
+    end if
+    return state
+  end if
+  if op == "-" then
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    if rhs_ok and rhs_const == 1 then
+      state.asm = a.sub_rax_imm8(state.asm, 8)
+    else
+      if rhs_ok and rhs_const == -1 then
+        state.asm = a.add_rax_imm8(state.asm, 8)
+      else
+        state.asm = a.sub_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.add_rax_imm8(state.asm, 1)
+      end if
+    end if
+    return state
+  end if
+  if op == "*" then
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+    state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
+    state.asm = a.imul_r64_r64(state.asm, "rax", "r11")
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    return state
+  end if
+  if op == "%" then
+    lid_m = _next_lid(state)
+    l_ok_m = "known_mod_ok_" + lid_m
+    l_fail_m = "known_mod_fail_" + lid_m
+    l_done_m = "known_mod_done_" + lid_m
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+    state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
+    state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+    state.asm = a.jcc(state.asm, "e", l_fail_m)
+    state.asm = a.cqo(state.asm)
+    state.asm = a.idiv_r64(state.asm, "r11")
+    state.asm = a.test_r64_r64(state.asm, "rdx", "rdx")
+    state.asm = a.jcc(state.asm, "e", l_ok_m)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+    state.asm = a.xor_r64_r64(state.asm, "rax", "r11")
+    state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+    state.asm = a.jcc(state.asm, "ge", l_ok_m)
+    state.asm = a.add_r64_r64(state.asm, "rdx", "r11")
+    state.asm = a.mark(state.asm, l_ok_m)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.jmp(state.asm, l_done_m)
+    state.asm = a.mark(state.asm, l_fail_m)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.mark(state.asm, l_done_m)
+    return state
+  end if
+  if op == "&" or op == "|" or op == "^" then
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    if op == "&" then
+      state.asm = a.and_r64_r64(state.asm, "rax", "r11")
+    else
+      if op == "|" then
+        state.asm = a.or_r64_r64(state.asm, "rax", "r11")
+      else
+        state.asm = a.xor_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+      end if
+    end if
+    return state
+  end if
+  if op == "<<" or op == ">>" then
+    lid_s = _next_lid(state)
+    l_fail_s = "known_shift_fail_" + lid_s
+    l_done_s = "known_shift_done_" + lid_s
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "r11")
+    state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
+    state.asm = a.jcc(state.asm, "l", l_fail_s)
+    state.asm = a.and_r64_imm(state.asm, "rcx", 63)
+    if op == "<<" then
+      state.asm = a.shl_r64_cl(state.asm, "rax")
+    else
+      state.asm = a.sar_r64_cl(state.asm, "rax")
+    end if
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.jmp(state.asm, l_done_s)
+    state.asm = a.mark(state.asm, l_fail_s)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.mark(state.asm, l_done_s)
+    return state
+  end if
+  if op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">=" then
+    cc = "e"
+    if op == "!=" then cc = "ne" end if
+    if op == "<" then cc = "l" end if
+    if op == "<=" then cc = "le" end if
+    if op == ">" then cc = "g" end if
+    if op == ">=" then cc = "ge" end if
+    state.asm = a.cmp_r64_r64(state.asm, "r10", "r11")
+    state.asm = a.setcc_al(state.asm, cc)
+    state.asm = a.movzx_eax_al(state.asm)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+    return state
+  end if
+  return state
+end function
+
 function _emit_expr_bin(state, expr)
   if expr.op == "and" then
     lid_and = _next_lid(state)
@@ -1966,6 +2136,12 @@ function _emit_expr_bin(state, expr)
   if rhs_const_int_ok then rhs_const_int = rhs_const.value end if
 
   op = expr.op
+  known_int_op = op == "+" or op == "-" or op == "*" or op == "%" or op == "&" or op == "|" or op == "^" or op == "<<" or op == ">>" or op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
+  if known_int_op and _opt_expr_known_int(state, expr.left) and _opt_expr_known_int(state, expr.right) then
+    state = _emit_known_int_binop(state, op, lhs_const_int_ok, lhs_const_int, rhs_const_int_ok, rhs_const_int)
+    return state
+  end if
+
   lid = _next_lid(state)
   l_int = "bin_int_" + lid
   l_float = "bin_float_" + lid
@@ -5757,7 +5933,12 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
   inline_name = callee
   if inline_name == "" then inline_name = raw_name end if
   inline_fn = _user_function_get(state, inline_name)
-  if typeof(inline_fn) == "struct" and typeof(try(inline_fn.is_inline)) == "bool" and inline_fn.is_inline and _inline_call_eligible(inline_fn) then
+  inline_used_bytes = 0
+  if typeof(state._inline_emitted_bytes) == "struct" then
+    inline_used_bytes = t.fastmap_get(state._inline_emitted_bytes, inline_name, 0)
+    if typeof(inline_used_bytes) != "int" then inline_used_bytes = 0 end if
+  end if
+  if inline_used_bytes < 4096 and typeof(inline_fn) == "struct" and typeof(try(inline_fn.is_inline)) == "bool" and inline_fn.is_inline and _inline_call_eligible(inline_fn) then
     inline_binding = scope.cg_resolve_binding(state, inline_name)
     if typeof(inline_binding) != "struct" or inline_binding.kind == "global" then
       state = _emit_inline_call(state, inline_name, call_args)
@@ -7830,6 +8011,7 @@ function _emit_inline_call(state, callee, args)
       state.asm = a.mov_rsp_disp32_rax(state.asm, param_base + ai * 8)
     end for
   end if
+  inline_body_start = a.pos(state.asm)
 
   l_end = "inline_end_" + _next_lid(state)
 
@@ -7919,6 +8101,12 @@ function _emit_inline_call(state, callee, args)
 
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   state.asm = a.mark(state.asm, l_end)
+  emitted_inline_bytes = a.pos(state.asm) - inline_body_start
+  if emitted_inline_bytes < 0 then emitted_inline_bytes = 0 end if
+  if typeof(state._inline_emitted_bytes) != "struct" then state._inline_emitted_bytes = t.fastmap_new(128) end if
+  old_inline_bytes = t.fastmap_get(state._inline_emitted_bytes, callee, 0)
+  if typeof(old_inline_bytes) != "int" then old_inline_bytes = 0 end if
+  state._inline_emitted_bytes = t.fastmap_set(state._inline_emitted_bytes, callee, old_inline_bytes + emitted_inline_bytes)
 
   state.in_function = saved_in_fn
   state.func_ret_label = saved_ret

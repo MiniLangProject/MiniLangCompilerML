@@ -31,8 +31,8 @@ function main(args)
     print "FAIL: asm_opcodes_golden.json has no vectors field"
     return 4
   end if
-  if s.contains(txt, "\"count\": 221") == false then
-    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 221-vector set"
+  if s.contains(txt, "\"count\": 222") == false then
+    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 222-vector set"
     return 5
   end if
 
@@ -77,6 +77,24 @@ function main(args)
   b = a.ret(b)
   // Both encoders peephole away an adjacent push/pop of the same register.
   failures = failures + checkOpcode("push/pop/ret peephole", b, "c3")
+
+  b = a.newAsmBuilder()
+  b = a.mark(b, "loop")
+  b = a.nop(b)
+  b = a.jmp(b, "loop")
+  failures = failures + checkOpcode("short backward jmp", b, "90ebfd")
+
+  b = a.newAsmBuilder()
+  b = a.mark(b, "loop")
+  b = a.nop(b)
+  b = a.jcc(b, "ne", "loop")
+  failures = failures + checkOpcode("short backward jcc", b, "9075fd")
+
+  b = a.newAsmBuilder()
+  b = a.jmp(b, "later")
+  b = a.nop(b)
+  b = a.mark(b, "later")
+  failures = failures + checkOpcode("forward jmp remains rel32", b, "e90100000090")
 
   if failures != 0 then return 6 end if
 
