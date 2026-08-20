@@ -31,8 +31,8 @@ function main(args)
     print "FAIL: asm_opcodes_golden.json has no vectors field"
     return 4
   end if
-  if s.contains(txt, "\"count\": 217") == false then
-    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 217-vector set"
+  if s.contains(txt, "\"count\": 221") == false then
+    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 221-vector set"
     return 5
   end if
 

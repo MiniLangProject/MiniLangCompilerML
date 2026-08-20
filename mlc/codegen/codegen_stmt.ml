@@ -9,6 +9,7 @@ import mlc.codegen.codegen_scope as scope
 import mlc.codegen.codegen_expr as exprmod
 import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
+import mlc.codegen.codegen_threads as th
 
 function inline _join_qname(prefix, name)
   if typeof(prefix) != "string" or prefix == "" then return name end if
@@ -291,6 +292,7 @@ function _clone_function_node_for_emit(fn_node)
     _copy_fn_array_field(try(fn_node.body)),
     try(fn_node.is_static),
     try(fn_node.is_inline),
+    try(fn_node.is_synchronized),
     _copy_fn_array_field(try(fn_node._ml_locals)),
     _copy_fn_array_field(try(fn_node._ml_globals_declared)),
     _copy_fn_array_field(try(fn_node._ml_captures)),
@@ -387,7 +389,7 @@ function _for_unroll_body_ok(stmts, loop_var)
     if nk == "Break" or nk == "Continue" or nk == "FunctionDef" or nk == "Switch" or nk == "While" or nk == "DoWhile" or nk == "For" or _is_foreach_stmt(st) then
       return false
     end if
-    if nk == "Assign" then
+    if nk == "Assign" or nk == "SynchronizedDecl" then
       if _coerce_name(st.name) == loop_var then return false end if
     end if
     if nk == "If" then
@@ -846,6 +848,21 @@ function cg_emit_stmt(state, stmt)
     state.current_file_prefix = ""
   end if
 
+  if state.in_function and k != "GlobalDecl" and typeof(state.func_ret_label) == "string" and state.func_ret_label != "" then
+    lid_stop = state.label_id
+    state.label_id = state.label_id + 1
+    l_continue = "thread_safe_continue_" + lid_stop
+    state.asm = a.mov_r11_gs_qword_28(state.asm)
+    state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+    state.asm = a.jcc(state.asm, "e", l_continue)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r11", 4)
+    state.asm = a.cmp_r32_imm(state.asm, "r11d", 2)
+    state.asm = a.jcc(state.asm, "ne", l_continue)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.jmp(state.asm, state.func_ret_label)
+    state.asm = a.mark(state.asm, l_continue)
+  end if
+
   if k == "NamespaceDecl" then
     if typeof(stmt.name) == "string" then state.current_file_prefix = stmt.name end if
     return state
@@ -1064,15 +1081,31 @@ function cg_emit_stmt(state, stmt)
     return state
   end if
 
-  if k == "Assign" then
+  if k == "Assign" or k == "SynchronizedDecl" then
+    if k == "SynchronizedDecl" and state.in_function then
+      state.diagnostics = state.diagnostics + ["synchronized variables may only be declared at top level or in a namespace"]
+      return state
+    end if
     nm_a = _coerce_name(stmt.name)
     if nm_a == "" then return state end if
     qn_a = nm_a
     if state.in_function == false and s.contains(qn_a, ".") == false then
       qn_a = _join_qname(state.current_qname_prefix, qn_a)
     end if
+    sync_name = qn_a
+    if state.in_function then
+      mapped_sync = _func_global_mapped_name(state, nm_a)
+      if mapped_sync != "" then sync_name = mapped_sync end if
+    end if
+    is_sync_write = _arr_has(state.synchronized_globals, sync_name)
+    if is_sync_write then state.asm = a.call(state.asm, "fn_sync_enter") end if
+    old_sync_depth = 0
+    if typeof(state.errprop_sync_depth) == "int" then old_sync_depth = state.errprop_sync_depth end if
+    if is_sync_write then state.errprop_sync_depth = old_sync_depth + 1 end if
     state = exprmod.cg_emit_expr(state, stmt.expr)
+    if is_sync_write then state.errprop_sync_depth = old_sync_depth end if
     state = scope.emit_store_var_scoped(state, qn_a, stmt)
+    if is_sync_write then state.asm = a.call(state.asm, "fn_sync_leave") end if
     return state
   end if
 
@@ -1565,6 +1598,7 @@ function cg_emit_stmt(state, stmt)
     depth_w = scope.cg_scope_depth(state)
     state.break_stack = state.break_stack + [_breakctx_make("loop", l_end, l_top, depth_w, depth_w)]
     state.asm = a.mark(state.asm, l_top)
+    state = th.emit_gc_safepoint_poll(state)
     if typeof(tv_w) != "bool" or tv_w != true then
       state = exprmod.cg_emit_expr(state, stmt.cond)
       l_wcond_ok = "while_cond_ok_" + lid_w
@@ -1594,6 +1628,7 @@ function cg_emit_stmt(state, stmt)
     state = _emit_stmt_list(state, stmt.body)
     state = scope.cg_scope_leave(state, true)
     state.asm = a.mark(state.asm, l_cont)
+    state = th.emit_gc_safepoint_poll(state)
     tv_dw = _opt_try_truthy(state, stmt.cond)
     if typeof(tv_dw) == "bool" and tv_dw == true then
       state.asm = a.jmp(state.asm, l_body)
@@ -1693,6 +1728,7 @@ function cg_emit_stmt(state, stmt)
     state = scope.cg_scope_leave(state, true)
 
     state.asm = a.mark(state.asm, l_cont_f)
+    state = th.emit_gc_safepoint_poll(state)
     state = scope.emit_load_var_scoped(state, qv)
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
     state = scope.emit_load_var_scoped(state, end_name_f)
@@ -2333,21 +2369,29 @@ function _scan_function_for_global_decls(state, fn_node)
   fpref = ""
   if fn_file != "" then fpref = _strpair_get(state.file_prefix_map, fn_file) end if
 
-  declared0 = try(fn_node._ml_globals_declared)
-  if typeof(declared0) == "array" and len(declared0) > 0 then
-    for di = 0 to len(declared0) - 1
-      nm0 = _coerce_name(declared0[di])
-      if nm0 == "" then continue end if
-      tgt0 = _resolve_global_target_scan(state, nm0, qpref, fpref)
-      if tgt0 == "" then continue end if
-      state = scope.declare_global_binding_root(state, tgt0, fn_node, false, 0)
-    end for
-  end if
-
   stack = []
   body_fn = try(fn_node.body)
   if typeof(body_fn) != "array" then return state end if
   if typeof(body_fn) == "array" and len(body_fn) > 0 then stack = body_fn end if
+
+  // Match Python's LIFO walk while retaining the source order of names inside
+  // each top-level `global a, b` declaration.
+  bi0 = len(body_fn) - 1
+  while bi0 >= 0
+    st0 = body_fn[bi0]
+    if typeof(st0) == "struct" and _coerce_name(st0.node_kind) == "GlobalDecl" then
+      names1 = try(st0.names)
+      if typeof(names1) == "array" and len(names1) > 0 then
+        for bj0 = 0 to len(names1) - 1
+          nm1 = _coerce_name(names1[bj0])
+          if nm1 == "" then continue end if
+          tgt1 = _resolve_global_target_scan(state, nm1, qpref, fpref)
+          if tgt1 != "" then state = scope.declare_global_binding_root(state, tgt1, st0, false, 0) end if
+        end for
+      end if
+    end if
+    bi0 = bi0 - 1
+  end while
 
   while typeof(stack) == "array" and len(stack) > 0
     top_i = len(stack) - 1
@@ -2533,10 +2577,14 @@ function _flatten_runtime_inner(state, stmts, prefix, current_file)
       handled = true
     end if
 
-    if handled == false and (k == "ConstDecl" or k == "Assign") then
+    if handled == false and (k == "ConstDecl" or k == "Assign" or k == "SynchronizedDecl") then
       nm = _coerce_name(st.name)
       if pref != "" and nm != "" and _has_dot_name(nm) == false then
         st.name = pref + nm
+        nm = st.name
+      end if
+      if k == "SynchronizedDecl" then
+        state.synchronized_globals = _arr_add_unique(state.synchronized_globals, nm)
       end if
       vals_out_b = t.arr_chunk_push(vals_out_b, st)
       handled = true
@@ -2820,6 +2868,21 @@ function _sort_names(vals)
   return t.arr_chunk_finish(unique_b)
 end function
 
+function _func_global_mapped_name(state, name)
+  if typeof(state.func_global_map_index) == "struct" then
+    mapped0 = t.fastmap_get(state.func_global_map_index, name, "")
+    if typeof(mapped0) == "string" and mapped0 != "" then return mapped0 end if
+  end if
+  pairs = state.func_global_map
+  if typeof(pairs) == "array" and len(pairs) > 0 then
+    for i = 0 to len(pairs) - 1
+      p = pairs[i]
+      if typeof(p) == "array" and len(p) >= 2 and p[0] == name then return _coerce_name(p[1]) end if
+    end for
+  end if
+  return ""
+end function
+
 function _id_label_pair_id(it)
   if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "int" then
     return it[0]
@@ -2964,6 +3027,9 @@ function _analysis_builtin_has(name)
   nm = _coerce_name(name)
   if nm == "" then return false end if
   if nm == "try" then return true end if
+  if nm == "Thread" then return true end if
+  if nm == "threadStopRequested" then return true end if
+  if nm == "threadSleep" then return true end if
   if nm == "array" then return true end if
   if nm == "bytes" then return true end if
   if nm == "byteBuffer" then return true end if
@@ -3185,7 +3251,7 @@ function _analysis_scan_stmt(state, st)
     return state
   end if
 
-  if k == "Assign" then
+  if k == "Assign" or k == "SynchronizedDecl" then
     if _heap_cfg_get_bool(state, "cg_mem_probe", false) and state.current_qname_prefix == "std.string." then
       print "[mem][cg][analysis] scan_assign name=" + _coerce_name(try(st.name))
     end if
@@ -3564,7 +3630,7 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
       continue
     end if
 
-    if k == "Assign" then
+    if k == "Assign" or k == "SynchronizedDecl" then
       nm2 = _coerce_name(try(st.name))
       if nm2 != "" and _name_set_has(globals_decl, nm2) == false then
         locals_set = _name_set_add(locals_set, nm2)
@@ -3683,7 +3749,7 @@ function _closure_collect_uses(stmts)
     k = _coerce_name(try(st.node_kind))
     if k == "FunctionDef" then continue end if
 
-    if k == "Assign" or k == "Print" or k == "ExprStmt" or k == "Return" then
+    if k == "Assign" or k == "SynchronizedDecl" or k == "Print" or k == "ExprStmt" or k == "Return" then
       used = _closure_expr_reads(try(st.expr), used)
       continue
     end if
@@ -3805,7 +3871,7 @@ function _closure_collect_writes(fn_node)
     k = _coerce_name(try(st.node_kind))
     if k == "FunctionDef" then continue end if
 
-    if k == "Assign" then
+    if k == "Assign" or k == "SynchronizedDecl" then
       wnm = _coerce_name(try(st.name))
       if wnm != "" then written = _name_set_add(written, wnm) end if
       continue
@@ -3884,7 +3950,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     k = _coerce_name(try(st.node_kind))
     if k == "FunctionDef" then continue end if
 
-    if k == "Assign" then
+    if k == "Assign" or k == "SynchronizedDecl" then
       rr = _closure_expr_reads(try(st.expr), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr)
       nm = _coerce_name(try(st.name))
@@ -4566,7 +4632,7 @@ function _stmt_uses_this(st)
   k = _coerce_name(try(st.node_kind))
   if k == "" then return false end if
 
-  if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "ConstDecl" or k == "Return" then
+  if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "SynchronizedDecl" or k == "ConstDecl" or k == "Return" then
     return _expr_uses_this(try(st.expr))
   end if
   if k == "SetMember" then
@@ -4918,6 +4984,9 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
 
     if k == "FunctionDef" then
       base_name = _coerce_name(st.name)
+      if typeof(try(st.is_inline)) == "bool" and st.is_inline and typeof(try(st.is_synchronized)) == "bool" and st.is_synchronized then
+        state.diagnostics = state.diagnostics + ["a synchronized function cannot also be inline"]
+      end if
       if base_name != "main" and _has_reserved_segment(state, base_name) then
         state.diagnostics = state.diagnostics +["function name '" + base_name + "' is reserved"]
       end if
@@ -5198,7 +5267,7 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
       continue
     end if
 
-    if k == "ConstDecl" or k == "Assign" then
+    if k == "ConstDecl" or k == "Assign" or k == "SynchronizedDecl" then
       nm = _coerce_name(st.name)
       if pref != "" and nm != "" and _has_dot_name(nm) == false then
         st.name = pref + nm
@@ -5336,7 +5405,7 @@ function _check_stmt_semantics(state, st, fn_arities)
   if typeof(st) != "struct" then return state end if
   k = st.node_kind
 
-  if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "ConstDecl" or k == "Return" then
+  if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "SynchronizedDecl" or k == "ConstDecl" or k == "Return" then
     if typeof(st.expr) == "struct" then
       state = _check_expr_semantics(state, st.expr, fn_arities)
     end if
@@ -5580,7 +5649,7 @@ function _declare_object_top_level_global_bindings(state, program)
     st = program[i]
     if typeof(st) != "struct" then continue end if
     k = _coerce_name(st.node_kind)
-    if k != "Assign" and k != "ConstDecl" then continue end if
+    if k != "Assign" and k != "SynchronizedDecl" and k != "ConstDecl" then continue end if
     qn = _coerce_name(st.name)
     if qn == "" then continue end if
     existing = scope.resolve_binding(state, qn)
@@ -6347,6 +6416,7 @@ function prepare_program_for_objects(state, program)
   state = _mem_probe(state, "static_callable_objects_done")
 
   state = _mem_probe(state, "pre_flatten")
+  state.synchronized_globals = []
   program = _flatten_runtime(state, program)
   state = _mem_probe(state, "flatten_done")
 
@@ -6360,7 +6430,7 @@ function prepare_program_for_objects(state, program)
       if typeof(pst) != "struct" then continue end if
       pst_file = _st_file(pst)
       if pst_file == "" then continue end if
-      if pst.node_kind != "Assign" and pst.node_kind != "ConstDecl" then continue end if
+      if pst.node_kind != "Assign" and pst.node_kind != "ConstDecl" and pst.node_kind != "SynchronizedDecl" then continue end if
       pst_name = _coerce_name(pst.name)
       if pst_name == "" then continue end if
       state._global_owner_file = _strpair_set(state._global_owner_file, pst_name, pst_file)
@@ -6451,6 +6521,10 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
     state.asm = a.call_rax(state.asm)
   end if
 
+  // Install the main managed-thread context before heap initialization;
+  // GC temporary roots are per-thread and route through gs:[0x28].
+  state = th.emit_sync_init(state)
+  // Initialize the one process-wide managed heap and collector metadata.
   state = mem.emit_heap_init(state, 0)
   state.asm = a.call(state.asm, "fn_cpu_init")
 
@@ -6933,6 +7007,13 @@ function emit_user_function(state, fn_node)
   end if
 
   // Save caller debug-location context and set current function context.
+  dbg_worker_lid = state.label_id
+  state.label_id = state.label_id + 1
+  dbg_worker_skip = "dbg_worker_skip_" + dbg_worker_lid
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+  state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.jcc(state.asm, "ne", dbg_worker_skip)
   state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
   state.asm = a.mov_rsp_disp32_rax(state.asm, dbg_save_script)
   state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
@@ -6968,12 +7049,14 @@ function emit_user_function(state, fn_node)
   state.rdata = d.rdata_add_obj_string_unique(state.rdata, lbl_fn, dbg_func)
   state.asm = a.lea_rax_rip(state.asm, lbl_fn)
   state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_func")
+  state.asm = a.mark(state.asm, dbg_worker_skip)
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
     print "[mem][cg] fn_stage name=" + code_name + " stage=dbg_labels_done"
   end if
 
   state = mem.emit_gc_clear_root_slots(state, root_base, root_top)
   state = mem.emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
+  state = th.emit_gc_safepoint_poll(state)
   // Incoming closure environment is passed in r10.
   state.asm = a.mov_r64_r64(state.asm, "r14", "r10")
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
@@ -7154,6 +7237,10 @@ function emit_user_function(state, fn_node)
     print "[mem][cg] fn_stage name=" + code_name + " stage=env_done"
   end if
 
+  if typeof(try(fn_node.is_synchronized)) == "bool" and fn_node.is_synchronized then
+    state.asm = a.call(state.asm, "fn_sync_enter")
+  end if
+
   if s.contains(qn, ".") then
     parts = s.split(qn, ".")
     if len(parts) > 1 then
@@ -7220,13 +7307,24 @@ function emit_user_function(state, fn_node)
   core.pop_cold_block_scope(state)
 
   state.asm = a.mark(state.asm, ret_lbl)
+  if typeof(try(fn_node.is_synchronized)) == "bool" and fn_node.is_synchronized then
+    state.asm = a.call(state.asm, "fn_sync_leave")
+  end if
   state = mem.emit_gc_pop_root_frame(state, root_rec_off)
+  dbg_restore_lid = state.label_id
+  state.label_id = state.label_id + 1
+  dbg_restore_skip = "dbg_restore_worker_" + dbg_restore_lid
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r11", 0)
+  state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
+  state.asm = a.jcc(state.asm, "ne", dbg_restore_skip)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", dbg_save_script)
   state.asm = a.mov_rip_qword_r11(state.asm, "dbg_loc_script")
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", dbg_save_func)
   state.asm = a.mov_rip_qword_r11(state.asm, "dbg_loc_func")
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", dbg_save_line)
   state.asm = a.mov_rip_qword_r11(state.asm, "dbg_loc_line")
+  state.asm = a.mark(state.asm, dbg_restore_skip)
   state.asm = a.add_rsp_imm32(state.asm, frame)
   state.asm = a.pop_r15(state.asm)
   state.asm = a.pop_r14(state.asm)
@@ -7427,7 +7525,7 @@ function max_calls_stmts(state, stmts)
     st = stmts[i]
     if typeof(st) != "struct" then continue end if
     nk = _coerce_name(st.node_kind)
-    if nk == "Assign" then
+    if nk == "Assign" or nk == "SynchronizedDecl" then
       m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
       continue
     end if

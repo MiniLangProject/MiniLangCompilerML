@@ -8,6 +8,7 @@ import mlc.codegen.codegen_scope as scope
 import mlc.codegen.codegen_runtime as rt
 import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_builtins_alloc as bal
+import mlc.codegen.codegen_threads as th
 
 struct CgState
   source,
@@ -76,6 +77,7 @@ struct CgState
   func_ret_label,
   func_frame_size,
   errprop_suppression,
+  errprop_sync_depth,
   dbg_line_starts,
   expr_temp_base,
   expr_temp_top,
@@ -115,6 +117,7 @@ struct CgState
   _module_init_active_file,
   _global_owner_file,
   _module_init_status_labels,
+  synchronized_globals,
 end struct
 
 struct NamedArray
@@ -300,6 +303,7 @@ function _seed_rdata(cg)
   cg.rdata = d.rdata_add_obj_string(cg.rdata, "obj_type_function", "function")
   cg.rdata = d.rdata_add_obj_string(cg.rdata, "obj_type_struct", "struct")
   cg.rdata = d.rdata_add_obj_string(cg.rdata, "obj_type_error", "error")
+  cg.rdata = d.rdata_add_obj_string(cg.rdata, "obj_type_thread", "thread")
   cg.rdata = d.rdata_add_obj_string(cg.rdata, "obj_type_unknown", "unknown")
 
   cg.rdata = d.rdata_add_bytes(cg.rdata, "hex_tbl", bytes("0123456789abcdef"))
@@ -351,12 +355,13 @@ function _seed_data(cg)
   cg.data = d.data_add_bytes(cg.data, "widebuf2", bytes(8096, 0))
   cg.data = d.data_add_bytes(cg.data, "widebuf3", bytes(8096, 0))
   cg.data = d.data_add_bytes(cg.data, "inbuf", bytes(4096, 0))
+  cg = th.ensure_thread_data(cg)
   return cg
 end function
 
 function cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs)
   base_imports =[
-  NamedArray("kernel32.dll", ["GetStdHandle", "ReadFile", "WriteFile", "WriteConsoleW", "MultiByteToWideChar", "SetConsoleOutputCP", "FreeConsole", "ExitProcess", "VirtualAlloc", "VirtualFree", "GetCommandLineW", "LocalFree", "WideCharToMultiByte"]),
+  NamedArray("kernel32.dll", ["GetStdHandle", "ReadFile", "WriteFile", "WriteConsoleW", "MultiByteToWideChar", "SetConsoleOutputCP", "FreeConsole", "ExitProcess", "VirtualAlloc", "VirtualFree", "GetCommandLineW", "LocalFree", "WideCharToMultiByte", "CreateThread", "WaitForSingleObject", "CloseHandle", "Sleep", "InitializeCriticalSection", "EnterCriticalSection", "LeaveCriticalSection"]),
   NamedArray("msvcrt.dll", ["_gcvt", "fmod"]),
   NamedArray("shell32.dll", ["CommandLineToArgvW"])
 ]
@@ -382,7 +387,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   [],
   [],
   [],
-  ["try", "error"],
+  ["try", "error", "Thread"],
   0,
   [],
   [],
@@ -425,6 +430,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   0,
   false,
   "",
+  0,
   0,
   0,
   [],
@@ -464,6 +470,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   t.fastmap_new(64),
   false,
   "",
+  [],
   [],
   []
   )
@@ -1094,8 +1101,15 @@ function emit_dbg_line(state, node)
     end if
   end if
   if ln > 0 then
+    lid = new_label_id(state)
+    l_skip = "dbg_line_worker_" + lid
+    state.asm = a.mov_r11_gs_qword_28(state.asm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+    state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+    state.asm = a.jcc(state.asm, "ne", l_skip)
     state.asm = a.mov_rax_imm64(state.asm, t.enc_int(ln))
     state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_line")
+    state.asm = a.mark(state.asm, l_skip)
   end if
   return state
 end function
@@ -1403,6 +1417,27 @@ function _helper_supported(lbl)
   if lbl == "fn_heap_free_blocks" then return true end if
   if lbl == "fn_heap_grow" then return true end if
   if lbl == "fn_gc_collect" then return true end if
+  if lbl == "fn_gc_safepoint" then return true end if
+  if lbl == "fn_gc_native_enter" then return true end if
+  if lbl == "fn_gc_native_leave" then return true end if
+  if lbl == "fn_gc_managed_exit" then return true end if
+  if lbl == "fn_heap_enter" then return true end if
+  if lbl == "fn_heap_leave" then return true end if
+  if lbl == "fn_gc_world_stop" then return true end if
+  if lbl == "fn_gc_world_resume" then return true end if
+  if lbl == "fn_sync_enter" then return true end if
+  if lbl == "fn_sync_leave" then return true end if
+  if lbl == "fn_thread_new" then return true end if
+  if lbl == "fn_thread_start" then return true end if
+  if lbl == "fn_thread_stop" then return true end if
+  if lbl == "fn_thread_join" then return true end if
+  if lbl == "fn_thread_alive" then return true end if
+  if lbl == "fn_thread_id" then return true end if
+  if lbl == "fn_thread_status" then return true end if
+  if lbl == "fn_thread_close" then return true end if
+  if lbl == "fn_thread_stop_requested" then return true end if
+  if lbl == "fn_thread_alloc" then return true end if
+  if lbl == "fn_thread_entry" then return true end if
   if lbl == "fn_mem_eq_bytes" then return true end if
   if lbl == "fn_bytes_hash" then return true end if
   if lbl == "fn_string_hash" then return true end if
@@ -1460,6 +1495,27 @@ end function
 
 function _emit_helper_by_label_group0(state, lbl)
   if lbl == "fn_cpu_init" then return rt.emit_cpu_init_function(state) end if
+  if lbl == "fn_gc_safepoint" then return th.emit_gc_safepoint_function(state) end if
+  if lbl == "fn_gc_native_enter" then return th.emit_gc_native_enter_function(state) end if
+  if lbl == "fn_gc_native_leave" then return th.emit_gc_native_leave_function(state) end if
+  if lbl == "fn_gc_managed_exit" then return th.emit_gc_managed_exit_function(state) end if
+  if lbl == "fn_heap_enter" then return th.emit_heap_enter_function(state) end if
+  if lbl == "fn_heap_leave" then return th.emit_heap_leave_function(state) end if
+  if lbl == "fn_gc_world_stop" then return th.emit_gc_world_stop_function(state) end if
+  if lbl == "fn_gc_world_resume" then return th.emit_gc_world_resume_function(state) end if
+  if lbl == "fn_sync_enter" then return th.emit_sync_enter_function(state) end if
+  if lbl == "fn_sync_leave" then return th.emit_sync_leave_function(state) end if
+  if lbl == "fn_thread_new" then return th.emit_thread_new_function(state) end if
+  if lbl == "fn_thread_start" then return th.emit_thread_start_function(state) end if
+  if lbl == "fn_thread_stop" then return th.emit_thread_stop_function(state) end if
+  if lbl == "fn_thread_join" then return th.emit_thread_join_function(state) end if
+  if lbl == "fn_thread_alive" then return th.emit_thread_alive_function(state) end if
+  if lbl == "fn_thread_id" then return th.emit_thread_id_function(state) end if
+  if lbl == "fn_thread_status" then return th.emit_thread_status_function(state) end if
+  if lbl == "fn_thread_close" then return th.emit_thread_close_function(state) end if
+  if lbl == "fn_thread_stop_requested" then return th.emit_thread_stop_requested_function(state) end if
+  if lbl == "fn_thread_entry" then return th.emit_thread_entry_function(state) end if
+  if lbl == "fn_thread_alloc" then return th.emit_thread_alloc_function(state) end if
   if lbl == "fn_alloc" then return mem.emit_alloc_function(state) end if
   if lbl == "fn_heap_grow" then return mem.emit_heap_grow_function(state) end if
   if lbl == "fn_gc_collect" then return mem.emit_gc_collect_function(state) end if
@@ -1566,19 +1622,24 @@ end function
 
 function _emit_helper_by_label(state, lbl)
   rank = _helper_rank(lbl)
-  if rank < 10 then return _emit_helper_by_label_group0(state, lbl) end if
-  if rank < 20 then return _emit_helper_by_label_group1(state, lbl) end if
-  if rank < 30 then return _emit_helper_by_label_group2(state, lbl) end if
-  if rank < 40 then return _emit_helper_by_label_group3(state, lbl) end if
-  if rank < 50 then return _emit_helper_by_label_group4(state, lbl) end if
-  if rank < 60 then return _emit_helper_by_label_group5(state, lbl) end if
+  if rank < 31 then return _emit_helper_by_label_group0(state, lbl) end if
+  if rank < 41 then return _emit_helper_by_label_group1(state, lbl) end if
+  if rank < 51 then return _emit_helper_by_label_group2(state, lbl) end if
+  if rank < 61 then return _emit_helper_by_label_group3(state, lbl) end if
+  if rank < 71 then return _emit_helper_by_label_group4(state, lbl) end if
+  if rank < 81 then return _emit_helper_by_label_group5(state, lbl) end if
   if rank < 1048576 then return _emit_helper_by_label_group6(state, lbl) end if
   return _emit_helper_by_label_other(state, lbl)
 end function
 
 function _helper_rank(lbl)
   ordered = [
-    "fn_cpu_init", "fn_alloc", "fn_heap_grow", "fn_gc_collect", "fn_copy_bytes", "fn_fill_bytes",
+    "fn_cpu_init", "fn_gc_safepoint", "fn_gc_native_enter", "fn_gc_native_leave",
+    "fn_gc_managed_exit", "fn_heap_enter", "fn_heap_leave", "fn_gc_world_stop", "fn_gc_world_resume",
+    "fn_sync_enter", "fn_sync_leave", "fn_thread_new", "fn_thread_start",
+    "fn_thread_stop", "fn_thread_join", "fn_thread_alive", "fn_thread_id", "fn_thread_status",
+    "fn_thread_close", "fn_thread_stop_requested", "fn_thread_entry", "fn_thread_alloc",
+    "fn_alloc", "fn_heap_grow", "fn_gc_collect", "fn_copy_bytes", "fn_fill_bytes",
     "fn_fill_qwords", "fn_mem_eq_bytes", "fn_bytes_hash", "fn_string_hash", "fn_bytes_startswith",
     "fn_bytes_endswith", "fn_bytes_indexof", "fn_bytes_lastindexof", "fn_bytes_compare", "fn_str_eq",
     "fn_string_slice", "fn_string_indexof", "fn_string_lastindexof", "fn_string_startswith",

@@ -714,6 +714,42 @@ function emit64(asm, x)
   return _emit64(asm, x)
 end function
 
+function mov_rax_gs_qword_28(asm)
+  vals = [0x65, 0x48, 0x8B, 0x04, 0x25, 0x28, 0, 0, 0]
+  for i = 0 to len(vals) - 1 asm = _emit8(asm, vals[i]) end for
+  return asm
+end function
+
+function mov_r11_gs_qword_28(asm)
+  vals = [0x65, 0x4C, 0x8B, 0x1C, 0x25, 0x28, 0, 0, 0]
+  for i = 0 to len(vals) - 1 asm = _emit8(asm, vals[i]) end for
+  return asm
+end function
+
+function mov_r10_gs_qword_28(asm)
+  vals = [0x65, 0x4C, 0x8B, 0x14, 0x25, 0x28, 0, 0, 0]
+  for i = 0 to len(vals) - 1 asm = _emit8(asm, vals[i]) end for
+  return asm
+end function
+
+function mov_gs_qword_28_rax(asm)
+  vals = [0x65, 0x48, 0x89, 0x04, 0x25, 0x28, 0, 0, 0]
+  for i = 0 to len(vals) - 1 asm = _emit8(asm, vals[i]) end for
+  return asm
+end function
+
+function _gc_tmp_context_offset(label)
+  if label == "gc_tmp0" then return 56 end if
+  if label == "gc_tmp1" then return 64 end if
+  if label == "gc_tmp2" then return 72 end if
+  if label == "gc_tmp3" then return 80 end if
+  if label == "gc_tmp4" then return 88 end if
+  if label == "gc_tmp5" then return 96 end if
+  if label == "gc_tmp6" then return 104 end if
+  if label == "gc_tmp7" then return 112 end if
+  return -1
+end function
+
 function mark(asm, name)
   here = pos(asm)
   last_jump = []
@@ -1388,6 +1424,21 @@ function mov_membase_disp_r32(asm, base, disp, src)
   return asm
 end function
 
+function lock_cmpxchg_membase_disp_r32(asm, base, disp, src)
+  sreg = _rid_any(src)
+  b = _rid_any(base)
+  if sreg < 0 or b < 0 then return asm end if
+  enc = _encode_mem(sreg & 7, b, disp)
+  rex_r = 0
+  if sreg >= 8 then rex_r = 1 end if
+  asm = _emit8(asm, 0xF0)
+  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xB1)
+  asm = _emit(asm, enc.tail)
+  return asm
+end function
+
 function mov_r8_membase_disp(asm, dst, base, disp)
   if _is_r8_name(dst) == false then return error(1, "mov_r8_membase_disp requires an 8-bit dst register") end if
   d = _rid_any(dst)
@@ -1650,6 +1701,14 @@ function mov_rip_dword_eax(asm, label)
 end function
 
 function mov_rax_rip_qword(asm, label)
+  tmp_off = _gc_tmp_context_offset(label)
+  if tmp_off >= 0 then
+    asm = push_reg(asm, "r10")
+    asm = mov_r10_gs_qword_28(asm)
+    asm = mov_r64_membase_disp(asm, "rax", "r10", tmp_off)
+    asm = pop_reg(asm, "r10")
+    return asm
+  end if
   asm = _emit_rex(asm, 1, 0, 0, 0, false)
   asm = _emit8(asm, 0x8B)
   asm = _emit8(asm, 0x05)
@@ -1660,6 +1719,14 @@ function mov_rax_rip_qword(asm, label)
 end function
 
 function mov_rdx_rip_qword(asm, label)
+  tmp_off = _gc_tmp_context_offset(label)
+  if tmp_off >= 0 then
+    asm = push_reg(asm, "r10")
+    asm = mov_r10_gs_qword_28(asm)
+    asm = mov_r64_membase_disp(asm, "rdx", "r10", tmp_off)
+    asm = pop_reg(asm, "r10")
+    return asm
+  end if
   asm = _emit_rex(asm, 1, 0, 0, 0, false)
   asm = _emit8(asm, 0x8B)
   asm = _emit8(asm, 0x15)
@@ -1670,6 +1737,14 @@ function mov_rdx_rip_qword(asm, label)
 end function
 
 function mov_rip_qword_rax(asm, label)
+  tmp_off = _gc_tmp_context_offset(label)
+  if tmp_off >= 0 then
+    asm = push_reg(asm, "r10")
+    asm = mov_r10_gs_qword_28(asm)
+    asm = mov_membase_disp_r64(asm, "r10", tmp_off, "rax")
+    asm = pop_reg(asm, "r10")
+    return asm
+  end if
   asm = _emit_rex(asm, 1, 0, 0, 0, false)
   asm = _emit8(asm, 0x89)
   asm = _emit8(asm, 0x05)
@@ -1680,6 +1755,14 @@ function mov_rip_qword_rax(asm, label)
 end function
 
 function mov_rip_qword_rdx(asm, label)
+  tmp_off = _gc_tmp_context_offset(label)
+  if tmp_off >= 0 then
+    asm = push_reg(asm, "r10")
+    asm = mov_r10_gs_qword_28(asm)
+    asm = mov_membase_disp_r64(asm, "r10", tmp_off, "rdx")
+    asm = pop_reg(asm, "r10")
+    return asm
+  end if
   asm = _emit_rex(asm, 1, 0, 0, 0, false)
   asm = _emit8(asm, 0x89)
   asm = _emit8(asm, 0x15)
@@ -1690,6 +1773,14 @@ function mov_rip_qword_rdx(asm, label)
 end function
 
 function mov_rip_qword_r11(asm, label)
+  tmp_off = _gc_tmp_context_offset(label)
+  if tmp_off >= 0 then
+    asm = push_reg(asm, "r10")
+    asm = mov_r10_gs_qword_28(asm)
+    asm = mov_membase_disp_r64(asm, "r10", tmp_off, "r11")
+    asm = pop_reg(asm, "r10")
+    return asm
+  end if
   asm = _emit_rex(asm, 1, 1, 0, 0, false)
   asm = _emit8(asm, 0x89)
   asm = _emit8(asm, 0x1D)
@@ -1700,6 +1791,14 @@ function mov_rip_qword_r11(asm, label)
 end function
 
 function mov_rip_qword_r8(asm, label)
+  tmp_off = _gc_tmp_context_offset(label)
+  if tmp_off >= 0 then
+    asm = push_reg(asm, "r10")
+    asm = mov_r10_gs_qword_28(asm)
+    asm = mov_membase_disp_r64(asm, "r10", tmp_off, "r8")
+    asm = pop_reg(asm, "r10")
+    return asm
+  end if
   asm = _emit_rex(asm, 1, 1, 0, 0, false)
   asm = _emit8(asm, 0x89)
   asm = _emit8(asm, 0x05)
@@ -1710,6 +1809,14 @@ function mov_rip_qword_r8(asm, label)
 end function
 
 function mov_rip_qword_r9(asm, label)
+  tmp_off = _gc_tmp_context_offset(label)
+  if tmp_off >= 0 then
+    asm = push_reg(asm, "r10")
+    asm = mov_r10_gs_qword_28(asm)
+    asm = mov_membase_disp_r64(asm, "r10", tmp_off, "r9")
+    asm = pop_reg(asm, "r10")
+    return asm
+  end if
   asm = _emit_rex(asm, 1, 1, 0, 0, false)
   asm = _emit8(asm, 0x89)
   asm = _emit8(asm, 0x0D)

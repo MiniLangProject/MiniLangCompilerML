@@ -7,6 +7,7 @@ import mlc.data as d
 import mlc.codegen.codegen_scope as scope
 import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
+import mlc.codegen.codegen_threads as th
 
 struct ConstEvalResult
   ok,
@@ -23,8 +24,6 @@ struct InlineStats
   has_switch,
   has_nested_fn,
 end struct
-
-_F64_POS_HALF_BITS = 4602678819172646912
 
 function inline _opt_truthy(v)
   tv = typeof(v)
@@ -1004,10 +1003,81 @@ function _qname_parts_any(expr)
 end function
 
 function _emit_std_math_roundlike_intrinsic(state, callee_name, arg)
-  // Conservative selfhost fallback: keep std.math floor/ceil/trunc/round on the
-  // MiniLang stdlib implementation until the direct SSE lowering is proven
-  // parity-correct on the ML compiler too.
-  return [state, false]
+  if callee_name != "std.math.floor" and callee_name != "std.math.ceil" and callee_name != "std.math.trunc" and callee_name != "std.math.round" then
+    return [state, false]
+  end if
+
+  lid = _next_lid(state)
+  l_float = "math_float_" + lid
+  l_fail = "math_fail_" + lid
+  l_done = "math_done_" + lid
+
+  state = cg_emit_expr(state, arg)
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.and_r64_imm(state.asm, "r10", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+  state.asm = a.jcc(state.asm, "e", l_done)
+  state = core.emit_to_double_xmm(state, 0, l_fail)
+  state.asm = a.jmp(state.asm, l_float)
+
+  state.asm = a.mark(state.asm, l_float)
+  if callee_name == "std.math.floor" then
+    l_exact_floor = "math_floor_exact_" + lid
+    state.asm = a.roundsd_xmm_xmm_imm8(state.asm, "xmm1", "xmm0", 1)
+    state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    state.asm = a.jcc(state.asm, "e", l_exact_floor)
+    state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    state = core.emit_normalize_xmm0_to_value(state)
+    state.asm = a.jmp(state.asm, l_done)
+    state.asm = a.mark(state.asm, l_exact_floor)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+    state.asm = a.jmp(state.asm, l_done)
+  end if
+
+  if callee_name == "std.math.ceil" then
+    l_exact_ceil = "math_ceil_exact_" + lid
+    state.asm = a.roundsd_xmm_xmm_imm8(state.asm, "xmm1", "xmm0", 2)
+    state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    state.asm = a.jcc(state.asm, "e", l_exact_ceil)
+    state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    state = core.emit_normalize_xmm0_to_value(state)
+    state.asm = a.jmp(state.asm, l_done)
+    state.asm = a.mark(state.asm, l_exact_ceil)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+    state.asm = a.jmp(state.asm, l_done)
+  end if
+
+  if callee_name == "std.math.trunc" then
+    state.asm = a.roundsd_xmm_xmm_imm8(state.asm, "xmm0", "xmm0", 3)
+    state = core.emit_normalize_xmm0_to_value(state)
+    state.asm = a.jmp(state.asm, l_done)
+  end if
+
+  if callee_name == "std.math.round" then
+    l_nonneg = "math_round_nonneg_" + lid
+    state.asm = a.xorpd_xmm_xmm(state.asm, "xmm2", "xmm2")
+    state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm2")
+    // The +0.5 bit pattern exceeds MiniLang's tagged-int range. Emit its two
+    // 32-bit halves directly so self-hosting preserves every immediate bit.
+    state.asm = a.mov_rax_u64_hi_lo_exact(state.asm, 0x3FE00000, 0)
+    state.asm = a.movq_xmm_r64(state.asm, "xmm1", "rax")
+    state.asm = a.jcc(state.asm, "ae", l_nonneg)
+    state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    state.asm = a.roundsd_xmm_xmm_imm8(state.asm, "xmm0", "xmm0", 2)
+    state = core.emit_normalize_xmm0_to_value(state)
+    state.asm = a.jmp(state.asm, l_done)
+    state.asm = a.mark(state.asm, l_nonneg)
+    state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    state.asm = a.roundsd_xmm_xmm_imm8(state.asm, "xmm0", "xmm0", 1)
+    state = core.emit_normalize_xmm0_to_value(state)
+    state.asm = a.jmp(state.asm, l_done)
+  end if
+
+  state.asm = a.mark(state.asm, l_fail)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.mark(state.asm, l_done)
+  return [state, true]
 end function
 
 function _is_expr_list_separator_artifact(ex)
@@ -1886,8 +1956,10 @@ function _emit_expr_bin(state, expr)
 
   lhs_const = _opt_try_const_value(state, expr.left)
   rhs_const = _opt_try_const_value(state, expr.right)
-  lhs_const_int_ok = lhs_const.ok and typeof(lhs_const.value) == "int"
-  rhs_const_int_ok = rhs_const.ok and typeof(rhs_const.value) == "int"
+  lhs_const_type = typeof(lhs_const.value)
+  rhs_const_type = typeof(rhs_const.value)
+  lhs_const_int_ok = lhs_const.ok and (lhs_const_type == "int" or (lhs_const_type == "float" and (lhs_const.value % 1) == 0))
+  rhs_const_int_ok = rhs_const.ok and (rhs_const_type == "int" or (rhs_const_type == "float" and (rhs_const.value % 1) == 0))
   lhs_const_int = 0
   rhs_const_int = 0
   if lhs_const_int_ok then lhs_const_int = lhs_const.value end if
@@ -2102,8 +2174,29 @@ function _emit_expr_bin(state, expr)
 
   if op == "/" then
     lid_divf = _next_lid(state)
-    l_div_fail = "bin_div_fail_" + lid_divf
-    l_div_done = "bin_div_done_" + lid_divf
+    l_div_fail = "div_fail_" + lid_divf
+    l_div_done = "div_done_" + lid_divf
+
+    // Match the reference compiler's strict-void semantics. Numeric conversion
+    // still returns void for ordinary type/divide-by-zero failures, but applying
+    // division to an actual void value is a propagated runtime error.
+    vidv = _next_lid(state)
+    l_nvoid = "div_nvoid_" + vidv
+    l_isvoid = "div_isvoid_" + vidv
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.and_rax_imm8(state.asm, 7)
+    state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+    state.asm = a.jcc(state.asm, "e", l_isvoid)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+    state.asm = a.and_rax_imm8(state.asm, 7)
+    state.asm = a.cmp_rax_imm8(state.asm, c.TAG_VOID)
+    state.asm = a.jcc(state.asm, "ne", l_nvoid)
+    state.asm = a.mark(state.asm, l_isvoid)
+    state = core.emit_dbg_line(state, expr)
+    state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply '/' to void")
+    state = _emit_auto_errprop(state)
+    state.asm = a.jmp(state.asm, l_div_done)
+    state.asm = a.mark(state.asm, l_nvoid)
 
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
     state = core.emit_to_double_xmm(state, 0, l_div_fail)
@@ -3065,6 +3158,80 @@ function _emit_expr_call(state, expr)
     end if
   end if
 
+  // Native Thread object methods. They intentionally share member-call syntax
+  // with user structs, but dispatch through the reserved OBJ_THREAD header.
+  if typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" and member_runtime then
+    mname_th = _coerce_name(try(cal.name))
+    if mname_th == "" then mname_th = _coerce_name(try(cal.field)) end if
+    helper_th = ""
+    min_args_th = 0
+    max_args_th = 0
+    if mname_th == "Start" then helper_th = "fn_thread_start" end if
+    if mname_th == "Stop" then helper_th = "fn_thread_stop" end if
+    if mname_th == "Join" then
+      helper_th = "fn_thread_join"
+      max_args_th = 1
+    end if
+    if mname_th == "Status" then helper_th = "fn_thread_status" end if
+    if mname_th == "IsAlive" then helper_th = "fn_thread_alive" end if
+    if mname_th == "Id" then helper_th = "fn_thread_id" end if
+    if mname_th == "Close" then helper_th = "fn_thread_close" end if
+    if helper_th != "" then
+      if nargs < min_args_th or nargs > max_args_th then
+        allowed_th = "" + min_args_th
+        if max_args_th != min_args_th then allowed_th = allowed_th + " or " + max_args_th end if
+        state.diagnostics = state.diagnostics + ["Thread." + mname_th + " expects " + allowed_th + " arguments, got " + nargs]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      tgt_th = try(cal.target)
+      if typeof(tgt_th) != "struct" then tgt_th = try(cal.obj) end if
+      total_th = nargs + 1
+      base_th = core.alloc_expr_temps(state, total_th * 8)
+      state = cg_emit_expr(state, tgt_th)
+      state.asm = a.mov_rsp_disp32_rax(state.asm, base_th)
+      if nargs > 0 then
+        for ai_th = 0 to nargs - 1
+          state = cg_emit_expr(state, call_args[ai_th])
+          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_th + (ai_th + 1) * 8, "rax")
+        end for
+      end if
+
+      fid_th = _next_lid(state)
+      l_fail_th = "thread_method_fail_" + fid_th
+      l_done_th = "thread_method_done_" + fid_th
+      state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base_th)
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rcx")
+      state.asm = a.and_r64_imm(state.asm, "r11", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_fail_th)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "rcx", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "r11d", c.OBJ_THREAD)
+      state.asm = a.jcc(state.asm, "ne", l_fail_th)
+
+      if mname_th == "Join" then
+        if nargs == 1 then
+          state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base_th + 8)
+          state.asm = a.mov_r64_r64(state.asm, "r11", "rdx")
+          state.asm = a.and_r64_imm(state.asm, "r11", 7)
+          state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_INT)
+          state.asm = a.jcc(state.asm, "ne", l_fail_th)
+          state.asm = a.sar_r64_imm8(state.asm, "rdx", 3)
+        else
+          state.asm = a.mov_r32_imm32(state.asm, "edx", 0xFFFFFFFF)
+        end if
+      end if
+      state.asm = a.call(state.asm, helper_th)
+      state.asm = a.jmp(state.asm, l_done_th)
+      state.asm = a.mark(state.asm, l_fail_th)
+      state = _emit_make_error_const(state, c.ERR_METHOD_NOT_FOUND, "No matching Thread method '" + mname_th + "' for receiver")
+      state.asm = a.mark(state.asm, l_done_th)
+      state = _emit_auto_errprop(state)
+      state = core.free_expr_temps(state, total_th * 8)
+      return state
+    end if
+  end if
+
   // OOP-style struct instance call: obj.method(args...)
   // Compile as dynamic dispatch on receiver.struct_id -> direct call of hoisted method body.
   if typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" and member_runtime then
@@ -3268,6 +3435,78 @@ function _emit_expr_call(state, expr)
         return state
       end if
     end if
+  end if
+
+  // Thread(function): create a real OS thread object whose worker gets its own
+  // isolated arena. Thread entry points are capture-free, top-level, zero-arg functions.
+  if callee == "Thread" or raw_name == "Thread" then
+    if nargs != 1 then
+      state.diagnostics = state.diagnostics + ["Thread expects exactly 1 function, got " + nargs]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    fn_qn_th = _qname_of(state, call_args[0])
+    if fn_qn_th != "" then fn_qn_th = _apply_import_alias(state, fn_qn_th) end if
+    fn_def_th = 0
+    if fn_qn_th != "" then fn_def_th = _user_function_get(state, fn_qn_th) end if
+    if typeof(fn_def_th) != "struct" then
+      state.diagnostics = state.diagnostics + ["Thread expects a top-level function name"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    params_th = try(fn_def_th.params)
+    if typeof(params_th) == "array" and len(params_th) != 0 then
+      state.diagnostics = state.diagnostics + ["Thread entry function '" + fn_qn_th + "' must have zero parameters"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    captures_th = try(fn_def_th._ml_captures)
+    if typeof(captures_th) == "array" and len(captures_th) > 0 then
+      state.diagnostics = state.diagnostics + ["Thread entry function '" + fn_qn_th + "' must not capture local variables"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    state.asm = a.lea_rax_rip(state.asm, "fn_user_" + fn_qn_th)
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.call(state.asm, "fn_thread_new")
+    return state
+  end if
+
+  if callee == "threadStopRequested" or raw_name == "threadStopRequested" then
+    if nargs != 0 then
+      state.diagnostics = state.diagnostics + ["threadStopRequested expects no arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    state.asm = a.call(state.asm, "fn_thread_stop_requested")
+    return state
+  end if
+
+  if callee == "threadSleep" or raw_name == "threadSleep" then
+    if nargs != 1 then
+      state.diagnostics = state.diagnostics + ["threadSleep expects 1 argument, got " + nargs]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    state = cg_emit_expr(state, call_args[0])
+    lid_sleep = _next_lid(state)
+    l_ok_sleep = "thsleep_ok_" + lid_sleep
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.and_r64_imm(state.asm, "r11", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "e", l_ok_sleep)
+    state = _emit_make_error_const(state, c.ERR_CALL_NOT_CALLABLE, "threadSleep expects an integer millisecond value")
+    state = _emit_auto_errprop(state)
+    state.asm = a.mark(state.asm, l_ok_sleep)
+    state.asm = a.sar_rax_imm8(state.asm, 3)
+    state.asm = a.mov_r32_r32(state.asm, "r12d", "eax")
+    state.asm = a.call(state.asm, "fn_gc_native_enter")
+    state.asm = a.mov_r32_r32(state.asm, "ecx", "r12d")
+    state.asm = a.mov_rax_rip_qword(state.asm, "iat_Sleep")
+    state.asm = a.call_rax(state.asm)
+    state.asm = a.call(state.asm, "fn_gc_native_leave")
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return state
   end if
 
   // Type-qualified helper instance method call without receiver:
@@ -4893,11 +5132,7 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       return [state, true]
     end if
-    state.asm = a.mov_rax_rip_qword(state.asm, "heap_end")
-    state.asm = a.mov_rdx_rip_qword(state.asm, "heap_base")
-    state.asm = a.sub_r64_r64(state.asm, "rax", "rdx")
-    state.asm = a.shl_rax_imm8(state.asm, 3)
-    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.call(state.asm, "fn_heap_bytes_committed")
     return [state, true]
   end if
 
@@ -4907,11 +5142,7 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       return [state, true]
     end if
-    state.asm = a.mov_rax_rip_qword(state.asm, "heap_reserve_end")
-    state.asm = a.mov_rdx_rip_qword(state.asm, "heap_base")
-    state.asm = a.sub_r64_r64(state.asm, "rax", "rdx")
-    state.asm = a.shl_rax_imm8(state.asm, 3)
-    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.call(state.asm, "fn_heap_bytes_reserved")
     return [state, true]
   end if
 
@@ -6785,6 +7016,8 @@ function _emit_auto_errprop(state)
   lid = _next_lid(state)
   l_noerr = "errprop_noerr_" + lid
   l_cold = "errprop_cold_" + lid
+  sync_cleanup_depth = 0
+  if typeof(state.errprop_sync_depth) == "int" then sync_cleanup_depth = state.errprop_sync_depth end if
 
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
   state.asm = a.and_r64_imm(state.asm, "r10", 7)
@@ -6797,7 +7030,17 @@ function _emit_auto_errprop(state)
   state.asm = a.cmp_r32_imm(state.asm, "r10d", c.ERROR_STRUCT_ID)
   state.asm = a.jcc(state.asm, "ne", l_noerr)
 
-  if core.defer_cold_block(state, l_cold, _emit_auto_errprop_cold_block) then
+  if sync_cleanup_depth > 0 then
+    for cleanup_i = 1 to sync_cleanup_depth
+      state.asm = a.call(state.asm, "fn_sync_leave")
+    end for
+    if state.in_function and typeof(state.func_ret_label) == "string" and state.func_ret_label != "" then
+      state.asm = a.jmp(state.asm, state.func_ret_label)
+    else
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_unhandled_error_exit")
+    end if
+  else if core.defer_cold_block(state, l_cold, _emit_auto_errprop_cold_block) then
     state.asm = a.jmp(state.asm, l_cold)
   else
     if state.in_function and typeof(state.func_ret_label) == "string" and state.func_ret_label != "" then
@@ -6952,8 +7195,7 @@ function _emit_extern_arg_to_native(state, abi_ty, fail_label, pos, wbuf_label)
     state.asm = a.lea_r11_rip(state.asm, wbuf_label)
     state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "r11")
     state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x28, c.WIDEBUF_SIZE / 2, true)
-    state.asm = a.mov_rax_rip_qword(state.asm, "iat_MultiByteToWideChar")
-    state.asm = a.call_rax(state.asm)
+    state.asm = a.call_rip_qword(state.asm, "iat_MultiByteToWideChar")
     state.asm = a.lea_rax_rip(state.asm, wbuf_label)
     state.asm = a.jmp(state.asm, l_ok_ws)
 
@@ -7283,6 +7525,10 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
     i = i + 1
   end while
 
+  // Native code may block indefinitely. Publish a stable stack-root chain
+  // before entering it so stop-the-world GC need not wait for the OS call.
+  state.asm = a.call(state.asm, "fn_gc_native_enter")
+
   if nargs >= 1 then
     aty0 = _coerce_name(ps[0])
     if typeof(ps[0]) == "struct" then
@@ -7377,6 +7623,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   end if
 
   state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
+  state.asm = a.call(state.asm, "fn_gc_native_leave")
   state = _emit_extern_ret_from_native(state, sig.ret_ty, l_fail, pos)
   state.asm = a.jmp(state.asm, l_done)
 
@@ -7753,6 +8000,9 @@ function emit_expr(state, ex)
 end function
 
 function emit_extern_stubs(state)
+  // Keep helper discovery identical to the Python compiler even when the
+  // program declares no externs. This preserves deterministic helper order.
+  state.used_helpers = state.used_helpers + ["fn_gc_native_enter", "fn_gc_native_leave"]
   xs = state.extern_sigs
   if typeof(xs) != "array" or len(xs) <= 0 then return state end if
 
@@ -7859,6 +8109,8 @@ function emit_extern_stubs(state)
       end for
     end if
 
+    state.asm = a.call(state.asm, "fn_gc_native_enter")
+
     regs = ["rcx", "rdx", "r8", "r9"]
     xregs = ["xmm0", "xmm1", "xmm2", "xmm3"]
     lim = nargs
@@ -7886,6 +8138,7 @@ function emit_extern_stubs(state)
     end if
 
     state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
+    state.asm = a.call(state.asm, "fn_gc_native_leave")
     state = _emit_extern_ret_from_native(state, ret_ty, l_fail, pos)
     state.asm = a.jmp(state.asm, l_done)
 

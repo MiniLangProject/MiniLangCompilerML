@@ -2,6 +2,8 @@ package mlc.minilang_parser
 import std.string as s
 import mlc.tools as t
 
+extern function _parse_strtod(text as cstr, endptr as ptr) from "msvcrt.dll" symbol "strtod" returns double
+
 struct ParseError
   message,
   pos,
@@ -173,6 +175,14 @@ struct Assign
   _filename,
 end struct
 
+struct SynchronizedDecl
+  node_kind,
+  name,
+  expr,
+  _pos,
+  _filename,
+end struct
+
 struct SetMember
   node_kind,
   obj,
@@ -213,6 +223,7 @@ struct FunctionDef
   body,
   is_static,
   is_inline,
+  is_synchronized,
   _ml_locals,
   _ml_globals_declared,
   _ml_captures,
@@ -366,7 +377,7 @@ _keywords =[
 "print", "if", "then", "else", "end", "while", "loop", "true", "false", "and", "or", "not",
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
 "switch", "case", "default", "struct", "enum", "are", "namespace", "import", "as", "package",
-"extern", "from", "returns", "symbol", "out", "static", "inline", "void", "is"
+"extern", "from", "returns", "symbol", "out", "static", "inline", "synchronized", "void", "is"
 ]
 
 function newToken(kind, value, pos)
@@ -1019,7 +1030,9 @@ function _parse_int_literal(raw)
 end function
 
 function _parse_float_literal(raw)
-  return toFloat(raw)
+  // Use the CRT's correctly-rounded binary64 conversion. The generic
+  // MiniLang toFloat() parser can differ by one ULP for long decimals.
+  return _parse_strtod(raw, void)
 end function
 
 function _precedence(op)
@@ -1682,6 +1695,10 @@ function _parse_stmt()
     return _parse_stmt_const(start_pos, t)
   end if
 
+  if t.kind == "KW" and t.value == "synchronized" then
+    return _parse_stmt_synchronized(start_pos, t)
+  end if
+
   if t.kind == "KW" and t.value == "print" then
     return _parse_stmt_print(start_pos, t)
   end if
@@ -1809,6 +1826,18 @@ function _parse_stmt_const(start_pos, t)
   e = _parse_expr(0)
   if _has_error() then return end if
   return ConstDecl("ConstDecl", n.value, e, start_pos, _filename)
+end function
+
+function _parse_stmt_synchronized(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  _advance()
+  n = _expect_kind("IDENT")
+  if _has_error() then return end if
+  _expect_value("OP", "=")
+  if _has_error() then return end if
+  e = _parse_expr(0)
+  if _has_error() then return end if
+  return SynchronizedDecl("SynchronizedDecl", n.value, e, start_pos, _filename)
 end function
 
 function _parse_stmt_print(start_pos, t)
@@ -2006,10 +2035,17 @@ function _parse_stmt_struct(start_pos, t)
       end if
 
       is_inline = false
-      if _peek().kind == "KW" and _peek().value == "inline" then
-        is_inline = true
-        _advance()
-      end if
+      is_synchronized = false
+      while _peek().kind == "KW" and(_peek().value == "inline" or _peek().value == "synchronized")
+        modifier = _advance().value
+        if modifier == "inline" then
+          if is_inline then _set_error("duplicate function modifier 'inline'", _peek().pos) return end if
+          is_inline = true
+        else
+          if is_synchronized then _set_error("duplicate function modifier 'synchronized'", _peek().pos) return end if
+          is_synchronized = true
+        end if
+      end while
 
       mn = _expect_kind("IDENT")
       if _has_error() then return end if
@@ -2024,7 +2060,7 @@ function _parse_stmt_struct(start_pos, t)
       if _has_error() then return end if
       _expect_end_of("function")
       if _has_error() then return end if
-      appm = _chunked_push(methods_chunks, methods_tail, FunctionDef("FunctionDef", mn.value, mp, mb, is_static, is_inline, [], [], [], [], [], 0, [], [], [], [], false, mpos, _filename), 16)
+      appm = _chunked_push(methods_chunks, methods_tail, FunctionDef("FunctionDef", mn.value, mp, mb, is_static, is_inline, is_synchronized, [], [], [], [], [], 0, [], [], [], [], false, mpos, _filename), 16)
       methods_chunks = appm[0]
       methods_tail = appm[1]
       continue
@@ -2139,10 +2175,17 @@ function _parse_stmt_function(start_pos, t)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   is_inline = false
-  if _peek().kind == "KW" and _peek().value == "inline" then
-    is_inline = true
-    _advance()
-  end if
+  is_synchronized = false
+  while _peek().kind == "KW" and(_peek().value == "inline" or _peek().value == "synchronized")
+    modifier = _advance().value
+    if modifier == "inline" then
+      if is_inline then _set_error("duplicate function modifier 'inline'", _peek().pos) return end if
+      is_inline = true
+    else
+      if is_synchronized then _set_error("duplicate function modifier 'synchronized'", _peek().pos) return end if
+      is_synchronized = true
+    end if
+  end while
   nm = _expect_kind("IDENT")
   if _has_error() then return end if
   _expect_kind("LPAREN")
@@ -2156,7 +2199,7 @@ function _parse_stmt_function(start_pos, t)
   if _has_error() then return end if
   _expect_end_of("function")
   if _has_error() then return end if
-  return FunctionDef("FunctionDef", nm.value, params, body, false, is_inline, [], [], [], [], [], 0, [], [], [], [], false, start_pos, _filename)
+  return FunctionDef("FunctionDef", nm.value, params, body, false, is_inline, is_synchronized, [], [], [], [], [], 0, [], [], [], [], false, start_pos, _filename)
 end function
 
 function _parse_stmt_loop(start_pos, t)

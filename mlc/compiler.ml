@@ -825,7 +825,7 @@ end function
 function _is_decl_stmt(st)
   if typeof(st) != "struct" then return false end if
   k = st.node_kind
-  return k == "FunctionDef" or k == "StructDef" or k == "EnumDef" or k == "NamespaceDef" or k == "NamespaceDecl" or k == "ExternFunctionDef" or k == "ExternFunctionDecl" or k == "ConstDecl" or k == "Assign" or k == "Import"
+  return k == "FunctionDef" or k == "StructDef" or k == "EnumDef" or k == "NamespaceDef" or k == "NamespaceDecl" or k == "ExternFunctionDef" or k == "ExternFunctionDecl" or k == "ConstDecl" or k == "Assign" or k == "SynchronizedDecl" or k == "Import"
 end function
 
 function _check_decl_stmt(st, module_path, diags, keep_going, max_errors)
@@ -1152,7 +1152,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
         // Fast-path for common declaration-only node kinds to avoid expensive helper calls.
         if typeof(stx) == "struct" then
           kx = stx.node_kind
-          if kx == "FunctionDef" or kx == "StructDef" or kx == "NamespaceDecl" or kx == "ExternFunctionDef" or kx == "ExternFunctionDecl" or kx == "Assign" or kx == "Import" then
+          if kx == "FunctionDef" or kx == "StructDef" or kx == "NamespaceDecl" or kx == "ExternFunctionDef" or kx == "ExternFunctionDecl" or kx == "Assign" or kx == "SynchronizedDecl" or kx == "Import" then
             continue
           end if
         end if

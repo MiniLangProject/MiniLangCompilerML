@@ -1707,6 +1707,7 @@ function emit_typeof_function(state)
   l_flt = "tof_flt_" + lid
   l_bytes = "tof_bytes_" + lid
   l_fun = "tof_fun_" + lid
+  l_thread = "tof_thread_" + lid
   l_sti = "tof_sti_" + lid
   l_stt = "tof_stt_" + lid
   l_unk = "tof_unk_" + lid
@@ -1768,6 +1769,8 @@ function emit_typeof_function(state)
   state.asm = a.jcc(state.asm, "e", l_fun)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BUILTIN)
   state.asm = a.jcc(state.asm, "e", l_fun)
+  state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_THREAD)
+  state.asm = a.jcc(state.asm, "e", l_thread)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCT)
   state.asm = a.jcc(state.asm, "e", l_sti)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCTTYPE)
@@ -1792,6 +1795,10 @@ function emit_typeof_function(state)
 
   state.asm = a.mark(state.asm, l_fun)
   state.asm = a.lea_rax_rip(state.asm, "obj_type_function")
+  state.asm = a.ret(state.asm)
+
+  state.asm = a.mark(state.asm, l_thread)
+  state.asm = a.lea_rax_rip(state.asm, "obj_type_thread")
   state.asm = a.ret(state.asm)
 
   state.asm = a.mark(state.asm, l_sti)
@@ -1831,6 +1838,7 @@ function emit_typeName_function(state)
   l_flt = "tna_flt_" + lid
   l_bytes = "tna_bytes_" + lid
   l_fun = "tna_fun_" + lid
+  l_thread = "tna_thread_" + lid
   l_sti = "tna_sti_" + lid
   l_stt = "tna_stt_" + lid
   l_unk = "tna_unk_" + lid
@@ -1917,6 +1925,8 @@ function emit_typeName_function(state)
   state.asm = a.jcc(state.asm, "e", l_fun)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BUILTIN)
   state.asm = a.jcc(state.asm, "e", l_fun)
+  state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_THREAD)
+  state.asm = a.jcc(state.asm, "e", l_thread)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCT)
   state.asm = a.jcc(state.asm, "e", l_sti)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCTTYPE)
@@ -1941,6 +1951,10 @@ function emit_typeName_function(state)
 
   state.asm = a.mark(state.asm, l_fun)
   state.asm = a.lea_rax_rip(state.asm, "obj_type_function")
+  state.asm = a.ret(state.asm)
+
+  state.asm = a.mark(state.asm, l_thread)
+  state.asm = a.lea_rax_rip(state.asm, "obj_type_thread")
   state.asm = a.ret(state.asm)
 
   state.asm = a.mark(state.asm, l_sti)

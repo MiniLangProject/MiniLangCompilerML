@@ -254,6 +254,7 @@ function _clone_state_for_object(base, seed_runtime)
   st.func_ret_label = ""
   st.func_frame_size = 0
   st.errprop_suppression = 0
+  st.errprop_sync_depth = 0
   st.dbg_line_starts = base.dbg_line_starts
   st.expr_temp_base = 0
   st.expr_temp_top = 0
