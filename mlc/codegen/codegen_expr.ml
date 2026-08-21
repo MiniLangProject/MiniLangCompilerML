@@ -987,11 +987,9 @@ function _qname_parts_any(expr)
     return s.split(nm, ".")
   end if
   if k == "Member" then
+    // The self-hosted parser's Member AST has `target`/`name`. `obj` belongs
+    // to SetMember and cannot be probed safely on a Member struct at runtime.
     tgt2 = try(expr.target)
-    obj2 = try(expr.obj)
-    if typeof(tgt2) != "struct" and typeof(obj2) == "struct" then
-      tgt2 = obj2
-    end if
     base2 = _qname_parts_any(tgt2)
     if typeof(base2) != "array" or len(base2) <= 0 then return 0 end if
     nm2 = _coerce_name(try(expr.name))
@@ -1379,7 +1377,7 @@ function _emit_expr_is_type(state, expr)
           state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_int(cv_v.value))
         else
           if cv_v.ok and typeof(cv_v.value) == "string" then
-            lbl_ve = "cstr_ve_" + len(state.rdata.labels)
+            lbl_ve = "cstr_ve_" + d.rdata_label_count(state.rdata)
             state.rdata = d.rdata_add_obj_string(state.rdata, lbl_ve, cv_v.value)
             state.asm = a.lea_rdx_rip(state.asm, lbl_ve)
           else
@@ -8121,7 +8119,11 @@ function _emit_inline_call(state, callee, args)
     end for
   end if
 
-  state._inline_call_stack = state._inline_call_stack + [callee]
+  // Keep the caller's stack in a local root and restore it unconditionally.
+  // Statement emission may return a copied codegen state; relying on its field
+  // to pop the active callee can therefore observe `void` in large programs.
+  saved_inline_call_stack = state._inline_call_stack
+  state._inline_call_stack = saved_inline_call_stack + [callee]
   emitter = state._inline_param_stack
   body = try(fn.body)
   if typeof(body) != "array" then body = [] end if
@@ -8134,11 +8136,7 @@ function _emit_inline_call(state, callee, args)
       end for
     end if
   end if
-  if len(state._inline_call_stack) > 1 then
-    state._inline_call_stack = slice(state._inline_call_stack, 0, len(state._inline_call_stack) - 1)
-  else
-    state._inline_call_stack = []
-  end if
+  state._inline_call_stack = saved_inline_call_stack
 
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   state.asm = a.mark(state.asm, l_end)

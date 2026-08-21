@@ -739,6 +739,66 @@ function arr_chunked_finish(chunks, tail)
   return arr_merge_chunks_balanced(all)
 end function
 
+function arr_chunked_count(chunks, tail, cap)
+  ccap = cap
+  if typeof(ccap) != "int" or ccap <= 0 then ccap = 64 end if
+  chunk_count = 0
+  if _chunks_is_paged(chunks) then
+    pages = chunks[1]
+    if typeof(pages) == "array" and len(pages) > 0 then
+      for pi = 0 to len(pages) - 1
+        page = pages[pi]
+        if typeof(page) == "array" then chunk_count = chunk_count + len(page) end if
+      end for
+    end if
+    chunk_count = chunk_count + arr_chunk_tail_len(chunks[2])
+  else
+    if typeof(chunks) == "array" then chunk_count = len(chunks) end if
+  end if
+  return chunk_count * ccap + arr_chunk_tail_len(tail)
+end function
+
+function arr_chunked_get(chunks, tail, idx, cap, defaultv)
+  if typeof(idx) != "int" or idx < 0 then return defaultv end if
+  ccap = cap
+  if typeof(ccap) != "int" or ccap <= 0 then ccap = 64 end if
+  chunk_offset = idx % ccap
+  chunk_index = (idx - chunk_offset) / ccap
+  chunk = 0
+  chunk_count = 0
+
+  if _chunks_is_paged(chunks) then
+    pages = chunks[1]
+    if typeof(pages) != "array" then pages = [] end if
+    page_index = chunk_index >> 8
+    page_offset = chunk_index & 0xFF
+    if page_index >= 0 and page_index < len(pages) then
+      page = pages[page_index]
+      if typeof(page) == "array" and page_offset >= 0 and page_offset < len(page) then
+        chunk = page[page_offset]
+      end if
+    end if
+    chunk_count = len(pages) << 8
+    if typeof(chunk) != "array" then
+      tail_chunk_index = chunk_index - chunk_count
+      chunk = arr_chunk_tail_get(chunks[2], tail_chunk_index, 0)
+    end if
+    chunk_count = chunk_count + arr_chunk_tail_len(chunks[2])
+  else
+    if typeof(chunks) == "array" then
+      chunk_count = len(chunks)
+      if chunk_index < chunk_count then chunk = chunks[chunk_index] end if
+    end if
+  end if
+
+  if typeof(chunk) == "array" then
+    if chunk_offset >= 0 and chunk_offset < len(chunk) then return chunk[chunk_offset] end if
+    return defaultv
+  end if
+  tail_index = idx - chunk_count * ccap
+  return arr_chunk_tail_get(tail, tail_index, defaultv)
+end function
+
 function arr_chunk_finish(builder)
   b = builder
   if typeof(b) != "struct" then return [] end if

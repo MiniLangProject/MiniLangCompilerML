@@ -61,7 +61,7 @@ function _ensure_enum_obj_strings(state)
       vname = vals[vid]
       if typeof(vname) != "string" then continue end if
       lbl = "enumv_" + eid + "_" + vid
-      if _has_label(state.rdata.labels, lbl) == false then
+      if d.rdata_has_label(state.rdata, lbl) == false then
         state.rdata = d.rdata_add_obj_string(state.rdata, lbl, eqn + "." + vname)
       end if
     end for
@@ -122,9 +122,13 @@ function emit_input_function(state)
   state.asm = a.ret(state.asm)
   state.asm = a.mark(state.asm, l_nonempty)
 
+  // fn_alloc may clobber volatile R9. Preserve the effective line length in
+  // the caller-local slot above shadow space, matching the Python backend.
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x20, "r9d")
   state.asm = a.mov_r32_r32(state.asm, "ecx", "r9d")
   state.asm = a.add_r32_imm(state.asm, "ecx", 9)
   state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "rsp", 0x20)
 
   state.asm = a.mov_r11_rax(state.asm)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRING, false)

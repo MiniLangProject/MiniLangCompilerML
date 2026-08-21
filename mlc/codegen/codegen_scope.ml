@@ -468,7 +468,7 @@ function cg_declare_binding(state, name, kind, is_const, const_expr, const_value
   if kind == "global" then
     b.label = "g_" + _sanitize_ident(name) + "_" + bid
     if typeof(state.data) == "struct" then
-      if _has_data_label(state.data.labels, b.label) == false then
+      if d.data_has_label(state.data, b.label) == false then
         state.data = d.data_add_u64(state.data, b.label, t.enc_void())
       end if
     end if
@@ -797,7 +797,7 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
 
   b.label = "g_" + _sanitize_ident(nm) + "_" + bid
   if typeof(state.data) == "struct" then
-    if _has_data_label(state.data.labels, b.label) == false then
+    if d.data_has_label(state.data, b.label) == false then
       state.data = d.data_add_u64(state.data, b.label, t.enc_void())
     end if
   end if
@@ -937,7 +937,7 @@ function materialize_global_binding_root(state, name)
   if typeof(b.label) == "string" and b.label != "" then return state end if
 
   b.label = "g_" + _sanitize_ident(nm) + "_" + b.id
-  if typeof(state.data) == "struct" and _has_data_label(state.data.labels, b.label) == false then
+  if typeof(state.data) == "struct" and d.data_has_label(state.data, b.label) == false then
     state.data = d.data_add_u64(state.data, b.label, t.enc_void())
   end if
   root[found] = b

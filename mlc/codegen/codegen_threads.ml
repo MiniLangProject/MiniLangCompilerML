@@ -57,26 +57,26 @@ function _new_label_id(state)
 end function
 
 function ensure_thread_data(state)
-  if _has_label(state.data.labels, "sync_monitor") == false then
+  if d.data_has_label(state.data, "sync_monitor") == false then
     state.data = d.data_pad_align(state.data, 8)
     state.data = d.data_add_bytes(state.data, "sync_monitor", bytes(40, 0))
   end if
-  if _has_label(state.data.labels, "heap_monitor") == false then
+  if d.data_has_label(state.data, "heap_monitor") == false then
     state.data = d.data_pad_align(state.data, 8)
     state.data = d.data_add_bytes(state.data, "heap_monitor", bytes(40, 0))
   end if
-  if _has_label(state.data.labels, "gc_coord_monitor") == false then
+  if d.data_has_label(state.data, "gc_coord_monitor") == false then
     state.data = d.data_pad_align(state.data, 8)
     state.data = d.data_add_bytes(state.data, "gc_coord_monitor", bytes(40, 0))
   end if
-  if _has_label(state.data.labels, "main_thread_context") == false then
+  if d.data_has_label(state.data, "main_thread_context") == false then
     state.data = d.data_pad_align(state.data, 8)
     state.data = d.data_add_bytes(state.data, "main_thread_context", bytes(THREAD_CONTEXT_SIZE, 0))
   end if
-  if _has_label(state.data.labels, "thread_contexts_head") == false then
+  if d.data_has_label(state.data, "thread_contexts_head") == false then
     state.data = d.data_add_u64(state.data, "thread_contexts_head", 0)
   end if
-  if _has_label(state.data.labels, "gc_requested") == false then
+  if d.data_has_label(state.data, "gc_requested") == false then
     state.data = d.data_add_u64(state.data, "gc_requested", 0)
   end if
   return state
@@ -688,7 +688,7 @@ function emit_thread_status_function(state)
   names = ["obj_thread_created", "obj_thread_running", "obj_thread_stop_requested", "obj_thread_completed", "obj_thread_stopped", "obj_thread_failed"]
   values = ["Created", "Running", "StopRequested", "Completed", "Stopped", "Failed"]
   for i = 0 to len(names) - 1
-    if _has_label(state.rdata.labels, names[i]) == false then
+    if d.rdata_has_label(state.rdata, names[i]) == false then
       state.rdata = d.rdata_add_obj_string(state.rdata, names[i], values[i])
     end if
   end for

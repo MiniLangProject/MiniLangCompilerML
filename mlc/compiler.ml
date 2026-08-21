@@ -8,6 +8,7 @@ import mlc.codegen.codegen as codegen
 import mlc.pe as pe
 import mlc.tools as t
 import mlc.asm as a
+import mlc.data as d
 
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
@@ -149,6 +150,7 @@ _path_norm_cache = []
 _front_visited_set = []
 _front_resolve_cache = []
 _pe_state_keepalive = 0
+_compile_codegen_keepalive = 0
 _object_pipeline_enabled = false
 _asm_listing_enabled = false
 _asm_listing_path = ""
@@ -1600,12 +1602,12 @@ end function
 function _compiler_gc_limit_from_config(runtime_config)
   compiler_gc_limit = _cfg_get_int(runtime_config, "compiler_gc_limit_bytes", 0)
   if compiler_gc_limit <= 0 then
-    compiler_gc_limit = _cfg_get_int(runtime_config, "gc_bytes_limit", 0)
-  end if
-  if compiler_gc_limit <= 0 then
-    compiler_gc_limit = _cfg_get_int(runtime_config, "commit_bytes", 64 << 20)
-    if compiler_gc_limit < (64 << 20) then compiler_gc_limit = 64 << 20 end if
-    if compiler_gc_limit > (256 << 20) then compiler_gc_limit = 256 << 20 end if
+    // `gc_bytes_limit` belongs to the generated target.  Reusing it for the
+    // self-hosted compiler made target flags such as `--gc-limit 1m` trigger
+    // collections inside virtually every emitter call and could change the
+    // generated program.  Large compiler phases perform explicit, rooted
+    // collections; keep automatic compiler GC at its independent safe cadence.
+    compiler_gc_limit = 1536 << 20
   end if
   return compiler_gc_limit
 end function
@@ -2098,15 +2100,15 @@ function _mlo_from_state(kind, module_file, entry_label, st)
   rdata_labels = []
   rdata_patches = []
   if typeof(st.rdata) == "struct" then
-    rdata_labels = _mlo_labels_from_arr(st.rdata.labels)
-    rdata_patches = _mlo_patches_from_data(st.rdata.patches)
+    rdata_labels = _mlo_labels_from_arr(d.rdata_get_labels(st.rdata))
+    rdata_patches = _mlo_patches_from_data(d.rdata_get_patches(st.rdata))
   end if
 
   data_labels = []
   data_patches = []
   if typeof(st.data) == "struct" then
-    data_labels = _mlo_labels_from_arr(st.data.labels)
-    data_patches = _mlo_patches_from_data(st.data.patches)
+    data_labels = _mlo_labels_from_arr(d.data_get_labels(st.data))
+    data_patches = _mlo_patches_from_data(d.data_get_patches(st.data))
   end if
 
   return MloObject(
@@ -4682,6 +4684,7 @@ end function
 function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
   global _pe_state_keepalive
+  global _compile_codegen_keepalive
   compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
   gc_set_limit(compiler_gc_limit)
   _heap_probe("compile:start")
@@ -4691,6 +4694,12 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   input_abs = _path_abspath(input_ml)
   if input_abs == "" then input_abs = input_ml end if
   load = _load_program_for_codegen(input_abs, include_dirs, keep_going, max_errors)
+  // Code generation can allocate enough temporary objects to trigger an
+  // automatic collection inside deeply nested emitter calls.  Keep the full
+  // parsed program reachable independently of compiler-stack liveness until
+  // emit_program returns; otherwise very large function bodies can leave a
+  // stale AST pointer that fails in the native typeof helper.
+  _compile_codegen_keepalive = load
   _heap_probe("compile:load_program_done")
   if len(load.diagnostics) > 0 then
     for i = 0 to len(load.diagnostics) - 1
@@ -4725,9 +4734,11 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   // The monolithic/default path needs the same synthetic callStat metadata as
   // the object pipeline before member access is planned.
   cg = codegen.enable_call_profile_metadata(cg)
+  _compile_codegen_keepalive = [load, cg]
   cg = codegen.emit_program(cg, load.program)
   _heap_probe("compile:codegen_done")
   st = cg.state
+  _compile_codegen_keepalive = st
   _pe_state_keepalive = st
   load.program = []
   load.source = ""
@@ -4761,6 +4772,8 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     st.asm.labels_tail = []
     st.asm.patches_chunks = []
     st.asm.patches_tail = []
+    st.asm.deferred_patches_chunks = []
+    st.asm.deferred_patches_tail = []
     st.asm.calls_chunks = []
     st.asm.calls_tail = []
     st.asm.before_call_live_temps = []
@@ -4882,9 +4895,11 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
       end if
     end for
   end if
-  if typeof(st.rdata) == "struct" and typeof(st.rdata.labels) == "array" and len(st.rdata.labels) > 0 then
-    for i = 0 to len(st.rdata.labels) - 1
-      lb2 = st.rdata.labels[i]
+  rdata_label_list = []
+  if typeof(st.rdata) == "struct" then rdata_label_list = d.rdata_get_labels(st.rdata) end if
+  if typeof(rdata_label_list) == "array" and len(rdata_label_list) > 0 then
+    for i = 0 to len(rdata_label_list) - 1
+      lb2 = rdata_label_list[i]
       if typeof(lb2) == "struct" and typeof(lb2.name) == "string" and typeof(lb2.offset) == "int" then
         app_lb2 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb2.name, rdata_rva + lb2.offset), 1024)
         labels_chunks = app_lb2[0]
@@ -4892,9 +4907,11 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
       end if
     end for
   end if
-  if typeof(st.data) == "struct" and typeof(st.data.labels) == "array" and len(st.data.labels) > 0 then
-    for i = 0 to len(st.data.labels) - 1
-      lb3 = st.data.labels[i]
+  data_label_list = []
+  if typeof(st.data) == "struct" then data_label_list = d.data_get_labels(st.data) end if
+  if typeof(data_label_list) == "array" and len(data_label_list) > 0 then
+    for i = 0 to len(data_label_list) - 1
+      lb3 = data_label_list[i]
       if typeof(lb3) == "struct" and typeof(lb3.name) == "string" and typeof(lb3.offset) == "int" then
         app_lb3 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb3.name, data_rva + lb3.offset), 1024)
         labels_chunks = app_lb3[0]
@@ -5006,7 +5023,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     end for
   end if
 
-  patch_sets = [[rdata_buf, st.rdata.patches], [data_buf, st.data.patches]]
+  patch_sets = [[rdata_buf, d.rdata_get_patches(st.rdata)], [data_buf, d.data_get_patches(st.data)]]
   for psi = 0 to len(patch_sets) - 1
     pack = patch_sets[psi]
     if typeof(pack) != "array" or len(pack) < 2 then continue end if
@@ -5073,12 +5090,12 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   labels = []
   label_map = t.fastmap_new(16)
   if typeof(st.rdata) == "struct" then
-    st.rdata.labels = []
-    st.rdata.patches = []
+    st.rdata = d.rdata_clear_labels(st.rdata)
+    st.rdata = d.rdata_clear_patches(st.rdata)
   end if
   if typeof(st.data) == "struct" then
-    st.data.labels = []
-    st.data.patches = []
+    st.data = d.data_clear_labels(st.data)
+    st.data = d.data_clear_patches(st.data)
   end if
   if typeof(st.bss) == "struct" then
     st.bss.labels = []
@@ -5113,6 +5130,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   end if
 
   _pe_state_keepalive = 0
+  _compile_codegen_keepalive = 0
 
   print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler)"
   return 0
@@ -5199,6 +5217,7 @@ end function
 
 function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
+  global _compile_codegen_keepalive
   runtime_config = _cfg_set(runtime_config, "cg_object_pipeline", true)
   compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
   gc_set_limit(compiler_gc_limit)
@@ -5213,6 +5232,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   if input_abs == "" then input_abs = input_ml end if
   _progress_phase("loading modules")
   load = _load_program_for_codegen(input_abs, include_dirs, keep_going, max_errors)
+  _compile_codegen_keepalive = load
   _heap_probe("compile:load_program_done")
   if len(load.diagnostics) > 0 then
     for i = 0 to len(load.diagnostics) - 1
@@ -5253,6 +5273,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   cg.state.is_windows_subsystem = (subsystem == 2)
   _heap_probe("compile:before_call_profile_metadata")
   cg = codegen.enable_call_profile_metadata(cg)
+  _compile_codegen_keepalive = [load, cg]
   _heap_probe("compile:call_profile_metadata_done")
 
   _progress_phase("planning object pipeline")
@@ -5263,6 +5284,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     return 2
   end if
   cg = prep[0]
+  _compile_codegen_keepalive = [load, cg]
   module_init_recs = prep[1]
   max_call_args_main = prep[2]
   _heap_probe("compile:plan_done")
@@ -5457,6 +5479,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   st = 0
   cg = 0
   load = 0
+  _compile_codegen_keepalive = 0
   _heap_probe("compile:pre_link_gc")
 
   if _link_should_use_fresh_process(obj_paths) then

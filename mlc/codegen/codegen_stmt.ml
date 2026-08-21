@@ -11,6 +11,13 @@ import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_threads as th
 
+// Explicit native-GC calls inside the self-hosted compiler need a process root
+// for the large codegen graph.  The generated liveness map is intentionally
+// conservative for ordinary calls, but multi-thousand-function programs keep
+// AST entries alive across dozens of manual collections and exposed a stale
+// pointer in fn_typeof without this barrier.
+_phase_codegen_keepalive = 0
+
 function inline _join_qname(prefix, name)
   if typeof(prefix) != "string" or prefix == "" then return name end if
   if prefix[len(prefix) - 1] == "." then
@@ -325,11 +332,15 @@ function _forget_nested_function_by_codegen_name(state, code_name)
 end function
 
 function _maybe_phase_gc(state, tag, min_bytes)
+  global _phase_codegen_keepalive
   need = min_bytes
   if typeof(need) != "int" or need <= 0 then need = 256 << 20 end if
   used = heap_bytes_used()
   if typeof(used) == "int" and used >= need then
+    _phase_codegen_keepalive = state
     gc_collect()
+    state = _phase_codegen_keepalive
+    _phase_codegen_keepalive = 0
     return _mem_probe(state, tag)
   end if
   return state
@@ -1320,16 +1331,7 @@ function cg_emit_stmt(state, stmt)
       state.label_id = state.label_id + 1
       lbl_p = "str_" + lid_str_p
       state.rdata = d.rdata_add_str_nl(state.rdata, lbl_p, stmt.expr.value, true)
-      ln_p = 0
-      if typeof(state.rdata.labels) == "array" then
-        for li = 0 to len(state.rdata.labels) - 1
-          lbi = state.rdata.labels[li]
-          if typeof(lbi) == "struct" and lbi.name == lbl_p then
-            if typeof(lbi.length) == "int" then ln_p = lbi.length end if
-            break
-          end if
-        end for
-      end if
+      ln_p = d.rdata_label_length(state.rdata, lbl_p)
       return core.emit_writefile(state, lbl_p, ln_p)
     end if
 
@@ -2554,6 +2556,14 @@ function _inline_scan_stmt_uses(state, stmts, owner, inline_names, address_taken
 end function
 
 function _analyze_inline_only_functions(state, program)
+  // Native-body pruning is deliberately disabled. A source-level address scan
+  // cannot prove imported aliases, callable objects and late post-budget
+  // fallbacks unreachable. Keeping native bodies preserves bounded inlining
+  // while making every callable relocation safe by construction.
+  return []
+
+  // Retained as dormant analysis code so pruning can only be reconsidered
+  // together with a relocation-complete reachability proof.
   if state.call_profile then return [] end if
   if _heap_cfg_get_bool(state, "cg_object_pipeline", false) then return [] end if
   inline_names = []
@@ -6345,8 +6355,11 @@ function _emit_program_module_inits_all(state, module_init_recs)
 end function
 
 function _emit_program_functions_all(state)
+  global _phase_codegen_keepalive
   entries = _all_function_entries(state)
   pending = []
+  // Bounded inline expansion remains active, but the safety policy above keeps
+  // every callable native fallback body. `pending` therefore stays empty.
   if typeof(state.inline_only_functions) == "array" then pending = state.inline_only_functions + [] end if
   regular_b = t.arr_chunk_new(128)
   if typeof(entries) == "array" and len(entries) > 0 then
@@ -6366,11 +6379,33 @@ function _emit_program_functions_all(state)
   while i < total
     state = emit_module_function_entries(state, entries, i, 8)
     i = i + 8
-    if (i % 16) == 0 then
-      state = _maybe_phase_gc(state, "mid_user_fn_phase_gc", 512 << 20)
+    // Large targets may contain millions of local branches. Resolve patches
+    // whose .text labels are known in small batches so their records do not
+    // remain live until final PE assembly.
+    if (i % 128) == 0 then
+      state.asm = a.resolve_defined_patches(state.asm)
+    end if
+    // `heap_bytes_used()` is a high-water mark. Use a bounded but deliberately
+    // wider GC cadence: scanning a multi-gigabyte compiler heap every 128
+    // functions dominates large builds such as MiniQuake.
+    if (i % 512) == 0 then
+      _phase_codegen_keepalive = [state, entries, pending]
+      gc_collect()
+      phase_roots = _phase_codegen_keepalive
+      state = phase_roots[0]
+      entries = phase_roots[1]
+      pending = phase_roots[2]
+      _phase_codegen_keepalive = 0
+      state = _mem_probe(state, "mid_user_fn_phase_gc")
     end if
     if _heap_cfg_get_bool(state, "cg_collect_during_codegen", false) then
+      _phase_codegen_keepalive = [state, entries, pending]
       gc_collect()
+      phase_roots2 = _phase_codegen_keepalive
+      state = phase_roots2[0]
+      entries = phase_roots2[1]
+      pending = phase_roots2[2]
+      _phase_codegen_keepalive = 0
     end if
   end while
 
@@ -6402,11 +6437,12 @@ function _emit_program_functions_all(state)
     end for
   end while
 
-  if len(pending) > 0 and typeof(state.rdata.patches) == "array" then
+  if len(pending) > 0 then
+    pending_rdata_patches = d.rdata_get_patches(state.rdata)
     kept_patches = []
-    if len(state.rdata.patches) > 0 then
-      for rpi0 = 0 to len(state.rdata.patches) - 1
-        rp0 = state.rdata.patches[rpi0]
+    if len(pending_rdata_patches) > 0 then
+      for rpi0 = 0 to len(pending_rdata_patches) - 1
+        rp0 = pending_rdata_patches[rpi0]
         drop0 = false
         if typeof(rp0) == "struct" then
           rt0 = _coerce_name(try(rp0.target))
@@ -6418,7 +6454,7 @@ function _emit_program_functions_all(state)
         if drop0 == false then kept_patches = kept_patches + [rp0] end if
       end for
     end if
-    state.rdata.patches = kept_patches
+    state.rdata = d.rdata_set_patches(state.rdata, kept_patches)
   end if
   state.pruned_inline_functions = pending
   state = _mem_probe(state, "user_fn_emit_done")
@@ -6437,6 +6473,7 @@ function _clear_program_function_state(state)
 end function
 
 function _emit_program_via_objects(state, program)
+  global _phase_codegen_keepalive
   prep = prepare_program_for_objects(state, program)
   if typeof(prep) != "array" or len(prep) < 3 then return state end if
 
@@ -6454,6 +6491,13 @@ function _emit_program_via_objects(state, program)
   state = _clear_program_function_state(state)
   state = exprmod.emit_extern_stubs(state)
   state = core.emit_used_helpers(state)
+  // Helper labels are emitted after user functions. Resolve their accumulated
+  // .text fixups now; only PE-section/data/IAT relocations remain pending.
+  state.asm = a.resolve_all_defined_patches(state.asm)
+  _phase_codegen_keepalive = state
+  gc_collect()
+  state = _phase_codegen_keepalive
+  _phase_codegen_keepalive = 0
   return state
 end function
 
@@ -6908,6 +6952,27 @@ function prepare_program_for_objects(state, program)
   state.pruned_inline_functions = []
   state = _mem_probe(state, "flatten_done")
 
+  // An inline body may contain a wider call than anything visible in its
+  // caller's AST. Reserve outgoing arguments and rooted call-temp slots for
+  // that hidden arity in every frame that can receive inline expansion. This
+  // mirrors the Python backend and prevents inlined calls from overwriting the
+  // caller's debug saves, locals or GC root-frame record.
+  state.max_inline_call_args_global = 0
+  if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
+    for ifi = 0 to len(state.user_functions) - 1
+      ifn_rec = state.user_functions[ifi]
+      if typeof(ifn_rec) != "array" or len(ifn_rec) != 2 then continue end if
+      ifn = ifn_rec[1]
+      if typeof(ifn) != "struct" then continue end if
+      if typeof(try(ifn.is_inline)) != "bool" or ifn.is_inline == false then continue end if
+      if exprmod._inline_call_eligible(ifn) == false then continue end if
+      ifn_arity = max_calls_stmts(state, try(ifn.body))
+      if typeof(ifn_arity) == "int" and ifn_arity > state.max_inline_call_args_global then
+        state.max_inline_call_args_global = ifn_arity
+      end if
+    end for
+  end if
+
   state._global_owner_file = t.fastmap_new(256)
   state._module_init_status_labels = t.fastmap_new(64)
   state._module_init_active = false
@@ -6973,6 +7038,9 @@ function prepare_program_for_objects(state, program)
 
   max_call_args_main = max_calls_stmts(state, program)
   if typeof(max_call_args_main) != "int" or max_call_args_main < 0 then max_call_args_main = 0 end if
+  if typeof(state.max_inline_call_args_global) == "int" and state.max_inline_call_args_global > max_call_args_main then
+    max_call_args_main = state.max_inline_call_args_global
+  end if
   return [state, module_init_recs, max_call_args_main]
 end function
 
@@ -7129,6 +7197,9 @@ function emit_module_init_object(state, module_rec)
 
   max_call_args = max_calls_stmts(state, mstmts)
   if typeof(max_call_args) != "int" or max_call_args < 0 then max_call_args = 0 end if
+  if typeof(state.max_inline_call_args_global) == "int" and state.max_inline_call_args_global > max_call_args then
+    max_call_args = state.max_inline_call_args_global
+  end if
   out_stack_args = max_call_args - 4
   if out_stack_args < 0 then out_stack_args = 0 end if
   out_reserve = out_stack_args * 8
@@ -7351,6 +7422,9 @@ function emit_user_function(state, fn_node)
   ret_lbl = "fn_ret_" + code_name
   max_call_args = max_calls_stmts(state, fn_node.body)
   if typeof(max_call_args) != "int" or max_call_args < 0 then max_call_args = 0 end if
+  if typeof(state.max_inline_call_args_global) == "int" and state.max_inline_call_args_global > max_call_args then
+    max_call_args = state.max_inline_call_args_global
+  end if
 
   old_decl_site = state.decl_site_bindings
   old_fn_locals = state.function_locals

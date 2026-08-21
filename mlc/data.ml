@@ -28,6 +28,7 @@ end struct
 struct DataBuilder
   data,
   labels,
+  label_index,
   patches,
   used,
 end struct
@@ -40,6 +41,7 @@ end struct
 struct RDataBuilder
   data,
   labels,
+  label_index,
   patches,
   pool_raw,
   pool_obj_string,
@@ -123,7 +125,77 @@ function _find_pool_entry(pool, key)
 end function
 
 function newDataBuilder()
-  return DataBuilder(bytes(16384, 0), [], [], 0)
+  return DataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), t.arr_chunk_new(1024), 0)
+end function
+
+function data_get_labels(db)
+  if typeof(db) != "struct" then return [] end if
+  if typeof(db.labels) == "array" then return db.labels end if
+  if typeof(db.labels) == "struct" then return t.arr_chunk_finish(db.labels) end if
+  return []
+end function
+
+function data_label_count(db)
+  if typeof(db) != "struct" then return 0 end if
+  if typeof(db.label_index) == "struct" then return t.fastmap_size(db.label_index) end if
+  return len(data_get_labels(db))
+end function
+
+function data_label_record(db, name)
+  if typeof(db) != "struct" or typeof(name) != "string" or name == "" then return 0 end if
+  if typeof(db.label_index) == "struct" then
+    hit = t.fastmap_get(db.label_index, name, 0)
+    if typeof(hit) == "struct" then return hit end if
+  end if
+  labels = data_get_labels(db)
+  if len(labels) > 0 then
+    for i = 0 to len(labels) - 1
+      it = labels[i]
+      if typeof(it) == "struct" and try(it.name) == name then return it end if
+    end for
+  end if
+  return 0
+end function
+
+function data_has_label(db, name)
+  return typeof(data_label_record(db, name)) == "struct"
+end function
+
+function data_set_labels(db, labels)
+  if typeof(db) != "struct" then return db end if
+  db.labels = t.arr_chunk_new(1024)
+  cap = 2048
+  if typeof(labels) == "array" and len(labels) > 0 then cap = (len(labels) * 2) + 64 end if
+  db.label_index = t.fastmap_new(cap)
+  if typeof(labels) == "array" and len(labels) > 0 then
+    for i = 0 to len(labels) - 1
+      it = labels[i]
+      if typeof(it) != "struct" or typeof(it.name) != "string" then continue end if
+      db.labels = t.arr_chunk_push(db.labels, it)
+      db.label_index = t.fastmap_set(db.label_index, it.name, it)
+    end for
+  end if
+  return db
+end function
+
+function data_clear_labels(db)
+  return data_set_labels(db, [])
+end function
+
+function _data_upsert_label(db, name, offset)
+  if typeof(db) != "struct" or typeof(name) != "string" or name == "" then return db end if
+  if typeof(db.labels) != "struct" or typeof(db.label_index) != "struct" then
+    db = data_set_labels(db, data_get_labels(db))
+  end if
+  hit = t.fastmap_get(db.label_index, name, 0)
+  if typeof(hit) == "struct" then
+    hit.offset = offset
+    return db
+  end if
+  rec = DataLabel(name, offset)
+  db.labels = t.arr_chunk_push(db.labels, rec)
+  db.label_index = t.fastmap_set(db.label_index, name, rec)
+  return db
 end function
 
 function newBssBuilder()
@@ -131,7 +203,129 @@ function newBssBuilder()
 end function
 
 function newRDataBuilder()
-  return RDataBuilder(bytes(16384, 0), [], [], t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
+  return RDataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), t.arr_chunk_new(1024), t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
+end function
+
+function data_get_patches(db)
+  if typeof(db) != "struct" then return [] end if
+  if typeof(db.patches) == "array" then return db.patches end if
+  if typeof(db.patches) == "struct" then return t.arr_chunk_finish(db.patches) end if
+  return []
+end function
+
+function data_set_patches(db, patches)
+  if typeof(db) != "struct" then return db end if
+  db.patches = t.arr_chunk_new(1024)
+  if typeof(patches) == "array" and len(patches) > 0 then
+    for i = 0 to len(patches) - 1
+      db.patches = t.arr_chunk_push(db.patches, patches[i])
+    end for
+  end if
+  return db
+end function
+
+function data_clear_patches(db)
+  return data_set_patches(db, [])
+end function
+
+function rdata_get_patches(rb)
+  if typeof(rb) != "struct" then return [] end if
+  if typeof(rb.patches) == "array" then return rb.patches end if
+  if typeof(rb.patches) == "struct" then return t.arr_chunk_finish(rb.patches) end if
+  return []
+end function
+
+function rdata_set_patches(rb, patches)
+  if typeof(rb) != "struct" then return rb end if
+  rb.patches = t.arr_chunk_new(1024)
+  if typeof(patches) == "array" and len(patches) > 0 then
+    for i = 0 to len(patches) - 1
+      rb.patches = t.arr_chunk_push(rb.patches, patches[i])
+    end for
+  end if
+  return rb
+end function
+
+function rdata_clear_patches(rb)
+  return rdata_set_patches(rb, [])
+end function
+
+function rdata_get_labels(rb)
+  if typeof(rb) != "struct" then return [] end if
+  if typeof(rb.labels) == "array" then return rb.labels end if
+  if typeof(rb.labels) == "struct" then return t.arr_chunk_finish(rb.labels) end if
+  return []
+end function
+
+function rdata_label_count(rb)
+  if typeof(rb) != "struct" then return 0 end if
+  if typeof(rb.label_index) == "struct" then return t.fastmap_size(rb.label_index) end if
+  labels = rdata_get_labels(rb)
+  return len(labels)
+end function
+
+function rdata_label_record(rb, name)
+  if typeof(rb) != "struct" or typeof(name) != "string" or name == "" then return 0 end if
+  if typeof(rb.label_index) == "struct" then
+    hit = t.fastmap_get(rb.label_index, name, 0)
+    if typeof(hit) == "struct" then return hit end if
+  end if
+  labels = rdata_get_labels(rb)
+  if len(labels) > 0 then
+    for i = 0 to len(labels) - 1
+      it = labels[i]
+      if typeof(it) == "struct" and try(it.name) == name then return it end if
+    end for
+  end if
+  return 0
+end function
+
+function rdata_has_label(rb, name)
+  return typeof(rdata_label_record(rb, name)) == "struct"
+end function
+
+function rdata_label_length(rb, name)
+  rec = rdata_label_record(rb, name)
+  if typeof(rec) == "struct" and typeof(rec.length) == "int" then return rec.length end if
+  return 0
+end function
+
+function rdata_set_labels(rb, labels)
+  if typeof(rb) != "struct" then return rb end if
+  rb.labels = t.arr_chunk_new(1024)
+  cap = 2048
+  if typeof(labels) == "array" and len(labels) > 0 then cap = (len(labels) * 2) + 64 end if
+  rb.label_index = t.fastmap_new(cap)
+  if typeof(labels) == "array" and len(labels) > 0 then
+    for i = 0 to len(labels) - 1
+      it = labels[i]
+      if typeof(it) != "struct" or typeof(it.name) != "string" then continue end if
+      rb.labels = t.arr_chunk_push(rb.labels, it)
+      rb.label_index = t.fastmap_set(rb.label_index, it.name, it)
+    end for
+  end if
+  return rb
+end function
+
+function rdata_clear_labels(rb)
+  return rdata_set_labels(rb, [])
+end function
+
+function _rdata_upsert_label(rb, name, offset, length)
+  if typeof(rb) != "struct" or typeof(name) != "string" or name == "" then return rb end if
+  if typeof(rb.labels) != "struct" or typeof(rb.label_index) != "struct" then
+    rb = rdata_set_labels(rb, rdata_get_labels(rb))
+  end if
+  hit = t.fastmap_get(rb.label_index, name, 0)
+  if typeof(hit) == "struct" then
+    hit.offset = offset
+    hit.length = length
+    return rb
+  end if
+  rec = DataRangeLabel(name, offset, length)
+  rb.labels = t.arr_chunk_push(rb.labels, rec)
+  rb.label_index = t.fastmap_set(rb.label_index, name, rec)
+  return rb
 end function
 
 function _buf_used(db)
@@ -178,27 +372,28 @@ end function
 
 function data_add_u32(db, name, value)
   off = _buf_used(db)
-  db.labels = _upsert_data_label(db.labels, name, off)
+  db = _data_upsert_label(db, name, off)
   db = _buf_append(db, t.u32(value))
   return db
 end function
 
 function data_add_u64(db, name, value)
   off = _buf_used(db)
-  db.labels = _upsert_data_label(db.labels, name, off)
+  db = _data_upsert_label(db, name, off)
   db = _buf_append(db, t.u64(value))
   return db
 end function
 
 function data_add_bytes(db, name, b)
   off = _buf_used(db)
-  db.labels = _upsert_data_label(db.labels, name, off)
+  db = _data_upsert_label(db, name, off)
   db = _buf_append(db, b)
   return db
 end function
 
 function data_add_abs64_patch(db, offset, target)
-  db.patches = db.patches +[DataPatch(offset, target, "abs64")]
+  if typeof(db.patches) != "struct" then db = data_set_patches(db, data_get_patches(db)) end if
+  db.patches = t.arr_chunk_push(db.patches, DataPatch(offset, target, "abs64"))
   return db
 end function
 
@@ -244,7 +439,7 @@ function _rdata_intern_raw(rb, name, raw)
   hit = _find_pool_entry(rb.pool_raw, raw)
   if typeof(hit) == "struct" then
     pe = hit
-    rb.labels = _upsert_range_label(rb.labels, name, pe.offset, pe.length)
+    rb = _rdata_upsert_label(rb, name, pe.offset, pe.length)
     return rb
   end if
 
@@ -252,7 +447,7 @@ function _rdata_intern_raw(rb, name, raw)
   rb = _buf_append(rb, raw)
   rec = PoolEntry(raw, off, len(raw))
   rb.pool_raw = t.fastmap_set(rb.pool_raw, raw, rec)
-  rb.labels = _upsert_range_label(rb.labels, name, off, len(raw))
+  rb = _rdata_upsert_label(rb, name, off, len(raw))
   return rb
 end function
 
@@ -277,12 +472,13 @@ function rdata_add_bytes_unique(rb, name, raw)
   rb = _buf_append(rb, raw)
   // The caller promises a fresh label. Avoid the otherwise quadratic
   // duplicate-name scan for large generated static-object tables.
-  rb.labels = rb.labels + [DataRangeLabel(name, off, len(raw))]
+  rb = _rdata_upsert_label(rb, name, off, len(raw))
   return rb
 end function
 
 function rdata_add_abs64_patch(rb, offset, target)
-  rb.patches = rb.patches +[DataPatch(offset, target, "abs64")]
+  if typeof(rb.patches) != "struct" then rb = rdata_set_patches(rb, rdata_get_patches(rb)) end if
+  rb.patches = t.arr_chunk_push(rb.patches, DataPatch(offset, target, "abs64"))
   return rb
 end function
 
@@ -370,7 +566,7 @@ function rdata_add_obj_string(rb, name, text)
 
   hit = _find_pool_entry(rb.pool_obj_string, payload)
   if typeof(hit) == "struct" then
-    rb.labels = _upsert_range_label(rb.labels, name, hit.offset, hit.length)
+    rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
 
@@ -382,7 +578,7 @@ function rdata_add_obj_string(rb, name, text)
   rb = _buf_append(rb, bytes(1, 0))
   ln = _buf_used(rb) - off
 
-  rb.labels = _upsert_range_label(rb.labels, name, off, ln)
+  rb = _rdata_upsert_label(rb, name, off, ln)
   rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln))
   return rb
 end function
@@ -392,7 +588,7 @@ function rdata_add_obj_string_unique(rb, name, text)
 
   hit = _find_pool_entry(rb.pool_obj_string, payload)
   if typeof(hit) == "struct" then
-    rb.labels = rb.labels + [DataRangeLabel(name, hit.offset, hit.length)]
+    rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
 
@@ -404,7 +600,7 @@ function rdata_add_obj_string_unique(rb, name, text)
   rb = _buf_append(rb, bytes(1, 0))
   ln = _buf_used(rb) - off
 
-  rb.labels = rb.labels + [DataRangeLabel(name, off, ln)]
+  rb = _rdata_upsert_label(rb, name, off, ln)
   rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln))
   return rb
 end function
@@ -414,7 +610,7 @@ function rdata_add_obj_float(rb, name, value)
 
   hit = _find_pool_entry(rb.pool_obj_float, packed)
   if typeof(hit) == "struct" then
-    rb.labels = _upsert_range_label(rb.labels, name, hit.offset, hit.length)
+    rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
 
@@ -425,7 +621,7 @@ function rdata_add_obj_float(rb, name, value)
   rb = _buf_append(rb, packed)
   ln = _buf_used(rb) - off
 
-  rb.labels = _upsert_range_label(rb.labels, name, off, ln)
+  rb = _rdata_upsert_label(rb, name, off, ln)
   rb.pool_obj_float = t.fastmap_set(rb.pool_obj_float, packed, PoolEntry(packed, off, ln))
   return rb
 end function

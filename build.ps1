@@ -115,7 +115,10 @@ $buildArgs = @(
   $entry,
   $stageOutput,
   "-I", $Root,
-  "--heap-reserve", "4g",
+  # Reserving address space is cheap on x64. The larger compiler heap lets the
+  # resulting compiler handle very large monolithic targets such as MiniQuake;
+  # committed memory still starts at 2 GiB and can be trimmed after GC.
+  "--heap-reserve", "8g",
   "--heap-commit", "2g",
   "--heap-shrink",
   "--heap-shrink-min", "256m",

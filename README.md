@@ -214,7 +214,24 @@ Useful variants:
 
 Notes:
 - The script stages the self-host build in a short temporary directory and then moves the finished executable into `build/`.
-- Self-builds use the memory-bounded `.mlo` object pipeline. This is intentional: a monolithic self-build of the current compiler exceeds the configured 4 GiB MiniLang heap.
+- Self-builds use the memory-bounded `.mlo` object pipeline. The generated
+  compiler reserves an 8 GiB virtual heap so very large monolithic target builds
+  such as MiniQuake have headroom; only 2 GiB is initially committed and unused
+  top pages may be trimmed after GC.
+- During large monolithic target builds, each bounded phase resolves only the
+  newly emitted `.text` fixups. Unknown forward targets move to a deferred
+  generation and are revisited once after helper emission, avoiding repeated
+  rescans of an ever-growing patch set. Only section/data/IAT relocations then
+  remain pending for PE assembly; generated executable bytes are unchanged.
+- For very large multi-module targets, pass `--object-pipeline`. It bounds the
+  live assembler graph per object and links in a fresh compiler process. The
+  MiniQuake regression fixture (112 modules / 656 objects) builds successfully
+  through this path and its `--help` runtime smoke exits with code 0.
+- Compiler-internal `.rdata` and `.data` labels use chunked, indexed builders;
+  section relocation records are chunked as well. The complete parsed
+  AST/codegen graph remains an explicit GC root for the whole emission phase.
+  Target `--gc-limit` values configure only the generated executable; they no
+  longer change the compiler's own collection cadence.
 - By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 
@@ -243,10 +260,10 @@ Notes:
 
 For identical source files, include roots and compiler options, the normal
 monolithic path of this compiler and the Python reference compiler emit
-byte-identical PE files. The current 16-program parity matrix covers the
-language/standard-library suites, GC stress, extern/native interop, global
-rebinding, native threads and managed thread pools; every pair matches by
-SHA-256.
+byte-identical PE files. The current 19-program parity matrix covers the
+language/standard-library suites, GC stress, compiler-GC liveness,
+extern/native interop, global rebinding, native threads and managed thread
+pools; every pair matches by SHA-256.
 
 The compiler executables themselves differ because the production self-build
 uses the MiniLang-only `.mlo` object pipeline. A compiler built through that
@@ -855,9 +872,12 @@ Current behavior / limits:
 - Eligibility is deliberately cost-bounded, and each callee has a 4096-byte
   native expansion budget. Later call sites fall back to its normal callable
   body instead of allowing unbounded code growth.
-- If every emitted use was expanded and the function was never used as a
-  value, its otherwise unreachable native body is omitted. Address-taken,
-  recursive, non-expanded and profiling-visible functions always keep it.
+- Caller stack sizing includes the widest call inside every eligible inline
+  body. Such a call is hidden from the caller's own AST, but still needs the
+  same outgoing-argument and GC-rooted call-temp space after expansion.
+- Every inline function retains a normal callable body. This deliberately
+  trades a small amount of executable size for relocation safety across
+  imported aliases, first-class callable values and late budget fallbacks.
 
 
 ### Function calls
@@ -2143,9 +2163,10 @@ Heap sizing flags:
 
 Optimizations (always-on, conservative):
 - **Constant pooling**: identical `.rdata` constants are stored once and referenced by multiple sites.
-- **Bounded inlining and inline-only pruning**: eligible direct calls expand up
-  to 4096 generated native bytes per callee; a callable fallback body is kept
-  whenever an address or non-expanded call can reach it.
+- **Bounded inlining with safe fallback bodies**: eligible direct calls expand
+  up to 4096 generated native bytes per callee; every function retains a normal
+  callable body so imported aliases, data references and later calls remain
+  valid.
 - **Local integer type flow**: locals proven to remain integers use direct
   tagged arithmetic, bitwise, shift and comparison sequences. Ambiguous,
   captured, synchronized, global and floating-point values retain the generic

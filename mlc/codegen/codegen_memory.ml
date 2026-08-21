@@ -50,12 +50,12 @@ function _append_unique(values, value)
 end function
 
 function _ensure_data_u64(db, name, value)
-  if _has_label(db.labels, name) then return db end if
+  if d.data_has_label(db, name) then return db end if
   return d.data_add_u64(db, name, value)
 end function
 
 function _ensure_rdata_str(rb, name, text)
-  if _has_label(rb.labels, name) then return rb end if
+  if d.rdata_has_label(rb, name) then return rb end if
   return d.rdata_add_str_nl(rb, name, text, false)
 end function
 
@@ -137,7 +137,7 @@ function ensure_gc_data(state)
   db = _ensure_data_u64(db, "heap_commit_bytes", 0)
   db = _ensure_data_u64(db, "heap_reserve_bytes", 0)
 
-  has_ms_data = _has_label(db.labels, "gc_mark_stack")
+  has_ms_data = d.data_has_label(db, "gc_mark_stack")
   has_ms_bss = _has_label(bb.labels, "gc_mark_stack")
   if has_ms_data == false and has_ms_bss == false then
     bb = d.bss_reserve(bb, "gc_mark_stack", GC_MARK_STACK_QWORDS * 8, 8)
@@ -407,12 +407,12 @@ function emit_alloc_function(state)
   rb = _ensure_rdata_str(rb, "oom_used", "used=")
   rb = _ensure_rdata_str(rb, "oom_nl", "\n")
   state.rdata = rb
-  oom_hdr_len = _rlabel_len(rb.labels, "oom_hdr")
-  oom_requested_len = _rlabel_len(rb.labels, "oom_requested")
-  oom_reserved_len = _rlabel_len(rb.labels, "oom_reserved")
-  oom_committed_len = _rlabel_len(rb.labels, "oom_committed")
-  oom_used_len = _rlabel_len(rb.labels, "oom_used")
-  oom_nl_len = _rlabel_len(rb.labels, "oom_nl")
+  oom_hdr_len = d.rdata_label_length(rb, "oom_hdr")
+  oom_requested_len = d.rdata_label_length(rb, "oom_requested")
+  oom_reserved_len = d.rdata_label_length(rb, "oom_reserved")
+  oom_committed_len = d.rdata_label_length(rb, "oom_committed")
+  oom_used_len = d.rdata_label_length(rb, "oom_used")
+  oom_nl_len = d.rdata_label_length(rb, "oom_nl")
 
   state.asm = a.mark(state.asm, "fn_alloc")
 
@@ -991,7 +991,7 @@ function emit_gc_collect_function(state)
 
   state.asm = a.mark(state.asm, L_MS_OVERFLOW)
   if typeof(state.rdata) == "struct" then
-    ln = _rlabel_len(state.rdata.labels, "gc_ms_overflow")
+    ln = d.rdata_label_length(state.rdata, "gc_ms_overflow")
     state.asm = a.mov_rcx_imm32(state.asm, -12)
     state.asm = a.mov_rax_rip_qword(state.asm, "iat_GetStdHandle")
     state.asm = a.call_rax(state.asm)

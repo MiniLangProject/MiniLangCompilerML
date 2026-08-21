@@ -215,18 +215,14 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
     print "[FAIL] " + name + " (missing label dump)"
     return false
   end if
-  if s.contains(labels, "[label] fn_user_pruned_add ") then
-    print "[FAIL] " + name + " (direct-only inline body was not pruned)"
-    return false
-  end if
-  if s.contains(labels, "[label] fn_user_kept_add ") == false or s.contains(labels, "[label] fn_user_budget_add ") == false then
-    print "[FAIL] " + name + " (required inline fallback body is missing)"
+  if s.contains(labels, "[label] fn_user_pruned_add ") == false or s.contains(labels, "[label] fn_user_kept_add ") == false or s.contains(labels, "[label] fn_user_budget_add ") == false or s.contains(labels, "[label] fn_user_loop_inline ") == false then
+    print "[FAIL] " + name + " (safe inline fallback body is missing)"
     return false
   end if
 
   leaf_labels = _label_function_block(labels, "leaf_frame")
-  if leaf_labels == "" or s.contains(leaf_labels, "gcclr_loop_") then
-    print "[FAIL] " + name + " (tiny root frame did not use straight-line clearing)"
+  if leaf_labels == "" or s.contains(leaf_labels, "gcclr_loop_") == false then
+    print "[FAIL] " + name + " (hidden inline call arity did not expand the caller root frame)"
     return false
   end if
   loop_labels = _label_function_block(labels, "const_loop")
@@ -236,6 +232,24 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
   end if
   if s.contains(loop_labels, "__for_end_") or s.contains(loop_labels, "__for_step_") then
     print "[FAIL] " + name + " (constant loop retained dynamic end/step state)"
+    return false
+  end if
+
+  small_src = _path_join(repo_root, "tests\\root_frame_small.ml")
+  small_out = _path_join(repo_root, "tests\\_rt_root_frame_small.exe")
+  small_labels_abs = _path_join(repo_root, "tests\\_rt_root_frame_small.labels")
+  if fs.exists(small_out) then fs.delete(small_out) end if
+  if fs.exists(small_labels_abs) then fs.delete(small_labels_abs) end if
+  small_mode_flags = "--dump-labels " + _q(small_labels_abs)
+  small_compile = _run_compile(compiler_path, small_src, small_out, repo_root, extra_flags, small_mode_flags)
+  if small_compile != 0 or _run_exe(small_out, "") != 0 then
+    print "[FAIL] " + name + " (small root-frame regression program failed)"
+    return false
+  end if
+  small_labels = fs.readAllText(small_labels_abs)
+  small_leaf_labels = _label_function_block(small_labels, "leaf_frame")
+  if small_leaf_labels == "" or s.contains(small_leaf_labels, "gcclr_loop_") then
+    print "[FAIL] " + name + " (tiny root frame did not use straight-line clearing)"
     return false
   end if
 
@@ -252,6 +266,9 @@ function main(args)
 
   compiler_path = args[0]
   extra_flags = _join_extra_args(args, 1)
+  compiler_gc_flags = extra_flags
+  if compiler_gc_flags != "" then compiler_gc_flags = compiler_gc_flags + " " end if
+  compiler_gc_flags = compiler_gc_flags + "--gc-limit 1m"
   repo_root = _repo_root_hint(compiler_path)
 
   pass = 0
@@ -275,6 +292,9 @@ function main(args)
   if _test(compiler_path, repo_root, "thread_invalid_entry", "tests\\thread_invalid_entry.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_invalid_synchronized_local", "tests\\thread_invalid_synchronized_local.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "asm_opcodes_golden_smoke", "tests\\test_asm_opcodes.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "member_callable_direct", "tests\\member_callable_direct.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "codegen_phase_gc", "tests\\codegen_phase_gc.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "compiler_gc_liveness", "tests\\compiler_gc_liveness.ml", "run_ok", compiler_gc_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test_codegen_optimizations(compiler_path, repo_root, extra_flags) then pass = pass + 1 else fail = fail + 1 end if
 
   // Existing ns/import framework tests

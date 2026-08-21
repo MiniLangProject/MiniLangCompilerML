@@ -20,6 +20,8 @@ struct AsmBuilder
   labels_tail,
   patches_chunks,
   patches_tail,
+  deferred_patches_chunks,
+  deferred_patches_tail,
   calls_chunks,
   calls_tail,
   chunk_pages,
@@ -75,11 +77,86 @@ end function
 
 function newAsmBuilder()
   cs = 65536
-  return AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], t.fastmap_new(256), [])
+  return AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], t.fastmap_new(256), [])
 end function
 
 function get_patches(asm)
-  return t.arr_chunked_finish(asm.patches_chunks, asm.patches_tail)
+  patch_out = t.arr_chunk_new(1024)
+  deferred_count = t.arr_chunked_count(asm.deferred_patches_chunks, asm.deferred_patches_tail, 256)
+  if deferred_count > 0 then
+    for i = 0 to deferred_count - 1
+      patch_out = t.arr_chunk_push(patch_out, t.arr_chunked_get(asm.deferred_patches_chunks, asm.deferred_patches_tail, i, 256, 0))
+    end for
+  end if
+  active_count = t.arr_chunked_count(asm.patches_chunks, asm.patches_tail, 256)
+  if active_count > 0 then
+    for i = 0 to active_count - 1
+      patch_out = t.arr_chunk_push(patch_out, t.arr_chunked_get(asm.patches_chunks, asm.patches_tail, i, 256, 0))
+    end for
+  end if
+  return t.arr_chunk_finish(patch_out)
+end function
+
+function _resolve_patch_set(asm, patch_chunks, patch_tail, kept_chunks, kept_tail)
+  patch_count = t.arr_chunked_count(patch_chunks, patch_tail, 256)
+  if patch_count <= 0 then return [asm, kept_chunks, kept_tail] end if
+  for i = 0 to patch_count - 1
+    p = t.arr_chunked_get(patch_chunks, patch_tail, i, 256, 0)
+    resolved = false
+    patch_pos = try(p.pos)
+    patch_target = try(p.target)
+    if typeof(p) == "struct" and typeof(patch_pos) == "int" and typeof(patch_target) == "string" then
+      target_pos = -1
+      if typeof(asm.label_pos_map) == "struct" then
+        target_pos = t.fastmap_get(asm.label_pos_map, patch_target, -1)
+        if typeof(target_pos) != "int" then target_pos = -1 end if
+      end if
+      if target_pos >= 0 and patch_pos >= 0 and patch_pos + 3 < asm.size then
+        disp = target_pos - (patch_pos + 4)
+        b = t.u32(disp)
+        asm = _set_chunk_byte(asm, patch_pos, b[0])
+        asm = _set_chunk_byte(asm, patch_pos + 1, b[1])
+        asm = _set_chunk_byte(asm, patch_pos + 2, b[2])
+        asm = _set_chunk_byte(asm, patch_pos + 3, b[3])
+        resolved = true
+      end if
+    end if
+    if resolved == false then
+      app = t.arr_chunked_push(kept_chunks, kept_tail, p, 256)
+      kept_chunks = app[0]
+      kept_tail = app[1]
+    end if
+  end for
+  return [asm, kept_chunks, kept_tail]
+end function
+
+function resolve_defined_patches(asm)
+  // Resolve only patches emitted since the previous phase. Forward targets
+  // move to a deferred generation instead of being scanned again after every
+  // 128 functions. This keeps large-program code generation linear.
+  r = _resolve_patch_set(asm, asm.patches_chunks, asm.patches_tail, asm.deferred_patches_chunks, asm.deferred_patches_tail)
+  asm = r[0]
+  asm.deferred_patches_chunks = r[1]
+  asm.deferred_patches_tail = r[2]
+  asm.patches_chunks = []
+  asm.patches_tail = []
+  asm.buf_valid = false
+  return asm
+end function
+
+function resolve_all_defined_patches(asm)
+  // Once helper labels have been emitted, revisit deferred forward references
+  // exactly once. Only PE-section/data/IAT relocations remain pending.
+  r = _resolve_patch_set(asm, asm.deferred_patches_chunks, asm.deferred_patches_tail, [], [])
+  asm = r[0]
+  r = _resolve_patch_set(asm, asm.patches_chunks, asm.patches_tail, r[1], r[2])
+  asm = r[0]
+  asm.deferred_patches_chunks = r[1]
+  asm.deferred_patches_tail = r[2]
+  asm.patches_chunks = []
+  asm.patches_tail = []
+  asm.buf_valid = false
+  return asm
 end function
 
 function get_calls(asm)
@@ -231,6 +308,8 @@ end function
 function _patches_replace(asm, patches)
   asm.patches_chunks = []
   asm.patches_tail = []
+  asm.deferred_patches_chunks = []
+  asm.deferred_patches_tail = []
   if typeof(patches) != "array" then return asm end if
   for i = 0 to len(patches) - 1
     asm = _patch_push(asm, patches[i])

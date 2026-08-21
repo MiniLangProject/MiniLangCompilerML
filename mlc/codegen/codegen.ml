@@ -138,8 +138,8 @@ function _copy_data_builder(db)
   out_db = d.newDataBuilder()
   if typeof(db) != "struct" then return out_db end if
   out_db.data = _copy_bytes(db.data)
-  out_db.labels = _copy_array(db.labels)
-  out_db.patches = _copy_array(db.patches)
+  out_db = d.data_set_labels(out_db, d.data_get_labels(db))
+  out_db = d.data_set_patches(out_db, d.data_get_patches(db))
   out_db.used = db.used
   return out_db
 end function
@@ -156,8 +156,8 @@ function _copy_rdata_builder(rb)
   out_rb = d.newRDataBuilder()
   if typeof(rb) != "struct" then return out_rb end if
   out_rb.data = _copy_bytes(rb.data)
-  out_rb.labels = _copy_array(rb.labels)
-  out_rb.patches = _copy_array(rb.patches)
+  out_rb = d.rdata_set_labels(out_rb, d.rdata_get_labels(rb))
+  out_rb = d.rdata_set_patches(out_rb, d.rdata_get_patches(rb))
   out_rb.pool_raw = _copy_fastmap(rb.pool_raw)
   out_rb.pool_obj_string = _copy_fastmap(rb.pool_obj_string)
   out_rb.pool_obj_float = _copy_fastmap(rb.pool_obj_float)
@@ -231,6 +231,7 @@ function _clone_state_for_object(base, seed_runtime)
   st.typename_enum_by_qname = base.typename_enum_by_qname
   st.user_functions = base.user_functions
   st.nested_user_functions = base.nested_user_functions
+  st.max_inline_call_args_global = base.max_inline_call_args_global
   st.struct_methods = base.struct_methods
   st.struct_static_methods = base.struct_static_methods
   st.function_global_labels = base.function_global_labels

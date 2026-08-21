@@ -180,6 +180,33 @@ try {
   $runnerArgs = @($Compiler) + $effectiveCompilerArgs
   $results += Invoke-NativeStep "run ML test harness" $runnerExe $runnerArgs
 
+  $inputSrc = Join-Path $Root "tests\input_length_regression.ml"
+  $inputExe = Join-Path $script:ResolvedArtifactsDir "input_length_regression.exe"
+  $inputBuildArgs = @($inputSrc, $inputExe, "-I", $Root) + $effectiveCompilerArgs
+  $results += Invoke-NativeStep "compile input ABI regression" $Compiler $inputBuildArgs
+  if ($results[-1].ExitCode -eq 0) {
+    Write-Host ""
+    Write-Host "== run input ABI regression =="
+    Write-LogLine ""
+    Write-LogLine "== run input ABI regression =="
+    $inputTimer = [System.Diagnostics.Stopwatch]::StartNew()
+    $inputOutput = @("show tables;" | & $inputExe 2>&1 | ForEach-Object { "" + $_ })
+    $inputExit = $LASTEXITCODE
+    $inputTimer.Stop()
+    foreach ($line in $inputOutput) {
+      Write-Host $line
+      Write-LogLine $line
+    }
+    if ($inputExit -eq 0 -and -not ($inputOutput -contains "[OK] input ABI length")) {
+      $inputExit = 1
+    }
+    $results += [pscustomobject]@{
+      Name = "run input ABI regression"
+      ExitCode = $inputExit
+      Seconds = $inputTimer.Elapsed.TotalSeconds
+    }
+  }
+
   $listingSrc = Join-Path $Root "tests\native_raw_value_smoke.ml"
   $listingExe = Join-Path $script:ResolvedArtifactsDir "asm_listing_smoke.exe"
   $listingPath = Join-Path $script:ResolvedArtifactsDir "asm_listing_smoke.asm"
