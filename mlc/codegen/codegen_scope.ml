@@ -66,11 +66,44 @@ function inline _scope_depth(state)
   return len(state.scope_stack) - 1
 end function
 
+function inline frame_count(frame)
+  if t.arr_vec_is(frame) then return t.arr_vec_count(frame) end if
+  if typeof(frame) == "array" then return len(frame) end if
+  return 0
+end function
+
+function inline frame_get(frame, idx)
+  if t.arr_vec_is(frame) then return t.arr_vec_get(frame, idx, void) end if
+  if typeof(frame) != "array" or typeof(idx) != "int" or idx < 0 or idx >= len(frame) then return void end if
+  return frame[idx]
+end function
+
+function inline frame_set(frame, idx, value)
+  if t.arr_vec_is(frame) then return t.arr_vec_set(frame, idx, value) end if
+  if typeof(frame) == "array" and typeof(idx) == "int" and idx >= 0 and idx < len(frame) then frame[idx] = value end if
+  return frame
+end function
+
+function inline frame_push(frame, value)
+  f = frame
+  if t.arr_vec_is(f) == false then
+    if typeof(f) == "array" then f = t.arr_vec_from_array(f, 16) else f = t.arr_vec_new(16) end if
+  end if
+  return t.arr_vec_push(f, value)
+end function
+
+function inline frame_finish(frame)
+  if t.arr_vec_is(frame) then return t.arr_vec_finish(frame) end if
+  if typeof(frame) == "array" then return frame end if
+  return []
+end function
+
 function inline _frame_last_binding(frame, name)
-  if typeof(frame) != "array" or len(frame) <= 0 then return 0 end if
-  i = len(frame) - 1
+  n = frame_count(frame)
+  if n <= 0 then return 0 end if
+  i = n - 1
   while i >= 0
-    b = frame[i]
+    b = frame_get(frame, i)
     if typeof(b) == "struct" and b.name == name then
       return b
     end if
@@ -126,6 +159,15 @@ function inline _is_reserved_identifier(state, name)
 end function
 
 function _append_unique(items, value)
+  if t.arr_vec_is(items) then
+    n = t.arr_vec_count(items)
+    if n > 0 then
+      for i = 0 to n - 1
+        if t.arr_vec_get(items, i, void) == value then return items end if
+      end for
+    end if
+    return t.arr_vec_push(items, value)
+  end if
   if typeof(items) != "array" then return [value] end if
   if len(items) > 0 then
     for i = 0 to len(items) - 1
@@ -272,14 +314,14 @@ function new_label_id(state)
 end function
 
 function cg_scope_setup(state)
-  state.scope_stack =[[]]
-  state.scope_declared =[[]]
+  state.scope_stack = [t.arr_vec_new(256)]
+  state.scope_declared = [t.arr_vec_new(256)]
   state.scope_index_stack = [t.fastmap_new(128)]
   state.scope_declared_index_stack = [t.fastmap_new(128)]
   state.decl_site_bindings = t.fastmap_new(128)
   state.binding_id = 0
-  state.global_slots =[]
-  state.globals =[]
+  state.global_slots = t.arr_vec_new(512)
+  state.globals = t.arr_vec_new(512)
   state.func_globals =[]
   state.func_global_map =[]
   state.func_global_map_index = t.fastmap_new(64)
@@ -298,10 +340,10 @@ end function
 
 function cg_scope_enter(state)
   if typeof(state.scope_stack) != "array" then
-    state.scope_stack =[[]]
+    state.scope_stack = [t.arr_vec_new(16)]
   end if
   if typeof(state.scope_declared) != "array" then
-    state.scope_declared =[[]]
+    state.scope_declared = [t.arr_vec_new(16)]
   end if
   if typeof(state.scope_index_stack) != "array" then
     state.scope_index_stack = [t.fastmap_new(128)]
@@ -309,8 +351,8 @@ function cg_scope_enter(state)
   if typeof(state.scope_declared_index_stack) != "array" then
     state.scope_declared_index_stack = [t.fastmap_new(128)]
   end if
-  state.scope_stack = state.scope_stack +[[]]
-  state.scope_declared = state.scope_declared +[[]]
+  state.scope_stack = state.scope_stack + [t.arr_vec_new(16)]
+  state.scope_declared = state.scope_declared + [t.arr_vec_new(16)]
   state.scope_index_stack = state.scope_index_stack + [t.fastmap_new(128)]
   state.scope_declared_index_stack = state.scope_declared_index_stack + [t.fastmap_new(128)]
   return state
@@ -324,7 +366,7 @@ function cg_scope_leave(state, emit_cleanup)
   if typeof(emit_cleanup) == "bool" then cleanup = emit_cleanup end if
   if cleanup then
     bindings = state.scope_declared[len(state.scope_declared) - 1]
-    if typeof(bindings) == "array" and len(bindings) > 0 then
+    if frame_count(bindings) > 0 then
       state = emit_cleanup_bindings(state, bindings)
     end if
   end if
@@ -394,8 +436,8 @@ function _declare_in_current_scope(state, b)
   ss = state.scope_stack
   si = len(ss) - 1
   di = len(sd) - 1
-  ss[si] = ss[si] +[b]
-  sd[di] = sd[di] +[b]
+  ss[si] = frame_push(ss[si], b)
+  sd[di] = frame_push(sd[di], b)
   state.scope_stack = ss
   state.scope_declared = sd
 
@@ -423,7 +465,7 @@ function _declare_in_current_scope(state, b)
     end if
     if t.fastmap_has(state.function_local_ids, b.id) == false then
       state.function_local_ids = t.fastmap_set(state.function_local_ids, b.id, 1)
-      state.function_locals = state.function_locals +[b]
+      state.function_locals = frame_push(state.function_locals, b)
     end if
   end if
   return state
@@ -501,7 +543,7 @@ function cg_declare_binding(state, name, kind, is_const, const_expr, const_value
     end if
     if t.fastmap_has(state.function_local_ids, bid) == false then
       state.function_local_ids = t.fastmap_set(state.function_local_ids, bid, 1)
-      state.function_locals = state.function_locals +[b]
+      state.function_locals = frame_push(state.function_locals, b)
     end if
   end if
   return state
@@ -515,10 +557,10 @@ function cg_set_const_binding_value(state, name, pyv)
   i = len(ss) - 1
   while i >= 0
     fr = ss[i]
-    if typeof(fr) == "array" and len(fr) > 0 then
-      j = len(fr) - 1
+    if frame_count(fr) > 0 then
+      j = frame_count(fr) - 1
       while j >= 0
-        b = fr[j]
+        b = frame_get(fr, j)
         if typeof(b) == "struct" and b.name == name then
           already_materialized = false
           if typeof(b.const_value_encoded) != "void" then already_materialized = true end if
@@ -553,7 +595,7 @@ function cg_set_const_binding_value(state, name, pyv)
             state.rdata = d.rdata_add_obj_string(state.rdata, lbl2, pyv)
             b.const_value_label = lbl2
           end if
-          fr[j] = b
+          fr = frame_set(fr, j, b)
           ss[i] = fr
           state.scope_stack = ss
           sis = state.scope_index_stack
@@ -584,17 +626,17 @@ function cg_precompute_const_binding_value(state, name, pyv)
   i = len(ss) - 1
   while i >= 0
     fr = ss[i]
-    if typeof(fr) == "array" and len(fr) > 0 then
-      j = len(fr) - 1
+    if frame_count(fr) > 0 then
+      j = frame_count(fr) - 1
       while j >= 0
-        b = fr[j]
+        b = frame_get(fr, j)
         if typeof(b) == "struct" and b.name == name then
           b.is_const = true
           b.const_initialized = true
           b.const_value_py = pyv
           b.const_value_encoded = void
           b.const_value_label = ""
-          fr[j] = b
+          fr = frame_set(fr, j, b)
           ss[i] = fr
           state.scope_stack = ss
           sis = state.scope_index_stack
@@ -627,7 +669,7 @@ function scope_depth(state)
 end function
 
 function scope_global_slots(state)
-  return state.global_slots
+  return frame_finish(state.global_slots)
 end function
 
 function _coerce_name(name)
@@ -753,10 +795,10 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   if _check_reserved_ident(state, nm, decl_node) == false then return state end if
 
   if typeof(state.scope_stack) != "array" or len(state.scope_stack) <= 0 then
-    state.scope_stack =[[]]
+    state.scope_stack = [t.arr_vec_new(256)]
   end if
   if typeof(state.scope_declared) != "array" or len(state.scope_declared) <= 0 then
-    state.scope_declared =[[]]
+    state.scope_declared = [t.arr_vec_new(256)]
   end if
   if typeof(state.scope_index_stack) != "array" or len(state.scope_index_stack) <= 0 then
     state.scope_index_stack = [t.fastmap_new(128)]
@@ -766,7 +808,7 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   end if
 
   root = state.scope_stack[0]
-  if typeof(root) != "array" then root = [] end if
+  if frame_count(root) <= 0 and t.arr_vec_is(root) == false then root = t.arr_vec_new(256) end if
   existing = t.fastmap_get(state.scope_index_stack[0], nm, 0)
   if typeof(existing) != "struct" then
     existing = _frame_last_binding(root, nm)
@@ -808,13 +850,11 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   ss = state.scope_stack
   sd = state.scope_declared
   rf = ss[0]
-  if typeof(rf) != "array" then rf = [] end if
-  rf = rf + [b]
+  rf = frame_push(rf, b)
   ss[0] = rf
 
   rd = sd[0]
-  if typeof(rd) != "array" then rd = [] end if
-  rd = rd + [b]
+  rd = frame_push(rd, b)
   sd[0] = rd
 
   state.scope_stack = ss
@@ -848,10 +888,10 @@ function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
   if _check_reserved_ident(state, nm, decl_node) == false then return state end if
 
   if typeof(state.scope_stack) != "array" or len(state.scope_stack) <= 0 then
-    state.scope_stack =[[]]
+    state.scope_stack = [t.arr_vec_new(256)]
   end if
   if typeof(state.scope_declared) != "array" or len(state.scope_declared) <= 0 then
-    state.scope_declared =[[]]
+    state.scope_declared = [t.arr_vec_new(256)]
   end if
   if typeof(state.scope_index_stack) != "array" or len(state.scope_index_stack) <= 0 then
     state.scope_index_stack = [t.fastmap_new(128)]
@@ -861,7 +901,7 @@ function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
   end if
 
   root = state.scope_stack[0]
-  if typeof(root) != "array" then root = [] end if
+  if frame_count(root) <= 0 and t.arr_vec_is(root) == false then root = t.arr_vec_new(256) end if
   existing = t.fastmap_get(state.scope_index_stack[0], nm, 0)
   if typeof(existing) != "struct" then
     existing = _frame_last_binding(root, nm)
@@ -893,12 +933,10 @@ function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
   ss = state.scope_stack
   sd = state.scope_declared
   rf = ss[0]
-  if typeof(rf) != "array" then rf = [] end if
-  rf = rf + [b]
+  rf = frame_push(rf, b)
   ss[0] = rf
   rd = sd[0]
-  if typeof(rd) != "array" then rd = [] end if
-  rd = rd + [b]
+  rd = frame_push(rd, b)
   sd[0] = rd
   state.scope_stack = ss
   state.scope_declared = sd
@@ -920,12 +958,12 @@ function materialize_global_binding_root(state, name)
 
   ss = state.scope_stack
   root = ss[0]
-  if typeof(root) != "array" then return state end if
+  if frame_count(root) <= 0 then return state end if
   found = -1
   b = void
-  i = len(root) - 1
+  i = frame_count(root) - 1
   while i >= 0
-    candidate = root[i]
+    candidate = frame_get(root, i)
     if typeof(candidate) == "struct" and candidate.name == nm and candidate.kind == "global" then
       found = i
       b = candidate
@@ -940,18 +978,18 @@ function materialize_global_binding_root(state, name)
   if typeof(state.data) == "struct" and d.data_has_label(state.data, b.label) == false then
     state.data = d.data_add_u64(state.data, b.label, t.enc_void())
   end if
-  root[found] = b
+  root = frame_set(root, found, b)
   ss[0] = root
   state.scope_stack = ss
 
   sd = state.scope_declared
-  if typeof(sd) == "array" and len(sd) > 0 and typeof(sd[0]) == "array" then
+  if typeof(sd) == "array" and len(sd) > 0 and frame_count(sd[0]) > 0 then
     rd = sd[0]
-    j = len(rd) - 1
+    j = frame_count(rd) - 1
     while j >= 0
-      db = rd[j]
+      db = frame_get(rd, j)
       if typeof(db) == "struct" and db.id == b.id then
-        rd[j] = b
+        rd = frame_set(rd, j, b)
         break
       end if
       j = j - 1
@@ -1016,13 +1054,13 @@ function bind_param(state, name, offset, decl_node)
   if typeof(ss) == "array" and len(ss) > 0 then
     si = len(ss) - 1
     fr = ss[si]
-    if typeof(fr) == "array" and len(fr) > 0 then
-      i = len(fr) - 1
+    if frame_count(fr) > 0 then
+      i = frame_count(fr) - 1
       while i >= 0
-        b = fr[i]
+        b = frame_get(fr, i)
         if typeof(b) == "struct" and b.name == nm and b.kind == "param" then
           b.offset = offset
-          fr[i] = b
+          fr = frame_set(fr, i, b)
           ss[si] = fr
           state.scope_stack = ss
           sis = state.scope_index_stack
@@ -1089,10 +1127,11 @@ function ensure_binding_for_write(state, name, decl_node)
 end function
 
 function emit_cleanup_bindings(state, bindings)
-  if typeof(bindings) != "array" or len(bindings) <= 0 then return state end if
+  count = frame_count(bindings)
+  if count <= 0 then return state end if
   voidv = t.enc_void()
-  for i = 0 to len(bindings) - 1
-    b = bindings[i]
+  for i = 0 to count - 1
+    b = frame_get(bindings, i)
     if typeof(b) != "struct" then continue end if
     if b.kind == "param" then continue end if
     if b.kind == "local" then
@@ -1118,7 +1157,7 @@ function emit_cleanup_to_depth(state, target_depth)
   while d > target_depth
     if typeof(state.scope_declared) == "array" and d >= 0 and d < len(state.scope_declared) then
       bindings = state.scope_declared[d]
-      if typeof(bindings) == "array" and len(bindings) > 0 then
+      if frame_count(bindings) > 0 then
         state = emit_cleanup_bindings(state, bindings)
       end if
     end if
@@ -1440,7 +1479,7 @@ end function
 
 function analysis_reset_function(state)
   state.decl_site_bindings = t.fastmap_new(128)
-  state.function_locals =[]
+  state.function_locals = t.arr_vec_new(32)
   state.function_local_ids = t.fastmap_new(64)
   state.func_globals =[]
   state.func_global_map =[]
@@ -1452,8 +1491,12 @@ function analysis_layout_function_locals(state, base_offset)
   off = 0
   if typeof(base_offset) != "int" then base_offset = 0 end if
   fl = state.function_locals
+  if t.arr_vec_is(fl) then fl = t.arr_vec_finish(fl) end if
   if typeof(fl) != "array" then return state end if
-  if len(fl) <= 0 then return state end if
+  if len(fl) <= 0 then
+    state.function_locals = []
+    return state
+  end if
   for i = 0 to len(fl) - 1
     b = fl[i]
     if typeof(b) != "struct" then continue end if

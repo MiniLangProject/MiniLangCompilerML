@@ -17,6 +17,7 @@ import mlc.codegen.codegen_threads as th
 // AST entries alive across dozens of manual collections and exposed a stale
 // pointer in fn_typeof without this barrier.
 _phase_codegen_keepalive = 0
+_module_function_entry_index = 0
 
 function inline _join_qname(prefix, name)
   if typeof(prefix) != "string" or prefix == "" then return name end if
@@ -122,24 +123,32 @@ end function
 
 function _set_user_function(state, qname, fn_node)
   arr = state.user_functions
-  if typeof(arr) != "array" then arr =[] end if
+  if t.arr_vec_is(arr) == false and typeof(arr) != "array" then arr = t.arr_vec_new(256) end if
   idx_map = state.user_function_index
   if typeof(idx_map) != "struct" then idx_map = t.fastmap_new(256) end if
+  count = 0
+  if t.arr_vec_is(arr) then
+    count = t.arr_vec_count(arr)
+  else
+    count = len(arr)
+  end if
   idx = t.fastmap_get(idx_map, qname, -1)
-  if typeof(idx) == "int" and idx >= 0 and idx < len(arr) then
-    cur = arr[idx]
+  if typeof(idx) == "int" and idx >= 0 and idx < count then
+    cur = void
+    if t.arr_vec_is(arr) then cur = t.arr_vec_get(arr, idx, void) else cur = arr[idx] end if
     if typeof(cur) == "array" and len(cur) == 2 and cur[0] == qname then
-      arr[idx] =[qname, fn_node]
+      if t.arr_vec_is(arr) then arr = t.arr_vec_set(arr, idx, [qname, fn_node]) else arr[idx] =[qname, fn_node] end if
       state.user_functions = arr
       state.user_function_index = idx_map
       return state
     end if
   end if
-  if len(arr) > 0 then
-    for i = 0 to len(arr) - 1
-      p = arr[i]
+  if count > 0 then
+    for i = 0 to count - 1
+      p = void
+      if t.arr_vec_is(arr) then p = t.arr_vec_get(arr, i, void) else p = arr[i] end if
       if typeof(p) == "array" and len(p) == 2 and p[0] == qname then
-        arr[i] =[qname, fn_node]
+        if t.arr_vec_is(arr) then arr = t.arr_vec_set(arr, i, [qname, fn_node]) else arr[i] =[qname, fn_node] end if
         idx_map = t.fastmap_set(idx_map, qname, i)
         state.user_functions = arr
         state.user_function_index = idx_map
@@ -147,14 +156,19 @@ function _set_user_function(state, qname, fn_node)
       end if
     end for
   end if
-  app = t.arr_chunked_push([], [], [qname, fn_node], 1)
-  tail = t.arr_chunked_finish(app[0], app[1])
-  if typeof(tail) == "array" and len(tail) == 1 then
-    arr = arr + tail
+  if t.arr_vec_is(arr) then
+    arr = t.arr_vec_push(arr, [qname, fn_node])
   else
-    arr = arr + [[qname, fn_node]]
+    grown = array(count + 1, 0)
+    if count > 0 then
+      for copy_i = 0 to count - 1
+        grown[copy_i] = arr[copy_i]
+      end for
+    end if
+    grown[count] = [qname, fn_node]
+    arr = grown
   end if
-  idx_map = t.fastmap_set(idx_map, qname, len(arr) - 1)
+  idx_map = t.fastmap_set(idx_map, qname, count)
   state.user_function_index = idx_map
   state.user_functions = arr
   return state
@@ -171,16 +185,24 @@ end function
 
 function _user_function_get_node(state, qname)
   arr = state.user_functions
-  if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
+  count = 0
+  if t.arr_vec_is(arr) then
+    count = t.arr_vec_count(arr)
+  else if typeof(arr) == "array" then
+    count = len(arr)
+  end if
+  if count <= 0 then return 0 end if
   if typeof(state.user_function_index) == "struct" then
     idx = t.fastmap_get(state.user_function_index, qname, -1)
-    if typeof(idx) == "int" and idx >= 0 and idx < len(arr) then
-      it = arr[idx]
+    if typeof(idx) == "int" and idx >= 0 and idx < count then
+      it = void
+      if t.arr_vec_is(arr) then it = t.arr_vec_get(arr, idx, void) else it = arr[idx] end if
       if typeof(it) == "array" and len(it) == 2 and it[0] == qname and typeof(it[1]) == "struct" then return it[1] end if
     end if
   end if
-  for i = 0 to len(arr) - 1
-    it2 = arr[i]
+  for i = 0 to count - 1
+    it2 = void
+    if t.arr_vec_is(arr) then it2 = t.arr_vec_get(arr, i, void) else it2 = arr[i] end if
     if typeof(it2) == "array" and len(it2) == 2 and it2[0] == qname and typeof(it2[1]) == "struct" then
       return it2[1]
     end if
@@ -191,9 +213,16 @@ end function
 function _user_function_keys_sorted(state)
   keys_b = t.arr_chunk_new(128)
   arr = state.user_functions
-  if typeof(arr) != "array" or len(arr) <= 0 then return [] end if
-  for i = 0 to len(arr) - 1
-    it = arr[i]
+  count = 0
+  if t.arr_vec_is(arr) then
+    count = t.arr_vec_count(arr)
+  else if typeof(arr) == "array" then
+    count = len(arr)
+  end if
+  if count <= 0 then return [] end if
+  for i = 0 to count - 1
+    it = void
+    if t.arr_vec_is(arr) then it = t.arr_vec_get(arr, i, void) else it = arr[i] end if
     if typeof(it) == "array" and len(it) == 2 and typeof(it[0]) == "string" and it[0] != "" then
       keys_b = t.arr_chunk_push(keys_b, it[0])
     end if
@@ -1138,12 +1167,18 @@ function cg_emit_stmt(state, stmt)
       end if
     end if
 
+    // The RHS may allocate and collect. Native registers are not managed GC
+    // roots, so publish the target in the expression-temp root range until the
+    // RHS has been evaluated.
     state = exprmod.cg_emit_expr(state, obj_expr)
-    state.asm = a.mov_r64_r64(state.asm, "r12", "rax")
-    state = core.reserve_expr_temp_regs(state, ["r12"])
+    target_off_sm = core.alloc_expr_temps(state, 8)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, target_off_sm)
+
     state = exprmod.cg_emit_expr(state, stmt.expr)
-    state = core.release_expr_temp_regs(state, ["r12"])
     state.asm = a.mov_r64_r64(state.asm, "r13", "rax")
+
+    state.asm = a.mov_r64_membase_disp(state.asm, "r12", "rsp", target_off_sm)
+    state = core.free_expr_temps(state, 8)
 
     lid_sm = state.label_id
     state.label_id = state.label_id + 1
@@ -3318,31 +3353,60 @@ end function
 
 function _sort_id_label_pairs(vals)
   if typeof(vals) != "array" or len(vals) <= 1 then return vals end if
-  arr = []
+  n = len(vals)
+  arr = array(n, 0)
   for i = 0 to len(vals) - 1
-    arr = arr + [vals[i]]
+    arr[i] = vals[i]
   end for
-  n = len(arr)
-  if n <= 1 then return arr end if
-  for i = 0 to n - 2
-    for j = 0 to n - 2 - i
-      a = arr[j]
-      b = arr[j + 1]
-      aid = _id_label_pair_id(a)
-      bid = _id_label_pair_id(b)
-      swap = false
-      if aid < 0 then
-        if bid >= 0 then swap = true end if
-      else
-        if bid >= 0 and aid > bid then swap = true end if
-      end if
-      if swap then
-        tmp = arr[j]
-        arr[j] = arr[j + 1]
-        arr[j + 1] = tmp
-      end if
-    end for
-  end for
+  tmp = array(n, 0)
+  width = 1
+  while width < n
+    left = 0
+    while left < n
+      mid = left + width
+      if mid > n then mid = n end if
+      right = left + width + width
+      if right > n then right = n end if
+      ai = left
+      bi = mid
+      oi = left
+      while ai < mid and bi < right
+        aid = _id_label_pair_id(arr[ai])
+        bid = _id_label_pair_id(arr[bi])
+        take_right = false
+        if aid < 0 then
+          if bid >= 0 then take_right = true end if
+        else
+          if bid >= 0 and aid > bid then take_right = true end if
+        end if
+        if take_right then
+          tmp[oi] = arr[bi]
+          bi = bi + 1
+        else
+          tmp[oi] = arr[ai]
+          ai = ai + 1
+        end if
+        oi = oi + 1
+      end while
+      while ai < mid
+        tmp[oi] = arr[ai]
+        ai = ai + 1
+        oi = oi + 1
+      end while
+      while bi < right
+        tmp[oi] = arr[bi]
+        bi = bi + 1
+        oi = oi + 1
+      end while
+      ci = left
+      while ci < right
+        arr[ci] = tmp[ci]
+        ci = ci + 1
+      end while
+      left = left + width + width
+    end while
+    width = width << 1
+  end while
   return arr
 end function
 
@@ -3365,7 +3429,11 @@ function _analysis_register_local_decl(state, decl_node, name)
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and state.current_qname_prefix == "std.string." then
     fl = state.function_locals
     flen = 0
-    if typeof(fl) == "array" then flen = len(fl) end if
+    if t.arr_vec_is(fl) then
+      flen = t.arr_vec_count(fl)
+    else if typeof(fl) == "array" then
+      flen = len(fl)
+    end if
     print "[mem][cg][analysis] local_decl_after name=" + nm + " fn_locals=" + flen
   end if
   return state
@@ -3391,13 +3459,13 @@ function _analysis_mark_current_binding_boxed(state, name)
   if typeof(ss) != "array" or len(ss) <= 0 then return state end if
   si = len(ss) - 1
   fr = ss[si]
-  if typeof(fr) != "array" or len(fr) <= 0 then return state end if
-  jb = len(fr) - 1
+  if scope.frame_count(fr) <= 0 then return state end if
+  jb = scope.frame_count(fr) - 1
   while jb >= 0
-    bb = fr[jb]
+    bb = scope.frame_get(fr, jb)
     if typeof(bb) == "struct" and bb.name == nm then
       bb.boxed = true
-      fr[jb] = bb
+      fr = scope.frame_set(fr, jb, bb)
       ss[si] = fr
       state.scope_stack = ss
       sisb = state.scope_index_stack
@@ -4952,15 +5020,29 @@ function inline _user_function_has(state, qname)
   if typeof(state.user_function_index) == "struct" then
     idx0 = t.fastmap_get(state.user_function_index, qname, -1)
     arr0 = state.user_functions
-    if typeof(idx0) == "int" and idx0 >= 0 and typeof(arr0) == "array" and idx0 < len(arr0) then
-      it0 = arr0[idx0]
+    count0 = 0
+    if t.arr_vec_is(arr0) then
+      count0 = t.arr_vec_count(arr0)
+    else if typeof(arr0) == "array" then
+      count0 = len(arr0)
+    end if
+    if typeof(idx0) == "int" and idx0 >= 0 and idx0 < count0 then
+      it0 = void
+      if t.arr_vec_is(arr0) then it0 = t.arr_vec_get(arr0, idx0, void) else it0 = arr0[idx0] end if
       if typeof(it0) == "array" and len(it0) == 2 and it0[0] == qname then return true end if
     end if
   end if
   arr = state.user_functions
-  if typeof(arr) != "array" or len(arr) <= 0 then return false end if
-  for i = 0 to len(arr) - 1
-    p = arr[i]
+  count = 0
+  if t.arr_vec_is(arr) then
+    count = t.arr_vec_count(arr)
+  else if typeof(arr) == "array" then
+    count = len(arr)
+  end if
+  if count <= 0 then return false end if
+  for i = 0 to count - 1
+    p = void
+    if t.arr_vec_is(arr) then p = t.arr_vec_get(arr, i, void) else p = arr[i] end if
     if typeof(p) == "array" and len(p) == 2 and p[0] == qname then
       if typeof(state.user_function_index) != "struct" then
         state.user_function_index = t.fastmap_new(256)
@@ -6861,6 +6943,7 @@ function prepare_program_for_objects(state, program)
   state.native_threads_possible = _stmts_use_native_threads(program)
   state.extern_structs = []
   state.value_enum_values = []
+  state.user_functions = t.arr_vec_new(512)
   state.user_function_index = t.fastmap_new(256)
   state.function_codegen_name_map = t.fastmap_new(512)
   state.qualify_cache = _prepare_qualify_cache(state.qualify_cache, 4096)
@@ -6887,6 +6970,9 @@ function prepare_program_for_objects(state, program)
   decl_seen_nonpackage = res[3]
   next_sid = res[4]
   next_eid = res[5]
+  // Declaration collection is the only append-heavy phase for this table.
+  // Freeze once so all established codegen consumers keep seeing arrays.
+  state.user_functions = t.arr_vec_finish(state.user_functions)
   state = _rebuild_lookup_indexes(state)
   state = _mem_probe(state, "decls_done")
 
@@ -7129,6 +7215,9 @@ function prepare_program_for_objects(state, program)
   if typeof(state.max_inline_call_args_global) == "int" and state.max_inline_call_args_global > max_call_args_main then
     max_call_args_main = state.max_inline_call_args_global
   end if
+  if t.arr_vec_is(state.global_slots) then state.global_slots = t.arr_vec_finish(state.global_slots) end if
+  if t.arr_vec_is(state.globals) then state.globals = t.arr_vec_finish(state.globals) end if
+  state = _rebuild_module_function_entry_index(state)
   return [state, module_init_recs, max_call_args_main]
 end function
 
@@ -7144,6 +7233,7 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
   state.expr_temp_top = 0
   frame_end = state.expr_temp_base + state.expr_temp_max
   main_frame = t.align_to_mod(frame_end + 0x20, 16, 8)
+  root_rec_off = main_frame - 0x20
 
   state.asm = a.mark(state.asm, "__ml_entry")
   state.asm = a.sub_rsp_imm32(state.asm, main_frame)
@@ -7170,6 +7260,16 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
   // Initialize the one process-wide managed heap and collector metadata.
   state = mem.emit_heap_init(state, 0)
   state.asm = a.call(state.asm, "fn_cpu_init")
+
+  // Top-level module initializers execute inline in this entry frame and use
+  // its expression-temp arena. Publish that arena before any initializer can
+  // allocate, matching the Python backend's precise root-frame layout.
+  entry_root_base = state.call_temp_base
+  entry_root_static_top = state.expr_temp_base
+  state = mem.emit_gc_clear_root_slots(state, entry_root_base, entry_root_static_top)
+  state = mem.emit_gc_push_root_frame(state, root_rec_off, entry_root_base, entry_root_static_top)
+  state._current_root_rec_off = root_rec_off
+  state._current_root_static_qwords = (entry_root_static_top - entry_root_base) / 8
 
   state = _emit_static_global_slot_initializers_from_globals(state)
   state = _mem_probe(state, "static_globals_done")
@@ -7434,7 +7534,50 @@ function emit_module_init_object(state, module_rec)
   return state
 end function
 
+function _module_function_entry_index_add(index, module_file, entry)
+  if typeof(index) != "struct" then index = t.fastmap_new(128) end if
+  mfile = _coerce_name(module_file)
+  if mfile == "" then return index end if
+  bucket = t.fastmap_get(index, mfile, 0)
+  if t.arr_vec_is(bucket) == false then bucket = t.arr_vec_new(16) end if
+  bucket = t.arr_vec_push(bucket, entry)
+  return t.fastmap_set(index, mfile, bucket)
+end function
+
+function _rebuild_module_function_entry_index(state)
+  global _module_function_entry_index
+  index = t.fastmap_new(128)
+
+  // Preserve the historical order exactly: sorted top-level functions first,
+  // followed by sorted nested-function code names.
+  uf_names = _user_function_keys_sorted(state)
+  if typeof(uf_names) == "array" and len(uf_names) > 0 then
+    for uf_i = 0 to len(uf_names) - 1
+      uf_name = uf_names[uf_i]
+      uf_node = _user_function_get_node(state, uf_name)
+      if typeof(uf_node) != "struct" then continue end if
+      index = _module_function_entry_index_add(index, _st_file(uf_node), [0, uf_name])
+    end for
+  end if
+
+  nested_names = _nested_function_codegen_names_sorted(state)
+  if typeof(nested_names) == "array" and len(nested_names) > 0 then
+    for nfi = 0 to len(nested_names) - 1
+      nf = _nested_function_get_by_codegen_name(state, nested_names[nfi])
+      if typeof(nf) != "struct" then continue end if
+      index = _module_function_entry_index_add(index, _st_file(nf), [1, nested_names[nfi]])
+    end for
+  end if
+  _module_function_entry_index = index
+  return state
+end function
+
 function module_function_entries(state, module_file)
+  global _module_function_entry_index
+  if typeof(_module_function_entry_index) == "struct" then
+    cached = t.fastmap_get(_module_function_entry_index, _coerce_name(module_file), 0)
+    if t.arr_vec_is(cached) then return t.arr_vec_finish(cached) end if
+  end if
   entries_b = t.arr_chunk_new(64)
   uf_names = _user_function_keys_sorted(state)
   if typeof(uf_names) == "array" and len(uf_names) > 0 then
@@ -7525,7 +7668,11 @@ function emit_user_function(state, fn_node)
     print "[dbg][stage] " + code_name + " analysis_prepare_done"
   end if
   n_locals = 0
-  if typeof(state.function_locals) == "array" then n_locals = len(state.function_locals) end if
+  if t.arr_vec_is(state.function_locals) then
+    n_locals = t.arr_vec_count(state.function_locals)
+  else if typeof(state.function_locals) == "array" then
+    n_locals = len(state.function_locals)
+  end if
 
   out_stack_args = max_call_args - 4
   if out_stack_args < 0 then out_stack_args = 0 end if

@@ -17,6 +17,16 @@ struct ArrayChunkVoidSentinel
   tag,
 end struct
 
+// Capacity-backed mutable sequence for compiler-internal hot paths.  MiniLang
+// arrays have exact length, so repeatedly doing `items = items + [value]`
+// copies the complete prefix.  ArrayVector grows geometrically and is
+// materialized only at API boundaries.
+struct ArrayVector
+  data,
+  size,
+  cap,
+end struct
+
 struct BytePages
   chunk_pages,
   chunk_tail,
@@ -32,6 +42,96 @@ struct FastMap
 end struct
 
 _arr_void_sentinel = ArrayChunkVoidSentinel(0xA11D)
+
+function arr_vec_is(value)
+  if typeof(value) != "struct" then return false end if
+  if typeof(try(value.data)) != "array" then return false end if
+  if typeof(try(value.size)) != "int" then return false end if
+  if typeof(try(value.cap)) != "int" then return false end if
+  return true
+end function
+
+function arr_vec_new(initial_cap)
+  ccap = initial_cap
+  if typeof(ccap) != "int" or ccap < 4 then ccap = 4 end if
+  return ArrayVector(array(ccap, _arr_void_sentinel), 0, ccap)
+end function
+
+function arr_vec_count(vec)
+  if arr_vec_is(vec) == false then return 0 end if
+  n = vec.size
+  if n < 0 then return 0 end if
+  if n > len(vec.data) then return len(vec.data) end if
+  return n
+end function
+
+function arr_vec_get(vec, idx, defaultv)
+  if arr_vec_is(vec) == false then return defaultv end if
+  n = arr_vec_count(vec)
+  if typeof(idx) != "int" or idx < 0 or idx >= n then return defaultv end if
+  return _arr_unwrap_value(vec.data[idx])
+end function
+
+function arr_vec_set(vec, idx, value)
+  v = vec
+  if arr_vec_is(v) == false then return v end if
+  n = arr_vec_count(v)
+  if typeof(idx) != "int" or idx < 0 or idx >= n then return v end if
+  v.data[idx] = _arr_wrap_value(value)
+  return v
+end function
+
+function arr_vec_push(vec, value)
+  v = vec
+  if arr_vec_is(v) == false then v = arr_vec_new(4) end if
+  n = arr_vec_count(v)
+  if n >= v.cap or n >= len(v.data) then
+    next_cap = v.cap << 1
+    if next_cap < 4 then next_cap = 4 end if
+    while next_cap <= n
+      next_cap = next_cap << 1
+    end while
+    next_data = array(next_cap, _arr_void_sentinel)
+    if n > 0 then
+      for i = 0 to n - 1
+        next_data[i] = v.data[i]
+      end for
+    end if
+    v.data = next_data
+    v.cap = next_cap
+  end if
+  v.data[n] = _arr_wrap_value(value)
+  v.size = n + 1
+  return v
+end function
+
+function arr_vec_from_array(values, extra_cap)
+  n = 0
+  if typeof(values) == "array" then n = len(values) end if
+  extra = extra_cap
+  if typeof(extra) != "int" or extra < 0 then extra = 0 end if
+  v = arr_vec_new(n + extra)
+  if n > 0 then
+    for i = 0 to n - 1
+      v.data[i] = _arr_wrap_value(values[i])
+    end for
+  end if
+  v.size = n
+  return v
+end function
+
+function arr_vec_finish(vec)
+  if arr_vec_is(vec) == false then
+    if typeof(vec) == "array" then return vec end if
+    return []
+  end if
+  n = arr_vec_count(vec)
+  if n <= 0 then return [] end if
+  // Reuse the chunk-tail materializer: its fast path is one linear copy, and
+  // its sentinel path is the language-supported way to retain actual void
+  // elements (direct index assignment of void is intentionally rejected).
+  return _arr_tail_to_array(ArrayChunkTail(vec.data, n, vec.cap))
+end function
 
 function _u64_mask()
   // All bits set without a large out-of-range source literal.
@@ -517,6 +617,25 @@ function arr_chunk_tail_set(tail, idx, value)
   return t
 end function
 
+function _arr_concat_chunks_balanced(parts)
+  if typeof(parts) != "array" or len(parts) <= 0 then return [] end if
+  current = parts
+  while len(current) > 1
+    next_b = arr_vec_new((len(current) + 1) / 2)
+    i = 0
+    while i < len(current)
+      if i + 1 < len(current) then
+        next_b = arr_vec_push(next_b, current[i] + current[i + 1])
+      else
+        next_b = arr_vec_push(next_b, current[i])
+      end if
+      i = i + 2
+    end while
+    current = arr_vec_finish(next_b)
+  end while
+  return current[0]
+end function
+
 function _arr_tail_to_array(tail)
   if typeof(tail) == "array" then return tail end if
   if typeof(tail) != "struct" then return [] end if
@@ -558,7 +677,10 @@ function _arr_tail_to_array(tail)
   if len(blk) > 0 then
     parts = parts + [blk]
   end if
-  return arr_merge_chunks_balanced(parts)
+  // Index assignment of void is invalid in MiniLang. Balanced concatenation
+  // preserves real void elements and keeps the number of full-array copies
+  // logarithmic in the number of fixed-size blocks.
+  return _arr_concat_chunks_balanced(parts)
 end function
 
 function inline _chunks_paged_tag()

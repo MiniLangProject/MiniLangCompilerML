@@ -943,6 +943,21 @@ function emit_gc_collect_function(state)
   state.asm = a.mov_r64_r64(state.asm, "rbp", "rax")
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_mark_bits_base")
   state.asm = a.mov_r64_r64(state.asm, "rsi", "rax")
+
+  // Start every mark phase from a genuinely empty bitmap. Clearing only the
+  // bits of real live headers during sweep leaves marks made through plausible
+  // interior pointers behind. A later free-list split can turn such an address
+  // into a real object header, which would then be skipped as already scanned.
+  // One bitmap byte covers 64 heap bytes, so clear only the used prefix.
+  state.asm = a.mov_rax_rip_qword(state.asm, "heap_ptr")
+  state.asm = a.sub_r64_r64(state.asm, "rax", "rbp")
+  state.asm = a.add_r64_imm(state.asm, "rax", 63)
+  state.asm = a.shr_r64_imm8(state.asm, "rax", 6)
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.mov_r64_r64(state.asm, "rdi", "rsi")
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.rep_stosb(state.asm)
+
   state.asm = a.mov_rax_imm64(state.asm, 0)
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_mark_top")
 

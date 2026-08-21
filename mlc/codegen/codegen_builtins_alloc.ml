@@ -759,13 +759,17 @@ function emit_box_float_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_box_float")
 
-  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+  // XMM0 is volatile across fn_alloc, which may itself collect and enter OS
+  // synchronization helpers. Preserve the raw double in a non-root stack slot.
+  state.asm = a.sub_rsp_imm8(state.asm, 0x38)
+  state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", 0x20, "xmm0")
   state.asm = a.mov_rcx_imm32(state.asm, 16)
   state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", 0x20)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 0, c.OBJ_FLOAT, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 4, 0, false)
   state.asm = a.movsd_membase_disp_xmm(state.asm, "rax", 8, "xmm0")
-  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.add_rsp_imm8(state.asm, 0x38)
   state.asm = a.ret(state.asm)
   return state
 end function

@@ -86,7 +86,9 @@ function _copy_frame_stack(frames)
   if len(frames) > 0 then
     for i = 0 to len(frames) - 1
       fr = frames[i]
-      if typeof(fr) == "array" then
+      if t.arr_vec_is(fr) then
+        out_b = t.arr_chunk_push(out_b, t.arr_vec_finish(fr))
+      else if typeof(fr) == "array" then
         out_b = t.arr_chunk_push(out_b, fr + [])
       else
         out_b = t.arr_chunk_push(out_b, [])
@@ -162,6 +164,27 @@ function _copy_rdata_builder(rb)
   out_rb.pool_obj_string = _copy_fastmap(rb.pool_obj_string)
   out_rb.pool_obj_float = _copy_fastmap(rb.pool_obj_float)
   out_rb.used = rb.used
+  return out_rb
+end function
+
+function _sparse_data_builder(base_db)
+  out_db = d.newDataBuilder()
+  if typeof(base_db) != "struct" then return out_db end if
+  // Keep support-label references for data_has_label() decisions, but start
+  // new object payload at offset zero and do not copy the support bytes.
+  out_db.reference_label_index = base_db.label_index
+  out_db.used = 0
+  return out_db
+end function
+
+function _sparse_rdata_builder(base_rb)
+  out_rb = d.newRDataBuilder()
+  if typeof(base_rb) != "struct" then return out_rb end if
+  out_rb.reference_label_index = base_rb.label_index
+  out_rb.pool_raw = t.fastmap_new(256)
+  out_rb.pool_obj_string = t.fastmap_new(256)
+  out_rb.pool_obj_float = t.fastmap_new(64)
+  out_rb.used = 0
   return out_rb
 end function
 
@@ -310,9 +333,9 @@ function _clone_state_for_object(base, seed_runtime)
     st.rdata.pool_obj_string = t.fastmap_new(256)
     st.rdata.pool_obj_float = t.fastmap_new(64)
   else
-    st.data = d.newDataBuilder()
-    st.bss = d.newBssBuilder()
-    st.rdata = d.newRDataBuilder()
+    st.data = _sparse_data_builder(base.data)
+    st.bss = _copy_bss_builder(base.bss)
+    st.rdata = _sparse_rdata_builder(base.rdata)
   end if
 
   return st

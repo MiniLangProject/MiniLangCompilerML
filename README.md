@@ -227,6 +227,15 @@ Notes:
   live assembler graph per object and links in a fresh compiler process. The
   MiniQuake regression fixture (112 modules / 656 objects) builds successfully
   through this path and its `--help` runtime smoke exits with code 0.
+- Pass `--profile-compiler` to the self-hosted compiler to print wall-clock
+  timings for module loading, declaration planning, object emission and each
+  linker phase. The flag is diagnostic only and does not change target bytes.
+- Append-heavy compiler tables use capacity-backed internal vectors and are
+  frozen to ordinary arrays at established codegen boundaries. Object clones
+  use a sparse, read-only index of support labels instead of copying the full
+  support `.data`/`.rdata` buffers and label arrays for every function chunk.
+  The hot-path guard in `scripts/check_hotpath_concats.ps1` prevents the main
+  declaration/scope paths from regressing to growing-array concatenation.
 - Compiler-internal `.rdata` and `.data` labels use chunked, indexed builders;
   section relocation records are chunked as well. The complete parsed
   AST/codegen graph remains an explicit GC root for the whole emission phase.
@@ -255,12 +264,14 @@ Notes:
 - Full logs are written to `build/test-logs/`; temporary test binaries are removed unless `-KeepArtifacts` is passed.
 - `-ShowCompilerProgress` keeps the compiler's `[phase]`, `[obj]`, and `[link]` progress lines visible on the console.
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
+- The test script runs the compiler hot-path concatenation guard before it
+  builds the MiniLang test harness.
 
 ### Compiler parity and self-hosting
 
 For identical source files, include roots and compiler options, the normal
 monolithic path of this compiler and the Python reference compiler emit
-byte-identical PE files. The current 19-program parity matrix covers the
+byte-identical PE files. The current 23-program parity matrix covers the
 language/standard-library suites, GC stress, compiler-GC liveness,
 extern/native interop, global rebinding, native threads and managed thread
 pools; every pair matches by SHA-256.
@@ -271,6 +282,13 @@ pipeline nevertheless produced the same byte-identical language-suite target
 as the Python-bootstrap-built compiler. Exact hashes, test counts, boundaries
 and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
+
+The current 112-module / 656-object MiniQuake benchmark completes through the
+memory-bounded object pipeline in 420.095 seconds and its `--help` smoke exits
+successfully. The matching Python monolithic build takes 69.089 seconds. The
+self-host profile identifies object emission (283.657 seconds), label
+resolution (74.829 seconds) and patch application (19.515 seconds) as the next
+optimization targets.
 
 
 ---

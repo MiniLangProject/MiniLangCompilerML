@@ -29,6 +29,7 @@ struct DataBuilder
   data,
   labels,
   label_index,
+  reference_label_index,
   patches,
   used,
 end struct
@@ -42,6 +43,7 @@ struct RDataBuilder
   data,
   labels,
   label_index,
+  reference_label_index,
   patches,
   pool_raw,
   pool_obj_string,
@@ -125,7 +127,7 @@ function _find_pool_entry(pool, key)
 end function
 
 function newDataBuilder()
-  return DataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), t.arr_chunk_new(1024), 0)
+  return DataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), 0, t.arr_chunk_new(1024), 0)
 end function
 
 function data_get_labels(db)
@@ -147,6 +149,10 @@ function data_label_record(db, name)
     hit = t.fastmap_get(db.label_index, name, 0)
     if typeof(hit) == "struct" then return hit end if
   end if
+  if typeof(db.reference_label_index) == "struct" then
+    ref_hit = t.fastmap_get(db.reference_label_index, name, 0)
+    if typeof(ref_hit) == "struct" then return ref_hit end if
+  end if
   labels = data_get_labels(db)
   if len(labels) > 0 then
     for i = 0 to len(labels) - 1
@@ -164,6 +170,7 @@ end function
 function data_set_labels(db, labels)
   if typeof(db) != "struct" then return db end if
   db.labels = t.arr_chunk_new(1024)
+  db.reference_label_index = 0
   cap = 2048
   if typeof(labels) == "array" and len(labels) > 0 then cap = (len(labels) * 2) + 64 end if
   db.label_index = t.fastmap_new(cap)
@@ -203,7 +210,7 @@ function newBssBuilder()
 end function
 
 function newRDataBuilder()
-  return RDataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), t.arr_chunk_new(1024), t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
+  return RDataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), 0, t.arr_chunk_new(1024), t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
 end function
 
 function data_get_patches(db)
@@ -270,6 +277,10 @@ function rdata_label_record(rb, name)
     hit = t.fastmap_get(rb.label_index, name, 0)
     if typeof(hit) == "struct" then return hit end if
   end if
+  if typeof(rb.reference_label_index) == "struct" then
+    ref_hit = t.fastmap_get(rb.reference_label_index, name, 0)
+    if typeof(ref_hit) == "struct" then return ref_hit end if
+  end if
   labels = rdata_get_labels(rb)
   if len(labels) > 0 then
     for i = 0 to len(labels) - 1
@@ -293,6 +304,7 @@ end function
 function rdata_set_labels(rb, labels)
   if typeof(rb) != "struct" then return rb end if
   rb.labels = t.arr_chunk_new(1024)
+  rb.reference_label_index = 0
   cap = 2048
   if typeof(labels) == "array" and len(labels) > 0 then cap = (len(labels) * 2) + 64 end if
   rb.label_index = t.fastmap_new(cap)

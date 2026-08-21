@@ -247,9 +247,16 @@ function _has_any_global_prefix(state, base)
 
   if found == false then
     gls = state.globals
-    if typeof(gls) == "array" and len(gls) > 0 then
-      for i = 0 to len(gls) - 1
-        g = gls[i]
+    gl_count = 0
+    if t.arr_vec_is(gls) then
+      gl_count = t.arr_vec_count(gls)
+    else if typeof(gls) == "array" then
+      gl_count = len(gls)
+    end if
+    if gl_count > 0 then
+      for i = 0 to gl_count - 1
+        g = void
+        if t.arr_vec_is(gls) then g = t.arr_vec_get(gls, i, void) else g = gls[i] end if
         if typeof(g) == "struct" and typeof(g.name) == "string" then
           if s.startsWith(g.name, pref) then
             found = true
@@ -6609,7 +6616,11 @@ function _emit_expr_array_lit(state, expr)
 
   state.asm = a.mov_rcx_imm32(state.asm, 8 + n * 8)
   state.asm = a.call(state.asm, "fn_alloc")
-  base_tmp = core.alloc_expr_value_temp(state, true)
+  // Arbitrary array elements may inline statement bodies that use the normal
+  // non-volatile scratch registers without crossing an ABI call boundary.
+  // Keep the managed base in its published stack-root slot throughout element
+  // evaluation so a clobbered cached register can never override that root.
+  base_tmp = core.alloc_expr_value_temp(state, false)
   state = core.expr_value_temp_store_rax(state, base_tmp)
   state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
 

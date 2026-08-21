@@ -166,6 +166,10 @@ $results = @()
 $overallTimer = [System.Diagnostics.Stopwatch]::StartNew()
 
 try {
+  $concatGuard = Join-Path $ScriptDir "check_hotpath_concats.ps1"
+  & $concatGuard
+  if ($LASTEXITCODE -ne 0) { throw "Compiler hot-path concatenation guard failed." }
+
   $runnerSrc = Join-Path $Root "tests\runtests.ml"
   $runnerExe = Join-Path $script:ResolvedArtifactsDir "runtests.exe"
 

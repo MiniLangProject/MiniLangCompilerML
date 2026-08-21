@@ -13,6 +13,7 @@ import mlc.data as d
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
 extern function GetModuleFileNameW(module as ptr, buffer as buffer, bufferLen as u32) from "kernel32.dll" symbol "GetModuleFileNameW" returns u32
+extern function GetTickCount64() from "kernel32.dll" symbol "GetTickCount64" returns u64
 extern function _wsystem(cmd as wstr) from "msvcrt.dll" returns int
 
 struct FrontDiag
@@ -159,6 +160,10 @@ _asm_show_bytes = true
 _asm_show_code = true
 _asm_dump_data = false
 _asm_dump_pe = false
+_compiler_profile_enabled = false
+_compiler_profile_started = 0
+_compiler_profile_phase_started = 0
+_compiler_profile_phase_name = ""
 
 function _build_line_starts(source)
   if typeof(source) != "string" then return [0] end if
@@ -184,6 +189,7 @@ function _usage()
   print "  --self-frontcheck-keep-going"
   print "Debug:"
   print "  --mem-probe"
+  print "  --profile-compiler    print wall-clock time for compiler phases"
   print "Listings:"
   print "  --asm [--asm-out <path>] [--asm-cols addr,opcodes,code]"
   print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
@@ -203,7 +209,47 @@ function _get_flag_value(args, flag)
   return ""
 end function
 
+function _compiler_profile_reset()
+  global _compiler_profile_started
+  global _compiler_profile_phase_started
+  global _compiler_profile_phase_name
+  if _compiler_profile_enabled == false then return void end if
+  tick = GetTickCount64()
+  _compiler_profile_started = tick
+  _compiler_profile_phase_started = tick
+  _compiler_profile_phase_name = ""
+  return void
+end function
+
+function _compiler_profile_phase(msg)
+  global _compiler_profile_phase_started
+  global _compiler_profile_phase_name
+  if _compiler_profile_enabled == false then return void end if
+  tick = GetTickCount64()
+  if _compiler_profile_phase_name != "" then
+    print "[profile] phase=" + _compiler_profile_phase_name + " elapsed_ms=" + (tick - _compiler_profile_phase_started)
+  end if
+  _compiler_profile_phase_name = msg
+  _compiler_profile_phase_started = tick
+  return void
+end function
+
+function _compiler_profile_finish()
+  global _compiler_profile_started
+  global _compiler_profile_phase_started
+  global _compiler_profile_phase_name
+  if _compiler_profile_enabled == false then return void end if
+  tick = GetTickCount64()
+  if _compiler_profile_phase_name != "" then
+    print "[profile] phase=" + _compiler_profile_phase_name + " elapsed_ms=" + (tick - _compiler_profile_phase_started)
+  end if
+  print "[profile] total_ms=" + (tick - _compiler_profile_started)
+  _compiler_profile_phase_name = ""
+  return void
+end function
+
 function _progress_phase(msg)
+  _compiler_profile_phase(msg)
   print "[phase] " + msg
 end function
 
@@ -2235,6 +2281,20 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
   return obj
 end function
 
+function _mlo_from_sparse_state_delta(kind, module_file, entry_label, st, base_state)
+  obj = _mlo_from_state(kind, module_file, entry_label, st)
+  if typeof(base_state) != "struct" then return obj end if
+
+  bss_prefix = 0
+  if typeof(base_state.bss) == "struct" and typeof(base_state.bss.size) == "int" then bss_prefix = base_state.bss.size end if
+  if obj.bss_size >= bss_prefix then
+    bss_cut = _mlo_align_down8(bss_prefix)
+    obj.bss_size = obj.bss_size - bss_cut
+    obj.bss_labels = _mlo_labels_after_cut(obj.bss_labels, bss_prefix, bss_cut)
+  end if
+  return obj
+end function
+
 function _mlo_preserve_module_label(name)
   if typeof(name) != "string" or name == "" then return false end if
   if _startsWith(name, "fn_user_") then return true end if
@@ -4215,6 +4275,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   _progress_phase("linking")
   _progress_link("objects=" + len(obj_paths) + " output=" + output_exe)
+  _compiler_profile_phase("link: collecting objects")
   _progress_link("collecting sections, labels and imports")
   for oi = 0 to len(obj_paths) - 1
     obj_path = obj_paths[oi]
@@ -4328,6 +4389,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     end if
   end for
 
+  _compiler_profile_phase("link: combining sections")
   _progress_link("building combined sections")
   text_buf = _concat_bytes_parts(text_parts_b)
   rdata_buf = _concat_bytes_parts(rdata_parts_b)
@@ -4376,6 +4438,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   p = pe.layout(p)
   _heap_probe("link:pe_ready")
+  _compiler_profile_phase("link: resolving labels")
   _progress_link("PE layout ready")
 
   text_rva = p.sections[0].virt_addr
@@ -4536,6 +4599,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   buf = text_buf
   if typeof(patch_file_recs) == "array" and len(patch_file_recs) > 0 then
+    _compiler_profile_phase("link: applying patches")
     _progress_link("applying patches")
     patch_index = 0
     for ri = 0 to len(patch_file_recs) - 1
@@ -4584,6 +4648,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     print "CompileError: failed to write assembly listing"
     return 2
   end if
+  _compiler_profile_phase("link: writing executable")
   _progress_link("writing executable " + output_exe)
   wr = fs.writeAllBytes(output_exe, exe)
   if typeof(wr) == "error" then
@@ -4609,6 +4674,7 @@ end function
 
 function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem, runtime_config)
   global _dump_labels_path
+  global _compiler_profile_enabled
   self_exe = _self_exe_path()
   if self_exe == "" then return -1 end if
 
@@ -4625,6 +4691,7 @@ function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem
   if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
     cmd = cmd + " --dump-labels " + _cmd_quote_arg(_dump_labels_path)
   end if
+  if _compiler_profile_enabled then cmd = cmd + " --profile-compiler" end if
 
   _progress_phase("linking in fresh compiler process")
   _progress_link("object dir=" + obj_dir)
@@ -4655,7 +4722,7 @@ function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg
   end if
 
   helper_union = _merge_string_arrays(helper_union, mst.used_helpers)
-  mod_obj = _mlo_from_state_delta("module", module_file, entry_label, mst, base_state)
+  mod_obj = _mlo_from_sparse_state_delta("module", module_file, entry_label, mst, base_state)
   mod_obj.data_labels = _mlo_strip_shared_runtime_data_labels(mod_obj.data_labels)
   mod_obj = _mlo_namespace_object(mod_obj, "objm_" + obj_index, true)
   helper_union = _collect_internal_helper_targets(helper_union, mod_obj.asm_patches)
@@ -4693,6 +4760,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   end if
   input_abs = _path_abspath(input_ml)
   if input_abs == "" then input_abs = input_ml end if
+  _compiler_profile_phase("loading modules")
   load = _load_program_for_codegen(input_abs, include_dirs, keep_going, max_errors)
   // Code generation can allocate enough temporary objects to trigger an
   // automatic collection inside deeply nested emitter calls.  Keep the full
@@ -4711,6 +4779,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     return 2
   end if
 
+  _compiler_profile_phase("collecting extern declarations")
   extern_sigs = collect_extern_sigs(load.program)
   _heap_probe("compile:extern_sigs_done")
   extern_struct_names = collect_extern_structs(load.program)
@@ -4723,6 +4792,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     print "CompileError: " + extern_validation
     return 2
   end if
+  _compiler_profile_phase("initializing code generator")
   cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
   if typeof(cg) == "struct" and typeof(cg.state) == "struct" then
     cg.state.dbg_line_starts = load.sources
@@ -4735,6 +4805,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   // the object pipeline before member access is planned.
   cg = codegen.enable_call_profile_metadata(cg)
   _compile_codegen_keepalive = [load, cg]
+  _compiler_profile_phase("emitting program")
   cg = codegen.emit_program(cg, load.program)
   _heap_probe("compile:codegen_done")
   st = cg.state
@@ -4779,6 +4850,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     st.asm.before_call_live_temps = []
     st.asm.peephole_last_jump = []
   end if
+  _compiler_profile_phase("compacting codegen state")
   st = _compact_codegen_state_for_pe(st)
   _pe_state_keepalive = st
   st = _pe_state_keepalive
@@ -4837,6 +4909,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   end if
   _heap_probe("compile:buffers_compacted")
 
+  _compiler_profile_phase("building PE layout")
   p = pe.newPEBuilder()
   p.subsystem = subsystem
   p = pe.add_section(p, ".text", text_buf, 0x60000020)
@@ -4880,6 +4953,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   bss_rva = p.sections[3].virt_addr
   p.entry_rva = text_rva
 
+  _compiler_profile_phase("resolving labels and patches")
   labels_chunks = []
   labels_tail = []
   if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
@@ -5114,6 +5188,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   dt.data = st.data.data
   p.sections[2] = dt
 
+  _compiler_profile_phase("building and writing executable")
   exe = pe.build(p)
   _heap_probe("compile:pe_built")
   listing_result = _write_asm_listing_if_enabled(output_exe, p, st.asm.buf, st.rdata.data, st.data.data, idsec.data)
@@ -5343,7 +5418,10 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     mrec = _module_init_rec_for_file(module_init_recs, module_file)
     if typeof(mrec) == "array" and len(mrec) >= 5 then
       entry_label = _coerce_name(mrec[2])
-      mod_cg = codegen.clone_for_object(cg, true)
+      // Module objects contain only their own deltas. Seeding every clone with
+      // the complete support .data/.rdata copied tens of megabytes hundreds of
+      // times, even though _mlo_from_state_delta discarded that prefix again.
+      mod_cg = codegen.clone_for_object(cg, false)
       if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
         print "CompileError: failed to clone module codegen state"
         return 2
@@ -5361,18 +5439,20 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
       module_object_seq = module_object_seq + 1
       mod_cg = 0
       fin = 0
-      if (module_object_seq % 8) == 0 then gc_collect() end if
+      // Automatic GC remains governed by the compiler heap limit. A full mark
+      // scan after every eight tiny objects dominates self-hosted builds.
+      if (module_object_seq % 64) == 0 then gc_collect() end if
     end if
 
     fn_entries = codegen.module_function_entries(cg, module_file)
     fn_chunk_size = module_fn_chunk_size
     if s.endsWith(module_file, "codegen_builtins_alloc.ml") then fn_chunk_size = 4 end if
     if s.endsWith(module_file, "codegen_expr.ml") or s.endsWith(module_file, "codegen_stmt.ml") or s.endsWith(module_file, "compiler.ml") then
-      fn_chunk_size = 2
+      fn_chunk_size = 4
     end if
     fn_start = 0
     while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
-      mod_cg = codegen.clone_for_object(cg, true)
+      mod_cg = codegen.clone_for_object(cg, false)
       if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
         print "CompileError: failed to clone module codegen state"
         return 2
@@ -5391,7 +5471,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
       fn_start = fn_start + fn_chunk_size
       mod_cg = 0
       fin = 0
-      if (module_object_seq % 8) == 0 then gc_collect() end if
+      if (module_object_seq % 64) == 0 then gc_collect() end if
     end while
 
     if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
@@ -5411,13 +5491,13 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
       end if
     end if
     // Module object emission creates large transient asm/rdata/patch arrays.
-    // Drop those roots immediately; waiting several modules can exhaust the
-    // 2GB runtime heap while self-compiling the compiler's codegen modules.
+    // Drop roots immediately, but amortize the expensive full-heap scan across
+    // four modules; the configured automatic GC limit remains the safety net.
     mod_cg = 0
     mrec = 0
     fn_entries = 0
     pm = 0
-    gc_collect()
+    if ((mi + 1) % 4) == 0 then gc_collect() end if
     if ((mi + 1) % 4) == 0 then
       _heap_probe("compile:module_" + (mi + 1))
     end if
@@ -5526,7 +5606,10 @@ function run_cli(args)
   global _asm_show_code
   global _asm_dump_data
   global _asm_dump_pe
+  global _compiler_profile_enabled
   _mem_probe_enabled = _has_flag(args, "--mem-probe")
+  _compiler_profile_enabled = _has_flag(args, "--profile-compiler")
+  _compiler_profile_reset()
   _dump_labels_path = _get_flag_value(args, "--dump-labels")
   _object_pipeline_enabled = _has_flag(args, "--object-pipeline")
   _asm_listing_enabled = _has_flag(args, "--asm") and _has_flag(args, "--no-asm") == false
@@ -5610,8 +5693,12 @@ function run_cli(args)
 
   link_obj_dir = _get_flag_value(args, "--link-obj-dir")
   if link_obj_dir != "" then
-    return link_obj_dir_to_exe(link_obj_dir, out_path, subsystem)
+    link_rc = link_obj_dir_to_exe(link_obj_dir, out_path, subsystem)
+    _compiler_profile_finish()
+    return link_rc
   end if
 
-  return compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  compile_rc = compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  _compiler_profile_finish()
+  return compile_rc
 end function

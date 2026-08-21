@@ -282,10 +282,15 @@ function main(args)
   fail = 0
 
   // Suite-style runtime tests
+  if _test(compiler_path, repo_root, "array_vector", "tests\\array_vector.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_suite", "tests\\language_suite.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "stdlib_unit_tests", "tests\\stdlib_unit_tests.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_periodic_test", "tests\\gc_periodic_test.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_heap_stress", "tests\\gc_heap_stress.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "gc_box_float_safepoint", "tests\\gc_box_float_safepoint.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "gc_float_call_roots", "tests\\gc_float_call_roots.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "gc_nested_graph_roots", "tests\\gc_nested_graph_roots.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "gc_reference_write_roots", "tests\\gc_reference_write_roots.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "aes128_ecb_nist_kat", "tests\\aes128_ecb_nist_kat.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "winapi_extern_smoke", "tests\\winapi_extern_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_bytes_ptr_smoke", "tests\\native_bytes_ptr_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
