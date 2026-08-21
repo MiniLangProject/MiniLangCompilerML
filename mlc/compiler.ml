@@ -7,6 +7,7 @@ import mlc.minilang_parser as parser
 import mlc.codegen.codegen as codegen
 import mlc.pe as pe
 import mlc.tools as t
+import mlc.project as project
 import mlc.asm as a
 import mlc.data as d
 
@@ -183,6 +184,7 @@ function _usage()
   print "MiniLang self-hosted compiler (bootstrap frontend)"
   print "Usage:"
   print "  mlc_win64.exe <input.ml> <output.exe> [compiler options]"
+  print "  mlc_win64.exe --project <minilang.toml> [compiler options]"
   print "  mlc_win64.exe <ignored> <output.exe> --link-obj-dir <tmp-dir> [compiler options]"
   print "Extra self-hosted checks:"
   print "  --self-frontcheck"
@@ -1700,6 +1702,7 @@ function _compact_codegen_state_for_pe(st)
   st.filename = ""
   st.import_aliases = []
   st.extern_sigs = []
+  st.extern_abi_structs = []
   st.extern_structs = []
   st.heap_config = []
   st.break_stack = []
@@ -3944,6 +3947,33 @@ function _extern_struct_field_type_supported(ty)
   return t0 == "i8" or t0 == "u8" or t0 == "i16" or t0 == "u16" or t0 == "i32" or t0 == "u32" or t0 == "i64" or t0 == "u64" or t0 == "int" or t0 == "bool" or t0 == "ptr" or t0 == "pointer"
 end function
 
+struct ExternStructLayout
+  qname,
+  fields,
+  types,
+  offsets,
+  size,
+  align,
+end struct
+
+function _extern_struct_type_size(ty)
+  t0 = s.toLowerAscii(s.trim(ty))
+  if t0 == "i8" or t0 == "u8" then return 1 end if
+  if t0 == "i16" or t0 == "u16" then return 2 end if
+  if t0 == "i32" or t0 == "u32" or t0 == "bool" then return 4 end if
+  if t0 == "i64" or t0 == "u64" or t0 == "int" or t0 == "ptr" or t0 == "pointer" then return 8 end if
+  return 0
+end function
+
+function _extern_struct_layout_find(layouts, qname)
+  if typeof(layouts) != "array" or len(layouts) <= 0 then return 0 end if
+  for eli = 0 to len(layouts) - 1
+    it = layouts[eli]
+    if typeof(it) == "struct" and it.qname == qname then return it end if
+  end for
+  return 0
+end function
+
 function _collect_file_package_prefixes(program)
   acc = []
   cur_file = ""
@@ -4032,8 +4062,21 @@ function _collect_extern_structs_walk(stmts, prefix, current_file, file_prefixes
       end if
     end for
     qn = pref + st.name
-    if _array_contains(names, qn) then return error(1, "Duplicate extern struct declaration: " + qn) end if
-    names = names + [qn]
+    if typeof(_extern_struct_layout_find(names, qn)) == "struct" then return error(1, "Duplicate extern struct declaration: " + qn) end if
+    offs_b = t.arr_chunk_new(len(st.fields))
+    struct_off = 0
+    struct_align = 1
+    for lfi = 0 to len(st.fields) - 1
+      fsize = _extern_struct_type_size(st._extern_field_types[lfi])
+      falign = fsize
+      if falign > 8 then falign = 8 end if
+      if falign > struct_align then struct_align = falign end if
+      if struct_off % falign != 0 then struct_off = struct_off + (falign - (struct_off % falign)) end if
+      offs_b = t.arr_chunk_push(offs_b, struct_off)
+      struct_off = struct_off + fsize
+    end for
+    if struct_off % struct_align != 0 then struct_off = struct_off + (struct_align - (struct_off % struct_align)) end if
+    names = names + [ExternStructLayout(qn, st.fields, st._extern_field_types, t.arr_chunk_finish(offs_b), struct_off, struct_align)]
   end for
   return names
 end function
@@ -4062,7 +4105,7 @@ function validate_extern_sigs(extern_sigs, extern_struct_names)
         is_out = typeof(p.is_out) == "bool" and p.is_out
         if is_out then
           seen_out = true
-          if _abi_param_type_supported(ty) == false and _array_contains(extern_struct_names, ty) == false then
+          if _abi_param_type_supported(ty) == false and typeof(_extern_struct_layout_find(extern_struct_names, ty)) != "struct" then
             return "extern function " + sig.qname + ": unsupported out parameter type '" + ty + "'"
           end if
         else
@@ -4793,7 +4836,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     return 2
   end if
   _compiler_profile_phase("initializing code generator")
-  cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
+  cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names)
   if typeof(cg) == "struct" and typeof(cg.state) == "struct" then
     cg.state.dbg_line_starts = load.sources
     cg.state.heap_config = runtime_config
@@ -5334,7 +5377,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   end if
   _progress_phase("initializing code generator")
   _heap_probe("compile:before_new_codegen")
-  cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, [])
+  cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names)
   _heap_probe("compile:new_codegen_done")
   if typeof(cg) != "struct" or typeof(cg.state) != "struct" then
     print "CompileError: failed to initialize code generator"
@@ -5607,6 +5650,17 @@ function run_cli(args)
   global _asm_dump_data
   global _asm_dump_pe
   global _compiler_profile_enabled
+  expanded_project = project.expandArgs(args)
+  if typeof(expanded_project) != "struct" or expanded_project.ok == false then
+    msg_project = "invalid project manifest"
+    if typeof(expanded_project) == "struct" and typeof(expanded_project.message) == "string" then msg_project = expanded_project.message end if
+    print "ProjectError: " + msg_project
+    return 2
+  end if
+  args = expanded_project.args
+  project_build = expanded_project.project
+  project_digest = ""
+  project_cache_enabled = false
   _mem_probe_enabled = _has_flag(args, "--mem-probe")
   _compiler_profile_enabled = _has_flag(args, "--profile-compiler")
   _compiler_profile_reset()
@@ -5652,6 +5706,12 @@ function run_cli(args)
 
   inp = args[0]
   out_path = args[1]
+  if typeof(project_build) == "struct" then
+    if project.ensureOutputDirectory(out_path) == false then
+      print "ProjectError: failed to create output directory"
+      return 2
+    end if
+  end if
   include_dirs = _collect_include_dirs(args)
   keep_going = _has_flag(args, "--keep-going")
   max_errors = _get_max_errors(args)
@@ -5691,6 +5751,22 @@ function run_cli(args)
   end if
   subsystem = ss[1]
 
+  if typeof(project_build) == "struct" and project_build.incremental then
+    project_cache_enabled = _asm_listing_enabled == false and _dump_labels_path == "" and self_enabled == false and _has_flag(args, "--link-obj-dir") == false
+    if project_cache_enabled then
+      project_digest = project.fingerprint(project_build, inp, include_dirs)
+      if typeof(project_digest) == "error" then
+        print "ProjectError: cannot fingerprint project"
+        return 2
+      end if
+      if project.restore(project_build, project_digest, out_path) then
+        print "OK: cache hit; restored " + out_path
+        _compiler_profile_finish()
+        return 0
+      end if
+    end if
+  end if
+
   link_obj_dir = _get_flag_value(args, "--link-obj-dir")
   if link_obj_dir != "" then
     link_rc = link_obj_dir_to_exe(link_obj_dir, out_path, subsystem)
@@ -5699,6 +5775,13 @@ function run_cli(args)
   end if
 
   compile_rc = compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  if compile_rc == 0 and project_cache_enabled then
+    cache_store = project.store(project_build, project_digest, out_path)
+    if typeof(cache_store) == "error" then
+      print "ProjectError: cannot update incremental cache"
+      return 2
+    end if
+  end if
   _compiler_profile_finish()
   return compile_rc
 end function

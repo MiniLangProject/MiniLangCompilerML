@@ -152,6 +152,43 @@ Notes (current implementation):
 - The compiler uses the shared MiniLang frontend for parsing (tokenizer/parser).
 
 
+### Project manifests and incremental builds
+
+Larger programs can keep their entry point, output path and compiler options in
+a TOML manifest and build it with one command:
+
+```powershell
+.\build\mlc_win64.exe --project minilang.toml
+```
+
+```toml
+[project]
+entry = "src/main.ml"
+output = "build/app.exe"
+include = ["src", "vendor"]
+subsystem = "console"
+object_pipeline = true
+incremental = true
+cache_dir = ".minilang-cache"
+compiler_args = ["--heap-reserve", "1g"]
+```
+
+All paths are relative to the manifest. `entry` (or its alias `input`) and
+`output` are required. `include`/`import_paths` and `compiler_args` are arrays
+of strings. Unknown fields and wrong field types are errors instead of being
+silently ignored. Command-line arguments after the manifest are appended; use
+`--no-incremental` to force a clean build.
+
+The incremental cache is conservative. Its fingerprint covers the manifest,
+effective compiler arguments, the compiler executable and every `.ml` source
+below the entry/include roots. An exact hit restores the already linked
+executable while the `.mlo` object directory remains available; any relevant
+change performs a clean object build and atomically replaces the cached
+artifact. Listing, label-dump and self-frontcheck builds bypass the cache. Set
+`object_pipeline = true` for the memory-bounded `.mlo` path. The same manifest
+also works with the Python compiler, which emits the equivalent monolithic
+image.
+
 ### Formatting (mlfmt)
 
 There is a small auto-formatter written in MiniLang: `tools/mlfmt.ml`.
@@ -271,7 +308,7 @@ Notes:
 
 For identical source files, include roots and compiler options, the normal
 monolithic path of this compiler and the Python reference compiler emit
-byte-identical PE files. The current 23-program parity matrix covers the
+byte-identical PE files. The current 25-program parity matrix covers the
 language/standard-library suites, GC stress, compiler-GC liveness,
 extern/native interop, global rebinding, native threads and managed thread
 pools; every pair matches by SHA-256.
@@ -283,12 +320,17 @@ as the Python-bootstrap-built compiler. Exact hashes, test counts, boundaries
 and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
-The current 112-module / 656-object MiniQuake benchmark completes through the
+The most recent 112-module / 656-object MiniQuake benchmark (before the
+`defer`/FFI/manifest additions) completes through the
 memory-bounded object pipeline in 420.095 seconds and its `--help` smoke exits
 successfully. The matching Python monolithic build takes 69.089 seconds. The
 self-host profile identifies object emission (283.657 seconds), label
 resolution (74.829 seconds) and patch application (19.515 seconds) as the next
 optimization targets.
+
+The current source reaches a binary fixed point: two consecutive 293-object
+`.mlo` stages took 326.648 and 278.837 seconds and produced identical
+54,773,248-byte compiler images (SHA-256 is recorded in the parity report).
 
 
 ---
@@ -864,6 +906,31 @@ function add3(
 end function
 ```
 
+
+### Deferred cleanup (`defer`)
+
+Inside a function, `defer` registers a function or method call for execution
+when that function leaves:
+
+```ml
+function saveFile(path, data)
+  handle = openFile(path)
+  defer closeFile(handle)
+  writeFile(handle, data)
+  return true
+end function
+```
+
+- Deferred calls execute in reverse registration order (LIFO) on `return`,
+  normal fall-through and automatic `error` propagation.
+- The callee/receiver and all arguments are captured when `defer` is reached;
+  later variable assignments do not change the queued call.
+- A `defer` in a branch is registered only if that branch executes.
+- If a deferred call returns an `error`, it becomes the pending function result;
+  older deferred calls still run.
+- The current implementation accepts call expressions only and rejects `defer`
+  directly inside loops. Put one iteration in a helper function when per-item
+  cleanup is needed.
 
 ### Inline functions (`inline`)
 
@@ -1843,7 +1910,8 @@ Parameter forms:
 - `out <type>` / `out <name> as <type>` (**experimental**, see below)
 
 Supported ABI types (inputs):
-- `int` / `i64` / `u64` / `i32` / `u32`
+- `int` / `i64` / `u64` / `i32` / `u32` / `i16` / `u16` / `i8` / `u8`
+- `double`
 - `bool` (accepts `bool` or `int` at the call site)
 - `ptr` (accepts `ptr`, `int`, or `void`; `void` becomes `NULL`)
 - `cstr` (MiniLang `string` -> `char*` UTF-8; `void` becomes `NULL`)
@@ -1852,7 +1920,8 @@ Supported ABI types (inputs):
 
 Supported return types:
 - `void`
-- `int` / `i64` / `u64` / `i32` / `u32` / `ptr`
+- `int` / `i64` / `u64` / `i32` / `u32` / `i16` / `u16` / `i8` / `u8` / `ptr`
+- `double`
 - `bool`
 - `cstr` (reads a NUL-terminated `char*` and converts to a MiniLang `string`; `NULL` -> `void`)
 - `wstr` (reads a NUL-terminated `wchar_t*` and converts to a MiniLang `string`; `NULL` -> `void`)
@@ -1921,8 +1990,11 @@ extern struct POINT
 end struct
 ```
 
-This is intended for future interop features (e.g. passing/receiving structured data via pointers / out-params).  
-Current status: declarations are parsed and validated, but full marshaling support is still WIP.
+Layouts use Win64 C-style sequential placement, natural field alignment and a
+maximum alignment of eight bytes. Supported fields are `i8/u8`, `i16/u16`,
+`i32/u32`, `i64/u64`, `int`, `bool` (Win32 `BOOL`) and `ptr`. Structs returned
+through an implicit `out` parameter are copied into a normal GC-managed
+MiniLang struct, so they remain valid after the native call returns.
 
 ### out parameters (experimental)
 
@@ -1934,7 +2006,17 @@ extern function GetCursorPos(out p as POINT) from "user32.dll" returns bool
 
 Rules:
 - `out` parameters must appear **at the end** of the parameter list (so they can be implicitly handled at call sites).
-- Current status: the compiler validates `out` declarations, but code generation is still WIP.
+- A direct call may omit all trailing `out` arguments. Storage is allocated in
+  the current thread's stack frame and is therefore thread-safe and valid for
+  the duration of the native call.
+- One omitted `out` value becomes the call result. Multiple omitted values are
+  returned as a MiniLang array in declaration order.
+- If such a call has native return type `bool`, a false result becomes a
+  catchable MiniLang `error`; otherwise the native status/result is discarded
+  in favor of the marshaled out value(s).
+- Full-arity calls remain accepted for backward compatibility. Automatic out
+  allocation/marshaling is enabled by omission at a direct call site; indirect
+  extern function values retain their declared full arity.
 
 ---
 
@@ -2055,6 +2137,7 @@ Statements are separated by newlines or `;`.
 - `function synchronized name(a,b) ... end function` (process-wide recursive monitor)
 - (native) optional entrypoint: `function main(args) ... end function`
 - `return` / `return <expr>` / `return;` (and bare `return` directly before `end/else/case` in inline blocks)
+- `defer <call-expression>` (inside functions; LIFO cleanup on every function exit)
 - `global x, y, z` (inside functions; native compiler only; trailing comma optional; names may be qualified like `foo.bar.x`)
 - `if <expr> then ... end if` (block or inline)
 - `while <expr> ... end while`

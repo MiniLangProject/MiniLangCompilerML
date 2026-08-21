@@ -177,6 +177,51 @@ function _test(compiler_path, repo_root, name, src_rel, mode, extra_flags)
   return true
 end function
 
+function _test_project_manifest(compiler_path, repo_root)
+  name = "project_manifest_cache"
+  manifest_abs = _path_join(repo_root, "build\\_rt_project_manifest.toml")
+  source_abs = _path_join(repo_root, "build\\_rt_project_source.ml")
+  output_abs = _path_join(repo_root, "build\\_rt_project_output.exe")
+  manifest_text = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nincremental = true\ncache_dir = \"_rt_project_cache\"\n"
+  if typeof(fs.writeAllText(manifest_abs, manifest_text)) == "error" then
+    print "[FAIL] " + name + " (could not write manifest)"
+    return false
+  end if
+  source_v1 = "function main(args)\n  return 0\nend function\n"
+  if typeof(fs.writeAllText(source_abs, source_v1)) == "error" then
+    print "[FAIL] " + name + " (could not write v1 source)"
+    return false
+  end if
+  cmd = "call " + _q(compiler_path) + " --project " + _q(manifest_abs)
+  if _wsystem(cmd) != 0 or _run_exe(output_abs, "") != 0 then
+    print "[FAIL] " + name + " (initial build/run failed)"
+    return false
+  end if
+
+  // A source-content change must invalidate the cached executable.
+  source_v2 = "function main(args)\n  return 7\nend function\n"
+  if typeof(fs.writeAllText(source_abs, source_v2)) == "error" or _wsystem(cmd) != 0 then
+    print "[FAIL] " + name + " (source-change rebuild failed)"
+    return false
+  end if
+  if _run_exe(output_abs, "") != 7 then
+    print "[FAIL] " + name + " (stale executable after source change)"
+    return false
+  end if
+
+  // Removing only the output must allow an exact cache hit to restore it.
+  if fs.delete(output_abs) == false then
+    print "[FAIL] " + name + " (could not remove output before restore)"
+    return false
+  end if
+  if _wsystem(cmd) != 0 or fs.exists(output_abs) == false or _run_exe(output_abs, "") != 7 then
+    print "[FAIL] " + name + " (cache restore failed)"
+    return false
+  end if
+  print "[PASS] " + name
+  return true
+end function
+
 function _label_function_block(labels, fn_name)
   marker = "[label] fn_user_" + fn_name + " "
   start = s.indexOf(labels, marker, 0)
@@ -296,6 +341,9 @@ function main(args)
   if _test(compiler_path, repo_root, "native_bytes_ptr_smoke", "tests\\native_bytes_ptr_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_raw_value_smoke", "tests\\native_raw_value_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_callback_wndproc_smoke", "tests\\native_callback_wndproc_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "extern_out_runtime", "tests\\extern_out_runtime.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "defer_features", "tests\\defer_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test_project_manifest(compiler_path, repo_root) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "global_function_rebind", "tests\\global_function_rebind.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_features", "tests\\thread_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "threading_stdlib", "tests\\threading_stdlib.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

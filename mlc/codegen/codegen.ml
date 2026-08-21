@@ -219,7 +219,7 @@ function _clone_state_for_object(base, seed_runtime)
     return core.cg_core_new("", "", [], [], [])
   end if
 
-  st = core.cg_core_new(base.source, base.filename, base.import_aliases, base.extern_sigs, base.extern_structs)
+  st = core.cg_core_new(base.source, base.filename, base.import_aliases, base.extern_sigs, base.extern_abi_structs)
   st.heap_config = base.heap_config
   st.call_profile = base.call_profile
   st.trace_calls = base.trace_calls

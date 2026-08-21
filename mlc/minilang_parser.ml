@@ -135,6 +135,14 @@ struct Member
   _filename,
 end struct
 
+// Compiler-internal expression used while emitting deferred calls.
+struct DeferredCapture
+  node_kind,
+  offset,
+  _pos,
+  _filename,
+end struct
+
 // statement AST (subset port)
 struct Import
   node_kind,
@@ -242,6 +250,16 @@ end struct
 struct Return
   node_kind,
   expr,
+  _pos,
+  _filename,
+end struct
+
+struct Defer
+  node_kind,
+  expr,
+  site_id,
+  offsets,
+  capture_kind,
   _pos,
   _filename,
 end struct
@@ -377,7 +395,7 @@ _keywords =[
 "print", "if", "then", "else", "end", "while", "loop", "true", "false", "and", "or", "not",
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
 "switch", "case", "default", "struct", "enum", "are", "namespace", "import", "as", "package",
-"extern", "from", "returns", "symbol", "out", "static", "inline", "synchronized", "void", "is"
+"extern", "from", "returns", "symbol", "out", "static", "inline", "synchronized", "void", "is", "defer"
 ]
 
 function newToken(kind, value, pos)
@@ -1719,6 +1737,10 @@ function _parse_stmt()
     return _parse_stmt_return(start_pos, t)
   end if
 
+  if t.kind == "KW" and t.value == "defer" then
+    return _parse_stmt_defer(start_pos, t)
+  end if
+
   if t.kind == "KW" and t.value == "extern" then
     return _parse_stmt_extern(start_pos, t)
   end if
@@ -1907,6 +1929,22 @@ function _parse_stmt_return(start_pos, t)
   e = _parse_expr(0)
   if _has_error() then return end if
   return Return("Return", e, start_pos, _filename)
+end function
+
+function _parse_stmt_defer(start_pos, t)
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  if _func_depth <= 0 then
+    _set_error("'defer' is only allowed inside functions", t.pos)
+    return
+  end if
+  _advance()
+  e = _parse_expr(0)
+  if _has_error() then return end if
+  if typeof(e) != "struct" or try(e.node_kind) != "Call" then
+    _set_error("'defer' expects a function or method call", start_pos)
+    return
+  end if
+  return Defer("Defer", e, -1, [], "", start_pos, _filename)
 end function
 
 function _parse_stmt_extern(start_pos, t)

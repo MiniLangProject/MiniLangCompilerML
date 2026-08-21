@@ -497,6 +497,203 @@ function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   return state
 end function
 
+struct DeferCollectResult
+  state,
+  builder,
+  count,
+end struct
+
+function _collect_defer_walk(state, stmts, in_loop, builder, count)
+  if typeof(stmts) != "array" or len(stmts) <= 0 then
+    return DeferCollectResult(state, builder, count)
+  end if
+  for dwi = 0 to len(stmts) - 1
+    st = stmts[dwi]
+    if typeof(st) != "struct" then continue end if
+    k = _coerce_name(try(st.node_kind))
+    if k == "FunctionDef" then continue end if
+    if k == "Defer" then
+      if in_loop then
+        state.diagnostics = state.diagnostics + ["'defer' inside a loop is not supported; move it into a helper function" + _diag_stmt_loc(st)]
+        continue
+      end if
+      call = try(st.expr)
+      if typeof(call) != "struct" or try(call.node_kind) != "Call" then
+        state.diagnostics = state.diagnostics + ["'defer' expects a function or method call" + _diag_stmt_loc(st)]
+        continue
+      end if
+      st.site_id = count
+      builder = t.arr_chunk_push(builder, st)
+      count = count + 1
+      continue
+    end if
+    if k == "If" then
+      rr = _collect_defer_walk(state, try(st.then_body), in_loop, builder, count)
+      state = rr.state
+      builder = rr.builder
+      count = rr.count
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
+        for dei = 0 to len(elifs) - 1
+          pair = elifs[dei]
+          if typeof(pair) == "array" and len(pair) >= 2 then
+            rr = _collect_defer_walk(state, pair[1], in_loop, builder, count)
+            state = rr.state
+            builder = rr.builder
+            count = rr.count
+          end if
+        end for
+      end if
+      rr = _collect_defer_walk(state, try(st.else_body), in_loop, builder, count)
+      state = rr.state
+      builder = rr.builder
+      count = rr.count
+      continue
+    end if
+    if k == "While" or k == "DoWhile" or k == "For" or k == "ForEach" then
+      rr = _collect_defer_walk(state, try(st.body), true, builder, count)
+      state = rr.state
+      builder = rr.builder
+      count = rr.count
+      continue
+    end if
+    if k == "Switch" then
+      cases = try(st.cases)
+      if typeof(cases) == "array" and len(cases) > 0 then
+        for dci = 0 to len(cases) - 1
+          rr = _collect_defer_walk(state, try(cases[dci].body), in_loop, builder, count)
+          state = rr.state
+          builder = rr.builder
+          count = rr.count
+        end for
+      end if
+      rr = _collect_defer_walk(state, try(st.default_body), in_loop, builder, count)
+      state = rr.state
+      builder = rr.builder
+      count = rr.count
+    end if
+  end for
+  return DeferCollectResult(state, builder, count)
+end function
+
+function _collect_defer_sites(state, fn_node)
+  b = t.arr_chunk_new(8)
+  r = _collect_defer_walk(state, try(fn_node.body), false, b, 0)
+  return [r.state, t.arr_chunk_finish(r.builder)]
+end function
+
+function _defer_static_callee(state, callee)
+  if typeof(callee) != "struct" then return false end if
+  k = _coerce_name(try(callee.node_kind))
+  if k == "Var" then
+    nm = _coerce_name(try(callee.name))
+    if exprmod._qname_exists(state, nm) then return true end if
+    return typeof(scope.cg_resolve_binding(state, nm)) != "struct"
+  end if
+  if k != "Member" then return false end if
+  qn = exprmod._expr_to_qualname(state, callee)
+  if typeof(qn) != "string" or qn == "" then return false end if
+  return exprmod._qname_exists(state, qn)
+end function
+
+function _emit_defer_registration(state, stmt)
+  call = try(stmt.expr)
+  args = try(call.args)
+  if typeof(args) != "array" then args = [] end if
+  offs = try(stmt.offsets)
+  if typeof(offs) != "array" or len(offs) != len(args) + 2 then
+    state.diagnostics = state.diagnostics + ["Internal compiler error: invalid defer frame layout" + _diag_stmt_loc(stmt)]
+    return state
+  end if
+  callee = try(call.callee)
+  ck = _coerce_name(try(callee.node_kind))
+  if _defer_static_callee(state, callee) then
+    stmt.capture_kind = "static"
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  else if ck == "Member" then
+    stmt.capture_kind = "member"
+    state = exprmod.cg_emit_expr(state, try(callee.target))
+  else
+    stmt.capture_kind = "dynamic"
+    state = exprmod.cg_emit_expr(state, callee)
+  end if
+  state.asm = a.mov_rsp_disp32_rax(state.asm, offs[1])
+  if len(args) > 0 then
+    for dai = 0 to len(args) - 1
+      state = exprmod.cg_emit_expr(state, args[dai])
+      state.asm = a.mov_rsp_disp32_rax(state.asm, offs[dai + 2])
+    end for
+  end if
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
+  state.asm = a.mov_rsp_disp32_rax(state.asm, offs[0])
+  return state
+end function
+
+function _defer_capture_node(stmt, off)
+  return ml.DeferredCapture("DeferredCapture", off, try(stmt._pos), try(stmt._filename))
+end function
+
+function _defer_replay_call(stmt)
+  call = stmt.expr
+  offs = stmt.offsets
+  callee = call.callee
+  if stmt.capture_kind == "member" then
+    callee = ml.Member("Member", _defer_capture_node(stmt, offs[1]), call.callee.name, try(stmt._pos), try(stmt._filename))
+  else if stmt.capture_kind == "dynamic" then
+    callee = _defer_capture_node(stmt, offs[1])
+  end if
+  ab = t.arr_chunk_new(len(call.args))
+  if len(call.args) > 0 then
+    for dri = 0 to len(call.args) - 1
+      ab = t.arr_chunk_push(ab, _defer_capture_node(stmt, offs[dri + 2]))
+    end for
+  end if
+  return ml.Call("Call", callee, t.arr_chunk_finish(ab), try(stmt._pos), try(stmt._filename))
+end function
+
+function _emit_defer_cleanup(state, sites, ret_off)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, ret_off)
+  old_sup = 0
+  if typeof(state.errprop_suppression) == "int" then old_sup = state.errprop_suppression end if
+  state.errprop_suppression = old_sup + 1
+  if typeof(sites) == "array" and len(sites) > 0 then
+    dsi = len(sites) - 1
+    while dsi >= 0
+      stmt = sites[dsi]
+      lid1 = state.label_id
+      state.label_id = state.label_id + 1
+      skip = "defer_skip_" + lid1
+      lid2 = state.label_id
+      state.label_id = state.label_id + 1
+      noerr = "defer_noerr_" + lid2
+      active_off = stmt.offsets[0]
+      state.asm = a.mov_rax_rsp_disp32(state.asm, active_off)
+      state.asm = a.cmp_rax_imm8(state.asm, t.enc_bool(true))
+      state.asm = a.jcc(state.asm, "ne", skip)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.mov_rsp_disp32_rax(state.asm, active_off)
+      state = exprmod.cg_emit_expr(state, _defer_replay_call(stmt))
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.and_r64_imm(state.asm, "r10", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", noerr)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_STRUCT)
+      state.asm = a.jcc(state.asm, "ne", noerr)
+      state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "rax", 4)
+      state.asm = a.cmp_r32_imm(state.asm, "r10d", c.ERROR_STRUCT_ID)
+      state.asm = a.jcc(state.asm, "ne", noerr)
+      state.asm = a.mov_rsp_disp32_rax(state.asm, ret_off)
+      state.asm = a.mark(state.asm, noerr)
+      state.asm = a.mark(state.asm, skip)
+      dsi = dsi - 1
+    end while
+  end if
+  state.errprop_suppression = old_sup
+  state.asm = a.mov_rax_rsp_disp32(state.asm, ret_off)
+  return state
+end function
+
 function _foreach_store_dword_eax(state, name)
   b = scope.cg_resolve_binding(state, name)
   if typeof(b) != "struct" then return state end if
@@ -2035,6 +2232,14 @@ function cg_emit_stmt(state, stmt)
       state.asm = a.ret(state.asm)
     end if
     return state
+  end if
+
+  if k == "Defer" then
+    if state.in_function == false then
+      state.diagnostics = state.diagnostics + ["'defer' outside function" + _diag_stmt_loc(stmt)]
+      return state
+    end if
+    return _emit_defer_registration(state, stmt)
   end if
 
   state.diagnostics = state.diagnostics +["Unsupported statement in native backend: " + k]
@@ -3767,7 +3972,7 @@ function _analysis_scan_stmt(state, st)
     return state
   end if
 
-  if k == "Print" or k == "ExprStmt" or k == "Return" then
+  if k == "Print" or k == "ExprStmt" or k == "Return" or k == "Defer" then
     state = _analysis_scan_expr(state, try(st.expr), false)
     return state
   end if
@@ -4241,7 +4446,7 @@ function _closure_collect_uses(stmts)
     k = _coerce_name(try(st.node_kind))
     if k == "FunctionDef" then continue end if
 
-    if k == "Assign" or k == "SynchronizedDecl" or k == "Print" or k == "ExprStmt" or k == "Return" then
+    if k == "Assign" or k == "SynchronizedDecl" or k == "Print" or k == "ExprStmt" or k == "Return" or k == "Defer" then
       used = _closure_expr_reads(try(st.expr), used)
       continue
     end if
@@ -4450,7 +4655,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
       continue
     end if
 
-    if k == "Print" or k == "ExprStmt" or k == "Return" then
+    if k == "Print" or k == "ExprStmt" or k == "Return" or k == "Defer" then
       rr2 = _closure_expr_reads(try(st.expr), _name_set_new(16))
       read_before = _note_reads(read_before, written_yet, rr2)
       continue
@@ -5138,7 +5343,7 @@ function _stmt_uses_this(st)
   k = _coerce_name(try(st.node_kind))
   if k == "" then return false end if
 
-  if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "SynchronizedDecl" or k == "ConstDecl" or k == "Return" then
+  if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "SynchronizedDecl" or k == "ConstDecl" or k == "Return" or k == "Defer" then
     return _expr_uses_this(try(st.expr))
   end if
   if k == "SetMember" then
@@ -5911,7 +6116,7 @@ function _check_stmt_semantics(state, st, fn_arities)
   if typeof(st) != "struct" then return state end if
   k = st.node_kind
 
-  if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "SynchronizedDecl" or k == "ConstDecl" or k == "Return" then
+  if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "SynchronizedDecl" or k == "ConstDecl" or k == "Return" or k == "Defer" then
     if typeof(st.expr) == "struct" then
       state = _check_expr_semantics(state, st.expr, fn_arities)
     end if
@@ -7651,6 +7856,11 @@ function emit_user_function(state, fn_node)
 
   fn_lbl = "fn_user_" + code_name
   ret_lbl = "fn_ret_" + code_name
+  dcr = _collect_defer_sites(state, fn_node)
+  state = dcr[0]
+  defer_sites = dcr[1]
+  defer_lbl = ret_lbl
+  if len(defer_sites) > 0 then defer_lbl = "fn_defer_" + code_name end if
   max_call_args = max_calls_stmts(state, fn_node.body)
   if typeof(max_call_args) != "int" or max_call_args < 0 then max_call_args = 0 end if
   if typeof(state.max_inline_call_args_global) == "int" and state.max_inline_call_args_global > max_call_args then
@@ -7690,6 +7900,26 @@ function emit_user_function(state, fn_node)
   params_base = locals_base + local_bytes
   call_temp_base = params_base
   if typeof(fn_node.params) == "array" then call_temp_base = params_base + len(fn_node.params) * 8 end if
+  defer_ret_off = -1
+  if len(defer_sites) > 0 then
+    defer_ret_off = call_temp_base
+    defer_cursor = defer_ret_off + 8
+    for dli = 0 to len(defer_sites) - 1
+      ds = defer_sites[dli]
+      dargs = try(ds.expr.args)
+      if typeof(dargs) != "array" then dargs = [] end if
+      slot_count = len(dargs) + 2
+      ob = t.arr_chunk_new(slot_count)
+      if slot_count > 0 then
+        for doi = 0 to slot_count - 1
+          ob = t.arr_chunk_push(ob, defer_cursor + doi * 8)
+        end for
+      end if
+      ds.offsets = t.arr_chunk_finish(ob)
+      defer_cursor = defer_cursor + slot_count * 8
+    end for
+    call_temp_base = defer_cursor
+  end if
   call_temp_bytes = max_call_args * 8
   call_temp_bytes = t.align_up(call_temp_bytes, 16)
   expr_temp_base = call_temp_base + call_temp_bytes
@@ -7759,7 +7989,7 @@ function emit_user_function(state, fn_node)
   if env_hop_flag then need_env = true end if
   if len(env_slots) > 0 then need_env = true end if
   state.in_function = true
-  state.func_ret_label = ret_lbl
+  state.func_ret_label = defer_lbl
   state.func_frame_size = frame
   state.var_slots = 0
   // Isolate expression-temp arena per function; do not leak allocator state across functions.
@@ -8108,7 +8338,12 @@ function emit_user_function(state, fn_node)
 
   // implicit return void
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
-  state.asm = a.jmp(state.asm, ret_lbl)
+  state.asm = a.jmp(state.asm, defer_lbl)
+  if len(defer_sites) > 0 then
+    state.asm = a.mark(state.asm, defer_lbl)
+    state = _emit_defer_cleanup(state, defer_sites, defer_ret_off)
+    state.asm = a.jmp(state.asm, ret_lbl)
+  end if
   state = core.emit_deferred_cold_blocks(state)
   core.pop_cold_block_scope(state)
 
@@ -8283,6 +8518,12 @@ function max_calls_expr(state, ex)
     args = _analysis_call_args(ex)
     cal = _analysis_call_callee(ex)
     call_arity = len(args)
+    ext_qn = exprmod._expr_to_qualname(state, cal)
+    ext_qn = exprmod._apply_import_alias(state, ext_qn)
+    ext_sig = exprmod._extern_sig_get(state, ext_qn)
+    if typeof(ext_sig) == "struct" and typeof(try(ext_sig.params)) == "array" and len(ext_sig.params) > call_arity then
+      call_arity = len(ext_sig.params)
+    end if
     if typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" then
       mname = _coerce_name(try(cal.name))
       if _struct_methods_any_has(state, mname) then
@@ -8440,6 +8681,10 @@ function max_calls_stmts(state, stmts)
       continue
     end if
     if nk == "Return" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
+    if nk == "Defer" then
       m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
       continue
     end if

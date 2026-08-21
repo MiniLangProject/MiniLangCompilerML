@@ -1085,6 +1085,16 @@ function _emit_std_math_roundlike_intrinsic(state, callee_name, arg)
   return [state, true]
 end function
 
+function _extern_struct_get(state, qname)
+  xs = state.extern_abi_structs
+  if typeof(xs) != "array" or len(xs) <= 0 then return 0 end if
+  for esi = 0 to len(xs) - 1
+    it = xs[esi]
+    if typeof(it) == "struct" and _coerce_name(try(it.qname)) == qname then return it end if
+  end for
+  return 0
+end function
+
 function _is_expr_list_separator_artifact(ex)
   if typeof(ex) != "struct" then return false end if
   nk = _coerce_name(try(ex.node_kind))
@@ -1123,6 +1133,13 @@ function cg_emit_expr(state, expr)
 
   if k == "COMMA" then
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return state
+  end if
+
+  // Compiler-internal operand used by the defer epilogue.  The captured
+  // MiniLang value lives in the current function's published root range.
+  if k == "DeferredCapture" then
+    state.asm = a.mov_rax_rsp_disp32(state.asm, try(expr.offset))
     return state
   end if
 
@@ -6117,6 +6134,41 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     end if
   end if
 
+  // Direct extern calls may omit trailing `out` parameters. Full-arity calls
+  // keep using the first-class OBJ_BUILTIN stub for backward compatibility.
+  ext_name = callee
+  ext_sig = _extern_sig_get(state, ext_name)
+  if typeof(ext_sig) != "struct" and raw_name != "" then
+    ext_name = raw_name
+    ext_sig = _extern_sig_get(state, ext_name)
+  end if
+  if typeof(ext_sig) == "struct" then
+    ext_binding = scope.cg_resolve_binding(state, ext_name)
+    if typeof(ext_binding) != "struct" or ext_binding.kind == "global" then
+      ext_params = try(ext_sig.params)
+      if typeof(ext_params) != "array" then ext_params = [] end if
+      ext_total = len(ext_params)
+      ext_required = ext_total
+      while ext_required > 0
+        ep = ext_params[ext_required - 1]
+        if typeof(ep) != "struct" or typeof(try(ep.is_out)) != "bool" or ep.is_out == false then break end if
+        ext_required = ext_required - 1
+      end while
+      if nargs < ext_required or nargs > ext_total then
+        want = "" + ext_total
+        if ext_required != ext_total then want = "" + ext_required + ".." + ext_total end if
+        state.diagnostics = state.diagnostics + ["Extern " + ext_name + " expects " + want + " args, got " + nargs]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      if nargs < ext_total then
+        state = _emit_extern_call(state, cal, call_args, "", ext_name, try(cal._pos))
+        state = _emit_auto_errprop(state)
+        return state
+      end if
+    end if
+  end if
+
   // Indirect callable dispatch (first-class function values).
   state.call_indirect_count = state.call_indirect_count + 1
   callee_is_member = false
@@ -6690,11 +6742,11 @@ end function
 // ------------------------------------------------------------
 
 function _abi_ty_to_str(abi_ty)
-  if typeof(abi_ty) == "string" then return s.toLowerAscii(abi_ty) end if
+  if typeof(abi_ty) == "string" then return abi_ty end if
   if typeof(abi_ty) == "struct" then
-    if typeof(abi_ty.ty) == "string" then return s.toLowerAscii(abi_ty.ty) end if
-    if typeof(abi_ty.type) == "string" then return s.toLowerAscii(abi_ty.type) end if
-    if typeof(abi_ty.name) == "string" then return s.toLowerAscii(abi_ty.name) end if
+    if typeof(abi_ty.ty) == "string" then return abi_ty.ty end if
+    if typeof(abi_ty.type) == "string" then return abi_ty.type end if
+    if typeof(abi_ty.name) == "string" then return abi_ty.name end if
   end if
   return ""
 end function
@@ -7298,7 +7350,9 @@ function _emit_auto_errprop_cold_block(state)
 end function
 
 function _emit_extern_arg_to_native(state, abi_ty, fail_label, pos, wbuf_label)
-  ty = s.toLowerAscii(s.trim(_abi_ty_to_str(abi_ty)))
+  raw_ty = s.trim(_abi_ty_to_str(abi_ty))
+  ty = s.toLowerAscii(raw_ty)
+  if typeof(_extern_struct_get(state, raw_ty)) == "struct" then ty = "ptr" end if
   if typeof(wbuf_label) != "string" or wbuf_label == "" then wbuf_label = "widebuf" end if
 
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
@@ -7668,6 +7722,57 @@ function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
   return state
 end function
 
+function _emit_extern_out_from_stack(state, abi_ty, stack_off, pos)
+  ty_raw = s.trim(_abi_ty_to_str(abi_ty))
+  ty = s.toLowerAscii(ty_raw)
+  ext = _extern_struct_get(state, ty_raw)
+  if typeof(ext) == "struct" then
+    fields = try(ext.fields)
+    types = try(ext.types)
+    offsets = try(ext.offsets)
+    if typeof(fields) != "array" or typeof(types) != "array" or typeof(offsets) != "array" or len(fields) != len(types) or len(fields) != len(offsets) then
+      state.diagnostics = state.diagnostics + ["Invalid extern struct layout for '" + ty_raw + "'"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    sid = _state_struct_id_get(state, ty_raw, 0)
+    if sid == 0 then
+      state.diagnostics = state.diagnostics + ["Invalid extern struct layout for '" + ty_raw + "'"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    base_off = core.alloc_expr_temps(state, 8)
+    state.asm = a.mov_rcx_imm32(state.asm, 8 + len(fields) * 8)
+    state.asm = a.call(state.asm, "fn_alloc")
+    state.asm = a.mov_rsp_disp32_rax(state.asm, base_off)
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, sid, false)
+    if len(fields) > 0 then
+      for efi = 0 to len(fields) - 1
+        state = _emit_extern_out_from_stack(state, types[efi], stack_off + offsets[efi], pos)
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_off)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + efi * 8, "rax")
+      end for
+    end if
+    state.asm = a.mov_rax_rsp_disp32(state.asm, base_off)
+    state = core.release_expr_temps(state, 8)
+    return state
+  end if
+
+  if ty == "double" then
+    state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", stack_off)
+    return core.emit_force_xmm0_to_float_value(state)
+  end if
+  if ty == "i32" or ty == "u32" or ty == "bool" then
+    state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", stack_off)
+  else
+    state.asm = a.mov_rax_rsp_disp32(state.asm, stack_off)
+  end if
+  if ty == "bytes" or ty == "buffer" or ty == "bytebuffer" then ty = "ptr" end if
+  return _emit_extern_ret_from_native(state, ty, "", pos)
+end function
+
 function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   threaded_native = state.native_threads_possible
   qn = ""
@@ -7689,10 +7794,22 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   if typeof(sig.params) == "array" then ps = sig.params end if
   if typeof(args) != "array" then args = [] end if
   nargs = len(args)
-  if nargs != len(ps) then
+  native_nargs = len(ps)
+  if nargs > native_nargs then
     state.diagnostics = state.diagnostics + ["Extern call arity mismatch: " + qn + " expects " + len(ps) + " args, got " + nargs]
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
     return state
+  end if
+  omitted = native_nargs - nargs
+  if omitted > 0 then
+    for ovi = nargs to native_nargs - 1
+      op = ps[ovi]
+      if typeof(op) != "struct" or typeof(try(op.is_out)) != "bool" or op.is_out == false then
+        state.diagnostics = state.diagnostics + ["Extern call arity mismatch: " + qn + " expects " + len(ps) + " args, got " + nargs]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+    end for
   end if
 
   dll = _coerce_name(sig.dll)
@@ -7705,9 +7822,9 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   end if
   if sym == "" then sym = _coerce_name(sig.name) end if
 
-  lid = _next_lid(state)
-  l_fail = "extcall_fail_" + lid
-  l_done = "extcall_done_" + lid
+  l_fail = "L_extern_fail_" + _next_lid(state)
+  l_cleanup = "L_extern_cleanup_" + _next_lid(state)
+  l_done = "L_extern_done_" + _next_lid(state)
   wpool = ["widebuf", "widebuf1", "widebuf2", "widebuf3"]
   root_base = 0
   root_alloc = false
@@ -7718,6 +7835,35 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
     else
       root_base = 0
     end if
+  end if
+
+  out_offsets = array(native_nargs, 0)
+  out_bytes = 0
+  if omitted > 0 then
+    for obi = nargs to native_nargs - 1
+      oty = s.trim(_abi_ty_to_str(ps[obi]))
+      olayout = _extern_struct_get(state, oty)
+      osize = 8
+      oalign = 8
+      if typeof(olayout) == "struct" then
+        if typeof(olayout.size) == "int" and olayout.size > 0 then osize = olayout.size end if
+        if typeof(olayout.align) == "int" and olayout.align > 0 then oalign = olayout.align end if
+      end if
+      out_bytes = t.align_up(out_bytes, oalign)
+      out_offsets[obi] = out_bytes
+      padded = t.align_up(osize, 8)
+      if padded < 8 then padded = 8 end if
+      out_bytes = out_bytes + padded
+    end for
+  end if
+  out_base = 0
+  out_alloc = false
+  if out_bytes > 0 then
+    out_base = core.alloc_expr_temps(state, out_bytes)
+    if typeof(out_base) == "int" and out_base > 0 then out_alloc = true end if
+    for oz = 0 to (out_bytes / 8) - 1
+      state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", out_base + oz * 8, 0, true)
+    end for
   end if
 
   i = 0
@@ -7758,11 +7904,20 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
     i = i + 1
   end while
 
+  if omitted > 0 then
+    for opi = nargs to native_nargs - 1
+      state.asm = a.lea_r64_membase_disp(state.asm, "rax", "rsp", out_base + out_offsets[opi])
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", state.call_temp_base + opi * 8, "rax")
+    end for
+  end if
+
   // Native code may block indefinitely. Publish a stable stack-root chain
   // before entering it so stop-the-world GC need not wait for the OS call.
   if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_enter") end if
 
-  if nargs >= 1 then
+  if native_nargs >= 1 then
     aty0 = _coerce_name(ps[0])
     if typeof(ps[0]) == "struct" then
       aty0 = _coerce_name(ps[0].ty)
@@ -7776,7 +7931,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
     end if
   end if
-  if nargs >= 2 then
+  if native_nargs >= 2 then
     aty1 = _coerce_name(ps[1])
     if typeof(ps[1]) == "struct" then
       aty1 = _coerce_name(ps[1].ty)
@@ -7790,7 +7945,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       state.asm = a.sar_r64_imm8(state.asm, "rdx", 3)
     end if
   end if
-  if nargs >= 3 then
+  if native_nargs >= 3 then
     aty2 = _coerce_name(ps[2])
     if typeof(ps[2]) == "struct" then
       aty2 = _coerce_name(ps[2].ty)
@@ -7804,7 +7959,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       state.asm = a.sar_r64_imm8(state.asm, "r8", 3)
     end if
   end if
-  if nargs >= 4 then
+  if native_nargs >= 4 then
     aty3 = _coerce_name(ps[3])
     if typeof(ps[3]) == "struct" then
       aty3 = _coerce_name(ps[3].ty)
@@ -7821,8 +7976,8 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   ext_stack_save_off = 0
   ext_stack_save_count = 0
   ext_stack_save_alloc = false
-  if nargs > 8 then
-    ext_stack_save_count = nargs - 8
+  if native_nargs > 8 then
+    ext_stack_save_count = native_nargs - 8
     ext_stack_save_bytes = ext_stack_save_count * 8
     ext_stack_save_off = core.alloc_expr_temps(state, ext_stack_save_bytes)
     if typeof(ext_stack_save_off) == "int" and ext_stack_save_off > 0 then
@@ -7837,9 +7992,9 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       ext_stack_save_count = 0
     end if
   end if
-  if nargs > 4 then
+  if native_nargs > 4 then
     si = 4
-    while si < nargs
+    while si < native_nargs
       state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", state.call_temp_base + si * 8)
       sty = _coerce_name(ps[si])
       if typeof(ps[si]) == "struct" then
@@ -7857,13 +8012,44 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
 
   state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
   if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
-  state = _emit_extern_ret_from_native(state, sig.ret_ty, l_fail, pos)
-  state.asm = a.jmp(state.asm, l_done)
+  if omitted > 0 then
+    out_ok = "L_extern_out_ok_" + _next_lid(state)
+    if s.toLowerAscii(s.trim(_abi_ty_to_str(sig.ret_ty))) == "bool" then
+      state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+      state.asm = a.jcc(state.asm, "ne", out_ok)
+      state = _emit_make_error_const(state, c.ERR_EXTERN_CONVERSION, "Extern out call failed: " + qn + " returned false")
+      state.asm = a.jmp(state.asm, l_cleanup)
+      state.asm = a.mark(state.asm, out_ok)
+    end if
+    if omitted == 1 then
+      oi = nargs
+      state = _emit_extern_out_from_stack(state, ps[oi], out_base + out_offsets[oi], pos)
+    else
+      arr_root = core.alloc_expr_temps(state, 8)
+      state.asm = a.mov_rcx_imm32(state.asm, 8 + omitted * 8)
+      state.asm = a.call(state.asm, "fn_alloc")
+      state.asm = a.mov_rsp_disp32_rax(state.asm, arr_root)
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, omitted, false)
+      for omi = 0 to omitted - 1
+        oi2 = nargs + omi
+        state = _emit_extern_out_from_stack(state, ps[oi2], out_base + out_offsets[oi2], pos)
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", arr_root)
+        state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + omi * 8, "rax")
+      end for
+      state.asm = a.mov_rax_rsp_disp32(state.asm, arr_root)
+      state = core.release_expr_temps(state, 8)
+    end if
+  else
+    state = _emit_extern_ret_from_native(state, sig.ret_ty, l_fail, pos)
+  end if
+  state.asm = a.jmp(state.asm, l_cleanup)
 
   state.asm = a.mark(state.asm, l_fail)
   state = _emit_make_error_const(state, c.ERR_EXTERN_CONVERSION, "Extern call failed: " + qn + " (argument type mismatch or conversion failure)")
 
-  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_cleanup)
   if ext_stack_save_count > 0 then
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
     si_restore = 0
@@ -7877,9 +8063,13 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
     end if
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
   end if
+  if out_alloc then
+    state = core.release_expr_temps(state, out_bytes)
+  end if
   if root_alloc then
     state = core.release_expr_temps(state, nargs * 8)
   end if
+  state.asm = a.mark(state.asm, l_done)
   return state
 end function
 
@@ -7935,6 +8125,10 @@ function _inline_collect_stmt_stats(st, stats)
   if k == "Assign" or k == "ConstDecl" or k == "ExprStmt" then return 2 + _inline_collect_expr_stats(try(st.expr), stats) end if
   if k == "Print" then return 4 + _inline_collect_expr_stats(try(st.expr), stats) end if
   if k == "Return" then return 1 + _inline_collect_expr_stats(try(st.expr), stats) end if
+  if k == "Defer" then
+    stats.has_nested_fn = true
+    return 24 + _inline_collect_expr_stats(try(st.expr), stats)
+  end if
   if k == "SetMember" then return 6 + _inline_collect_expr_stats(try(st.obj), stats) + _inline_collect_expr_stats(try(st.expr), stats) end if
   if k == "SetIndex" then return 7 + _inline_collect_expr_stats(try(st.target), stats) + _inline_collect_expr_stats(try(st.index), stats) + _inline_collect_expr_stats(try(st.expr), stats) end if
   if k == "If" then
