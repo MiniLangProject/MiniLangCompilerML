@@ -372,9 +372,14 @@ end function
 function emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
   state = ensure_gc_data(state)
   root_count = (root_top - root_base) >> 3
-  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  threaded_roots = state.native_threads_possible
+  if threaded_roots then state.asm = a.mov_r11_gs_qword_28(state.asm) end if
 
-  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", 48)
+  if threaded_roots then
+    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", 48)
+  else
+    state.asm = a.mov_rax_rip_qword(state.asm, "gc_roots_head")
+  end if
   state.asm = a.mov_rsp_disp32_rax(state.asm, root_rec_off + 0)
 
   state.asm = a.lea_r64_membase_disp(state.asm, "rax", "rsp", root_base)
@@ -384,15 +389,23 @@ function emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
   state.asm = a.mov_rsp_disp32_rax(state.asm, root_rec_off + 16)
 
   state.asm = a.lea_r64_membase_disp(state.asm, "rax", "rsp", root_rec_off)
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
+  if threaded_roots then
+    state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rax")
+  else
+    state.asm = a.mov_rip_qword_rax(state.asm, "gc_roots_head")
+  end if
   return state
 end function
 
 function emit_gc_pop_root_frame(state, root_rec_off)
   state = ensure_gc_data(state)
-  state.asm = a.mov_r11_gs_qword_28(state.asm)
   state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", root_rec_off + 0)
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rdx")
+  if state.native_threads_possible then
+    state.asm = a.mov_r11_gs_qword_28(state.asm)
+    state.asm = a.mov_membase_disp_r64(state.asm, "r11", 48, "rdx")
+  else
+    state.asm = a.mov_rip_qword_rdx(state.asm, "gc_roots_head")
+  end if
   return state
 end function
 
@@ -420,9 +433,12 @@ function emit_alloc_function(state)
 
   state.asm = a.mov_r64_r64(state.asm, "rax", "rcx")
   state.asm = a.mov_rsp_disp32_rax(state.asm, 0x38)
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
-  state.asm = a.call(state.asm, "fn_heap_enter")
+  threaded_heap = state.native_threads_possible
+  if threaded_heap then
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+    state.asm = a.call(state.asm, "fn_heap_enter")
+  end if
 
   lid_fix = state.label_id
   state.label_id = state.label_id + 1
@@ -651,13 +667,15 @@ function emit_alloc_function(state)
   state.asm = a.mark(state.asm, l_free_return)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
   state.asm = a.add_rax_imm8(state.asm, c.GC_HEADER_SIZE)
-  state.asm = a.mov_r11_gs_qword_28(state.asm)
-  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 136)
-  state.asm = a.and_r64_imm(state.asm, "r10", 3)
-  state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, 88, "rax")
-  state.asm = a.inc_r32(state.asm, "r10d")
-  state.asm = a.mov_membase_disp_r32(state.asm, "r11", 136, "r10d")
-  state.asm = a.call(state.asm, "fn_heap_leave")
+  if threaded_heap then
+    state.asm = a.mov_r11_gs_qword_28(state.asm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 136)
+    state.asm = a.and_r64_imm(state.asm, "r10", 3)
+    state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, 88, "rax")
+    state.asm = a.inc_r32(state.asm, "r10d")
+    state.asm = a.mov_membase_disp_r32(state.asm, "r11", 136, "r10d")
+  end if
+  if threaded_heap then state.asm = a.call(state.asm, "fn_heap_leave") end if
   state.asm = a.add_rsp_imm8(state.asm, 0x48)
   state.asm = a.ret(state.asm)
 
@@ -830,13 +848,15 @@ function emit_alloc_function(state)
   state.asm = a.mov_membase_disp_r64(state.asm, "rdx", 0, "rcx")
   state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
   state.asm = a.add_rax_imm8(state.asm, c.GC_HEADER_SIZE)
-  state.asm = a.mov_r11_gs_qword_28(state.asm)
-  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 136)
-  state.asm = a.and_r64_imm(state.asm, "r10", 3)
-  state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, 88, "rax")
-  state.asm = a.inc_r32(state.asm, "r10d")
-  state.asm = a.mov_membase_disp_r32(state.asm, "r11", 136, "r10d")
-  state.asm = a.call(state.asm, "fn_heap_leave")
+  if threaded_heap then
+    state.asm = a.mov_r11_gs_qword_28(state.asm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 136)
+    state.asm = a.and_r64_imm(state.asm, "r10", 3)
+    state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, 88, "rax")
+    state.asm = a.inc_r32(state.asm, "r10d")
+    state.asm = a.mov_membase_disp_r32(state.asm, "r11", 136, "r10d")
+  end if
+  if threaded_heap then state.asm = a.call(state.asm, "fn_heap_leave") end if
   state.asm = a.add_rsp_imm8(state.asm, 0x48)
   state.asm = a.ret(state.asm)
   return state
@@ -847,10 +867,13 @@ function emit_gc_collect_function(state)
   if typeof(state.rdata) == "struct" then
     state.rdata = _ensure_rdata_str(state.rdata, "gc_ms_overflow", "ERROR: GC mark stack overflow\n")
   end if
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_gc_world_stop")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_gc_world_resume")
+  threaded_gc = state.native_threads_possible
+  if threaded_gc then
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_gc_world_stop")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_gc_world_resume")
+  end if
   state.asm = a.mark(state.asm, "fn_gc_collect")
 
   // Preserve non-volatile regs used by collector.
@@ -863,8 +886,10 @@ function emit_gc_collect_function(state)
   state.asm = a.push_r15(state.asm)
   state.asm = a.push_reg(state.asm, "rdi")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
-  state.asm = a.call(state.asm, "fn_heap_enter")
-  state.asm = a.call(state.asm, "fn_gc_world_stop")
+  if threaded_gc then
+    state.asm = a.call(state.asm, "fn_heap_enter")
+    state.asm = a.call(state.asm, "fn_gc_world_stop")
+  end if
 
   lid = state.label_id
   state.label_id = state.label_id + 1
@@ -1009,6 +1034,12 @@ function emit_gc_collect_function(state)
 
   state.asm = a.mark(state.asm, L_BODY)
 
+  // Shared runtime-helper scratch remains part of the precise root set.
+  for i = 0 to 7
+    state.asm = a.mov_rax_rip_qword(state.asm, "gc_tmp" + i)
+    state.asm = a.call(state.asm, L_MARK_VALUE)
+  end for
+
   // Roots: global slots
   if typeof(state.global_slots) == "array" and len(state.global_slots) > 0 then
     for gi = 0 to len(state.global_slots) - 1
@@ -1019,29 +1050,37 @@ function emit_gc_collect_function(state)
     end for
   end if
 
-  // Roots: all registered thread contexts and their private stack-root chains.
   state.asm = a.mark(state.asm, L_ROOT_FRAMES)
-  state.asm = a.mov_rax_rip_qword(state.asm, "thread_contexts_head")
-  state.asm = a.mov_r64_r64(state.asm, "rdi", "rax")
-  state.asm = a.mark(state.asm, L_CONTEXT_LOOP)
-  state.asm = a.test_r64_r64(state.asm, "rdi", "rdi")
-  state.asm = a.jcc(state.asm, "e", L_MARK_LOOP)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 24)
-  state.asm = a.call(state.asm, L_MARK_VALUE)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 40)
-  state.asm = a.call(state.asm, L_MARK_VALUE)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 144)
-  state.asm = a.call(state.asm, L_MARK_VALUE)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 152)
-  state.asm = a.call(state.asm, L_MARK_VALUE)
-  for i = 0 to 7
-    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 56 + i * 8)
+  if threaded_gc then
+    state.asm = a.mov_rax_rip_qword(state.asm, "thread_contexts_head")
+    state.asm = a.mov_r64_r64(state.asm, "rdi", "rax")
+    state.asm = a.mark(state.asm, L_CONTEXT_LOOP)
+    state.asm = a.test_r64_r64(state.asm, "rdi", "rdi")
+    state.asm = a.jcc(state.asm, "e", L_MARK_LOOP)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 24)
     state.asm = a.call(state.asm, L_MARK_VALUE)
-  end for
-  state.asm = a.mov_r64_membase_disp(state.asm, "r13", "rdi", 48)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 40)
+    state.asm = a.call(state.asm, L_MARK_VALUE)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 144)
+    state.asm = a.call(state.asm, L_MARK_VALUE)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 152)
+    state.asm = a.call(state.asm, L_MARK_VALUE)
+    for i = 0 to 7
+      state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 56 + i * 8)
+      state.asm = a.call(state.asm, L_MARK_VALUE)
+    end for
+    state.asm = a.mov_r64_membase_disp(state.asm, "r13", "rdi", 48)
+  else
+    state.asm = a.mov_rax_rip_qword(state.asm, "gc_roots_head")
+    state.asm = a.mov_r64_r64(state.asm, "r13", "rax")
+  end if
   state.asm = a.mark(state.asm, L_ROOT_FRAME_LOOP)
   state.asm = a.test_r64_r64(state.asm, "r13", "r13")
-  state.asm = a.jcc(state.asm, "e", L_CONTEXT_NEXT)
+  if threaded_gc then
+    state.asm = a.jcc(state.asm, "e", L_CONTEXT_NEXT)
+  else
+    state.asm = a.jcc(state.asm, "e", L_MARK_LOOP)
+  end if
 
   state.asm = a.mov_r64_membase_disp(state.asm, "r14", "r13", 8)
   state.asm = a.mov_r64_membase_disp(state.asm, "r15", "r13", 16)
@@ -1061,9 +1100,11 @@ function emit_gc_collect_function(state)
   state.asm = a.mov_r64_r64(state.asm, "r13", "rax")
   state.asm = a.jmp(state.asm, L_ROOT_FRAME_LOOP)
 
-  state.asm = a.mark(state.asm, L_CONTEXT_NEXT)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rdi", "rdi", 120)
-  state.asm = a.jmp(state.asm, L_CONTEXT_LOOP)
+  if threaded_gc then
+    state.asm = a.mark(state.asm, L_CONTEXT_NEXT)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rdi", "rdi", 120)
+    state.asm = a.jmp(state.asm, L_CONTEXT_LOOP)
+  end if
 
   // mark loop
   state.asm = a.mark(state.asm, L_MARK_LOOP)
@@ -1355,8 +1396,10 @@ function emit_gc_collect_function(state)
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_bytes_since")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_young_bytes_since")
 
-  state.asm = a.call(state.asm, "fn_gc_world_resume")
-  state.asm = a.call(state.asm, "fn_heap_leave")
+  if threaded_gc then
+    state.asm = a.call(state.asm, "fn_gc_world_resume")
+    state.asm = a.call(state.asm, "fn_heap_leave")
+  end if
 
   state.asm = a.add_rsp_imm8(state.asm, 0x28)
   state.asm = a.pop_reg(state.asm, "rdi")
@@ -1386,11 +1429,16 @@ end function
 
 function emit_heap_count_function(state)
   state = ensure_gc_data(state)
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  threaded_heap = state.native_threads_possible
+  if threaded_heap then
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  end if
   state.asm = a.mark(state.asm, "fn_heap_count")
-  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
-  state.asm = a.call(state.asm, "fn_heap_enter")
+  if threaded_heap then
+    state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+    state.asm = a.call(state.asm, "fn_heap_enter")
+  end if
 
   lid = state.label_id
   state.label_id = state.label_id + 1
@@ -1428,19 +1476,26 @@ function emit_heap_count_function(state)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
   state.asm = a.shl_rax_imm8(state.asm, 3)
   state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-  state.asm = a.call(state.asm, "fn_heap_leave")
-  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  if threaded_heap then
+    state.asm = a.call(state.asm, "fn_heap_leave")
+    state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  end if
   state.asm = a.ret(state.asm)
   return state
 end function
 
 function emit_heap_bytes_used_function(state)
   state = ensure_gc_data(state)
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  threaded_heap = state.native_threads_possible
+  if threaded_heap then
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  end if
   state.asm = a.mark(state.asm, "fn_heap_bytes_used")
-  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
-  state.asm = a.call(state.asm, "fn_heap_enter")
+  if threaded_heap then
+    state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+    state.asm = a.call(state.asm, "fn_heap_enter")
+  end if
   state.asm = a.mov_rax_rip_qword(state.asm, "heap_ptr")
   state.asm = a.mov_r10_rax(state.asm)
   state.asm = a.mov_rax_rip_qword(state.asm, "heap_base")
@@ -1448,19 +1503,26 @@ function emit_heap_bytes_used_function(state)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
   state.asm = a.shl_rax_imm8(state.asm, 3)
   state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-  state.asm = a.call(state.asm, "fn_heap_leave")
-  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  if threaded_heap then
+    state.asm = a.call(state.asm, "fn_heap_leave")
+    state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  end if
   state.asm = a.ret(state.asm)
   return state
 end function
 
 function emit_heap_bytes_committed_function(state)
   state = ensure_gc_data(state)
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  threaded_heap = state.native_threads_possible
+  if threaded_heap then
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  end if
   state.asm = a.mark(state.asm, "fn_heap_bytes_committed")
-  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
-  state.asm = a.call(state.asm, "fn_heap_enter")
+  if threaded_heap then
+    state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+    state.asm = a.call(state.asm, "fn_heap_enter")
+  end if
   state.asm = a.mov_rax_rip_qword(state.asm, "heap_end")
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
   state.asm = a.mov_rax_rip_qword(state.asm, "heap_base")
@@ -1468,19 +1530,26 @@ function emit_heap_bytes_committed_function(state)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
   state.asm = a.shl_rax_imm8(state.asm, 3)
   state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-  state.asm = a.call(state.asm, "fn_heap_leave")
-  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  if threaded_heap then
+    state.asm = a.call(state.asm, "fn_heap_leave")
+    state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  end if
   state.asm = a.ret(state.asm)
   return state
 end function
 
 function emit_heap_bytes_reserved_function(state)
   state = ensure_gc_data(state)
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  threaded_heap = state.native_threads_possible
+  if threaded_heap then
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  end if
   state.asm = a.mark(state.asm, "fn_heap_bytes_reserved")
-  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
-  state.asm = a.call(state.asm, "fn_heap_enter")
+  if threaded_heap then
+    state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+    state.asm = a.call(state.asm, "fn_heap_enter")
+  end if
   state.asm = a.mov_rax_rip_qword(state.asm, "heap_reserve_end")
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
   state.asm = a.mov_rax_rip_qword(state.asm, "heap_base")
@@ -1488,20 +1557,27 @@ function emit_heap_bytes_reserved_function(state)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
   state.asm = a.shl_rax_imm8(state.asm, 3)
   state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-  state.asm = a.call(state.asm, "fn_heap_leave")
-  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  if threaded_heap then
+    state.asm = a.call(state.asm, "fn_heap_leave")
+    state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  end if
   state.asm = a.ret(state.asm)
   return state
 end function
 
 function emit_heap_free_blocks_function(state)
   state = ensure_gc_data(state)
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  threaded_heap = state.native_threads_possible
+  if threaded_heap then
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  end if
   state.asm = a.mark(state.asm, "fn_heap_free_blocks")
   state.asm = a.push_r13(state.asm)
-  state.asm = a.sub_rsp_imm8(state.asm, 0x20)
-  state.asm = a.call(state.asm, "fn_heap_enter")
+  if threaded_heap then
+    state.asm = a.sub_rsp_imm8(state.asm, 0x20)
+    state.asm = a.call(state.asm, "fn_heap_enter")
+  end if
 
   state.asm = a.xor_r32_r32(state.asm, "r8d", "r8d")
 
@@ -1548,8 +1624,10 @@ function emit_heap_free_blocks_function(state)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
   state.asm = a.shl_rax_imm8(state.asm, 3)
   state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-  state.asm = a.call(state.asm, "fn_heap_leave")
-  state.asm = a.add_rsp_imm8(state.asm, 0x20)
+  if threaded_heap then
+    state.asm = a.call(state.asm, "fn_heap_leave")
+    state.asm = a.add_rsp_imm8(state.asm, 0x20)
+  end if
   state.asm = a.pop_r13(state.asm)
   state.asm = a.ret(state.asm)
   return state
@@ -1557,12 +1635,17 @@ end function
 
 function emit_heap_free_bytes_function(state)
   state = ensure_gc_data(state)
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
-  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  threaded_heap = state.native_threads_possible
+  if threaded_heap then
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
+  end if
   state.asm = a.mark(state.asm, "fn_heap_free_bytes")
   state.asm = a.push_r13(state.asm)
-  state.asm = a.sub_rsp_imm8(state.asm, 0x20)
-  state.asm = a.call(state.asm, "fn_heap_enter")
+  if threaded_heap then
+    state.asm = a.sub_rsp_imm8(state.asm, 0x20)
+    state.asm = a.call(state.asm, "fn_heap_enter")
+  end if
 
   state.asm = a.xor_r32_r32(state.asm, "r8d", "r8d")
 
@@ -1611,8 +1694,10 @@ function emit_heap_free_bytes_function(state)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
   state.asm = a.shl_rax_imm8(state.asm, 3)
   state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-  state.asm = a.call(state.asm, "fn_heap_leave")
-  state.asm = a.add_rsp_imm8(state.asm, 0x20)
+  if threaded_heap then
+    state.asm = a.call(state.asm, "fn_heap_leave")
+    state.asm = a.add_rsp_imm8(state.asm, 0x20)
+  end if
   state.asm = a.pop_r13(state.asm)
   state.asm = a.ret(state.asm)
   return state

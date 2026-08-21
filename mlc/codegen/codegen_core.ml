@@ -122,6 +122,7 @@ struct CgState
   _module_init_active_file,
   _global_owner_file,
   _module_init_status_labels,
+  native_threads_possible,
   synchronized_globals,
 end struct
 
@@ -482,6 +483,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   "",
   [],
   [],
+  true,
   []
   )
   cg = _seed_rdata(cg)
@@ -1103,15 +1105,19 @@ function emit_dbg_line(state, node)
     end if
   end if
   if ln > 0 then
-    lid = new_label_id(state)
-    l_skip = "dbg_line_worker_" + lid
-    state.asm = a.mov_r11_gs_qword_28(state.asm)
-    state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
-    state.asm = a.test_r32_r32(state.asm, "eax", "eax")
-    state.asm = a.jcc(state.asm, "ne", l_skip)
+    threaded_debug = state.native_threads_possible
+    l_skip = ""
+    if threaded_debug then
+      lid = new_label_id(state)
+      l_skip = "dbg_line_worker_" + lid
+      state.asm = a.mov_r11_gs_qword_28(state.asm)
+      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+      state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+      state.asm = a.jcc(state.asm, "ne", l_skip)
+    end if
     state.asm = a.mov_rax_imm64(state.asm, t.enc_int(ln))
     state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_line")
-    state.asm = a.mark(state.asm, l_skip)
+    if threaded_debug then state.asm = a.mark(state.asm, l_skip) end if
   end if
   return state
 end function

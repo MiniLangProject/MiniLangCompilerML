@@ -3715,11 +3715,12 @@ function _emit_expr_call(state, expr)
     state.asm = a.mark(state.asm, l_ok_sleep)
     state.asm = a.sar_rax_imm8(state.asm, 3)
     state.asm = a.mov_r32_r32(state.asm, "r12d", "eax")
-    state.asm = a.call(state.asm, "fn_gc_native_enter")
+    threaded_native_sleep = state.native_threads_possible
+    if threaded_native_sleep then state.asm = a.call(state.asm, "fn_gc_native_enter") end if
     state.asm = a.mov_r32_r32(state.asm, "ecx", "r12d")
     state.asm = a.mov_rax_rip_qword(state.asm, "iat_Sleep")
     state.asm = a.call_rax(state.asm)
-    state.asm = a.call(state.asm, "fn_gc_native_leave")
+    if threaded_native_sleep then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
     return state
   end if
@@ -7657,6 +7658,7 @@ function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
 end function
 
 function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
+  threaded_native = state.native_threads_possible
   qn = ""
   if typeof(out_name) == "string" then qn = out_name end if
   if qn == "" and typeof(call_node) == "struct" then
@@ -7747,7 +7749,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
 
   // Native code may block indefinitely. Publish a stable stack-root chain
   // before entering it so stop-the-world GC need not wait for the OS call.
-  state.asm = a.call(state.asm, "fn_gc_native_enter")
+  if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_enter") end if
 
   if nargs >= 1 then
     aty0 = _coerce_name(ps[0])
@@ -7843,7 +7845,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   end if
 
   state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
-  state.asm = a.call(state.asm, "fn_gc_native_leave")
+  if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
   state = _emit_extern_ret_from_native(state, sig.ret_ty, l_fail, pos)
   state.asm = a.jmp(state.asm, l_done)
 
@@ -8227,9 +8229,10 @@ function emit_expr(state, ex)
 end function
 
 function emit_extern_stubs(state)
-  // Keep helper discovery identical to the Python compiler even when the
-  // program declares no externs. This preserves deterministic helper order.
-  state.used_helpers = state.used_helpers + ["fn_gc_native_enter", "fn_gc_native_leave"]
+  threaded_native = state.native_threads_possible
+  if threaded_native then
+    state.used_helpers = state.used_helpers + ["fn_gc_native_enter", "fn_gc_native_leave"]
+  end if
   xs = state.extern_sigs
   if typeof(xs) != "array" or len(xs) <= 0 then return state end if
 
@@ -8336,7 +8339,7 @@ function emit_extern_stubs(state)
       end for
     end if
 
-    state.asm = a.call(state.asm, "fn_gc_native_enter")
+    if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_enter") end if
 
     regs = ["rcx", "rdx", "r8", "r9"]
     xregs = ["xmm0", "xmm1", "xmm2", "xmm3"]
@@ -8365,7 +8368,7 @@ function emit_extern_stubs(state)
     end if
 
     state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
-    state.asm = a.call(state.asm, "fn_gc_native_leave")
+    if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
     state = _emit_extern_ret_from_native(state, ret_ty, l_fail, pos)
     state.asm = a.jmp(state.asm, l_done)
 

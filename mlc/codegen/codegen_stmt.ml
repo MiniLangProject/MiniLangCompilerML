@@ -859,21 +859,6 @@ function cg_emit_stmt(state, stmt)
     state.current_file_prefix = ""
   end if
 
-  if state.in_function and k != "GlobalDecl" and typeof(state.func_ret_label) == "string" and state.func_ret_label != "" then
-    lid_stop = state.label_id
-    state.label_id = state.label_id + 1
-    l_continue = "thread_safe_continue_" + lid_stop
-    state.asm = a.mov_r11_gs_qword_28(state.asm)
-    state.asm = a.test_r64_r64(state.asm, "r11", "r11")
-    state.asm = a.jcc(state.asm, "e", l_continue)
-    state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r11", 4)
-    state.asm = a.cmp_r32_imm(state.asm, "r11d", 2)
-    state.asm = a.jcc(state.asm, "ne", l_continue)
-    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
-    state.asm = a.jmp(state.asm, state.func_ret_label)
-    state.asm = a.mark(state.asm, l_continue)
-  end if
-
   if k == "NamespaceDecl" then
     if typeof(stmt.name) == "string" then state.current_file_prefix = stmt.name end if
     return state
@@ -1108,7 +1093,7 @@ function cg_emit_stmt(state, stmt)
       mapped_sync = _func_global_mapped_name(state, nm_a)
       if mapped_sync != "" then sync_name = mapped_sync end if
     end if
-    is_sync_write = _arr_has(state.synchronized_globals, sync_name)
+    is_sync_write = state.native_threads_possible and _arr_has(state.synchronized_globals, sync_name)
     if is_sync_write then state.asm = a.call(state.asm, "fn_sync_enter") end if
     old_sync_depth = 0
     if typeof(state.errprop_sync_depth) == "int" then old_sync_depth = state.errprop_sync_depth end if
@@ -1601,6 +1586,7 @@ function cg_emit_stmt(state, stmt)
     state.break_stack = state.break_stack + [_breakctx_make("loop", l_end, l_top, depth_w, depth_w)]
     state.asm = a.mark(state.asm, l_top)
     state = th.emit_gc_safepoint_poll(state)
+    state = th.emit_thread_cancellation_poll(state)
     if typeof(tv_w) != "bool" or tv_w != true then
       state = exprmod.cg_emit_expr(state, stmt.cond)
       l_wcond_ok = "while_cond_ok_" + lid_w
@@ -1631,6 +1617,7 @@ function cg_emit_stmt(state, stmt)
     state = scope.cg_scope_leave(state, true)
     state.asm = a.mark(state.asm, l_cont)
     state = th.emit_gc_safepoint_poll(state)
+    state = th.emit_thread_cancellation_poll(state)
     tv_dw = _opt_try_truthy(state, stmt.cond)
     if typeof(tv_dw) == "bool" and tv_dw == true then
       state.asm = a.jmp(state.asm, l_body)
@@ -1747,6 +1734,7 @@ function cg_emit_stmt(state, stmt)
 
     state.asm = a.mark(state.asm, l_cont_f)
     state = th.emit_gc_safepoint_poll(state)
+    state = th.emit_thread_cancellation_poll(state)
     state = scope.emit_load_var_scoped(state, qv)
     if const_bounds_f then
       encoded_end_f = t.enc_int(const_end_f)
@@ -1935,6 +1923,8 @@ function cg_emit_stmt(state, stmt)
     state = scope.cg_scope_leave(state, true)
 
     state.asm = a.mark(state.asm, l_cont_fe)
+    state = th.emit_gc_safepoint_poll(state)
+    state = th.emit_thread_cancellation_poll(state)
     state = _foreach_load_dword_eax(state, i_name)
     state.asm = a.mov_r32_r32(state.asm, "ecx", "eax")
     state.asm = a.inc_r32(state.asm, "ecx")
@@ -6770,7 +6760,105 @@ function _build_module_init_recs(state, program)
   return [state, t.arr_chunk_finish(module_init_recs_b)]
 end function
 
+function _expr_uses_native_threads(ex)
+  if typeof(ex) != "struct" then return false end if
+  nk = _coerce_name(try(ex.node_kind))
+  if nk == "Var" or nk == "Member" then
+    nm = _coerce_name(try(ex.name))
+    if nm == "Thread" or s.endsWith(nm, ".Thread") then return true end if
+  end if
+  if nk == "Member" then return _expr_uses_native_threads(try(ex.target)) end if
+  if nk == "Unary" then return _expr_uses_native_threads(try(ex.right)) end if
+  if nk == "Bin" then
+    return _expr_uses_native_threads(try(ex.left)) or _expr_uses_native_threads(try(ex.right))
+  end if
+  if nk == "Index" then
+    return _expr_uses_native_threads(try(ex.target)) or _expr_uses_native_threads(try(ex.index))
+  end if
+  if nk == "Call" then
+    if _expr_uses_native_threads(_analysis_call_callee(ex)) then return true end if
+    args_nt = _analysis_call_args(ex)
+    if len(args_nt) > 0 then
+      for each arg_nt in args_nt
+        if _expr_uses_native_threads(arg_nt) then return true end if
+      end for
+    end if
+    return false
+  end if
+  values_nt = 0
+  if nk == "ArrayLit" then values_nt = try(ex.items) end if
+  if nk == "StructInit" then values_nt = try(ex.values) end if
+  if typeof(values_nt) == "array" and len(values_nt) > 0 then
+    for each value_nt in values_nt
+      if typeof(value_nt) == "array" and len(value_nt) >= 2 then
+        if _expr_uses_native_threads(value_nt[1]) then return true end if
+      else
+        if _expr_uses_native_threads(value_nt) then return true end if
+      end if
+    end for
+  end if
+  return false
+end function
+
+function _stmts_use_native_threads(stmts)
+  if typeof(stmts) != "array" or len(stmts) <= 0 then return false end if
+  for each st_nt in stmts
+    if typeof(st_nt) != "struct" then continue end if
+    exprs_nt = [
+      try(st_nt.expr), try(st_nt.cond), try(st_nt.start), _analysis_for_end_expr(st_nt),
+      try(st_nt.step), try(st_nt.iterable), try(st_nt.obj),
+      try(st_nt.target), try(st_nt.index)
+    ]
+    for each expr_nt in exprs_nt
+      if _expr_uses_native_threads(expr_nt) then return true end if
+    end for
+
+    bodies_nt = [
+      try(st_nt.body), try(st_nt.then_body), try(st_nt.else_body),
+      try(st_nt.default_body), try(st_nt.methods)
+    ]
+    for each body_nt in bodies_nt
+      if _stmts_use_native_threads(body_nt) then return true end if
+    end for
+
+    elifs_nt = try(st_nt.elifs)
+    if typeof(elifs_nt) == "array" and len(elifs_nt) > 0 then
+      for each elif_nt in elifs_nt
+        if typeof(elif_nt) == "array" and len(elif_nt) >= 2 then
+          if _expr_uses_native_threads(elif_nt[0]) then return true end if
+          if _stmts_use_native_threads(elif_nt[1]) then return true end if
+        end if
+      end for
+    end if
+
+    cases_nt = try(st_nt.cases)
+    if typeof(cases_nt) == "array" and len(cases_nt) > 0 then
+      for each case_nt in cases_nt
+        if typeof(case_nt) != "struct" then continue end if
+        if _expr_uses_native_threads(try(case_nt.range_start)) then return true end if
+        if _expr_uses_native_threads(try(case_nt.range_end)) then return true end if
+        case_values_nt = try(case_nt.values)
+        if typeof(case_values_nt) == "array" and len(case_values_nt) > 0 then
+          for each case_value_nt in case_values_nt
+            if typeof(case_value_nt) == "array" and len(case_value_nt) >= 2 then
+              if _expr_uses_native_threads(case_value_nt[0]) then return true end if
+              if _expr_uses_native_threads(case_value_nt[1]) then return true end if
+            else
+              if _expr_uses_native_threads(case_value_nt) then return true end if
+            end if
+          end for
+        end if
+        if _stmts_use_native_threads(try(case_nt.body)) then return true end if
+      end for
+    end if
+  end for
+  return false
+end function
+
 function prepare_program_for_objects(state, program)
+  // Imported modules are part of program, so this closed-program scan safely
+  // removes TLS/GC polling and heap synchronization when Thread is unreachable.
+  state.native_threads_possible = _stmts_use_native_threads(program)
   state.extern_structs = []
   state.value_enum_values = []
   state.user_function_index = t.fastmap_new(256)
@@ -7571,13 +7659,17 @@ function emit_user_function(state, fn_node)
   end if
 
   // Save caller debug-location context and set current function context.
-  dbg_worker_lid = state.label_id
-  state.label_id = state.label_id + 1
-  dbg_worker_skip = "dbg_worker_skip_" + dbg_worker_lid
-  state.asm = a.mov_r11_gs_qword_28(state.asm)
-  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
-  state.asm = a.test_r32_r32(state.asm, "eax", "eax")
-  state.asm = a.jcc(state.asm, "ne", dbg_worker_skip)
+  threaded_debug = state.native_threads_possible
+  dbg_worker_skip = ""
+  if threaded_debug then
+    dbg_worker_lid = state.label_id
+    state.label_id = state.label_id + 1
+    dbg_worker_skip = "dbg_worker_skip_" + dbg_worker_lid
+    state.asm = a.mov_r11_gs_qword_28(state.asm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+    state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+    state.asm = a.jcc(state.asm, "ne", dbg_worker_skip)
+  end if
   state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
   state.asm = a.mov_rsp_disp32_rax(state.asm, dbg_save_script)
   state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
@@ -7613,7 +7705,7 @@ function emit_user_function(state, fn_node)
   state.rdata = d.rdata_add_obj_string_unique(state.rdata, lbl_fn, dbg_func)
   state.asm = a.lea_rax_rip(state.asm, lbl_fn)
   state.asm = a.mov_rip_qword_rax(state.asm, "dbg_loc_func")
-  state.asm = a.mark(state.asm, dbg_worker_skip)
+  if threaded_debug then state.asm = a.mark(state.asm, dbg_worker_skip) end if
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
     print "[mem][cg] fn_stage name=" + code_name + " stage=dbg_labels_done"
   end if
@@ -7686,6 +7778,7 @@ function emit_user_function(state, fn_node)
   end if
   // Publish incoming managed arguments before the first safepoint.
   state = th.emit_gc_safepoint_poll(state)
+  state = th.emit_thread_cancellation_poll(state)
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.contains" then
     print "[mem][cg] fn_stage name=" + code_name + " stage=params_done"
   end if
@@ -7802,7 +7895,8 @@ function emit_user_function(state, fn_node)
     print "[mem][cg] fn_stage name=" + code_name + " stage=env_done"
   end if
 
-  if typeof(try(fn_node.is_synchronized)) == "bool" and fn_node.is_synchronized then
+  synchronized_runtime = state.native_threads_possible and typeof(try(fn_node.is_synchronized)) == "bool" and fn_node.is_synchronized
+  if synchronized_runtime then
     state.asm = a.call(state.asm, "fn_sync_enter")
   end if
 
@@ -7872,24 +7966,27 @@ function emit_user_function(state, fn_node)
   core.pop_cold_block_scope(state)
 
   state.asm = a.mark(state.asm, ret_lbl)
-  if typeof(try(fn_node.is_synchronized)) == "bool" and fn_node.is_synchronized then
+  if synchronized_runtime then
     state.asm = a.call(state.asm, "fn_sync_leave")
   end if
   state = mem.emit_gc_pop_root_frame(state, root_rec_off)
-  dbg_restore_lid = state.label_id
-  state.label_id = state.label_id + 1
-  dbg_restore_skip = "dbg_restore_worker_" + dbg_restore_lid
-  state.asm = a.mov_r11_gs_qword_28(state.asm)
-  state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r11", 0)
-  state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
-  state.asm = a.jcc(state.asm, "ne", dbg_restore_skip)
+  dbg_restore_skip = ""
+  if threaded_debug then
+    dbg_restore_lid = state.label_id
+    state.label_id = state.label_id + 1
+    dbg_restore_skip = "dbg_restore_worker_" + dbg_restore_lid
+    state.asm = a.mov_r11_gs_qword_28(state.asm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "r11", 0)
+    state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
+    state.asm = a.jcc(state.asm, "ne", dbg_restore_skip)
+  end if
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", dbg_save_script)
   state.asm = a.mov_rip_qword_r11(state.asm, "dbg_loc_script")
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", dbg_save_func)
   state.asm = a.mov_rip_qword_r11(state.asm, "dbg_loc_func")
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", dbg_save_line)
   state.asm = a.mov_rip_qword_r11(state.asm, "dbg_loc_line")
-  state.asm = a.mark(state.asm, dbg_restore_skip)
+  if threaded_debug then state.asm = a.mark(state.asm, dbg_restore_skip) end if
   state.asm = a.add_rsp_imm32(state.asm, frame)
   state.asm = a.pop_r15(state.asm)
   state.asm = a.pop_r14(state.asm)

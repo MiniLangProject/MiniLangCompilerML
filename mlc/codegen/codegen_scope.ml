@@ -1280,7 +1280,7 @@ function emit_load_var_scoped(state, name)
       state.diagnostics = state.diagnostics + ["Internal error: missing global label for '" + nm + "'"]
       return state
     end if
-    is_sync = _arr_has(state.synchronized_globals, b.name)
+    is_sync = state.native_threads_possible and _arr_has(state.synchronized_globals, b.name)
     if is_sync then state.asm = a.call(state.asm, "fn_sync_enter") end if
     state = _maybe_emit_module_init_guard_for_global_read(state, b, nm, 0)
     state.asm = a.mov_rax_rip_qword(state.asm, b.label)

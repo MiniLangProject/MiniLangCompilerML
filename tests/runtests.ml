@@ -219,6 +219,13 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
     print "[FAIL] " + name + " (safe inline fallback body is missing)"
     return false
   end if
+  // This fixture cannot create a Thread. Whole-program feature gating must
+  // therefore eliminate cancellation/GC polls, TLS paths and the now-unused
+  // heap/native synchronization helper bodies from the generated binary.
+  if s.contains(labels, "thread_cancel_done_") or s.contains(labels, "gc_poll_done_") or s.contains(labels, "dbg_worker_") or s.contains(labels, "dbg_line_worker_") or s.contains(labels, "gc_context_loop_") or s.contains(labels, "[label] fn_heap_enter ") or s.contains(labels, "[label] fn_heap_leave ") or s.contains(labels, "[label] fn_gc_native_enter ") or s.contains(labels, "[label] fn_gc_native_leave ") or s.contains(labels, "[label] fn_gc_safepoint ") then
+    print "[FAIL] " + name + " (thread-free target retained native-thread overhead)"
+    return false
+  end if
 
   leaf_labels = _label_function_block(labels, "leaf_frame")
   if leaf_labels == "" or s.contains(leaf_labels, "gcclr_loop_") == false then

@@ -19,7 +19,8 @@ const THREAD_ALLOC_CURSOR = 136
 const THREAD_ARG = 144
 const THREAD_LOGICAL_ID = 152
 const THREAD_ARITY = 160
-const THREAD_CONTEXT_SIZE = 168
+const THREAD_HEAP_BYPASS_DEPTH = 168
+const THREAD_CONTEXT_SIZE = 176
 
 const THREAD_CREATED = 0
 const THREAD_RUNNING = 1
@@ -79,6 +80,9 @@ function ensure_thread_data(state)
   if d.data_has_label(state.data, "gc_requested") == false then
     state.data = d.data_add_u64(state.data, "gc_requested", 0)
   end if
+  if d.data_has_label(state.data, "managed_thread_count") == false then
+    state.data = d.data_add_u64(state.data, "managed_thread_count", 1)
+  end if
   return state
 end function
 
@@ -98,9 +102,12 @@ function emit_sync_init(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARG, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_LOGICAL_ID, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARITY, 0, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HEAP_BYPASS_DEPTH, 0, false)
   state.asm = a.mov_rip_qword_rax(state.asm, "thread_contexts_head")
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_requested")
+  state.asm = a.mov_rax_imm64(state.asm, 1)
+  state.asm = a.mov_rip_qword_rax(state.asm, "managed_thread_count")
   monitors = ["sync_monitor", "heap_monitor", "gc_coord_monitor"]
   for i = 0 to len(monitors) - 1
     state.asm = a.lea_rax_rip(state.asm, monitors[i])
@@ -112,6 +119,7 @@ function emit_sync_init(state)
 end function
 
 function emit_gc_safepoint_poll(state)
+  if state.native_threads_possible == false then return state end if
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_safepoint")
   done = "gc_poll_done_" + _new_label_id(state)
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_requested")
@@ -119,6 +127,44 @@ function emit_gc_safepoint_poll(state)
   state.asm = a.jcc(state.asm, "e", done)
   state.asm = a.call(state.asm, "fn_gc_safepoint")
   state.asm = a.mark(state.asm, done)
+  return state
+end function
+
+function emit_thread_cancellation_poll(state)
+  if state.native_threads_possible == false then return state end if
+  if state.in_function == false then return state end if
+  if typeof(state.func_ret_label) != "string" or state.func_ret_label == "" then return state end if
+  lid = _new_label_id(state)
+  l_done = "thread_cancel_done_" + lid
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+  state.asm = a.jcc(state.asm, "e", l_done)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_TYPE)
+  state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_THREAD)
+  state.asm = a.jcc(state.asm, "ne", l_done)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_STATUS)
+  state.asm = a.cmp_r32_imm(state.asm, "r10d", THREAD_STOP_REQUESTED)
+  state.asm = a.jcc(state.asm, "ne", l_done)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.jmp(state.asm, state.func_ret_label)
+  state.asm = a.mark(state.asm, l_done)
+  return state
+end function
+
+function _emit_managed_thread_count_delta(state, delta)
+  lid = _new_label_id(state)
+  l_retry = "managed_thread_count_retry_" + lid
+  state.asm = a.lea_r11_rip(state.asm, "managed_thread_count")
+  state.asm = a.mark(state.asm, l_retry)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+  if delta >= 0 then
+    state.asm = a.inc_r32(state.asm, "edx")
+  else
+    state.asm = a.dec_r32(state.asm, "edx")
+  end if
+  state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "r11", 0, "edx")
+  state.asm = a.jcc(state.asm, "ne", l_retry)
   return state
 end function
 
@@ -282,6 +328,17 @@ function emit_heap_enter_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_heap_enter")
+  lid_fast = _new_label_id(state)
+  l_locked_fast = "heap_enter_locked_" + lid_fast
+  state.asm = a.mov_rax_rip_qword(state.asm, "managed_thread_count")
+  state.asm = a.cmp_r64_imm(state.asm, "rax", 1)
+  state.asm = a.jcc(state.asm, "a", l_locked_fast)
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_HEAP_BYPASS_DEPTH)
+  state.asm = a.inc_r32(state.asm, "r10d")
+  state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_HEAP_BYPASS_DEPTH, "r10d")
+  state.asm = a.ret(state.asm)
+  state.asm = a.mark(state.asm, l_locked_fast)
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
   lid = _new_label_id(state)
   l_retry = "heap_enter_retry_" + lid
@@ -325,6 +382,16 @@ end function
 function emit_heap_leave_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_heap_leave")
+  lid = _new_label_id(state)
+  l_locked = "heap_leave_locked_" + lid
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_HEAP_BYPASS_DEPTH)
+  state.asm = a.test_r32_r32(state.asm, "r10d", "r10d")
+  state.asm = a.jcc(state.asm, "e", l_locked)
+  state.asm = a.dec_r32(state.asm, "r10d")
+  state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_HEAP_BYPASS_DEPTH, "r10d")
+  state.asm = a.ret(state.asm)
+  state.asm = a.mark(state.asm, l_locked)
   state.asm = a.sub_rsp_imm8(state.asm, 0x38)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "rax")
   state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", 0x28, "xmm0")
@@ -488,6 +555,7 @@ function emit_thread_new_function(state)
   state.asm = a.mov_membase_disp_r64(state.asm, "rax", THREAD_LOGICAL_ID, "r11")
   state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "rsp", 0x40)
   state.asm = a.mov_membase_disp_r32(state.asm, "rax", THREAD_ARITY, "r11d")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HEAP_BYPASS_DEPTH, 0, false)
   state.asm = a.lea_rax_rip(state.asm, "gc_coord_monitor")
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_EnterCriticalSection")
@@ -527,6 +595,7 @@ function emit_thread_start_function(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STOP, 0, false)
   state.asm = a.mov_membase_disp_r64(state.asm, "rcx", THREAD_ARG, "rdx")
   state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STATUS, THREAD_RUNNING, false)
+  state = _emit_managed_thread_count_delta(state, 1)
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "rax")
   state.asm = a.lea_r64_membase_disp(state.asm, "rax", "rsp", 0x40)
@@ -549,6 +618,7 @@ function emit_thread_start_function(state)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_STATUS, THREAD_FAILED, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_ARG, t.enc_void(), true)
+  state = _emit_managed_thread_count_delta(state, -1)
   state.asm = a.mark(state.asm, l_wrong_arity)
   state.asm = a.mark(state.asm, l_not_created)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
@@ -827,6 +897,7 @@ function emit_thread_entry_function(state)
   state.asm = a.jmp(state.asm, l_finish)
   state.asm = a.mark(state.asm, l_finish)
   state.asm = a.call(state.asm, "fn_gc_managed_exit")
+  state = _emit_managed_thread_count_delta(state, -1)
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_gs_qword_28_rax(state.asm)
   state.asm = a.add_rsp_imm8(state.asm, 0x28)
