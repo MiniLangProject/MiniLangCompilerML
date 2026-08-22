@@ -93,6 +93,40 @@ function Invoke-NativeStep {
   }
 }
 
+function Invoke-CompilerVersionCheck {
+  param(
+    [string]$Name,
+    [string]$CompilerPath
+  )
+
+  Write-Host ""
+  Write-Host "== $Name =="
+  Write-LogLine ""
+  Write-LogLine "== $Name =="
+  $timer = [System.Diagnostics.Stopwatch]::StartNew()
+  $expected = "MiniLang Compiler 1.0.0"
+  $exitCode = 0
+
+  foreach ($flag in @("-version", "--version")) {
+    $lines = @(& $CompilerPath $flag 2>&1 | ForEach-Object { "" + $_ })
+    $currentExit = [int]$LASTEXITCODE
+    foreach ($line in $lines) {
+      Write-Host $line
+      Write-LogLine $line
+    }
+    if ($currentExit -ne 0 -or ($lines -join "`n").Trim() -ne $expected) {
+      $exitCode = 1
+    }
+  }
+
+  $timer.Stop()
+  return [pscustomobject]@{
+    Name = $Name
+    ExitCode = $exitCode
+    Seconds = $timer.Elapsed.TotalSeconds
+  }
+}
+
 function Remove-TestArtifacts {
   if ($KeepArtifacts) { return }
 
@@ -169,6 +203,8 @@ try {
   $concatGuard = Join-Path $ScriptDir "check_hotpath_concats.ps1"
   & $concatGuard
   if ($LASTEXITCODE -ne 0) { throw "Compiler hot-path concatenation guard failed." }
+
+  $results += Invoke-CompilerVersionCheck "compiler version CLI" $Compiler
 
   $runnerSrc = Join-Path $Root "tests\runtests.ml"
   $runnerExe = Join-Path $script:ResolvedArtifactsDir "runtests.exe"

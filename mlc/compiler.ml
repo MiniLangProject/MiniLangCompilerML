@@ -11,6 +11,9 @@ import mlc.project as project
 import mlc.asm as a
 import mlc.data as d
 
+const COMPILER_VERSION = "1.0.0"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.0.0"
+
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
 extern function GetModuleFileNameW(module as ptr, buffer as buffer, bufferLen as u32) from "kernel32.dll" symbol "GetModuleFileNameW" returns u32
@@ -181,11 +184,12 @@ function _build_line_starts(source)
 end function
 
 function _usage()
-  print "MiniLang self-hosted compiler (bootstrap frontend)"
+  print "MiniLang self-hosted compiler " + COMPILER_VERSION
   print "Usage:"
   print "  mlc_win64.exe <input.ml> <output.exe> [compiler options]"
   print "  mlc_win64.exe --project <minilang.toml> [compiler options]"
   print "  mlc_win64.exe <ignored> <output.exe> --link-obj-dir <tmp-dir> [compiler options]"
+  print "  mlc_win64.exe -version | --version"
   print "Extra self-hosted checks:"
   print "  --self-frontcheck"
   print "  --self-frontcheck-keep-going"
@@ -4701,7 +4705,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     return 2
   end if
 
-  print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler)"
+  print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler " + COMPILER_VERSION + ")"
   return 0
 end function
 
@@ -5250,7 +5254,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   _pe_state_keepalive = 0
   _compile_codegen_keepalive = 0
 
-  print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler)"
+  print "OK: wrote " + output_exe + " (native x64 PE, MiniLang self-hosted compiler " + COMPILER_VERSION + ")"
   return 0
 end function
 
@@ -5650,6 +5654,10 @@ function run_cli(args)
   global _asm_dump_data
   global _asm_dump_pe
   global _compiler_profile_enabled
+  if len(args) == 1 and (args[0] == "-version" or args[0] == "--version") then
+    print COMPILER_VERSION_TEXT
+    return 0
+  end if
   expanded_project = project.expandArgs(args)
   if typeof(expanded_project) != "struct" or expanded_project.ok == false then
     msg_project = "invalid project manifest"

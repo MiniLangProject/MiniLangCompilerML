@@ -1,6 +1,7 @@
 param(
   [string]$Compiler = "",
   [string]$Output = "",
+  [string]$Python = "",
   [switch]$NoReplace,
   [switch]$SkipSmoke,
   [switch]$KeepObjects,
@@ -11,6 +12,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $PSCommandPath
+$script:CompilerIsPython = $false
+$script:PythonExe = ""
+$script:PythonPrefixArgs = @()
+$script:SelectedCompilerExitCode = 1
 
 function Resolve-BuildPath {
   param([string]$Path)
@@ -18,6 +23,35 @@ function Resolve-BuildPath {
     return [System.IO.Path]::GetFullPath($Path)
   }
   return [System.IO.Path]::GetFullPath((Join-Path $Root $Path))
+}
+
+function Resolve-CommandOrFile {
+  param(
+    [string]$Value,
+    [string]$Label
+  )
+  if (Test-Path -LiteralPath $Value -PathType Leaf) {
+    return [System.IO.Path]::GetFullPath($Value)
+  }
+  $command = Get-Command $Value -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($null -ne $command -and -not [string]::IsNullOrWhiteSpace($command.Path)) {
+    return $command.Path
+  }
+  throw "$Label not found: $Value"
+}
+
+function Invoke-SelectedCompiler {
+  param(
+    [string]$CompilerPath,
+    [string[]]$Arguments
+  )
+  if ($script:CompilerIsPython) {
+    $prefixArgs = @($script:PythonPrefixArgs)
+    & $script:PythonExe @prefixArgs $CompilerPath @Arguments
+  } else {
+    & $CompilerPath @Arguments
+  }
+  $script:SelectedCompilerExitCode = [int]$LASTEXITCODE
 }
 
 function Remove-CompilerObjects {
@@ -69,8 +103,9 @@ function Invoke-LinkFallback {
   Write-Host "Object dir: $objDir"
   Write-Host "Objects:    $mloCount"
 
-  & $CompilerPath $EntryPath $StageExePath "--link-obj-dir" $objDir "--subsystem" "console" "--gc-limit" "1536m"
-  $linkExit = $LASTEXITCODE
+  $linkArgs = @($EntryPath, $StageExePath, "--link-obj-dir", $objDir, "--subsystem", "console", "--gc-limit", "1536m")
+  Invoke-SelectedCompiler -CompilerPath $CompilerPath -Arguments $linkArgs
+  $linkExit = $script:SelectedCompilerExitCode
   if ($linkExit -ne 0) {
     throw "Fallback link failed with exit code $linkExit"
   }
@@ -78,7 +113,15 @@ function Invoke-LinkFallback {
 }
 
 if ($Compiler -eq "") {
-  $Compiler = Join-Path $Root "build\mlc_win64.exe"
+  $nativeCompiler = Join-Path $Root "build\mlc_win64.exe"
+  $pythonBootstrap = Join-Path (Split-Path -Parent $Root) "MiniLangCompilerPy\mlc_win64.py"
+  if (Test-Path -LiteralPath $nativeCompiler -PathType Leaf) {
+    $Compiler = $nativeCompiler
+  } elseif (Test-Path -LiteralPath $pythonBootstrap -PathType Leaf) {
+    $Compiler = $pythonBootstrap
+  } else {
+    throw "No bootstrap compiler found. Pass -Compiler PATH to a MiniLang compiler executable or to mlc_win64.py."
+  }
 }
 if ($Output -eq "") {
   $Output = Join-Path $Root "build\mlc_win64.exe"
@@ -89,6 +132,24 @@ $FinalOutput = Resolve-BuildPath $Output
 
 if (-not (Test-Path -LiteralPath $Compiler)) {
   throw "Compiler not found: $Compiler"
+}
+
+$script:CompilerIsPython = [System.IO.Path]::GetExtension($Compiler) -ieq ".py"
+if ($script:CompilerIsPython) {
+  if (-not [string]::IsNullOrWhiteSpace($Python)) {
+    $script:PythonExe = Resolve-CommandOrFile $Python "Python interpreter"
+    if ([System.IO.Path]::GetFileNameWithoutExtension($script:PythonExe) -ieq "py") {
+      $script:PythonPrefixArgs = @("-3")
+    }
+  } else {
+    $pyLauncher = Get-Command "py" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -ne $pyLauncher) {
+      $script:PythonExe = $pyLauncher.Path
+      $script:PythonPrefixArgs = @("-3")
+    } else {
+      $script:PythonExe = Resolve-CommandOrFile "python" "Python interpreter"
+    }
+  }
 }
 
 $outDir = Split-Path -Parent $FinalOutput
@@ -142,13 +203,13 @@ if (-not $NoBootstrapProbe) {
 }
 
 $buildTimer = [System.Diagnostics.Stopwatch]::StartNew()
-& $Compiler @buildArgs 2>&1 | ForEach-Object {
+Invoke-SelectedCompiler -CompilerPath $Compiler -Arguments $buildArgs 2>&1 | ForEach-Object {
   $line = "" + $_
   if ($line -notmatch '^\[mem\]') {
     Write-Host $line
   }
 }
-$buildExit = $LASTEXITCODE
+$buildExit = $script:SelectedCompilerExitCode
 
 if ($buildExit -ne 0) {
   $linked = Invoke-LinkFallback $Compiler $entry $stageOutput

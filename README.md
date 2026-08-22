@@ -1,15 +1,18 @@
 ﻿# MiniLang - Self-Hosted Compiler
 
+Current stable release: **1.0.0**.
+
 MiniLang (`.ml`) is a small, dynamically typed language that compiles to a
-native Windows x64 executable (PE32+) with the self-hosted compiler
-`build/mlc_win64.exe`. Console applications are the default;
+native Windows x64 executable (PE32+) with the self-hosted compiler produced by
+`build.ps1`. Console applications are the default;
 `--subsystem windows` emits a GUI-subsystem executable.
 
 The compiler implementation is written entirely in MiniLang and rebuilds
-itself with `build.ps1`. The checked-in `build/mlc_win64.exe` is a bootstrap and
-may lag the source revision after a source-only update; run `build.ps1` before
-depending on newly documented compiler behavior. This repository intentionally
-contains no Python source files. See
+itself with `build.ps1`. Release 1.0.0 and later are source-only: generated
+`.exe` files are deliberately not tracked. On a clean sibling checkout,
+`build.ps1` uses `MiniLangCompilerPy/mlc_win64.py` for the first bootstrap and
+uses the resulting native compiler on subsequent self-host runs. This
+repository intentionally contains no Python source files. See
 [Compiler parity and self-hosting](COMPILER_PARITY.md) for the exact bootstrap,
 self-build and target-output guarantees.
 
@@ -114,6 +117,7 @@ end function
 
 ```powershell
 .\build\mlc_win64.exe input.ml output.exe [options]
+.\build\mlc_win64.exe -version
 ```
 
 Notes:
@@ -162,7 +166,9 @@ Common options:
 - `--profile-compiler` print wall-clock compiler/linker phase timings without
   changing target bytes
 
-Tip: `.\build\mlc_win64.exe --help` prints a short usage summary.
+`.\build\mlc_win64.exe -version` and `--version` both print
+`MiniLang Compiler 1.0.0`. `.\build\mlc_win64.exe --help` prints a short usage
+summary.
 
 Notes (current implementation):
 - Targets Windows x64 console (PE32+).
@@ -267,9 +273,16 @@ Notes:
 
 ### Build the compiler itself
 
-Use `build.ps1` to rebuild `build/mlc_win64.exe` with the compiler that is already in `build/`:
+The repository does not contain a compiler executable. With
+`MiniLangCompilerPy` checked out as a sibling, the first call automatically
+creates the Python bootstrap. The second call rebuilds the compiler through
+the MiniLang-only `.mlo` pipeline:
 
 ```powershell
+# Python bootstrap when build\mlc_win64.exe does not exist.
+.\build.ps1
+
+# Native self-host build using the compiler created above.
 .\build.ps1
 ```
 
@@ -282,7 +295,10 @@ Useful variants:
 # Skip the post-build smoke test.
 .\build.ps1 -SkipSmoke
 
-# Use an explicit bootstrap compiler and a custom output path.
+# Use an explicit Python bootstrap and interpreter.
+.\build.ps1 -Compiler ..\MiniLangCompilerPy\mlc_win64.py -Python py
+
+# Use an explicit native bootstrap compiler and a custom output path.
 .\build.ps1 -Compiler .\build\mlc_win64.exe -Output .\build\mlc_custom.exe
 
 # Retain the generated .mlo object directory for linker investigation.
@@ -293,6 +309,8 @@ Useful variants:
 ```
 
 Notes:
+- When no `-Compiler` is supplied, the script prefers an existing
+  `build\mlc_win64.exe`; otherwise it discovers the sibling Python compiler.
 - The script stages the self-host build in a short temporary directory and then
   moves the finished executable into `build/`. Object files are removed unless
   `-KeepObjects` is passed.
@@ -372,9 +390,9 @@ object pipeline took 420.095 seconds and the matching Python monolithic build
 took 69.089 seconds. Treat these as historical measurements, not promises for
 later revisions.
 
-The current source reaches a binary fixed point: two consecutive 293-object
-`.mlo` stages took 326.648 and 278.837 seconds and produced identical
-54,773,248-byte compiler images (SHA-256 is recorded in the parity report).
+The 1.0.0 source reaches a binary fixed point: two consecutive 293-object
+`.mlo` stages took 185.140 and 240.518 seconds and produced identical
+54,789,120-byte compiler images (SHA-256 is recorded in the parity report).
 
 
 ---
