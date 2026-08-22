@@ -1,3 +1,4 @@
+// High-level module loading, compilation, object pipeline, linker and CLI.
 package mlc.compiler
 import std.fs as fs
 import std.string as s
@@ -20,6 +21,7 @@ extern function GetModuleFileNameW(module as ptr, buffer as buffer, bufferLen as
 extern function GetTickCount64() from "kernel32.dll" symbol "GetTickCount64" returns u64
 extern function _wsystem(cmd as wstr) from "msvcrt.dll" returns int
 
+// Frontend diagnostics and keep-going results.
 struct FrontDiag
   kind,
   filename,
@@ -35,6 +37,7 @@ struct FrontCheckResult
   parsed_modules,
 end struct
 
+// Parsed module graph nodes and resolution candidates.
 struct ModuleInfo
   path,
   package_name,
@@ -90,6 +93,7 @@ struct StrIntPair
   value,
 end struct
 
+// Normalized native ABI declarations used by validation and import planning.
 struct ExternSigParam
   name,
   ty,
@@ -105,6 +109,7 @@ struct ExternSig
   ret_ty,
 end struct
 
+// Serializable object-pipeline records consumed by the fresh linker process.
 struct MloLabel
   name,
   offset,
@@ -139,6 +144,7 @@ struct MloObject
   imports,
 end struct
 
+// Capacity-backed binary writer and reader for the .mlo file format.
 struct ObjBuf
   parts,
   total,
@@ -4085,11 +4091,13 @@ function _collect_extern_structs_walk(stmts, prefix, current_file, file_prefixes
   return names
 end function
 
+// Collect native struct declarations before validating extern signatures.
 function collect_extern_structs(program)
   prefixes = _collect_file_package_prefixes(program)
   return _collect_extern_structs_walk(program, "", "", prefixes, [])
 end function
 
+// Validate supported ABI types, out parameters and native struct references.
 function validate_extern_sigs(extern_sigs, extern_struct_names)
   if typeof(extern_sigs) != "array" or len(extern_sigs) <= 0 then return "" end if
   for si = 0 to len(extern_sigs) - 1
@@ -4218,6 +4226,7 @@ function _collect_extern_sigs_walk(stmts, prefix, current_file, file_prefixes, a
   return acc
 end function
 
+// Normalize all extern declarations into deterministic signature records.
 function collect_extern_sigs(program)
   file_prefixes = _collect_file_package_prefixes(program)
   b = _collect_extern_sigs_walk(program, "", "", file_prefixes, t.arr_chunk_new(64))
@@ -4795,6 +4804,7 @@ function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg
   return [0, "", helper_union, module_obj_paths_b, label_id]
 end function
 
+// Compile and link one complete program in memory.
 function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
   global _pe_state_keepalive
@@ -5337,6 +5347,7 @@ function _write_asm_listing_if_enabled(output_exe, peb, text_buf, rdata_buf, dat
   return true
 end function
 
+// Emit bounded .mlo batches and link them in a fresh compiler process.
 function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
   global _compile_codegen_keepalive
@@ -5618,6 +5629,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   return _link_mlo_files(obj_paths, output_exe, subsystem)
 end function
 
+// Dispatch to the selected monolithic or object-pipeline implementation.
 function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   if _object_pipeline_enabled then
     return compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
@@ -5625,10 +5637,12 @@ function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max
   return compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
 end function
 
+// Compile with default include, diagnostic, runtime and subsystem options.
 function compile_to_exe(input_ml, output_exe)
   return compile_to_exe_opts(input_ml, output_exe, [], false, 20, [], false, false, 3)
 end function
 
+// Link an existing object directory without parsing source again.
 function link_obj_dir_to_exe(obj_dir, output_exe, subsystem)
   _progress_phase("link object directory")
   _progress_link("object dir=" + obj_dir)
@@ -5642,6 +5656,7 @@ function link_obj_dir_to_exe(obj_dir, output_exe, subsystem)
   return _link_mlo_files(obj_paths, output_exe, subsystem)
 end function
 
+// Parse command-line arguments and execute project, compile or link mode.
 function run_cli(args)
   global _mem_probe_enabled
   global _dump_labels_path

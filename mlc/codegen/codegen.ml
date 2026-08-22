@@ -1,3 +1,4 @@
+// Public facade that combines the self-hosted backend modules.
 package mlc.codegen.codegen
 import mlc.asm as a
 import mlc.constants as c

@@ -1,3 +1,4 @@
+// Lightweight records for breakable control-flow and exception regions.
 package mlc.context
 
 const BREAKABLE_KIND_LOOP = "loop"
@@ -7,11 +8,13 @@ const BREAKABLE_CTX_DEFAULT_CONTINUE_LABEL = void
 const BREAKABLE_CTX_DEFAULT_BREAK_DEPTH = 0
 const BREAKABLE_CTX_DEFAULT_CONTINUE_DEPTH = 0
 
+// Legacy loop-only context retained for compatible helper signatures.
 struct LoopCtx
   break_label,
   continue_label,
 end struct
 
+// Unified loop/switch target plus cleanup depths for non-local exits.
 struct BreakableCtx
   kind,
   break_label,
@@ -20,6 +23,7 @@ struct BreakableCtx
   continue_depth,
 end struct
 
+// Construct the compact legacy loop context.
 function newLoopCtx(break_label, continue_label)
   return LoopCtx(break_label, continue_label)
 end function
@@ -38,6 +42,7 @@ function _normalizeBreakableCtx(kind, break_label, continue_label, break_depth, 
   return BreakableCtx(kind, break_label, continue_label, break_depth, continue_depth)
 end function
 
+// Construct a validated breakable-region descriptor.
 function newBreakableCtx(kind, break_label, continue_label, break_depth, continue_depth)
   return _normalizeBreakableCtx(kind, break_label, continue_label, break_depth, continue_depth)
 end function

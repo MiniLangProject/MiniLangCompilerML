@@ -1,9 +1,12 @@
+// Emits native threads, synchronization and stop-the-world GC coordination.
 package mlc.codegen.codegen_threads
 import mlc.asm as a
 import mlc.constants as c
 import mlc.data as d
 import mlc.tools as t
 
+// Native thread-context layout. Tagged managed values occupy qword fields and
+// are scanned as GC roots; status and counters use native integer fields.
 const THREAD_TYPE = 0
 const THREAD_STATUS = 4
 const THREAD_HANDLE = 8
@@ -22,6 +25,7 @@ const THREAD_ARITY = 160
 const THREAD_HEAP_BYPASS_DEPTH = 168
 const THREAD_CONTEXT_SIZE = 176
 
+// Public lifecycle states stored in THREAD_STATUS.
 const THREAD_CREATED = 0
 const THREAD_RUNNING = 1
 const THREAD_STOP_REQUESTED = 2
@@ -29,6 +33,7 @@ const THREAD_COMPLETED = 3
 const THREAD_STOPPED = 4
 const THREAD_FAILED = 5
 
+// Collector-facing states used by cooperative stop-the-world coordination.
 const GC_THREAD_RUNNING = 0
 const GC_THREAD_PARKED = 1
 const GC_THREAD_NATIVE = 2
@@ -57,6 +62,7 @@ function _new_label_id(state)
   return state.label_id
 end function
 
+// Materialize global monitors, the main context and coordination counters once.
 function ensure_thread_data(state)
   if d.data_has_label(state.data, "sync_monitor") == false then
     state.data = d.data_pad_align(state.data, 8)
@@ -86,6 +92,7 @@ function ensure_thread_data(state)
   return state
 end function
 
+// Initialize the main thread context and all process-wide critical sections.
 function emit_sync_init(state)
   state = ensure_thread_data(state)
   state.asm = a.lea_rax_rip(state.asm, "main_thread_context")
@@ -118,6 +125,7 @@ function emit_sync_init(state)
   return state
 end function
 
+// Emit a cheap conditional call that parks when collection was requested.
 function emit_gc_safepoint_poll(state)
   if state.native_threads_possible == false then return state end if
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_safepoint")
@@ -130,6 +138,7 @@ function emit_gc_safepoint_poll(state)
   return state
 end function
 
+// Cooperatively turn a stop request into an early function return.
 function emit_thread_cancellation_poll(state)
   if state.native_threads_possible == false then return state end if
   if state.in_function == false then return state end if
@@ -168,6 +177,7 @@ function _emit_managed_thread_count_delta(state, delta)
   return state
 end function
 
+// Emit the slow path that publishes a parked state until GC resumes the world.
 function emit_gc_safepoint_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_safepoint")
@@ -224,6 +234,7 @@ function emit_gc_safepoint_function(state)
   return state
 end function
 
+// Mark the current thread native so the collector does not wait for a poll.
 function emit_gc_native_enter_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_safepoint")
   state = ensure_thread_data(state)
@@ -258,6 +269,7 @@ function emit_gc_native_enter_function(state)
   return state
 end function
 
+// Rejoin managed execution, parking first when a collection is active.
 function emit_gc_native_leave_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_native_leave")
@@ -304,6 +316,7 @@ function emit_gc_native_leave_function(state)
   return state
 end function
 
+// Remove a terminating managed worker from collector participation.
 function emit_gc_managed_exit_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_managed_exit")
@@ -323,6 +336,7 @@ function emit_gc_managed_exit_function(state)
   return state
 end function
 
+// Serialize heap mutation while preserving re-entrant allocation depth.
 function emit_heap_enter_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_safepoint")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
@@ -379,6 +393,7 @@ function emit_heap_enter_function(state)
   return state
 end function
 
+// Release the heap monitor at the outermost allocation depth.
 function emit_heap_leave_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_heap_leave")
@@ -406,6 +421,7 @@ function emit_heap_leave_function(state)
   return state
 end function
 
+// Request collection and wait until every other managed thread is safe.
 function emit_gc_world_stop_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_world_stop")
@@ -468,6 +484,7 @@ function emit_gc_world_stop_function(state)
   return state
 end function
 
+// Clear the collection request and make parked threads runnable again.
 function emit_gc_world_resume_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_world_resume")
@@ -489,6 +506,7 @@ function emit_gc_world_resume_function(state)
   return state
 end function
 
+// Enter the process-wide monitor used by synchronized language constructs.
 function emit_sync_enter_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
@@ -506,6 +524,7 @@ function emit_sync_enter_function(state)
   return state
 end function
 
+// Leave the process-wide synchronized monitor.
 function emit_sync_leave_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_sync_leave")
@@ -521,6 +540,7 @@ function emit_sync_leave_function(state)
   return state
 end function
 
+// Allocate and initialize a managed Thread object without starting it.
 function emit_thread_new_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_thread_new")
@@ -576,6 +596,7 @@ function emit_thread_new_function(state)
   return state
 end function
 
+// Publish the argument and create the native worker exactly once.
 function emit_thread_start_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_thread_entry")
   state.asm = a.mark(state.asm, "fn_thread_start")
@@ -846,6 +867,7 @@ function emit_thread_alloc_function(state)
   return state
 end function
 
+// Bridge the Win32 entrypoint to a managed callback and publish its result.
 function emit_thread_entry_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_managed_exit")

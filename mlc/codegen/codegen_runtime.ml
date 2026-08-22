@@ -1,3 +1,4 @@
+// Emits reusable runtime helpers and non-allocating language builtins.
 package mlc.codegen.codegen_runtime
 import mlc.asm as a
 import mlc.constants as c

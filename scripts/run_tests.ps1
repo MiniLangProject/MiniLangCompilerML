@@ -1,3 +1,9 @@
+<#
+Compile and run the self-hosted compiler regression suite.
+
+The runner validates the compiler CLI, compiled MiniLang harness, ABI/input
+regressions, assembly listings and focused historical reproductions.
+#>
 param(
   [string]$Compiler = "",
   [string[]]$CompilerArgs = @(),

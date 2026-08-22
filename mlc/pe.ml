@@ -1,3 +1,4 @@
+// Deterministic PE32+ layout, import table and executable writer.
 package mlc.pe
 import mlc.tools as t
 
@@ -8,6 +9,7 @@ const IMAGE_SCN_CNT_CODE = 0x00000020
 const IMAGE_SCN_CNT_INITIALIZED_DATA = 0x00000040
 const IMAGE_SCN_CNT_UNINITIALIZED_DATA = 0x00000080
 
+// One fully laid-out PE section and its file/image coordinates.
 struct PESection
   name,
   data,
@@ -18,6 +20,7 @@ struct PESection
   raw_size,
 end struct
 
+// Mutable PE32+ image plan populated before final serialization.
 struct PEBuilder
   image_base,
   section_alignment,
@@ -29,22 +32,26 @@ struct PEBuilder
   subsystem,
 end struct
 
+// Small name/value record used by deterministic lookup tables.
 struct NamedInt
   name,
   value,
 end struct
 
+// Imported DLL name and its ordered function list.
 struct ImportDll
   dll,
   funcs,
 end struct
 
+// Resolved import-address-table RVA for one native symbol.
 struct IatSymbol
   dll,
   func,
   rva,
 end struct
 
+// Serialized import section plus directory and symbol metadata.
 struct IdataResult
   data,
   import_dir_rva,
@@ -139,6 +146,7 @@ function _find_section_by_name(pe, name)
   return 0
 end function
 
+// Create a Windows x64 image plan with stable alignment defaults.
 function newPEBuilder()
   return PEBuilder(
   0x140000000,
@@ -152,12 +160,14 @@ function newPEBuilder()
 )
 end function
 
+// Append one section; layout() assigns its addresses later.
 function add_section(pe, name, data, characteristics)
   sec = PESection(name, data, characteristics, 0, 0, 0, 0)
   pe.sections = pe.sections +[sec]
   return pe
 end function
 
+// Assign deterministic virtual and file offsets to every section.
 function layout(pe)
   dos_stub = 0x80
   pe_sig = 4
@@ -187,6 +197,7 @@ function layout(pe)
   return pe
 end function
 
+// Serialize headers and aligned section payloads into the final PE bytes.
 function build(pe)
   pe = layout(pe)
 
@@ -336,6 +347,7 @@ function build(pe)
   return image
 end function
 
+// Build a deterministic .idata section and resolved IAT symbol table.
 function build_idata(imports, base_rva)
   dlls_b = t.arr_chunk_new(32)
   if len(imports) > 0 then

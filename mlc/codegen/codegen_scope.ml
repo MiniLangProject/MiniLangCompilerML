@@ -1,9 +1,11 @@
+// Tracks lexical bindings, shadowing, captures and stack/root-frame slots.
 package mlc.codegen.codegen_scope
 import mlc.asm as a
 import mlc.constants as c
 import mlc.data as d
 import mlc.tools as t
 
+// One resolved variable binding, including storage, capture and const metadata.
 struct VarBinding
   id,
   name,

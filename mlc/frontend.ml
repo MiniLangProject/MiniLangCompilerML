@@ -1,9 +1,11 @@
+// Source loading, line mapping and parser integration for compiler clients.
 package mlc.frontend
 import std.fs as fs
 import std.string as s
 import mlc.minilang_parser as parser
 import mlc.tools as t
 
+// Source text, parsed program and normalized diagnostics returned together.
 struct FrontendParseResult
   source,
   program,
@@ -99,6 +101,7 @@ function _normalize_frontend_errors(errors, fallback_path)
   return t.arr_chunked_finish(chunks, tail)
 end function
 
+// Normalize comments/newlines while preserving source offsets for diagnostics.
 function normalize_code_for_tokenizer(src)
   if typeof(src) != "string" then
     return ""
@@ -208,6 +211,7 @@ function normalize_code_for_tokenizer(src)
   return s.join(pieces, "")
 end function
 
+// Load and parse one file, returning syntax failures in the result record.
 function parse_program(path)
   r = fs.readAllText(path)
   if typeof(r) == "error" then
@@ -221,12 +225,14 @@ function parse_program(path)
   return FrontendParseResult(code, prog,[])
 end function
 
+// Report frontend availability; the self-host build links it statically.
 function load_minilang_frontend(path)
   // The self-hosted port links the parser statically, so we return the
   // equivalent "loaded successfully" result instead of probing the filesystem.
   return true
 end function
 
+// Parse one file while collecting up to max_errors syntax diagnostics.
 function parse_program_keepgoing(path, max_errors)
   r = fs.readAllText(path)
   if typeof(r) == "error" then

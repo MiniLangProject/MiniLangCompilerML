@@ -1,3 +1,4 @@
+// Shared tagged-value, heap-object and Windows ABI constants.
 package mlc.constants
 
 // tagged values

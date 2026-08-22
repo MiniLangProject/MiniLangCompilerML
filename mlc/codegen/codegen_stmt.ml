@@ -1,3 +1,4 @@
+// Lowers statements and orchestrates whole-program planning and emission.
 package mlc.codegen.codegen_stmt
 import std.string as s
 import mlc.asm as a

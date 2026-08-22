@@ -1,3 +1,12 @@
+<#
+.SYNOPSIS
+Build the native self-hosted MiniLang compiler.
+
+.DESCRIPTION
+Uses an existing native compiler when available, otherwise bootstraps from the
+sibling Python compiler. Output is staged safely, smoke-tested and then moved
+to the requested destination. The object pipeline keeps peak memory bounded.
+#>
 param(
   [string]$Compiler = "",
   [string]$Output = "",
@@ -18,6 +27,7 @@ $script:PythonPrefixArgs = @()
 $script:SelectedCompilerExitCode = 1
 
 function Resolve-BuildPath {
+  # Resolve caller-supplied paths relative to this repository.
   param([string]$Path)
   if ([System.IO.Path]::IsPathRooted($Path)) {
     return [System.IO.Path]::GetFullPath($Path)
@@ -26,6 +36,7 @@ function Resolve-BuildPath {
 }
 
 function Resolve-CommandOrFile {
+  # Accept either an explicit file or a command discoverable through PATH.
   param(
     [string]$Value,
     [string]$Label
@@ -41,6 +52,7 @@ function Resolve-CommandOrFile {
 }
 
 function Invoke-SelectedCompiler {
+  # Normalize invocation and exit-code capture for native and Python compilers.
   param(
     [string]$CompilerPath,
     [string[]]$Arguments
@@ -55,6 +67,7 @@ function Invoke-SelectedCompiler {
 }
 
 function Remove-CompilerObjects {
+  # Remove only the validated object directory associated with one output.
   param([string]$ExePath)
   if ($KeepObjects) { return }
   $objDir = Get-CompilerObjectDir $ExePath
@@ -64,6 +77,7 @@ function Remove-CompilerObjects {
 }
 
 function Get-CompilerObjectDir {
+  # Constrain cleanup candidates to this repository or the system temp root.
   param([string]$ExePath)
   $outDir = Split-Path -Parent $ExePath
   $stem = [System.IO.Path]::GetFileNameWithoutExtension($ExePath)
@@ -78,6 +92,7 @@ function Get-CompilerObjectDir {
 }
 
 function Invoke-LinkFallback {
+  # Reuse completed object emission when only the fresh linker process failed.
   param(
     [string]$CompilerPath,
     [string]$EntryPath,

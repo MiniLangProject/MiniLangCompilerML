@@ -1,17 +1,21 @@
+// Deterministic x86-64 encoder, label patcher and assembly-listing support.
 package mlc.asm
 import mlc.tools as t
 
+// Deferred rel32 relocation from an instruction field to a named label.
 struct AsmPatch
   pos,
   target,
   kind,
 end struct
 
+// Named code offset in the materialized instruction stream.
 struct AsmLabel
   name,
   pos,
 end struct
 
+// Paged instruction stream plus chunked labels, patches and call metadata.
 struct AsmBuilder
   buf,
   size,
@@ -34,12 +38,14 @@ struct AsmBuilder
   peephole_last_jump,
 end struct
 
+// Encoded general-purpose-register number, width and REX requirement.
 struct GPR
   id,
   size,
   force_rex,
 end struct
 
+// Encoded ModRM/SIB memory operand tail and extension bits.
 struct EncMem
   rex_x,
   rex_b,
@@ -75,11 +81,13 @@ function _alloc_zero_bytes_keepalive(keepalive, size)
   return bytes(size, 0)
 end function
 
+// Create an empty assembler with production-sized page and index capacities.
 function newAsmBuilder()
   cs = 65536
   return AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], t.fastmap_new(256), [])
 end function
 
+// Materialize unresolved and active patch chunks in deterministic order.
 function get_patches(asm)
   patch_out = t.arr_chunk_new(1024)
   deferred_count = t.arr_chunked_count(asm.deferred_patches_chunks, asm.deferred_patches_tail, 256)
@@ -97,6 +105,7 @@ function get_patches(asm)
   return t.arr_chunk_finish(patch_out)
 end function
 
+// Apply every currently resolvable rel32 patch and retain forward references.
 function _resolve_patch_set(asm, patch_chunks, patch_tail, kept_chunks, kept_tail)
   patch_count = t.arr_chunked_count(patch_chunks, patch_tail, 256)
   if patch_count <= 0 then return [asm, kept_chunks, kept_tail] end if

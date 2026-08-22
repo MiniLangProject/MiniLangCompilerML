@@ -1,3 +1,4 @@
+// TOML project manifests and content-validated incremental build metadata.
 package mlc.project
 
 import std.fs as fs
@@ -9,6 +10,7 @@ extern function GetModuleFileNameW(module as ptr, buffer as buffer, bufferLen as
 extern function GetFileAttributesExW(path as wstr, level as int, info as bytes) from "kernel32.dll" returns bool
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" returns bool
 
+// Expanded project configuration carried through compilation and caching.
 struct ProjectBuild
   manifest,
   cache_dir,
@@ -16,6 +18,7 @@ struct ProjectBuild
   expanded_args,
 end struct
 
+// Success/error envelope for command-line manifest expansion.
 struct ProjectExpansion
   ok,
   args,
@@ -23,6 +26,7 @@ struct ProjectExpansion
   message,
 end struct
 
+// Two-lane deterministic hash state used for cache fingerprints.
 struct ProjectHash
   a,
   b,
@@ -108,6 +112,7 @@ function _is_known_key(key)
   return key == "entry" or key == "input" or key == "output" or key == "include" or key == "import_paths" or key == "subsystem" or key == "object_pipeline" or key == "incremental" or key == "cache_dir" or key == "compiler_args"
 end function
 
+// Replace --project arguments with validated ordinary compiler arguments.
 function expandArgs(args)
   if typeof(args) != "array" or len(args) < 1 or args[0] != "--project" then
     return ProjectExpansion(true, args, void, "")
@@ -268,6 +273,7 @@ function _string_less(left, right)
   return len(left_bytes) < len(right_bytes)
 end function
 
+// Hash the manifest, effective arguments and every reachable MiniLang source.
 function fingerprint(pb, input_path, include_dirs)
   h = ProjectHash(2166136261, 3266489917)
   h = _hash_text(h, "MiniLang-project-cache-v1")
@@ -325,6 +331,7 @@ function fingerprint(pb, input_path, include_dirs)
   return _hex32(h.a) + _hex32(h.b)
 end function
 
+// Restore a cached artifact only when its recorded digest matches exactly.
 function restore(pb, digest, output_path)
   if typeof(pb) != "struct" or pb.incremental == false then return false end if
   state_path = _join(pb.cache_dir, "build.state")
@@ -337,6 +344,7 @@ function restore(pb, digest, output_path)
   return typeof(copied) != "error"
 end function
 
+// Atomically update the cached artifact and its validation metadata.
 function store(pb, digest, output_path)
   if typeof(pb) != "struct" or pb.incremental == false then return true end if
   if _ensure_dir(pb.cache_dir) == false then return error(1, "failed to create project cache directory") end if
@@ -346,6 +354,7 @@ function store(pb, digest, output_path)
   return fs.writeAllText(_join(pb.cache_dir, "build.state"), digest + "\n")
 end function
 
+// Create the parent directory required by a configured output path.
 function ensureOutputDirectory(output_path)
   return _ensure_dir(_dirname(output_path))
 end function

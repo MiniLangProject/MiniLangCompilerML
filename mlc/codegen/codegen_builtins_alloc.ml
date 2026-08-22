@@ -1,3 +1,4 @@
+// Emits allocation-heavy builtins such as input, boxing and concatenation.
 package mlc.codegen.codegen_builtins_alloc
 import mlc.asm as a
 import mlc.constants as c

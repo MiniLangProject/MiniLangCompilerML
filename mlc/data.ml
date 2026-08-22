@@ -1,30 +1,36 @@
+// Deterministic chunked builders for PE data sections and named labels.
 package mlc.data
 import mlc.constants as c
 import mlc.tools as t
 
+// Named offset into a writable or zero-initialized section.
 struct DataLabel
   name,
   offset,
 end struct
 
+// Named offset and byte length into read-only data.
 struct DataRangeLabel
   name,
   offset,
   length,
 end struct
 
+// Deduplication entry for pooled constants.
 struct PoolEntry
   key,
   offset,
   length,
 end struct
 
+// Deferred absolute-address relocation inside a data section.
 struct DataPatch
   offset,
   target,
   kind,
 end struct
 
+// Chunked writable-data builder with indexed labels and relocations.
 struct DataBuilder
   data,
   labels,
@@ -34,11 +40,13 @@ struct DataBuilder
   used,
 end struct
 
+// Size-only builder for the zero-initialized section.
 struct BssBuilder
   size,
   labels,
 end struct
 
+// Chunked read-only builder with typed constant-deduplication pools.
 struct RDataBuilder
   data,
   labels,
@@ -126,6 +134,7 @@ function _find_pool_entry(pool, key)
   return 0
 end function
 
+// Create an empty writable-data builder with production-sized capacities.
 function newDataBuilder()
   return DataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), 0, t.arr_chunk_new(1024), 0)
 end function
@@ -205,10 +214,12 @@ function _data_upsert_label(db, name, offset)
   return db
 end function
 
+// Create an empty zero-initialized-data builder.
 function newBssBuilder()
   return BssBuilder(0,[])
 end function
 
+// Create an empty read-only-data builder and its constant pools.
 function newRDataBuilder()
   return RDataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), 0, t.arr_chunk_new(1024), t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
 end function

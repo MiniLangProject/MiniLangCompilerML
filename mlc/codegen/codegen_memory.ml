@@ -1,3 +1,4 @@
+// Emits the shared managed heap, allocator, root frames and mark/sweep GC.
 package mlc.codegen.codegen_memory
 import mlc.asm as a
 import mlc.constants as c

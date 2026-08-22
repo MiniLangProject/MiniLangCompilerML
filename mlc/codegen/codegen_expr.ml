@@ -1,3 +1,4 @@
+// Lowers MiniLang expressions, calls, constants and native interop to x64.
 package mlc.codegen.codegen_expr
 import std.string as s
 import mlc.asm as a
@@ -9,11 +10,13 @@ import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_threads as th
 
+// Explicit success/value envelope for compile-time expression evaluation.
 struct ConstEvalResult
   ok,
   value,
 end struct
 
+// Cost and control-flow summary used by the bounded inliner.
 struct InlineStats
   cost,
   stmt_count,

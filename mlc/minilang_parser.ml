@@ -1,15 +1,18 @@
+// Tokenizer, AST records and recursive-descent parser for MiniLang syntax.
 package mlc.minilang_parser
 import std.string as s
 import mlc.tools as t
 
 extern function _parse_strtod(text as cstr, endptr as ptr) from "msvcrt.dll" symbol "strtod" returns double
 
+// Parser failure with absolute source offset and originating filename.
 struct ParseError
   message,
   pos,
   filename,
 end struct
 
+// Lexical token preserving raw value and absolute source offset.
 struct Token
   kind,
   value,
@@ -33,17 +36,19 @@ function _tok_desc(tok)
   return _tok_text_part(k) + ":" + _tok_text_part(v)
 end function
 
+// Capacity-backed parser list tail used to avoid repeated array concatenation.
 struct ParserChunkTail
   data,
   used,
   cap,
 end struct
 
+// Internal marker that distinguishes spare capacity from a real void element.
 struct ParserChunkVoidSentinel
   tag,
 end struct
 
-// expression AST (initial self-hosting port)
+// Expression AST. Every node carries source coordinates for later diagnostics.
 struct Num
   node_kind,
   value,
@@ -143,7 +148,7 @@ struct DeferredCapture
   _filename,
 end struct
 
-// statement AST (subset port)
+// Statement/declaration AST shared by analysis and code generation.
 struct Import
   node_kind,
   path,

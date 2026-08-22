@@ -1,3 +1,9 @@
+<#
+Reject accidental growing-array concatenation in compiler hot paths.
+
+The guarded functions must retain capacity-backed builders because repeated
+`items = items + [value]` copies the complete prefix and dominates self-builds.
+#>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 

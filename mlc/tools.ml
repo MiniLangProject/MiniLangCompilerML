@@ -1,18 +1,22 @@
+// Dependency-light integer, path, hashing and chunked-builder utilities.
 package mlc.tools
 import mlc.constants as c
 
+// Append-only array builder that avoids copying a growing prefix.
 struct ArrayChunkBuilder
   chunks,
   tail,
   cap,
 end struct
 
+// Partially filled final chunk with explicit logical length.
 struct ArrayChunkTail
   data,
   used,
   cap,
 end struct
 
+// Internal marker that preserves actual void values inside spare capacity.
 struct ArrayChunkVoidSentinel
   tag,
 end struct
@@ -27,12 +31,14 @@ struct ArrayVector
   cap,
 end struct
 
+// Paged byte buffer used by large assembler and linker outputs.
 struct BytePages
   chunk_pages,
   chunk_tail,
   size,
 end struct
 
+// Compiler-internal open-addressing map with power-of-two capacity.
 struct FastMap
   keys,
   values,
@@ -43,6 +49,7 @@ end struct
 
 _arr_void_sentinel = ArrayChunkVoidSentinel(0xA11D)
 
+// ArrayVector operations keep append-heavy planning tables capacity-backed.
 function arr_vec_is(value)
   if typeof(value) != "struct" then return false end if
   if typeof(try(value.data)) != "array" then return false end if
@@ -213,6 +220,7 @@ function _fm_is_valid(mapv)
   return true
 end function
 
+// FastMap operations use deterministic hashing and linear probing.
 function fastmap_new(initial_cap)
   cap = _fm_next_pow2(initial_cap)
   return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), _arr_fill(cap, 0), cap, 0)
@@ -341,6 +349,7 @@ function fastmap_items(mapv)
   return arr_chunk_finish(out_b)
 end function
 
+// Round n upward to the next power-of-two alignment boundary.
 function align_up(n, a)
   return (n +(a - 1)) & ~(a - 1)
 end function
@@ -351,6 +360,7 @@ function align_to_mod(n, mod, target)
   return n + pad
 end function
 
+// Serialize an unsigned 16-bit value in little-endian order.
 function u16(x)
   b = bytes(2, 0)
   v = x & 0xFFFF
@@ -359,6 +369,7 @@ function u16(x)
   return b
 end function
 
+// Serialize an unsigned 32-bit value in little-endian order.
 function u32(x)
   b = bytes(4, 0)
   v = x & 0xFFFFFFFF
@@ -369,6 +380,7 @@ function u32(x)
   return b
 end function
 
+// Serialize the low 64 bits of a value in little-endian order.
 function u64(x)
   b = bytes(8, 0)
   v = x & _u64_mask()
@@ -771,6 +783,7 @@ function _chunks_materialize(chunks)
   return arr_merge_chunks_balanced([flat, tail_arr])
 end function
 
+// Create a chunked array builder with the requested tail capacity.
 function arr_chunk_new(cap)
   ccap = cap
   if typeof(ccap) != "int" or ccap <= 0 then ccap = 64 end if
@@ -936,6 +949,7 @@ function arr_chunk_push_all(builder, values)
   return b
 end function
 
+// Create an empty paged byte buffer.
 function byte_pages_new()
   return BytePages([], [], 0)
 end function

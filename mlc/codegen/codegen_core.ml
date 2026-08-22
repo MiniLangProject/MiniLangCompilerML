@@ -1,3 +1,4 @@
+// Owns shared backend state, labels, helper tracking and call emission.
 package mlc.codegen.codegen_core
 import mlc.asm as a
 import mlc.data as d
@@ -10,6 +11,8 @@ import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_builtins_alloc as bal
 import mlc.codegen.codegen_threads as th
 
+// Complete mutable state threaded through every backend emission function.
+// Collection fields use indexed/capacity-backed representations on hot paths.
 struct CgState
   source,
   filename,
@@ -127,6 +130,7 @@ struct CgState
   synchronized_globals,
 end struct
 
+// Compatibility lookup records used where older compiler images pass arrays.
 struct NamedArray
   key,
   values,
@@ -142,6 +146,7 @@ struct NamedAny
   value,
 end struct
 
+// Spill slot/register pair that keeps a tagged expression value GC-visible.
 struct ExprValueTemp
   off,
   reg,
