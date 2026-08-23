@@ -1002,6 +1002,26 @@ function _opt_try_known_type_label(state, expr, detailed)
   if typeof(expr) == "struct" and _coerce_name(try(expr.node_kind)) == "VoidLit" then
     return "obj_type_void"
   end if
+  fact = _opt_expr_known_type(state, expr)
+  base = _opt_type_base(fact)
+  if base == "int" then return "obj_type_int" end if
+  if base == "float" then return "obj_type_float" end if
+  if base == "bool" then return "obj_type_bool" end if
+  if base == "string" then return "obj_type_string" end if
+  if base == "array" then return "obj_type_array" end if
+  if base == "bytes" then return "obj_type_bytes" end if
+  if base == "struct" then
+    if detailed then
+      colon = -1
+      for i = 0 to len(fact) - 1 if fact[i] == ":" then colon = i; break end if end for
+      if colon >= 0 then
+        qname = s.substr(fact, colon + 1, len(fact) - colon - 1)
+        label = _strpair_get(state.typename_struct_by_qname, qname)
+        if label != "" then return label end if
+      end if
+    end if
+    return "obj_type_struct"
+  end if
   return ""
 end function
 
@@ -1577,6 +1597,21 @@ function _emit_expr_member(state, expr)
     obj_rt = try(expr.obj)
     if typeof(tgt) != "struct" and typeof(obj_rt) == "struct" then tgt = obj_rt end if
   end if
+  known_struct = _opt_expr_known_type(state, tgt)
+  if s.startsWith(known_struct, "struct:") then
+    struct_qname = s.substr(known_struct, 7, len(known_struct) - 7)
+    fields_fast = _state_struct_fields_get(state, struct_qname)
+    if typeof(fields_fast) == "array" and len(fields_fast) > 0 then
+      for fi_fast = 0 to len(fields_fast) - 1
+        if _coerce_name(fields_fast[fi_fast]) == mname then
+          state.asm = a.mark(state.asm, "struct_member_fast_" + _next_lid(state))
+          state = cg_emit_expr(state, tgt)
+          state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rax", 8 + fi_fast * 8)
+          return state
+        end if
+      end for
+    end if
+  end if
   state = cg_emit_expr(state, tgt)
 
   fid_m = _next_lid(state)
@@ -1649,6 +1684,11 @@ function _emit_expr_member(state, expr)
 end function
 
 function _emit_expr_index(state, expr)
+  fast_plan = _opt_known_index_plan(state, expr)
+  if typeof(fast_plan) == "array" and len(fast_plan) >= 3 then
+    return _opt_emit_known_index(state, expr, fast_plan)
+  end if
+
   lid_ix = _next_lid(state)
   l_arr = "idx_arr_" + lid_ix
   l_bytes = "idx_bytes_" + lid_ix
@@ -1948,6 +1988,207 @@ function _opt_expr_known_int(state, ex)
   return false
 end function
 
+function inline _opt_type_base(type_name)
+  if typeof(type_name) != "string" or type_name == "" then return "" end if
+  for i = 0 to len(type_name) - 1
+    if type_name[i] == ":" then return s.substr(type_name, 0, i) end if
+  end for
+  return type_name
+end function
+
+function _opt_type_exact_length(type_name)
+  if typeof(type_name) != "string" or type_name == "" then return -1 end if
+  colon = -1
+  for i = 0 to len(type_name) - 1
+    if type_name[i] == ":" then colon = i; break end if
+  end for
+  if colon < 0 then return -1 end if
+  base = s.substr(type_name, 0, colon)
+  if base != "array" and base != "bytes" then return -1 end if
+  raw = s.substr(type_name, colon + 1, len(type_name) - colon - 1)
+  value = toNumber(raw)
+  if typeof(value) != "int" or value < 0 then return -1 end if
+  return value
+end function
+
+function _opt_type_fact_get(items, name)
+  if typeof(items) != "array" or len(items) <= 0 then return "" end if
+  for i = 0 to len(items) - 1
+    rec = items[i]
+    if typeof(rec) == "array" and len(rec) >= 2 and rec[0] == name and typeof(rec[1]) == "string" then return rec[1] end if
+  end for
+  return ""
+end function
+
+function _opt_expr_known_type(state, ex)
+  if typeof(ex) != "struct" then return "" end if
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Num" then
+    if typeof(try(ex.value)) == "int" then return "int" end if
+    if typeof(try(ex.value)) == "float" then return "float" end if
+    return ""
+  end if
+  if k == "Bool" then return "bool" end if
+  if k == "Str" then return "string" end if
+  if k == "ArrayLit" then
+    items = try(ex.items)
+    if typeof(items) != "array" then items = [] end if
+    return "array:" + len(items)
+  end if
+  if k == "Var" then
+    nm = _coerce_name(try(ex.name))
+    fact = _opt_type_fact_get(state.known_value_types, nm)
+    if fact == "" then return "" end if
+    b = scope.cg_resolve_binding(state, nm)
+    if typeof(b) != "struct" then return "" end if
+    if b.kind != "local" and b.kind != "param" then return "" end if
+    if typeof(b.boxed) == "bool" and b.boxed then return "" end if
+    return fact
+  end if
+  if k == "IsType" then return "bool" end if
+  if k == "Unary" then
+    op_u = _coerce_name(try(ex.op))
+    rb = _opt_type_base(_opt_expr_known_type(state, try(ex.right)))
+    if op_u == "not" and rb != "" then return "bool" end if
+    if op_u == "~" and rb == "int" then return "int" end if
+    if op_u == "-" and rb == "int" then return "int" end if
+    if op_u == "-" and (rb == "float" or rb == "number") then return "number" end if
+    return ""
+  end if
+  if k == "Bin" then
+    op_b = _coerce_name(try(ex.op))
+    lb = _opt_type_base(_opt_expr_known_type(state, try(ex.left)))
+    rb2 = _opt_type_base(_opt_expr_known_type(state, try(ex.right)))
+    if op_b == "==" or op_b == "!=" then return "bool" end if
+    numeric_l_cmp = lb == "int" or lb == "float" or lb == "number"
+    numeric_r_cmp = rb2 == "int" or rb2 == "float" or rb2 == "number"
+    if (op_b == "<" or op_b == "<=" or op_b == ">" or op_b == ">=") and numeric_l_cmp and numeric_r_cmp then return "bool" end if
+    if (op_b == "and" or op_b == "or") and lb != "" and rb2 != "" then return "bool" end if
+    if (op_b == "&" or op_b == "|" or op_b == "^" or op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" then return "int" end if
+    if (op_b == "+" or op_b == "-" or op_b == "*" or op_b == "%") and lb == "int" and rb2 == "int" then return "int" end if
+    numeric_l = lb == "int" or lb == "float" or lb == "number"
+    numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
+    if (op_b == "+" or op_b == "-" or op_b == "*" or op_b == "/" or op_b == "%") and numeric_l and numeric_r then return "number" end if
+    return ""
+  end if
+  if k == "Index" then
+    tb = _opt_type_base(_opt_expr_known_type(state, try(ex.target)))
+    if tb == "bytes" then return "int" end if
+    if tb == "string" then return "string" end if
+  end if
+  return ""
+end function
+
+function _opt_known_index_plan(state, ex)
+  if typeof(ex) != "struct" then return [] end if
+  target = try(ex.target)
+  index = try(ex.index)
+  if typeof(target) != "struct" or _coerce_name(try(target.node_kind)) != "Var" then return [] end if
+  fact = _opt_expr_known_type(state, target)
+  kind = _opt_type_base(fact)
+  if kind != "array" and kind != "bytes" and kind != "string" then return [] end if
+  if _opt_type_base(_opt_expr_known_type(state, index)) != "int" then return [] end if
+  target_binding = scope.cg_resolve_binding(state, _coerce_name(try(target.name)))
+  if typeof(target_binding) != "struct" then return [] end if
+  base_slot = -1
+  bounds_proven = false
+  if typeof(index) == "struct" and _coerce_name(try(index.node_kind)) == "Var" then
+    index_binding = scope.cg_resolve_binding(state, _coerce_name(try(index.name)))
+    if typeof(index_binding) == "struct" and typeof(state.loop_index_fast_stack) == "array" and len(state.loop_index_fast_stack) > 0 then
+      li = len(state.loop_index_fast_stack) - 1
+      while li >= 0
+        loop_rec = state.loop_index_fast_stack[li]
+        if typeof(loop_rec) == "array" and len(loop_rec) >= 2 and loop_rec[0] == index_binding.id then
+          targets = loop_rec[1]
+          if typeof(targets) == "array" and len(targets) > 0 then
+            for ti = 0 to len(targets) - 1
+              spec = targets[ti]
+              if typeof(spec) == "array" and len(spec) >= 4 and spec[0] == target_binding.id and spec[1] == kind then
+                base_slot = spec[2]
+                bounds_proven = spec[3]
+                return [kind, base_slot, bounds_proven]
+              end if
+            end for
+          end if
+        end if
+        li = li - 1
+      end while
+    end if
+  end if
+  exact_len = _opt_type_exact_length(fact)
+  cv = cg_expr_try_const_value(state, index)
+  if exact_len >= 0 and cv.ok and typeof(cv.value) == "int" then
+    // Negative indices still require runtime length-based normalization.
+    if cv.value >= 0 and cv.value < exact_len then bounds_proven = true end if
+  end if
+  return [kind, base_slot, bounds_proven]
+end function
+
+function _opt_emit_known_index(state, expr, plan)
+  kind = plan[0]
+  base_slot = plan[1]
+  bounds_proven = plan[2]
+  lid = _next_lid(state)
+  l_oob = "idx_fast_oob_" + lid
+  l_done = "idx_fast_done_" + lid
+  state.asm = a.mark(state.asm, "idx_fast_" + kind + "_" + lid)
+  if bounds_proven then
+    state.asm = a.mark(state.asm, "idx_fast_bounds_elided_" + lid)
+  end if
+  spill = -1
+  if typeof(base_slot) == "int" and base_slot >= 0 then
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_slot)
+  else
+    state = cg_emit_expr(state, try(expr.target))
+    spill = core.alloc_expr_temps(state, 8)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, spill)
+  end if
+  state = cg_emit_expr(state, try(expr.index))
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+  if spill >= 0 then
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", spill)
+    state = core.free_expr_temps(state, 8)
+  end if
+  if bounds_proven == false then
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    l_nonnegative = "idx_fast_nonnegative_" + lid
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.jcc(state.asm, "ge", l_nonnegative)
+    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.mark(state.asm, l_nonnegative)
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.jcc(state.asm, "l", l_oob)
+    state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.jcc(state.asm, "ge", l_oob)
+  end if
+  if kind == "array" then
+    state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r11", "rcx", 8, 8)
+  else
+    if kind == "bytes" then
+      state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r11", "rcx", 1, 8)
+      state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    else
+      state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r11", "rcx", 1, 8)
+      state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
+      state.asm = a.lea_r11_rip(state.asm, "obj_char_table")
+      state.asm = a.shl_rax_imm8(state.asm, 4)
+      state.asm = a.add_r64_r64(state.asm, "rax", "r11")
+    end if
+  end if
+  if bounds_proven == false then
+    state.asm = a.jmp(state.asm, l_done)
+    state.asm = a.mark(state.asm, l_oob)
+    state = core.emit_dbg_line(state, expr)
+    state = _emit_make_error_const(state, c.ERR_INDEX_OOB, "Array index out of bounds")
+    state = _emit_auto_errprop(state)
+    state.asm = a.mark(state.asm, l_done)
+  end if
+  return state
+end function
+
 function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
   if op == "+" then
     if rhs_ok and rhs_const == 1 then
@@ -2082,6 +2323,83 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
   return state
 end function
 
+function _emit_known_float_binop(state, expr)
+  op = _coerce_name(try(expr.op))
+  supported = op == "+" or op == "-" or op == "*" or op == "/" or op == "%" or op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
+  if supported == false then return [state, false] end if
+  lhs = _opt_type_base(_opt_expr_known_type(state, try(expr.left)))
+  rhs = _opt_type_base(_opt_expr_known_type(state, try(expr.right)))
+  lhs_numeric = lhs == "int" or lhs == "float" or lhs == "number"
+  rhs_numeric = rhs == "int" or rhs == "float" or rhs == "number"
+  if lhs_numeric == false or rhs_numeric == false or (lhs != "float" and rhs != "float") then return [state, false] end if
+
+  lid = _next_lid(state)
+  l_fail = "numeric_float_fail_" + lid
+  l_done = "numeric_float_done_" + lid
+  state.asm = a.mark(state.asm, "numeric_float_fast_" + lid)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  state = core.emit_to_double_xmm(state, 0, l_fail)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+  state = core.emit_to_double_xmm(state, 1, l_fail)
+
+  if op == "/" or op == "%" then
+    state.asm = a.xorpd_xmm_xmm(state.asm, "xmm2", "xmm2")
+    state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm1", "xmm2")
+    state.asm = a.jcc(state.asm, "e", l_fail)
+  end if
+
+  if op == "+" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if op == "-" then state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if op == "*" then state.asm = a.mulsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if op == "/" then state.asm = a.divsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if op == "%" then
+    state.asm = a.movapd_xmm_xmm(state.asm, "xmm3", "xmm0")
+    state.asm = a.divsd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    state.asm = a.roundsd_xmm_xmm_imm8(state.asm, "xmm2", "xmm0", 1)
+    state.asm = a.mulsd_xmm_xmm(state.asm, "xmm2", "xmm1")
+    state.asm = a.subsd_xmm_xmm(state.asm, "xmm3", "xmm2")
+    state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", "xmm3")
+  end if
+
+  is_compare = op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
+  if is_compare then
+    state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    if op == "==" then
+      state.asm = a.setcc_al(state.asm, "e")
+      state.asm = a.setcc_r8(state.asm, "p", "dl")
+      state.asm = a.xor_r8_imm8(state.asm, "dl", 1)
+      state.asm = a.and_r8_r8(state.asm, "al", "dl")
+    else
+      if op == "!=" then
+        state.asm = a.setcc_al(state.asm, "ne")
+        state.asm = a.setcc_r8(state.asm, "p", "dl")
+        state.asm = a.or_r8_r8(state.asm, "al", "dl")
+      else
+        cc = "b"
+        if op == "<=" then cc = "be" end if
+        if op == ">" then cc = "a" end if
+        if op == ">=" then cc = "ae" end if
+        state.asm = a.setcc_al(state.asm, cc)
+        state.asm = a.setcc_r8(state.asm, "p", "dl")
+        state.asm = a.xor_r8_imm8(state.asm, "dl", 1)
+        state.asm = a.and_r8_r8(state.asm, "al", "dl")
+      end if
+    end if
+    state.asm = a.movzx_eax_al(state.asm)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+    state.asm = a.jmp(state.asm, l_done)
+  else
+    state = core.emit_normalize_xmm0_to_value(state)
+    state.asm = a.jmp(state.asm, l_done)
+  end if
+
+  state.asm = a.mark(state.asm, l_fail)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.mark(state.asm, l_done)
+  return [state, true]
+end function
+
 function _emit_expr_bin(state, expr)
   if expr.op == "and" then
     lid_and = _next_lid(state)
@@ -2196,6 +2514,9 @@ function _emit_expr_bin(state, expr)
     state = _emit_known_int_binop(state, op, lhs_const_int_ok, lhs_const_int, rhs_const_int_ok, rhs_const_int)
     return state
   end if
+  known_float_result = _emit_known_float_binop(state, expr)
+  state = known_float_result[0]
+  if known_float_result[1] then return state end if
 
   lid = _next_lid(state)
   l_int = "bin_int_" + lid
@@ -3948,6 +4269,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
     arg0 = call_args[0]
     known_ty = _opt_try_known_type_label(state, arg0, false)
     if known_ty != "" then
+      state.asm = a.mark(state.asm, "known_type_label_fast_" + _next_lid(state))
       state.asm = a.lea_rax_rip(state.asm, known_ty)
       return [state, true]
     end if
@@ -3988,6 +4310,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
     arg1 = call_args[0]
     known_tn = _opt_try_known_type_label(state, arg1, true)
     if known_tn != "" then
+      state.asm = a.mark(state.asm, "known_type_label_fast_" + _next_lid(state))
       state.asm = a.lea_rax_rip(state.asm, known_tn)
       return [state, true]
     end if
@@ -8311,6 +8634,8 @@ function _emit_inline_call(state, callee, args)
   saved_boxed = state.current_fn_boxed_names
   saved_env_index = state.current_fn_env_index
   saved_param_names = try(state.current_fn_param_names)
+  saved_known_value_types = state.known_value_types
+  saved_loop_index_fast_stack = state.loop_index_fast_stack
 
   base_globals = []
   if typeof(saved_scope_stack) == "array" and len(saved_scope_stack) > 0 then base_globals = saved_scope_stack[0] end if
@@ -8334,6 +8659,8 @@ function _emit_inline_call(state, callee, args)
   state.current_fn_param_names = params
   state.in_function = true
   state.func_ret_label = l_end
+  state.known_value_types = []
+  state.loop_index_fast_stack = []
 
   dot = -1
   for qi = len(callee) - 1 to 0
@@ -8404,6 +8731,8 @@ function _emit_inline_call(state, callee, args)
   state.current_fn_boxed_names = saved_boxed
   state.current_fn_env_index = saved_env_index
   state.current_fn_param_names = saved_param_names
+  state.known_value_types = saved_known_value_types
+  state.loop_index_fast_stack = saved_loop_index_fast_stack
 
   delta = state.expr_temp_top - base_top
   if delta > 0 then state = core.free_expr_temps(state, delta) end if

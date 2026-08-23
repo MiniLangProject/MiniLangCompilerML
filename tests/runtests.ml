@@ -286,6 +286,33 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
     print "[FAIL] " + name + " (constant loop retained dynamic end/step state)"
     return false
   end if
+  flow_labels = _label_function_block(labels, "extended_type_flow")
+  flow_markers = [
+    "numeric_float_fast_", "bool_condition_fast_",
+    "struct_member_fast_", "struct_setmember_fast_",
+    "loop_invariant_base_array_", "loop_invariant_base_bytes_",
+    "idx_fast_array_", "idx_fast_bytes_", "idx_fast_bounds_elided_",
+    "seti_fast_bytes_", "seti_fast_bounds_elided_"
+  ]
+  if flow_labels == "" then
+    print "[FAIL] " + name + " (extended type-flow function is missing)"
+    return false
+  end if
+  for each flow_marker in flow_markers
+    if s.contains(flow_labels, flow_marker) == false then
+      print "[FAIL] " + name + " (extended type-flow/BCE lowering is missing: " + flow_marker + ")"
+      return false
+    end if
+  end for
+  if s.contains(flow_labels, "idx_fast_oob_") or s.contains(flow_labels, "seti_fast_oob_") then
+    print "[FAIL] " + name + " (proven fixed-length loop retained bounds checks)"
+    return false
+  end if
+  negative_index_labels = _label_function_block(labels, "fixed_negative_index")
+  if s.contains(negative_index_labels, "idx_fast_array_") == false or s.contains(negative_index_labels, "idx_fast_nonnegative_") == false or s.contains(negative_index_labels, "idx_fast_oob_") == false then
+    print "[FAIL] " + name + " (negative fixed index incorrectly elided normalization/bounds checks)"
+    return false
+  end if
 
   small_src = _path_join(repo_root, "tests\\root_frame_small.ml")
   small_out = _path_join(repo_root, "tests\\_rt_root_frame_small.exe")

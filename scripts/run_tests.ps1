@@ -236,7 +236,7 @@ try {
     Write-LogLine ""
     Write-LogLine "== run input ABI regression =="
     $inputTimer = [System.Diagnostics.Stopwatch]::StartNew()
-    $inputOutput = @("show tables;" | & $inputExe 2>&1 | ForEach-Object { "" + $_ })
+    $inputOutput = @(@("show tables;", "\q") | & $inputExe 2>&1 | ForEach-Object { "" + $_ })
     $inputExit = $LASTEXITCODE
     $inputTimer.Stop()
     foreach ($line in $inputOutput) {

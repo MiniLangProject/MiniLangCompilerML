@@ -79,47 +79,85 @@ function emit_input_function(state)
     return state
   end if
 
-  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+  // Keep the input handle and accumulated byte count above shadow space.
+  // Reading one byte at a time preserves every logical line in redirected
+  // input instead of dropping the bytes after the first newline.
+  state.asm = a.sub_rsp_imm8(state.asm, 0x38)
 
   state.asm = a.mov_rcx_imm32(state.asm, 0xFFFFFFF6)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_GetStdHandle")
   state.asm = a.call_rax(state.asm)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x28, "rax")
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x30, "eax")
 
-  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_read_top = "in_read_top_" + lid
+  l_read_ok = "in_read_ok_" + lid
+  l_eof = "in_eof_" + lid
+  l_finish = "in_finish_" + lid
+  l_increment = "in_increment_" + lid
+  l_return_empty = "in_return_empty_" + lid
+  l_nonempty = "in_nonempty_" + lid
+
+  state.asm = a.mark(state.asm, l_read_top)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x30)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", INPUT_READ_MAX)
+  state.asm = a.jcc(state.asm, "ge", l_finish)
+
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 0x28)
   state.asm = a.lea_rax_rip(state.asm, "inbuf")
-  state.asm = a.mov_rdx_rax(state.asm)
-  state.asm = a.mov_r8d_imm32(state.asm, INPUT_READ_MAX)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rsp", 0x30)
+  state.asm = a.add_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+  state.asm = a.mov_r8d_imm32(state.asm, 1)
   state.asm = a.lea_r9_rip(state.asm, "bytesRead")
   state.asm = a.mov_qword_ptr_rsp20_rax_zero(state.asm)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_ReadFile")
   state.asm = a.call_rax(state.asm)
 
-  lid = state.label_id
-  state.label_id = state.label_id + 1
-  l_read_ok = "in_read_ok_" + lid
-  l_nonempty = "in_nonempty_" + lid
-
   state.asm = a.test_r32_r32(state.asm, "eax", "eax")
   state.asm = a.jcc(state.asm, "ne", l_read_ok)
-  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
-  state.asm = a.mov_rip_dword_eax(state.asm, "bytesRead")
+  state.asm = a.jmp(state.asm, l_eof)
   state.asm = a.mark(state.asm, l_read_ok)
-
   state.asm = a.mov_eax_rip_dword(state.asm, "bytesRead")
-  state.asm = a.mov_r32_r32(state.asm, "r9d", "eax")
+  state.asm = a.cmp_r32_imm(state.asm, "eax", 0)
+  state.asm = a.jcc(state.asm, "e", l_eof)
 
   state.asm = a.lea_rax_rip(state.asm, "inbuf")
-  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-  state.asm = a.mov_r32_r32(state.asm, "edx", "r9d")
-  state.asm = a.mov_r32_imm32(state.asm, "r8d", 10)
-  state.asm = a.mov_r32_imm32(state.asm, "r9d", 13)
-  state.asm = a.call(state.asm, "fn_scan_byte2_bytes")
-  state.asm = a.mov_r32_r32(state.asm, "r9d", "edx")
+  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x30)
+  state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
+  state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", 10)
+  state.asm = a.jcc(state.asm, "e", l_finish)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", 13)
+  state.asm = a.jcc(state.asm, "ne", l_increment)
+  state.asm = a.jmp(state.asm, l_read_top)
+
+  state.asm = a.mark(state.asm, l_increment)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x30)
+  state.asm = a.add_r32_imm(state.asm, "eax", 1)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x30, "eax")
+  state.asm = a.jmp(state.asm, l_read_top)
+
+  // EOF is distinct from a blank line so interactive consumers can terminate.
+  state.asm = a.mark(state.asm, l_eof)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x30)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", 0)
+  state.asm = a.jcc(state.asm, "ne", l_finish)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.add_rsp_imm8(state.asm, 0x38)
+  state.asm = a.ret(state.asm)
+
+  state.asm = a.mark(state.asm, l_finish)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "rsp", 0x30)
 
   state.asm = a.cmp_r32_imm(state.asm, "r9d", 0)
   state.asm = a.jcc(state.asm, "ne", l_nonempty)
+  state.asm = a.mark(state.asm, l_return_empty)
   state.asm = a.lea_rax_rip(state.asm, "obj_empty_string")
-  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.add_rsp_imm8(state.asm, 0x38)
   state.asm = a.ret(state.asm)
   state.asm = a.mark(state.asm, l_nonempty)
 
@@ -148,7 +186,7 @@ function emit_input_function(state)
   state.asm = a.mov_membase_disp_imm8(state.asm, "rax", 0, 0)
 
   state.asm = a.mov_rax_r11(state.asm)
-  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.add_rsp_imm8(state.asm, 0x38)
   state.asm = a.ret(state.asm)
   return state
 end function

@@ -486,6 +486,7 @@ function _for_unroll_values(state, s)
 end function
 
 function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
+  if exprmod._opt_type_base(exprmod._opt_expr_known_type(state, cond_expr)) == "bool" then return state end if
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
   state.asm = a.and_r64_imm(state.asm, "r10", 7)
   state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_VOID)
@@ -496,6 +497,18 @@ function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   state.asm = a.jmp(state.asm, false_label)
   state.asm = a.mark(state.asm, ok_label)
   return state
+end function
+
+function _emit_condition_false_jump(state, cond_expr, false_label)
+  if exprmod._opt_type_base(exprmod._opt_expr_known_type(state, cond_expr)) == "bool" then
+    lid_bool_fast = state.label_id
+    state.label_id = state.label_id + 1
+    state.asm = a.mark(state.asm, "bool_condition_fast_" + lid_bool_fast)
+    state.asm = a.cmp_r64_imm(state.asm, "rax", t.enc_bool(false))
+    state.asm = a.jcc(state.asm, "e", false_label)
+    return state
+  end if
+  return core.emit_jmp_if_false_rax(state, false_label)
 end function
 
 struct DeferCollectResult
@@ -1234,7 +1247,7 @@ function cg_emit_stmt(state, stmt)
       state = exprmod.cg_emit_expr(state, cond)
       l_cond_ok = "if_cond_ok_" + lid_if + "_" + (if_ci2 - start_idx)
       state = _emit_condition_nonvoid_guard(state, cond, l_cond_ok, next_lbl)
-      state = core.emit_jmp_if_false_rax(state, next_lbl)
+      state = _emit_condition_false_jump(state, cond, next_lbl)
       state = scope.cg_scope_enter(state)
       state = _emit_stmt_list(state, body)
       state = scope.cg_scope_leave(state, true)
@@ -1378,6 +1391,30 @@ function cg_emit_stmt(state, stmt)
       end if
     end if
 
+    known_struct_sm = exprmod._opt_expr_known_type(state, obj_expr)
+    if s.startsWith(known_struct_sm, "struct:") then
+      struct_qname_sm = s.substr(known_struct_sm, 7, len(known_struct_sm) - 7)
+      fields_fast_sm = exprmod._state_struct_fields_get(state, struct_qname_sm)
+      if typeof(fields_fast_sm) == "array" and len(fields_fast_sm) > 0 then
+        for fi_sm = 0 to len(fields_fast_sm) - 1
+          if _coerce_name(fields_fast_sm[fi_sm]) == field then
+            lid_sm_fast = state.label_id
+            state.label_id = state.label_id + 1
+            state.asm = a.mark(state.asm, "struct_setmember_fast_" + lid_sm_fast)
+            state = exprmod.cg_emit_expr(state, obj_expr)
+            target_fast_off = core.alloc_expr_temps(state, 8)
+            state.asm = a.mov_rsp_disp32_rax(state.asm, target_fast_off)
+            state = exprmod.cg_emit_expr(state, stmt.expr)
+            state.asm = a.mov_r64_r64(state.asm, "r13", "rax")
+            state.asm = a.mov_r64_membase_disp(state.asm, "r12", "rsp", target_fast_off)
+            state = core.free_expr_temps(state, 8)
+            state.asm = a.mov_membase_disp_r64(state.asm, "r12", 8 + fi_sm * 8, "r13")
+            return state
+          end if
+        end for
+      end if
+    end if
+
     // The RHS may allocate and collect. Native registers are not managed GC
     // roots, so publish the target in the expression-temp root range until the
     // RHS has been evaluated.
@@ -1418,6 +1455,11 @@ function cg_emit_stmt(state, stmt)
   end if
 
   if k == "SetIndex" then
+    fast_store = exprmod._opt_known_index_plan(state, stmt)
+    if typeof(fast_store) == "array" and len(fast_store) >= 3 and (fast_store[0] == "array" or fast_store[0] == "bytes") then
+      return _opt_emit_known_setindex(state, stmt, fast_store)
+    end if
+
     lid_si = state.label_id
     state.label_id = state.label_id + 1
     l_rhs_void = "seti_rhs_void_" + lid_si
@@ -1837,7 +1879,7 @@ function cg_emit_stmt(state, stmt)
       state = exprmod.cg_emit_expr(state, stmt.cond)
       l_wcond_ok = "while_cond_ok_" + lid_w
       state = _emit_condition_nonvoid_guard(state, stmt.cond, l_wcond_ok, l_end)
-      state = core.emit_jmp_if_false_rax(state, l_end)
+      state = _emit_condition_false_jump(state, stmt.cond, l_end)
     end if
     state = scope.cg_scope_enter(state)
     state = _emit_stmt_list(state, stmt.body)
@@ -1874,7 +1916,7 @@ function cg_emit_stmt(state, stmt)
         state = exprmod.cg_emit_expr(state, stmt.cond)
         l_dwcond_ok = "dowhile_cond_ok_" + lid_dw
         state = _emit_condition_nonvoid_guard(state, stmt.cond, l_dwcond_ok, l_end)
-        state = core.emit_jmp_if_false_rax(state, l_end)
+        state = _emit_condition_false_jump(state, stmt.cond, l_end)
         state.asm = a.jmp(state.asm, l_body)
       end if
     end if
@@ -1923,6 +1965,7 @@ function cg_emit_stmt(state, stmt)
     state = scope.cg_scope_enter(state)
     // For-loop variable is a fresh declaration in loop scope (Python parity).
     state = scope.declare_fresh_binding(state, qv, stmt, bind_kind_for)
+    loop_index_binding = scope.cg_resolve_binding(state, qv)
     fstate_names = _for_state_names(stmt)
     end_name_f = ""
     step_name_f = ""
@@ -1935,6 +1978,21 @@ function cg_emit_stmt(state, stmt)
     end if
     if step_name_f != "" then
       state = scope.declare_fresh_binding(state, step_name_f, stmt, bind_kind_for)
+    end if
+
+    index_hoists = _for_index_hoist_plans(state, stmt, loop_index_binding)
+    hoist_targets = []
+    if typeof(index_hoists) == "array" and len(index_hoists) > 0 then
+      for hi = 0 to len(index_hoists) - 1
+        hoist = index_hoists[hi]
+        base_slot_h = core.alloc_expr_temps(state, 8)
+        state = exprmod.cg_emit_expr(state, hoist[1])
+        state.asm = a.mov_rsp_disp32_rax(state.asm, base_slot_h)
+        lid_h = state.label_id
+        state.label_id = state.label_id + 1
+        state.asm = a.mark(state.asm, "loop_invariant_base_" + hoist[2] + "_" + lid_h)
+        hoist_targets = hoist_targets + [[hoist[0], hoist[2], base_slot_h, hoist[3]]]
+      end for
     end if
     state = exprmod.cg_emit_expr(state, stmt.start)
     state = scope.emit_store_var_scoped(state, qv, stmt)
@@ -1974,9 +2032,12 @@ function cg_emit_stmt(state, stmt)
     end if
 
     state.asm = a.mark(state.asm, l_top_f)
+    saved_loop_fast_stack = state.loop_index_fast_stack
+    state.loop_index_fast_stack = saved_loop_fast_stack + [[try(loop_index_binding.id), hoist_targets]]
     state = scope.cg_scope_enter(state)
     state = _emit_stmt_list(state, stmt.body)
     state = scope.cg_scope_leave(state, true)
+    state.loop_index_fast_stack = saved_loop_fast_stack
 
     state.asm = a.mark(state.asm, l_cont_f)
     state = th.emit_gc_safepoint_poll(state)
@@ -2014,6 +2075,7 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.jmp(state.asm, l_top_f)
 
     state.asm = a.mark(state.asm, l_end_f)
+    if len(hoist_targets) > 0 then state = core.free_expr_temps(state, len(hoist_targets) * 8) end if
     state = _breakstack_pop(state)
     state = scope.cg_scope_leave(state, true)
     return state
@@ -2656,6 +2718,580 @@ function _infer_known_int_names(state, fn_node)
     candidates = kept
   end while
   return candidates
+end function
+
+function inline _typeflow_base(type_name)
+  if typeof(type_name) != "string" or type_name == "" then return "" end if
+  for i = 0 to len(type_name) - 1
+    if type_name[i] == ":" then return s.substr(type_name, 0, i) end if
+  end for
+  return type_name
+end function
+
+function _typeflow_exact_length(type_name)
+  if typeof(type_name) != "string" or type_name == "" then return -1 end if
+  colon = -1
+  for i = 0 to len(type_name) - 1
+    if type_name[i] == ":" then colon = i; break end if
+  end for
+  if colon < 0 then return -1 end if
+  base = s.substr(type_name, 0, colon)
+  if base != "array" and base != "bytes" then return -1 end if
+  raw = s.substr(type_name, colon + 1, len(type_name) - colon - 1)
+  parsed = toNumber(raw)
+  if typeof(parsed) != "int" or parsed < 0 then return -1 end if
+  return parsed
+end function
+
+function _typeflow_get(items, name)
+  if typeof(items) != "array" or len(items) <= 0 then return "" end if
+  for i = 0 to len(items) - 1
+    rec = items[i]
+    if typeof(rec) == "array" and len(rec) >= 2 and rec[0] == name and typeof(rec[1]) == "string" then return rec[1] end if
+  end for
+  return ""
+end function
+
+function _typeflow_set(items, name, value)
+  if typeof(items) != "array" then items = [] end if
+  if len(items) > 0 then
+    for i = 0 to len(items) - 1
+      rec = items[i]
+      if typeof(rec) == "array" and len(rec) >= 2 and rec[0] == name then
+        items[i][1] = value
+        return items
+      end if
+    end for
+  end if
+  return items + [[name, value]]
+end function
+
+function _typeflow_remove(items, name)
+  kept_items = []
+  if typeof(items) != "array" or len(items) <= 0 then return kept_items end if
+  for i = 0 to len(items) - 1
+    rec = items[i]
+    if typeof(rec) != "array" or len(rec) < 2 or rec[0] != name then kept_items = kept_items + [rec] end if
+  end for
+  return kept_items
+end function
+
+function _typeflow_struct_qname(state, callee)
+  raw = _member_qname(callee)
+  if raw == "" then return "" end if
+  aliased = exprmod._apply_import_alias(state, raw)
+  if typeof(exprmod._state_struct_fields_get(state, aliased)) == "array" then return aliased end if
+  qualified = exprmod._qualify_identifier(state, aliased)
+  if typeof(exprmod._state_struct_fields_get(state, qualified)) == "array" then return qualified end if
+  // Match the Python backend's unique suffix fallback while function-prefix
+  // context is temporarily restored between analysis and emission.
+  suffix_hits = exprmod._pool_collect_suffix(state.struct_fields, "", "." + aliased, [])
+  if typeof(suffix_hits) == "array" and len(suffix_hits) == 1 then return suffix_hits[0] end if
+  return ""
+end function
+
+function _typeflow_expr_type(state, ex, known)
+  if typeof(ex) != "struct" then return "" end if
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Num" then
+    if typeof(try(ex.value)) == "int" then return "int" end if
+    if typeof(try(ex.value)) == "float" then return "float" end if
+    return ""
+  end if
+  if k == "Bool" then return "bool" end if
+  if k == "Str" then return "string" end if
+  if k == "ArrayLit" then
+    items = try(ex.items)
+    if typeof(items) != "array" then items = [] end if
+    return "array:" + len(items)
+  end if
+  if k == "Var" then return _typeflow_get(known, _coerce_name(try(ex.name))) end if
+  if k == "IsType" then return "bool" end if
+  if k == "Unary" then
+    op_u = _coerce_name(try(ex.op))
+    rb = _typeflow_base(_typeflow_expr_type(state, try(ex.right), known))
+    if op_u == "not" and rb != "" then return "bool" end if
+    if op_u == "~" and rb == "int" then return "int" end if
+    if op_u == "-" and rb == "int" then return "int" end if
+    if op_u == "-" and (rb == "float" or rb == "number") then return "number" end if
+    return ""
+  end if
+  if k == "Bin" then
+    op_b = _coerce_name(try(ex.op))
+    lb = _typeflow_base(_typeflow_expr_type(state, try(ex.left), known))
+    rb2 = _typeflow_base(_typeflow_expr_type(state, try(ex.right), known))
+    if op_b == "==" or op_b == "!=" then return "bool" end if
+    numeric_l_cmp = lb == "int" or lb == "float" or lb == "number"
+    numeric_r_cmp = rb2 == "int" or rb2 == "float" or rb2 == "number"
+    if (op_b == "<" or op_b == "<=" or op_b == ">" or op_b == ">=") and numeric_l_cmp and numeric_r_cmp then return "bool" end if
+    if (op_b == "and" or op_b == "or") and lb != "" and rb2 != "" then return "bool" end if
+    if (op_b == "&" or op_b == "|" or op_b == "^" or op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" then return "int" end if
+    if (op_b == "+" or op_b == "-" or op_b == "*" or op_b == "%") and lb == "int" and rb2 == "int" then return "int" end if
+    numeric_l = lb == "int" or lb == "float" or lb == "number"
+    numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
+    if (op_b == "+" or op_b == "-" or op_b == "*" or op_b == "/" or op_b == "%") and numeric_l and numeric_r then return "number" end if
+    return ""
+  end if
+  if k == "Index" then
+    tb = _typeflow_base(_typeflow_expr_type(state, try(ex.target), known))
+    if tb == "bytes" then return "int" end if
+    if tb == "string" then return "string" end if
+    return ""
+  end if
+  if k == "Call" then
+    cal = try(ex.callee)
+    raw = _member_qname(cal)
+    args = try(ex.args)
+    if typeof(args) != "array" then args = [] end if
+    if raw == "len" then return "int" end if
+    if raw == "typeof" or raw == "typeName" then return "string" end if
+    if raw == "bytes" or raw == "byteBuffer" then
+      if len(args) == 0 then return "bytes:0" end if
+      if len(args) == 1 or len(args) == 2 then
+        sz = _intflow_const_int(state, args[0])
+        if sz[0] and sz[1] >= 0 then return "bytes:" + sz[1] end if
+      end if
+      return "bytes"
+    end if
+    sq = _typeflow_struct_qname(state, cal)
+    if sq != "" then return "struct:" + sq end if
+  end if
+  return ""
+end function
+
+function _typeflow_merge(inferred)
+  if typeof(inferred) != "array" or len(inferred) <= 0 then return "" end if
+  first = inferred[0]
+  if typeof(first) != "string" or first == "" then return "" end if
+  all_same = true
+  numeric = true
+  base0 = _typeflow_base(first)
+  same_base = true
+  for i = 0 to len(inferred) - 1
+    value = inferred[i]
+    if typeof(value) != "string" or value == "" then return "" end if
+    if value != first then all_same = false end if
+    base = _typeflow_base(value)
+    if base != base0 then same_base = false end if
+    if base != "int" and base != "float" and base != "number" then numeric = false end if
+  end for
+  if all_same then return first end if
+  if numeric then return "number" end if
+  if same_base and (base0 == "array" or base0 == "bytes" or base0 == "string") then return base0 end if
+  return ""
+end function
+
+function _typeflow_scan_read_expr(ex, tracked, initialized, read_before)
+  if typeof(ex) != "struct" then return read_before end if
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Var" then
+    nm = _coerce_name(try(ex.name))
+    if _arr_has(tracked, nm) and _arr_has(initialized, nm) == false then read_before = _arr_add_unique(read_before, nm) end if
+    return read_before
+  end if
+  child = try(ex.left); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.right); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.expr); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.target); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.index); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.callee); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.obj); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  groups = [try(ex.args), try(ex.items), try(ex.values)]
+  for each group in groups
+    if typeof(group) != "array" or len(group) <= 0 then continue end if
+    for each value in group
+      value_expr = value
+      if typeof(value) == "array" and len(value) >= 2 then value_expr = value[1] end if
+      read_before = _typeflow_scan_read_expr(value_expr, tracked, initialized, read_before)
+    end for
+  end for
+  return read_before
+end function
+
+function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, direct)
+  if typeof(stmts) != "array" or len(stmts) <= 0 then return [initialized, read_before] end if
+  for each st in stmts
+    if typeof(st) != "struct" then continue end if
+    k = _coerce_name(try(st.node_kind))
+    if k == "FunctionDef" or k == "GlobalDecl" then continue end if
+    if k == "Assign" or k == "ConstDecl" or k == "SynchronizedDecl" then
+      read_before = _typeflow_scan_read_expr(try(st.expr), tracked, initialized, read_before)
+      if direct then initialized = _arr_add_unique(initialized, _coerce_name(try(st.name))) end if
+      continue
+    end if
+    if k == "For" then
+      read_before = _typeflow_scan_read_expr(try(st.start), tracked, initialized, read_before)
+      read_before = _typeflow_scan_read_expr(try(st.end_expr), tracked, initialized, read_before)
+      inner_for = initialized + []
+      inner_for = _arr_add_unique(inner_for, _coerce_name(try(st.var)))
+      nested_for = _typeflow_scan_read_order(try(st.body), tracked, inner_for, read_before, false)
+      read_before = nested_for[1]
+      continue
+    end if
+    if _is_foreach_stmt(st) then
+      read_before = _typeflow_scan_read_expr(try(st.iterable), tracked, initialized, read_before)
+      inner_each = initialized + []
+      inner_each = _arr_add_unique(inner_each, _foreach_var_name(st))
+      nested_each = _typeflow_scan_read_order(try(st.body), tracked, inner_each, read_before, false)
+      read_before = nested_each[1]
+      continue
+    end if
+    exprs = [try(st.expr), try(st.cond), try(st.target), try(st.index), try(st.start), try(st.end_expr), try(st.iterable), try(st.obj)]
+    for each ex in exprs read_before = _typeflow_scan_read_expr(ex, tracked, initialized, read_before) end for
+    elifs = try(st.elifs)
+    if typeof(elifs) == "array" and len(elifs) > 0 then
+      for each branch in elifs
+        if typeof(branch) == "array" and len(branch) >= 2 then
+          read_before = _typeflow_scan_read_expr(branch[0], tracked, initialized, read_before)
+        end if
+      end for
+    end if
+    kids = _scan_stmt_children(st)
+    if typeof(kids) == "array" and len(kids) > 0 then
+      nested = _typeflow_scan_read_order(kids, tracked, initialized + [], read_before, false)
+      read_before = nested[1]
+    end if
+  end for
+  return [initialized, read_before]
+end function
+
+function _infer_known_value_types(state, fn_node)
+  if typeof(fn_node) != "struct" then return [] end if
+  assignments = []
+  direct_initializers = []
+  loop_names = []
+  normal_names = []
+  excluded = []
+
+  params = try(fn_node.params)
+  if typeof(params) == "array" and len(params) > 0 then for i = 0 to len(params) - 1 excluded = _arr_add_unique(excluded, _coerce_name(params[i])) end for end if
+  boxed = try(fn_node._ml_boxed)
+  if typeof(boxed) == "array" and len(boxed) > 0 then for i = 0 to len(boxed) - 1 excluded = _arr_add_unique(excluded, _coerce_name(boxed[i])) end for end if
+  captures = try(fn_node._ml_captures)
+  if typeof(captures) == "array" and len(captures) > 0 then for i = 0 to len(captures) - 1 excluded = _arr_add_unique(excluded, _coerce_name(captures[i])) end for end if
+  globals = try(fn_node._ml_globals_declared)
+  if typeof(globals) == "array" and len(globals) > 0 then for i = 0 to len(globals) - 1 excluded = _arr_add_unique(excluded, _coerce_name(globals[i])) end for end if
+
+  body = try(fn_node.body)
+  if typeof(body) != "array" then body = [] end if
+  if len(body) > 0 then
+    for i = 0 to len(body) - 1
+      st0 = body[i]
+      if typeof(st0) != "struct" then continue end if
+      k0 = _coerce_name(try(st0.node_kind))
+      if k0 == "Assign" or k0 == "ConstDecl" then
+        nm0 = _coerce_name(try(st0.name))
+        if nm0 != "" and s.contains(nm0, ".") == false then direct_initializers = direct_initializers + [[nm0, try(st0.expr)]] end if
+      end if
+    end for
+  end if
+
+  stack = body + []
+  pos = 0
+  while pos < len(stack)
+    st = stack[pos]
+    pos = pos + 1
+    if typeof(st) != "struct" then continue end if
+    k = _coerce_name(try(st.node_kind))
+    if k == "FunctionDef" then continue end if
+    if k == "GlobalDecl" then
+      names_g = try(st.names)
+      if typeof(names_g) == "array" and len(names_g) > 0 then for gi = 0 to len(names_g) - 1 excluded = _arr_add_unique(excluded, _coerce_name(names_g[gi])) end for end if
+      continue
+    end if
+    if k == "SynchronizedDecl" then
+      excluded = _arr_add_unique(excluded, _coerce_name(try(st.name)))
+    else
+      if k == "Assign" or k == "ConstDecl" then
+        nm = _coerce_name(try(st.name))
+        if nm != "" and s.contains(nm, ".") == false then
+          assignments = _intflow_map_add(assignments, nm, try(st.expr))
+          normal_names = _arr_add_unique(normal_names, nm)
+        end if
+      end if
+    end if
+    if k == "For" then loop_names = _arr_add_unique(loop_names, _coerce_name(try(st.var))) end if
+    if _is_foreach_stmt(st) then excluded = _arr_add_unique(excluded, _foreach_var_name(st)) end if
+    kids = _scan_stmt_children(st)
+    if typeof(kids) == "array" and len(kids) > 0 then stack = stack + kids end if
+  end while
+
+  if len(loop_names) > 0 then
+    for i = 0 to len(loop_names) - 1
+      if _arr_has(normal_names, loop_names[i]) then excluded = _arr_add_unique(excluded, loop_names[i]) end if
+    end for
+  end if
+
+  tracked_names = loop_names + []
+  if len(assignments) > 0 then for i = 0 to len(assignments) - 1 tracked_names = _arr_add_unique(tracked_names, assignments[i][0]) end for end if
+  read_order = _typeflow_scan_read_order(body, tracked_names, [], [], true)
+  read_before_init = read_order[1]
+  if len(read_before_init) > 0 then for i = 0 to len(read_before_init) - 1 excluded = _arr_add_unique(excluded, read_before_init[i]) end for end if
+
+  initialized = loop_names + []
+  if len(direct_initializers) > 0 then for i = 0 to len(direct_initializers) - 1 initialized = _arr_add_unique(initialized, direct_initializers[i][0]) end for end if
+  candidates = []
+  if len(assignments) > 0 then for i = 0 to len(assignments) - 1 if _arr_has(initialized, assignments[i][0]) and _arr_has(excluded, assignments[i][0]) == false then candidates = _arr_add_unique(candidates, assignments[i][0]) end if end for end if
+  if len(loop_names) > 0 then for i = 0 to len(loop_names) - 1 if _arr_has(excluded, loop_names[i]) == false then candidates = _arr_add_unique(candidates, loop_names[i]) end if end for end if
+
+  facts = []
+  if len(loop_names) > 0 then for i = 0 to len(loop_names) - 1 if _arr_has(candidates, loop_names[i]) then facts = _typeflow_set(facts, loop_names[i], "int") end if end for end if
+  if len(direct_initializers) > 0 then
+    for i = 0 to len(direct_initializers) - 1
+      rec0 = direct_initializers[i]
+      if _arr_has(candidates, rec0[0]) and _typeflow_get(facts, rec0[0]) == "" then
+        ft0 = _typeflow_expr_type(state, rec0[1], facts)
+        if ft0 != "" then facts = _typeflow_set(facts, rec0[0], ft0) end if
+      end if
+    end for
+  end if
+
+  rounds = len(candidates) + 1
+  for round = 0 to rounds - 1
+    changed = false
+    if len(candidates) > 0 then
+      for i = 0 to len(candidates) - 1
+        nm_c = candidates[i]
+        vals = _intflow_map_get(assignments, nm_c)
+        if len(vals) <= 0 then continue end if
+        inferred = []
+        for j = 0 to len(vals) - 1 inferred = inferred + [_typeflow_expr_type(state, vals[j], facts)] end for
+        merged = _typeflow_merge(inferred)
+        if merged != "" and _typeflow_get(facts, nm_c) != merged then facts = _typeflow_set(facts, nm_c, merged); changed = true end if
+      end for
+    end if
+    if changed == false then break end if
+  end for
+
+  changed2 = true
+  while changed2
+    changed2 = false
+    snapshot = facts + []
+    if len(snapshot) > 0 then
+      for i = 0 to len(snapshot) - 1
+        nm_v = snapshot[i][0]
+        if _arr_has(loop_names, nm_v) and len(_intflow_map_get(assignments, nm_v)) <= 0 then continue end if
+        vals_v = _intflow_map_get(assignments, nm_v)
+        inferred_v = []
+        for j = 0 to len(vals_v) - 1 inferred_v = inferred_v + [_typeflow_expr_type(state, vals_v[j], facts)] end for
+        if len(vals_v) <= 0 or _typeflow_merge(inferred_v) == "" then facts = _typeflow_remove(facts, nm_v); changed2 = true end if
+      end for
+    end if
+  end while
+  return facts
+end function
+
+function _fast_target_add(items, name, expr)
+  if name == "" then return items end if
+  if typeof(items) != "array" then items = [] end if
+  if len(items) > 0 then for i = 0 to len(items) - 1 if items[i][0] == name then return items end if end for end if
+  return items + [[name, expr]]
+end function
+
+function _fast_index_scan_expr(ex, index_name, targets)
+  if typeof(ex) != "struct" then return targets end if
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Index" then
+    tgt = try(ex.target)
+    idx = try(ex.index)
+    if typeof(tgt) == "struct" and _coerce_name(try(tgt.node_kind)) == "Var" and typeof(idx) == "struct" and _coerce_name(try(idx.node_kind)) == "Var" and _coerce_name(try(idx.name)) == index_name then
+      targets = _fast_target_add(targets, _coerce_name(try(tgt.name)), tgt)
+    end if
+  end if
+  child = try(ex.left); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.right); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.expr); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.target); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.index); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.callee); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.obj); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  args = try(ex.args)
+  if typeof(args) == "array" and len(args) > 0 then for i = 0 to len(args) - 1 targets = _fast_index_scan_expr(args[i], index_name, targets) end for end if
+  items = try(ex.items)
+  if typeof(items) == "array" and len(items) > 0 then for i = 0 to len(items) - 1 targets = _fast_index_scan_expr(items[i], index_name, targets) end for end if
+  return targets
+end function
+
+function _fast_index_scan_loop(loop_node, index_name)
+  targets = []
+  mutated = []
+  body = try(loop_node.body)
+  if typeof(body) != "array" then body = [] end if
+  stack = body + []
+  pos = 0
+  while pos < len(stack)
+    st = stack[pos]
+    pos = pos + 1
+    if typeof(st) != "struct" then continue end if
+    k = _coerce_name(try(st.node_kind))
+    if k == "FunctionDef" then continue end if
+    if k == "Assign" or k == "ConstDecl" or k == "SynchronizedDecl" then mutated = _arr_add_unique(mutated, _coerce_name(try(st.name))) end if
+    if k == "SetIndex" then
+      tgt_si = try(st.target)
+      idx_si = try(st.index)
+      if typeof(tgt_si) == "struct" and _coerce_name(try(tgt_si.node_kind)) == "Var" and typeof(idx_si) == "struct" and _coerce_name(try(idx_si.node_kind)) == "Var" and _coerce_name(try(idx_si.name)) == index_name then
+        targets = _fast_target_add(targets, _coerce_name(try(tgt_si.name)), tgt_si)
+      end if
+    end if
+    child = try(st.expr); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.cond); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.target); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.index); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.start); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.end_expr); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.iterable); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.obj); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    kids = _scan_stmt_children(st)
+    if typeof(kids) == "array" and len(kids) > 0 then stack = stack + kids end if
+  end while
+  return [targets, mutated]
+end function
+
+function _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, start_value)
+  end_ex = try(loop_node.end_expr)
+  end_cv = _intflow_const_int(state, end_ex)
+  if end_cv[0] then return start_value <= end_cv[1] and end_cv[1] < exact_len end if
+  if typeof(end_ex) != "struct" or _coerce_name(try(end_ex.node_kind)) != "Bin" or _coerce_name(try(end_ex.op)) != "-" then return false end if
+  right_cv = _intflow_const_int(state, try(end_ex.right))
+  if right_cv[0] == false or right_cv[1] != 1 or start_value != 0 or exact_len <= 0 then return false end if
+  left = try(end_ex.left)
+  if typeof(left) != "struct" or _coerce_name(try(left.node_kind)) != "Call" then return false end if
+  if _member_qname(try(left.callee)) != "len" then return false end if
+  args = try(left.args)
+  if typeof(args) != "array" or len(args) != 1 then return false end if
+  arg = args[0]
+  return typeof(arg) == "struct" and _coerce_name(try(arg.node_kind)) == "Var" and _coerce_name(try(arg.name)) == target_name
+end function
+
+function _for_index_hoist_plans(state, loop_node, index_binding)
+  if state.in_function == false or typeof(index_binding) != "struct" then return [] end if
+  index_name = _coerce_name(try(loop_node.var))
+  if index_name == "" then return [] end if
+  scan = _fast_index_scan_loop(loop_node, index_name)
+  targets = scan[0]
+  mutated = scan[1]
+  if _arr_has(mutated, index_name) then return [] end if
+  start_cv = _intflow_const_int(state, try(loop_node.start))
+  if start_cv[0] == false or start_cv[1] < 0 then return [] end if
+  plans = []
+  if len(targets) <= 0 then return plans end if
+  target_names = []
+  for i = 0 to len(targets) - 1 target_names = _arr_add_unique(target_names, targets[i][0]) end for
+  target_names = _sort_names(target_names)
+  for i = 0 to len(target_names) - 1
+    rec = 0
+    for ri = 0 to len(targets) - 1 if targets[ri][0] == target_names[i] then rec = targets[ri]; break end if end for
+    if typeof(rec) != "array" or len(rec) < 2 then continue end if
+    target_name = rec[0]
+    if target_name == "" or _arr_has(mutated, target_name) then continue end if
+    fact = _typeflow_get(state.known_value_types, target_name)
+    kind = _typeflow_base(fact)
+    exact_len = _typeflow_exact_length(fact)
+    if (kind != "array" and kind != "bytes") or exact_len < 0 then continue end if
+    if _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, start_cv[1]) == false then continue end if
+    binding = scope.cg_resolve_binding(state, target_name)
+    if typeof(binding) != "struct" or (binding.kind != "local" and binding.kind != "param") then continue end if
+    plans = plans + [[binding.id, rec[1], kind, true]]
+  end for
+  return plans
+end function
+
+function _opt_emit_known_setindex(state, stmt, plan)
+  kind = plan[0]
+  base_slot = plan[1]
+  bounds_proven = plan[2]
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_rhs_void = "seti_fast_rhs_void_" + lid
+  l_oob = "seti_fast_oob_" + lid
+  l_bad_byte = "seti_fast_bad_byte_" + lid
+  l_done = "seti_fast_done_" + lid
+  state.asm = a.mark(state.asm, "seti_fast_" + kind + "_" + lid)
+  if bounds_proven then
+    state.asm = a.mark(state.asm, "seti_fast_bounds_elided_" + lid)
+  end if
+  own_base = -1
+  if typeof(base_slot) != "int" or base_slot < 0 then
+    state = exprmod.cg_emit_expr(state, stmt.target)
+    own_base = core.alloc_expr_temps(state, 8)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, own_base)
+  end if
+  state = exprmod.cg_emit_expr(state, stmt.index)
+  idx_slot = core.alloc_expr_temps(state, 8)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, idx_slot)
+  state = exprmod.cg_emit_expr(state, stmt.expr)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  load_base = base_slot
+  if own_base >= 0 then load_base = own_base end if
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", load_base)
+  state.asm = a.mov_rax_rsp_disp32(state.asm, idx_slot)
+  release_bytes = 8
+  if own_base >= 0 then release_bytes = 16 end if
+  state = core.free_expr_temps(state, release_bytes)
+  state.asm = a.cmp_r64_imm(state.asm, "r10", t.enc_void())
+  state.asm = a.jcc(state.asm, "e", l_rhs_void)
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+  if bounds_proven == false then
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    l_nonnegative = "seti_fast_nonnegative_" + lid
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.jcc(state.asm, "ge", l_nonnegative)
+    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.mark(state.asm, l_nonnegative)
+    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.jcc(state.asm, "l", l_oob)
+    state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.jcc(state.asm, "ge", l_oob)
+  end if
+  if kind == "array" then
+    l_store = "seti_fast_array_store_" + lid
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+    state.asm = a.jcc(state.asm, "ne", l_store)
+    state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
+    state.asm = a.and_r64_imm(state.asm, "r8", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_store)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+    state.asm = a.mark(state.asm, l_store)
+    state.asm = a.mov_mem_bis_r64(state.asm, "r11", "rcx", 8, 8, "r10")
+    state.asm = a.jmp(state.asm, l_done)
+  else
+    state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
+    state.asm = a.and_r64_imm(state.asm, "r8", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "ne", l_bad_byte)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+    state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+    state.asm = a.jcc(state.asm, "l", l_bad_byte)
+    state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
+    state.asm = a.jcc(state.asm, "g", l_bad_byte)
+    state.asm = a.lea_r64_mem_bis(state.asm, "r8", "r11", "rcx", 1, 8)
+    state.asm = a.mov_membase_disp_r8(state.asm, "r8", 0, "al")
+    state.asm = a.jmp(state.asm, l_done)
+  end if
+  state.asm = a.mark(state.asm, l_rhs_void)
+  state = core.emit_dbg_line(state, stmt)
+  state = exprmod._emit_make_error_const(state, c.ERR_VOID_OP, "Cannot assign void via index")
+  state = exprmod._emit_auto_errprop(state)
+  state.asm = a.jmp(state.asm, l_done)
+  if bounds_proven == false then
+    state.asm = a.mark(state.asm, l_oob)
+    state = core.emit_dbg_line(state, stmt)
+    state = exprmod._emit_make_error_const(state, c.ERR_INDEX_OOB, "Array index out of bounds")
+    state = exprmod._emit_auto_errprop(state)
+    state.asm = a.jmp(state.asm, l_done)
+  end if
+  if kind == "bytes" then
+    state.asm = a.mark(state.asm, l_bad_byte)
+    state = core.emit_dbg_line(state, stmt)
+    state = exprmod._emit_make_error_const(state, c.ERR_VOID_OP, "Byte value must be an int in range 0..255")
+    state = exprmod._emit_auto_errprop(state)
+  end if
+  state.asm = a.mark(state.asm, l_done)
+  return state
 end function
 
 function _inline_ref_resolve(state, ex, owner, inline_names)
@@ -7648,6 +8284,8 @@ function emit_module_init_object(state, module_rec)
   old_root_rec_off = state._current_root_rec_off
   old_root_static_qwords = state._current_root_static_qwords
   old_known_int_names = state.known_int_names
+  old_known_value_types = state.known_value_types
+  old_loop_index_fast_stack = state.loop_index_fast_stack
   old_scope_stack = state.scope_stack
   old_scope_declared = state.scope_declared
   old_scope_index_stack = state.scope_index_stack
@@ -7669,6 +8307,8 @@ function emit_module_init_object(state, module_rec)
   state._current_root_rec_off = root_rec_off
   state._current_root_static_qwords = (root_top - root_base) / 8
   state.known_int_names = []
+  state.known_value_types = []
+  state.loop_index_fast_stack = []
   state.scope_stack = [base_globals]
   state.scope_declared = [[]]
   state.scope_index_stack = [base_global_index]
@@ -7756,6 +8396,8 @@ function emit_module_init_object(state, module_rec)
   state._current_root_rec_off = old_root_rec_off
   state._current_root_static_qwords = old_root_static_qwords
   state.known_int_names = old_known_int_names
+  state.known_value_types = old_known_value_types
+  state.loop_index_fast_stack = old_loop_index_fast_stack
   state.scope_stack = old_scope_stack
   state.scope_declared = old_scope_declared
   state.scope_index_stack = old_scope_index_stack
@@ -7987,6 +8629,8 @@ function emit_user_function(state, fn_node)
   old_root_rec_off = state._current_root_rec_off
   old_root_static_qwords = state._current_root_static_qwords
   old_known_int_names = state.known_int_names
+  old_known_value_types = state.known_value_types
+  old_loop_index_fast_stack = state.loop_index_fast_stack
   old_boxed_names = state.current_fn_boxed_names
   old_env_index = state.current_fn_env_index
   old_env_root = state.current_env_root_off
@@ -8025,6 +8669,8 @@ function emit_user_function(state, fn_node)
   state._current_root_rec_off = root_rec_off
   state._current_root_static_qwords = (root_top - root_base) / 8
   state.known_int_names = _infer_known_int_names(state, fn_node)
+  state.known_value_types = _infer_known_value_types(state, fn_node)
+  state.loop_index_fast_stack = []
   state.current_fn_boxed_names = boxed_names
   state.current_fn_env_index = env_index
   state.current_env_root_off = env_root_off
@@ -8419,6 +9065,8 @@ function emit_user_function(state, fn_node)
   state._current_root_rec_off = old_root_rec_off
   state._current_root_static_qwords = old_root_static_qwords
   state.known_int_names = old_known_int_names
+  state.known_value_types = old_known_value_types
+  state.loop_index_fast_stack = old_loop_index_fast_stack
   state.current_fn_boxed_names = old_boxed_names
   state.current_fn_env_index = old_env_index
   state.current_env_root_off = old_env_root

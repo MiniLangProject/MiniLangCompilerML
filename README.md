@@ -390,9 +390,9 @@ object pipeline took 420.095 seconds and the matching Python monolithic build
 took 69.089 seconds. Treat these as historical measurements, not promises for
 later revisions.
 
-The 1.0.0 source reaches a binary fixed point: two consecutive 293-object
-`.mlo` stages took 185.140 and 240.518 seconds and produced identical
-54,789,120-byte compiler images (SHA-256 is recorded in the parity report).
+The 1.0.0 source reaches a binary fixed point: the latest two 301-object
+`.mlo` stages took 181.644 and 470.513 seconds and produced identical
+54,650,368-byte compiler images (SHA-256 is recorded in the parity report).
 
 
 ---
@@ -2439,13 +2439,19 @@ Optimizations (always-on, conservative):
   up to 4096 generated native bytes per callee; every function retains a normal
   callable body so imported aliases, data references and later calls remain
   valid.
-- **Local integer type flow**: locals proven to remain integers use direct
-  tagged arithmetic, bitwise, shift and comparison sequences. Ambiguous,
-  captured, synchronized, global and floating-point values retain the generic
-  dynamic path.
-- **Loop specialization**: small constant `for` loops can be unrolled; larger
-  constant-bound loops compare against an immediate limit and avoid dynamic
-  end/direction state.
+- **Local representation type flow**: locals whose complete write set proves a
+  stable `int`, `float`/number, `bool`, string, array, bytes or concrete struct
+  representation bypass the corresponding dynamic dispatch. This includes
+  direct tagged integer operations, numeric-only float arithmetic, bool
+  conditions, fixed-offset struct fields and type-specialized indexing.
+  Parameters, captured/boxed, synchronized, global or otherwise ambiguous
+  values retain the generic checked path.
+- **Loop specialization and bounds-check elimination**: small constant `for`
+  loops can be unrolled; larger constant-bound loops avoid dynamic end/direction
+  state. For a fixed-length local array or bytes value, an inclusive range
+  proven inside `0..len(value)-1` loads the container base once and removes the
+  per-iteration target, index-tag and bounds checks. Negative or unproven
+  indices retain normalization and full bounds validation.
 - **GC-root liveness and prologues**: expression roots are unpublished as soon
   as their lifetime ends, call spills are sized to actual arity, and tiny root
   frames use straight-line initialization.
