@@ -367,6 +367,10 @@ function prepare_program_for_objects(cg, program)
   if typeof(cg) != "struct" then return [cg, [], 0] end if
   if typeof(cg.state) != "struct" then return [cg, [], 0] end if
   st = core.cg_core_init(cg.state)
+  // Entry-object emission can inline calls from global initializers before
+  // any cloned function fragment exists. Root the statement callback on the
+  // canonical state just as the monolithic path does.
+  st._inline_param_stack = stmt.cg_emit_stmt
   prep = stmt.prepare_program_for_objects(st, program)
   if typeof(prep) != "array" or len(prep) < 3 then
     cg.state = st

@@ -101,8 +101,8 @@ function main(args)
     print "FAIL: asm_opcodes_golden.json has no vectors field"
     return 4
   end if
-  if s.contains(txt, "\"count\": 222") == false then
-    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 222-vector set"
+  if s.contains(txt, "\"count\": 227") == false then
+    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 227-vector set"
     return 5
   end if
 
@@ -140,6 +140,26 @@ function main(args)
   b = a.newAsmBuilder()
   b = a.xor_r32_r32(b, "r11d", "r10d")
   failures = failures + checkOpcode("xor_r32_r32", b, "4533da")
+
+  b = a.newAsmBuilder()
+  b = a.and_r32_r32(b, "r11d", "r10d")
+  failures = failures + checkOpcode("and_r32_r32", b, "4523da")
+
+  b = a.newAsmBuilder()
+  b = a.or_r32_r32(b, "r11d", "r10d")
+  failures = failures + checkOpcode("or_r32_r32", b, "450bda")
+
+  b = a.newAsmBuilder()
+  b = a.bsr_r32_r32(b, "r11d", "r10d")
+  failures = failures + checkOpcode("bsr_r32_r32", b, "450fbdda")
+
+  b = a.newAsmBuilder()
+  b = a.crc32_r32_membase_disp8(b, "r11d", "rbp", -16)
+  failures = failures + checkOpcode("crc32_r32_membase_disp8", b, "f2440f38f05df0")
+
+  b = a.newAsmBuilder()
+  b = a.crc32_r64_membase_disp(b, "r11", "rbp", -16)
+  failures = failures + checkOpcode("crc32_r64_membase_disp", b, "f24c0f38f15df0")
 
   b = a.newAsmBuilder()
   b = a.push_reg(b, "r11")

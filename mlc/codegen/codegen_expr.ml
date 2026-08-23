@@ -4154,6 +4154,76 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
     if native_helper[1] == true then return [state, true] end if
   end if
 
+  // Checksum, constant-time comparison, and CPU dispatch intrinsics remain
+  // special forms so unused programs do not pull in tables or helper code.
+  if callee == "nativeCrc32c" or raw_name == "nativeCrc32c" or callee == "nativeCrc32" or raw_name == "nativeCrc32" then
+    if nargs != 4 then
+      state.diagnostics = state.diagnostics +["native CRC functions expect exactly 4 arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    tmp_crc = core.alloc_expr_temps(state, 32)
+    tmp_crc_ok = typeof(tmp_crc) == "int" and tmp_crc > 0
+    if not tmp_crc_ok then tmp_crc = 0x300 end if
+    for crci = 0 to 3
+      state = cg_emit_expr(state, call_args[crci])
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_crc + crci * 8, "rax")
+    end for
+    state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", tmp_crc)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_crc + 8)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_crc + 16)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", tmp_crc + 24)
+    if callee == "nativeCrc32c" or raw_name == "nativeCrc32c" then
+      state.asm = a.call(state.asm, "fn_native_crc32c")
+    else
+      state.asm = a.call(state.asm, "fn_native_crc32")
+    end if
+    if tmp_crc_ok then state = core.free_expr_temps(state, 32) end if
+    return [state, true]
+  end if
+
+  if callee == "bytesConstantTimeEquals" or raw_name == "bytesConstantTimeEquals" then
+    if nargs != 2 then
+      state.diagnostics = state.diagnostics +["bytesConstantTimeEquals() expects exactly 2 arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    tmp_ct = core.alloc_expr_temps(state, 16)
+    tmp_ct_ok = typeof(tmp_ct) == "int" and tmp_ct > 0
+    if not tmp_ct_ok then tmp_ct = 0x300 end if
+    state = cg_emit_expr(state, call_args[0])
+    state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_ct, "rax")
+    state = cg_emit_expr(state, call_args[1])
+    state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_ct + 8, "rax")
+    state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", tmp_ct)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_ct + 8)
+    state.asm = a.call(state.asm, "fn_bytes_constant_time_eq")
+    if tmp_ct_ok then state = core.free_expr_temps(state, 16) end if
+    return [state, true]
+  end if
+
+  if callee == "runtimeCpuFeatures" or raw_name == "runtimeCpuFeatures" then
+    if nargs != 0 then state.diagnostics = state.diagnostics +["runtimeCpuFeatures() expects no arguments"] end if
+    if nargs == 0 then state.asm = a.call(state.asm, "fn_runtime_cpu_features") else state.asm = a.mov_rax_imm64(state.asm, t.enc_void()) end if
+    return [state, true]
+  end if
+  if callee == "runtimeCpuActiveFeatures" or raw_name == "runtimeCpuActiveFeatures" then
+    if nargs != 0 then state.diagnostics = state.diagnostics +["runtimeCpuActiveFeatures() expects no arguments"] end if
+    if nargs == 0 then state.asm = a.call(state.asm, "fn_runtime_cpu_active_features") else state.asm = a.mov_rax_imm64(state.asm, t.enc_void()) end if
+    return [state, true]
+  end if
+  if callee == "runtimeCpuSetMask" or raw_name == "runtimeCpuSetMask" then
+    if nargs != 1 then
+      state.diagnostics = state.diagnostics +["runtimeCpuSetMask() expects exactly 1 argument"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    state = cg_emit_expr(state, call_args[0])
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.call(state.asm, "fn_runtime_cpu_set_mask")
+    return [state, true]
+  end if
+
   // Builtin nativeBytesPtr(bytes) -> native pointer to the bytes payload.
   if (callee == "nativeBytesPtr" or raw_name == "nativeBytesPtr") then
     if nargs != 1 then

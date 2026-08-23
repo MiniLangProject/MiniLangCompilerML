@@ -338,6 +338,10 @@ function _seed_data(cg)
   cg.data = d.data_add_u64(cg.data, "dbg_loc_script", t.enc_void())
   cg.data = d.data_add_u64(cg.data, "dbg_loc_func", t.enc_void())
   cg.data = d.data_add_u64(cg.data, "dbg_loc_line", t.enc_int(0))
+  // Feature bits: SSE2, SSE4.2, AVX, AVX2, AES-NI, PCLMULQDQ and SHA.
+  // The active mask can only remove detected capabilities for fallback tests.
+  cg.data = d.data_add_u32(cg.data, "cpu_features_detected", 0)
+  cg.data = d.data_add_u32(cg.data, "cpu_features_active", 0)
   cg.data = d.data_add_u32(cg.data, "cpu_has_avx2", 0)
 
   // Keep heap/GC control globals early in .data so accidental scratch-buffer
@@ -1417,6 +1421,9 @@ end function
 
 function _helper_supported(lbl)
   if lbl == "fn_cpu_init" then return true end if
+  if lbl == "fn_runtime_cpu_features" then return true end if
+  if lbl == "fn_runtime_cpu_active_features" then return true end if
+  if lbl == "fn_runtime_cpu_set_mask" then return true end if
   if lbl == "fn_int_to_dec" then return true end if
   if lbl == "fn_strlen" then return true end if
   if lbl == "fn_alloc" then return true end if
@@ -1464,6 +1471,15 @@ function _helper_supported(lbl)
   if lbl == "fn_thread_alloc" then return true end if
   if lbl == "fn_thread_entry" then return true end if
   if lbl == "fn_mem_eq_bytes" then return true end if
+  if lbl == "fn_bytes_constant_time_eq" then return true end if
+  if lbl == "fn_find_byte_forward" then return true end if
+  if lbl == "fn_find_byte_reverse" then return true end if
+  if lbl == "fn_mem_indexof" then return true end if
+  if lbl == "fn_mem_lastindexof" then return true end if
+  if lbl == "fn_crc32c_update_raw" then return true end if
+  if lbl == "fn_crc32_update_raw" then return true end if
+  if lbl == "fn_native_crc32c" then return true end if
+  if lbl == "fn_native_crc32" then return true end if
   if lbl == "fn_bytes_hash" then return true end if
   if lbl == "fn_string_hash" then return true end if
   if lbl == "fn_bytes_startswith" then return true end if
@@ -1520,6 +1536,9 @@ end function
 
 function _emit_helper_by_label_group0(state, lbl)
   if lbl == "fn_cpu_init" then return rt.emit_cpu_init_function(state) end if
+  if lbl == "fn_runtime_cpu_features" then return rt.emit_runtime_cpu_features_function(state) end if
+  if lbl == "fn_runtime_cpu_active_features" then return rt.emit_runtime_cpu_active_features_function(state) end if
+  if lbl == "fn_runtime_cpu_set_mask" then return rt.emit_runtime_cpu_set_mask_function(state) end if
   if lbl == "fn_gc_safepoint" then return th.emit_gc_safepoint_function(state) end if
   if lbl == "fn_gc_native_enter" then return th.emit_gc_native_enter_function(state) end if
   if lbl == "fn_gc_native_leave" then return th.emit_gc_native_leave_function(state) end if
@@ -1552,6 +1571,15 @@ function _emit_helper_by_label_group0(state, lbl)
   if lbl == "fn_fill_bytes" then return rt.emit_fill_bytes_function(state) end if
   if lbl == "fn_fill_qwords" then return rt.emit_fill_qwords_function(state) end if
   if lbl == "fn_mem_eq_bytes" then return rt.emit_mem_eq_bytes_function(state) end if
+  if lbl == "fn_bytes_constant_time_eq" then return rt.emit_bytes_constant_time_eq_function(state) end if
+  if lbl == "fn_find_byte_forward" then return rt.emit_find_byte_forward_function(state) end if
+  if lbl == "fn_find_byte_reverse" then return rt.emit_find_byte_reverse_function(state) end if
+  if lbl == "fn_mem_indexof" then return rt.emit_mem_indexof_function(state) end if
+  if lbl == "fn_mem_lastindexof" then return rt.emit_mem_lastindexof_function(state) end if
+  if lbl == "fn_crc32c_update_raw" then return rt.emit_crc32c_update_raw_function(state) end if
+  if lbl == "fn_crc32_update_raw" then return rt.emit_crc32_update_raw_function(state) end if
+  if lbl == "fn_native_crc32c" then return rt.emit_native_crc32c_function(state) end if
+  if lbl == "fn_native_crc32" then return rt.emit_native_crc32_function(state) end if
   if lbl == "fn_bytes_hash" then return rt.emit_bytes_hash_function(state) end if
   if lbl == "fn_string_hash" then return rt.emit_string_hash_function(state) end if
   return state
@@ -1651,19 +1679,20 @@ end function
 
 function _emit_helper_by_label(state, lbl)
   rank = _helper_rank(lbl)
-  if rank < 35 then return _emit_helper_by_label_group0(state, lbl) end if
-  if rank < 45 then return _emit_helper_by_label_group1(state, lbl) end if
-  if rank < 55 then return _emit_helper_by_label_group2(state, lbl) end if
-  if rank < 65 then return _emit_helper_by_label_group3(state, lbl) end if
-  if rank < 75 then return _emit_helper_by_label_group4(state, lbl) end if
-  if rank < 85 then return _emit_helper_by_label_group5(state, lbl) end if
+  if rank < 47 then return _emit_helper_by_label_group0(state, lbl) end if
+  if rank < 57 then return _emit_helper_by_label_group1(state, lbl) end if
+  if rank < 67 then return _emit_helper_by_label_group2(state, lbl) end if
+  if rank < 77 then return _emit_helper_by_label_group3(state, lbl) end if
+  if rank < 87 then return _emit_helper_by_label_group4(state, lbl) end if
+  if rank < 97 then return _emit_helper_by_label_group5(state, lbl) end if
   if rank < 1048576 then return _emit_helper_by_label_group6(state, lbl) end if
   return _emit_helper_by_label_other(state, lbl)
 end function
 
 function _helper_rank(lbl)
   ordered = [
-    "fn_cpu_init", "fn_gc_safepoint", "fn_gc_native_enter", "fn_gc_native_leave",
+    "fn_cpu_init", "fn_runtime_cpu_features", "fn_runtime_cpu_active_features",
+    "fn_runtime_cpu_set_mask", "fn_gc_safepoint", "fn_gc_native_enter", "fn_gc_native_leave",
     "fn_gc_managed_exit", "fn_heap_enter", "fn_heap_leave", "fn_gc_world_stop", "fn_gc_world_resume",
     "fn_sync_enter", "fn_sync_leave", "fn_thread_new", "fn_thread_start",
     "fn_thread_stop", "fn_thread_join", "fn_thread_alive", "fn_thread_id",
@@ -1671,7 +1700,10 @@ function _helper_rank(lbl)
     "fn_thread_result", "fn_thread_status",
     "fn_thread_close", "fn_thread_stop_requested", "fn_thread_entry", "fn_thread_alloc",
     "fn_alloc", "fn_heap_grow", "fn_gc_collect", "fn_copy_bytes", "fn_fill_bytes",
-    "fn_fill_qwords", "fn_mem_eq_bytes", "fn_bytes_hash", "fn_string_hash", "fn_bytes_startswith",
+    "fn_fill_qwords", "fn_mem_eq_bytes", "fn_bytes_constant_time_eq",
+    "fn_find_byte_forward", "fn_find_byte_reverse", "fn_mem_indexof", "fn_mem_lastindexof",
+    "fn_crc32c_update_raw", "fn_crc32_update_raw", "fn_native_crc32c", "fn_native_crc32",
+    "fn_bytes_hash", "fn_string_hash", "fn_bytes_startswith",
     "fn_bytes_endswith", "fn_bytes_indexof", "fn_bytes_lastindexof", "fn_bytes_compare", "fn_str_eq",
     "fn_string_slice", "fn_string_indexof", "fn_string_lastindexof", "fn_string_startswith",
     "fn_string_endswith", "fn_string_repeat", "fn_string_ltrim_ascii", "fn_string_rtrim_ascii",

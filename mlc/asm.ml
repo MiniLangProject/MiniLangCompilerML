@@ -1326,7 +1326,9 @@ function sub_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x2B, dst, src, 0) 
 function xor_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x33, dst, src, 1) end function
 function xor_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x33, dst, src, 0) end function
 function and_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x23, dst, src, 1) end function
+function and_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x23, dst, src, 0) end function
 function or_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x0B, dst, src, 1) end function
+function or_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x0B, dst, src, 0) end function
 function and_r8_r8(asm, dst, src) return _emit_bin_rr(asm, 0x22, dst, src, 0) end function
 function or_r8_r8(asm, dst, src) return _emit_bin_rr(asm, 0x0A, dst, src, 0) end function
 
@@ -1735,6 +1737,52 @@ function bsf_r32_r32(asm, dst32, src32)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0xBC)
   asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+function bsr_r32_r32(asm, dst32, src32)
+  if _is_r32_name(dst32) == false or _is_r32_name(src32) == false then return error(1, "bsr_r32_r32 requires (r32, r32)") end if
+  d = _rid_any(dst32)
+  s = _rid_any(src32)
+  rex_r = 0
+  if d >= 8 then rex_r = 1 end if
+  rex_b = 0
+  if s >= 8 then rex_b = 1 end if
+  asm = _emit_rex(asm, 0, rex_r, 0, rex_b, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xBD)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+// Emit SSE4.2 CRC32 r64, qword [base+disp].  Callers must dispatch on
+// CPUID.SSE4.2; this instruction implements CRC-32C, not CRC-32/IEEE.
+function crc32_r64_membase_disp(asm, dst64, base, disp)
+  d = _rid_any(dst64)
+  b = _rid_any(base)
+  if d < 0 or b < 0 then return asm end if
+  enc = _encode_mem(d & 7, b, disp)
+  asm = _emit8(asm, 0xF2)
+  asm = _emit_rex(asm, 1, (d >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x38)
+  asm = _emit8(asm, 0xF1)
+  asm = _emit(asm, enc.tail)
+  return asm
+end function
+
+function crc32_r32_membase_disp8(asm, dst32, base, disp)
+  if _is_r32_name(dst32) == false then return error(1, "crc32_r32_membase_disp8 requires a 32-bit destination") end if
+  d = _rid_any(dst32)
+  b = _rid_any(base)
+  if d < 0 or b < 0 then return asm end if
+  enc = _encode_mem(d & 7, b, disp)
+  asm = _emit8(asm, 0xF2)
+  asm = _emit_rex(asm, 0, (d >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x38)
+  asm = _emit8(asm, 0xF0)
+  asm = _emit(asm, enc.tail)
   return asm
 end function
 

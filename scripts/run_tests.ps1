@@ -255,11 +255,32 @@ try {
   $runnerArgs = @($Compiler) + $effectiveCompilerArgs
   $results += Invoke-NativeStep "run ML test harness" $runnerExe $runnerArgs
 
+  $nativePrimitiveCases = @(
+    [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },
+    [pscustomobject]@{ Name = "SIMD search differential"; Source = "simd_search.ml" },
+    [pscustomobject]@{ Name = "CNG crypto vectors"; Source = "crypto_cng.ml" }
+  )
+  foreach ($nativeCase in $nativePrimitiveCases) {
+    $nativeSource = Join-Path $Root ("tests\" + $nativeCase.Source)
+    $nativeStem = [System.IO.Path]::GetFileNameWithoutExtension($nativeCase.Source)
+    $nativeExe = Join-Path $script:ResolvedArtifactsDir ($nativeStem + ".exe")
+    $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root) + $effectiveCompilerArgs
+    $results += Invoke-NativeStep ("compile " + $nativeCase.Name) $Compiler $nativeArgs
+    if ($results[-1].ExitCode -eq 0) {
+      $results += Invoke-NativeStep ("run " + $nativeCase.Name) $nativeExe @()
+    }
+  }
+
   # The object pipeline is a serialization boundary for one canonical codegen
   # stream. Guard both optimization-heavy and cross-module programs so layout,
   # constant pooling and module initialization cannot drift from normal builds.
   $parityCompilerArgs = @($effectiveCompilerArgs | Where-Object { $_ -ne "--object-pipeline" })
   $objectParityCases = @(
+    [pscustomobject]@{
+      Name = "entry initializer inline"
+      Source = Join-Path $Root "tests\object_entry_inline.ml"
+      Includes = @($Root)
+    },
     [pscustomobject]@{
       Name = "codegen optimizations"
       Source = Join-Path $Root "tests\codegen_optimizations.ml"

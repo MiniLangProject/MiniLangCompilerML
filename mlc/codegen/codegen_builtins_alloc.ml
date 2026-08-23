@@ -1733,8 +1733,6 @@ function emit_string_indexof_function(state)
   l_start_nonneg = "stridx_start_nonneg_" + lid
   l_start_in_range = "stridx_start_in_range_" + lid
   l_prepare = "stridx_prepare_" + lid
-  l_outer = "stridx_outer_" + lid
-  l_inner = "stridx_inner_" + lid
   l_found = "stridx_found_" + lid
   l_done = "stridx_done_" + lid
 
@@ -1784,40 +1782,20 @@ function emit_string_indexof_function(state)
   state.asm = a.mark(state.asm, l_prepare)
   state.asm = a.cmp_r32_r32(state.asm, "edx", "r9d")
   state.asm = a.jcc(state.asm, "g", l_not_found)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x24, "r8d")
+  state.asm = a.lea_r64_mem_bis(state.asm, "rcx", "r11", "r8", 1, 8)
   state.asm = a.mov_r32_r32(state.asm, "eax", "r9d")
-  state.asm = a.sub_r32_r32(state.asm, "eax", "edx")
-  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x24, "eax")
-  state.asm = a.cmp_r32_r32(state.asm, "r8d", "eax")
-  state.asm = a.jcc(state.asm, "g", l_not_found)
-  state.asm = a.mov_r32_r32(state.asm, "r9d", "r8d")
-
-  state.asm = a.mark(state.asm, l_outer)
-  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x24)
-  state.asm = a.cmp_r32_r32(state.asm, "r9d", "eax")
-  state.asm = a.jcc(state.asm, "g", l_not_found)
-  state.asm = a.xor_r32_r32(state.asm, "r8d", "r8d")
-
-  state.asm = a.mark(state.asm, l_inner)
-  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x20)
-  state.asm = a.cmp_r32_r32(state.asm, "r8d", "ecx")
-  state.asm = a.jcc(state.asm, "ge", l_found)
-  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
-  state.asm = a.add_r64_r64(state.asm, "rax", "r8")
-  state.asm = a.lea_r64_mem_bis(state.asm, "rdx", "r11", "rax", 1, 8)
-  state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rdx", 0)
-  state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r10", "r8", 1, 8)
-  state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
-  state.asm = a.cmp_r32_r32(state.asm, "edx", "eax")
-  state.asm = a.jcc(state.asm, "ne", l_inner + "_miss")
-  state.asm = a.inc_r32(state.asm, "r8d")
-  state.asm = a.jmp(state.asm, l_inner)
-
-  state.asm = a.mark(state.asm, l_inner + "_miss")
-  state.asm = a.inc_r32(state.asm, "r9d")
-  state.asm = a.jmp(state.asm, l_outer)
+  state.asm = a.sub_r32_r32(state.asm, "eax", "r8d")
+  state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.lea_r64_membase_disp(state.asm, "r8", "r10", 8)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "rsp", 0x20)
+  state.asm = a.call(state.asm, "fn_mem_indexof")
+  state.asm = a.cmp_r32_imm(state.asm, "eax", 0xFFFFFFFF)
+  state.asm = a.jcc(state.asm, "e", l_not_found)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "rsp", 0x24)
+  state.asm = a.add_r32_r32(state.asm, "eax", "r9d")
 
   state.asm = a.mark(state.asm, l_found)
-  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
   state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
   state.asm = a.or_r64_imm8(state.asm, "rax", c.TAG_INT)
   state.asm = a.jmp(state.asm, l_done)
@@ -1844,8 +1822,6 @@ function emit_string_lastindexof_function(state)
   l_fail = "strridx_fail_" + lid
   l_not_found = "strridx_not_found_" + lid
   l_prepare = "strridx_prepare_" + lid
-  l_outer = "strridx_outer_" + lid
-  l_inner = "strridx_inner_" + lid
   l_found = "strridx_found_" + lid
   l_done = "strridx_done_" + lid
 
@@ -1879,37 +1855,15 @@ function emit_string_lastindexof_function(state)
   state.asm = a.mark(state.asm, l_prepare)
   state.asm = a.cmp_r32_r32(state.asm, "edx", "r9d")
   state.asm = a.jcc(state.asm, "g", l_not_found)
-  state.asm = a.mov_r32_r32(state.asm, "eax", "r9d")
-  state.asm = a.sub_r32_r32(state.asm, "eax", "edx")
-  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x24, "eax")
-  state.asm = a.mov_r32_r32(state.asm, "r9d", "eax")
-
-  state.asm = a.mark(state.asm, l_outer)
-  state.asm = a.cmp_r32_imm(state.asm, "r9d", 0)
-  state.asm = a.jcc(state.asm, "l", l_not_found)
-  state.asm = a.xor_r32_r32(state.asm, "r8d", "r8d")
-
-  state.asm = a.mark(state.asm, l_inner)
-  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x20)
-  state.asm = a.cmp_r32_r32(state.asm, "r8d", "ecx")
-  state.asm = a.jcc(state.asm, "ge", l_found)
-  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
-  state.asm = a.add_r64_r64(state.asm, "rax", "r8")
-  state.asm = a.lea_r64_mem_bis(state.asm, "rdx", "r11", "rax", 1, 8)
-  state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rdx", 0)
-  state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r10", "r8", 1, 8)
-  state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
-  state.asm = a.cmp_r32_r32(state.asm, "edx", "eax")
-  state.asm = a.jcc(state.asm, "ne", l_inner + "_miss")
-  state.asm = a.inc_r32(state.asm, "r8d")
-  state.asm = a.jmp(state.asm, l_inner)
-
-  state.asm = a.mark(state.asm, l_inner + "_miss")
-  state.asm = a.dec_r32(state.asm, "r9d")
-  state.asm = a.jmp(state.asm, l_outer)
+  state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "r9d")
+  state.asm = a.lea_r64_membase_disp(state.asm, "r8", "r10", 8)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "rsp", 0x20)
+  state.asm = a.call(state.asm, "fn_mem_lastindexof")
+  state.asm = a.cmp_r32_imm(state.asm, "eax", 0xFFFFFFFF)
+  state.asm = a.jcc(state.asm, "e", l_not_found)
 
   state.asm = a.mark(state.asm, l_found)
-  state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
   state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
   state.asm = a.or_r64_imm8(state.asm, "rax", c.TAG_INT)
   state.asm = a.jmp(state.asm, l_done)
