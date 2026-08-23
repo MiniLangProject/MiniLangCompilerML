@@ -21,6 +21,7 @@ struct PoolEntry
   key,
   offset,
   length,
+  label,
 end struct
 
 // Deferred absolute-address relocation inside a data section.
@@ -56,6 +57,7 @@ struct RDataBuilder
   pool_raw,
   pool_obj_string,
   pool_obj_float,
+  alias_index,
   used,
 end struct
 
@@ -146,6 +148,21 @@ function data_get_labels(db)
   return []
 end function
 
+function data_get_labels_after(db, start_index)
+  out_b = t.arr_chunk_new(64)
+  if typeof(db) != "struct" then return t.arr_chunk_finish(out_b) end if
+  start = start_index
+  if typeof(start) != "int" or start < 0 then start = 0 end if
+  count = data_label_count(db)
+  if start >= count then return t.arr_chunk_finish(out_b) end if
+  if typeof(db.labels) == "array" then
+    for i = start to count - 1 out_b = t.arr_chunk_push(out_b, db.labels[i]) end for
+  else
+    for i = start to count - 1 out_b = t.arr_chunk_push(out_b, t.arr_chunk_get(db.labels, i, 0)) end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
 function data_label_count(db)
   if typeof(db) != "struct" then return 0 end if
   if typeof(db.label_index) == "struct" then return t.fastmap_size(db.label_index) end if
@@ -221,7 +238,7 @@ end function
 
 // Create an empty read-only-data builder and its constant pools.
 function newRDataBuilder()
-  return RDataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), 0, t.arr_chunk_new(1024), t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), 0)
+  return RDataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), 0, t.arr_chunk_new(1024), t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), t.fastmap_new(1024), 0)
 end function
 
 function data_get_patches(db)
@@ -229,6 +246,28 @@ function data_get_patches(db)
   if typeof(db.patches) == "array" then return db.patches end if
   if typeof(db.patches) == "struct" then return t.arr_chunk_finish(db.patches) end if
   return []
+end function
+
+function data_patch_count(db)
+  if typeof(db) != "struct" then return 0 end if
+  if typeof(db.patches) == "array" then return len(db.patches) end if
+  if typeof(db.patches) == "struct" then return t.arr_chunk_count(db.patches) end if
+  return 0
+end function
+
+function data_get_patches_after(db, start_index)
+  out_b = t.arr_chunk_new(64)
+  if typeof(db) != "struct" then return t.arr_chunk_finish(out_b) end if
+  start = start_index
+  if typeof(start) != "int" or start < 0 then start = 0 end if
+  count = data_patch_count(db)
+  if start >= count then return t.arr_chunk_finish(out_b) end if
+  if typeof(db.patches) == "array" then
+    for i = start to count - 1 out_b = t.arr_chunk_push(out_b, db.patches[i]) end for
+  else
+    for i = start to count - 1 out_b = t.arr_chunk_push(out_b, t.arr_chunk_get(db.patches, i, 0)) end for
+  end if
+  return t.arr_chunk_finish(out_b)
 end function
 
 function data_set_patches(db, patches)
@@ -253,6 +292,28 @@ function rdata_get_patches(rb)
   return []
 end function
 
+function rdata_patch_count(rb)
+  if typeof(rb) != "struct" then return 0 end if
+  if typeof(rb.patches) == "array" then return len(rb.patches) end if
+  if typeof(rb.patches) == "struct" then return t.arr_chunk_count(rb.patches) end if
+  return 0
+end function
+
+function rdata_get_patches_after(rb, start_index)
+  out_b = t.arr_chunk_new(64)
+  if typeof(rb) != "struct" then return t.arr_chunk_finish(out_b) end if
+  start = start_index
+  if typeof(start) != "int" or start < 0 then start = 0 end if
+  count = rdata_patch_count(rb)
+  if start >= count then return t.arr_chunk_finish(out_b) end if
+  if typeof(rb.patches) == "array" then
+    for i = start to count - 1 out_b = t.arr_chunk_push(out_b, rb.patches[i]) end for
+  else
+    for i = start to count - 1 out_b = t.arr_chunk_push(out_b, t.arr_chunk_get(rb.patches, i, 0)) end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
 function rdata_set_patches(rb, patches)
   if typeof(rb) != "struct" then return rb end if
   rb.patches = t.arr_chunk_new(1024)
@@ -273,6 +334,27 @@ function rdata_get_labels(rb)
   if typeof(rb.labels) == "array" then return rb.labels end if
   if typeof(rb.labels) == "struct" then return t.arr_chunk_finish(rb.labels) end if
   return []
+end function
+
+function rdata_get_labels_after(rb, start_index)
+  out_b = t.arr_chunk_new(64)
+  if typeof(rb) != "struct" then return t.arr_chunk_finish(out_b) end if
+  start = start_index
+  if typeof(start) != "int" or start < 0 then start = 0 end if
+  count = rdata_label_count(rb)
+  if start >= count then return t.arr_chunk_finish(out_b) end if
+  if typeof(rb.labels) == "array" then
+    for i = start to count - 1 out_b = t.arr_chunk_push(out_b, rb.labels[i]) end for
+  else
+    for i = start to count - 1 out_b = t.arr_chunk_push(out_b, t.arr_chunk_get(rb.labels, i, 0)) end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function rdata_resolve_alias(rb, name)
+  if typeof(rb) != "struct" or typeof(name) != "string" or name == "" then return name end if
+  if typeof(rb.alias_index) != "struct" then return name end if
+  return t.fastmap_get(rb.alias_index, name, name)
 end function
 
 function rdata_label_count(rb)
@@ -462,13 +544,15 @@ function _rdata_intern_raw(rb, name, raw)
   hit = _find_pool_entry(rb.pool_raw, raw)
   if typeof(hit) == "struct" then
     pe = hit
+    if typeof(rb.alias_index) != "struct" then rb.alias_index = t.fastmap_new(1024) end if
+    rb.alias_index = t.fastmap_set(rb.alias_index, name, pe.label)
     rb = _rdata_upsert_label(rb, name, pe.offset, pe.length)
     return rb
   end if
 
   off = _buf_used(rb)
   rb = _buf_append(rb, raw)
-  rec = PoolEntry(raw, off, len(raw))
+  rec = PoolEntry(raw, off, len(raw), name)
   rb.pool_raw = t.fastmap_set(rb.pool_raw, raw, rec)
   rb = _rdata_upsert_label(rb, name, off, len(raw))
   return rb
@@ -589,6 +673,8 @@ function rdata_add_obj_string(rb, name, text)
 
   hit = _find_pool_entry(rb.pool_obj_string, payload)
   if typeof(hit) == "struct" then
+    if typeof(rb.alias_index) != "struct" then rb.alias_index = t.fastmap_new(1024) end if
+    rb.alias_index = t.fastmap_set(rb.alias_index, name, hit.label)
     rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
@@ -602,7 +688,7 @@ function rdata_add_obj_string(rb, name, text)
   ln = _buf_used(rb) - off
 
   rb = _rdata_upsert_label(rb, name, off, ln)
-  rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln))
+  rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln, name))
   return rb
 end function
 
@@ -611,6 +697,8 @@ function rdata_add_obj_string_unique(rb, name, text)
 
   hit = _find_pool_entry(rb.pool_obj_string, payload)
   if typeof(hit) == "struct" then
+    if typeof(rb.alias_index) != "struct" then rb.alias_index = t.fastmap_new(1024) end if
+    rb.alias_index = t.fastmap_set(rb.alias_index, name, hit.label)
     rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
@@ -624,7 +712,7 @@ function rdata_add_obj_string_unique(rb, name, text)
   ln = _buf_used(rb) - off
 
   rb = _rdata_upsert_label(rb, name, off, ln)
-  rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln))
+  rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln, name))
   return rb
 end function
 
@@ -633,6 +721,8 @@ function rdata_add_obj_float(rb, name, value)
 
   hit = _find_pool_entry(rb.pool_obj_float, packed)
   if typeof(hit) == "struct" then
+    if typeof(rb.alias_index) != "struct" then rb.alias_index = t.fastmap_new(1024) end if
+    rb.alias_index = t.fastmap_set(rb.alias_index, name, hit.label)
     rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
@@ -645,6 +735,6 @@ function rdata_add_obj_float(rb, name, value)
   ln = _buf_used(rb) - off
 
   rb = _rdata_upsert_label(rb, name, off, ln)
-  rb.pool_obj_float = t.fastmap_set(rb.pool_obj_float, packed, PoolEntry(packed, off, ln))
+  rb.pool_obj_float = t.fastmap_set(rb.pool_obj_float, packed, PoolEntry(packed, off, ln, name))
   return rb
 end function

@@ -7269,6 +7269,13 @@ function _all_function_entries(state)
   return t.arr_chunk_finish(entries_b)
 end function
 
+// Expose the canonical monolithic function order to the object writer.  The
+// .mlo pipeline must partition this sequence without regrouping it by module;
+// regrouping changes both native code layout and first-use constant order.
+function all_function_entries(state)
+  return _all_function_entries(state)
+end function
+
 function _program_main_name(state)
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
     for i = 0 to len(state.user_functions) - 1
@@ -7422,9 +7429,6 @@ function _emit_program_via_objects(state, program)
   main_name = _program_main_name(state)
 
   state = emit_entry_object(state, module_init_recs, max_call_args_main, main_name)
-  if _heap_cfg_get_bool(state, "cg_object_pipeline", false) then
-    state = _emit_program_module_inits_all(state, module_init_recs)
-  end if
   module_init_recs = []
   state = _emit_program_functions_all(state)
   state = _clear_program_function_state(state)
@@ -8051,15 +8055,12 @@ function prepare_program_for_objects(state, program)
   end if
   state = _mem_probe(state, "func_globals_bound")
 
-  module_init_recs = []
-  if _heap_cfg_get_bool(state, "cg_object_pipeline", false) == false then
-    // Python's monolithic backend reserves module guard slots before globals
-    // discovered during top-level emission. Preserve that deterministic data
-    // order so RIP patches and complete PE bytes match across compilers.
-    mir_early = _build_module_init_recs(state, program)
-    state = mir_early[0]
-    module_init_recs = mir_early[1]
-  end if
+  // Reserve module guard slots before globals discovered during top-level
+  // emission on every backend.  The object pipeline is a spill format for the
+  // monolithic byte stream, so planning must not perturb .data order.
+  mir_early = _build_module_init_recs(state, program)
+  state = mir_early[0]
+  module_init_recs = mir_early[1]
   state = _declare_top_level_global_bindings(state, program)
   state = _precompute_top_level_const_bindings(state, program)
   state = _mem_probe(state, "owner_map_done")
@@ -8069,12 +8070,6 @@ function prepare_program_for_objects(state, program)
     state = _mem_probe(state, "semantic_done")
   end if
 
-  if _heap_cfg_get_bool(state, "cg_object_pipeline", false) then
-    mir = _build_module_init_recs(state, program)
-    state = mir[0]
-    module_init_recs = mir[1]
-    state = _declare_object_top_level_global_bindings(state, program)
-  end if
   state = _mem_probe(state, "module_init_recs_done")
 
   max_call_args_main = max_calls_stmts(state, program)
@@ -8143,51 +8138,41 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
 
   state = core.push_cold_block_scope(state)
   if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
-    if _heap_cfg_get_bool(state, "cg_object_pipeline", false) then
-      for mri = 0 to len(module_init_recs) - 1
-        mr = module_init_recs[mri]
-        if typeof(mr) != "array" or len(mr) < 5 then continue end if
-        fn_lbl2 = _coerce_name(mr[2])
-        if fn_lbl2 == "" then continue end if
-        state.asm = a.call(state.asm, fn_lbl2)
-      end for
-    else
-      // Match the Python backend's monolithic layout: top-level module bodies
-      // execute inline in the entry frame. The .mlo pipeline retains separate
-      // callable module-init objects for memory-bounded cross-module linking.
-      for mri = 0 to len(module_init_recs) - 1
-        mr = module_init_recs[mri]
-        if typeof(mr) != "array" or len(mr) < 5 then continue end if
-        mfile = _coerce_name(mr[0])
-        mstmts = mr[1]
-        fn_lbl2 = _coerce_name(mr[2])
-        flag_lbl2 = _coerce_name(mr[3])
-        status_lbl2 = _coerce_name(mr[4])
-        if fn_lbl2 == "" or flag_lbl2 == "" or status_lbl2 == "" then continue end if
-        done_lbl2 = fn_lbl2 + "_done"
-        state.asm = a.mov_rax_rip_qword(state.asm, flag_lbl2)
-        state.asm = a.test_r64_r64(state.asm, "rax", "rax")
-        state.asm = a.jcc(state.asm, "ne", done_lbl2)
-        state.asm = a.mov_r64_imm64(state.asm, "rax", 1)
-        state.asm = a.mov_rip_qword_rax(state.asm, flag_lbl2)
-        state.asm = a.mov_r64_imm64(state.asm, "rax", 1)
-        state.asm = a.mov_rip_qword_rax(state.asm, status_lbl2)
-        old_module_active = state._module_init_active
-        old_module_file = state._module_init_active_file
-        state._module_init_active = true
-        state._module_init_active_file = mfile
-        if typeof(mstmts) == "array" and len(mstmts) > 0 then
-          for msi = 0 to len(mstmts) - 1
-            state = cg_emit_stmt(state, mstmts[msi])
-          end for
-        end if
-        state._module_init_active = old_module_active
-        state._module_init_active_file = old_module_file
-        state.asm = a.mov_r64_imm64(state.asm, "rax", 2)
-        state.asm = a.mov_rip_qword_rax(state.asm, status_lbl2)
-        state.asm = a.mark(state.asm, done_lbl2)
-      end for
-    end if
+    // .mlo is a spill representation of the canonical monolithic stream.
+    // Keep module bodies inline in __ml_entry so partitioning cannot add call
+    // frames or change the generated target bytes.
+    for mri = 0 to len(module_init_recs) - 1
+      mr = module_init_recs[mri]
+      if typeof(mr) != "array" or len(mr) < 5 then continue end if
+      mfile = _coerce_name(mr[0])
+      mstmts = mr[1]
+      fn_lbl2 = _coerce_name(mr[2])
+      flag_lbl2 = _coerce_name(mr[3])
+      status_lbl2 = _coerce_name(mr[4])
+      if fn_lbl2 == "" or flag_lbl2 == "" or status_lbl2 == "" then continue end if
+      done_lbl2 = fn_lbl2 + "_done"
+      state.asm = a.mov_rax_rip_qword(state.asm, flag_lbl2)
+      state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+      state.asm = a.jcc(state.asm, "ne", done_lbl2)
+      state.asm = a.mov_r64_imm64(state.asm, "rax", 1)
+      state.asm = a.mov_rip_qword_rax(state.asm, flag_lbl2)
+      state.asm = a.mov_r64_imm64(state.asm, "rax", 1)
+      state.asm = a.mov_rip_qword_rax(state.asm, status_lbl2)
+      old_module_active = state._module_init_active
+      old_module_file = state._module_init_active_file
+      state._module_init_active = true
+      state._module_init_active_file = mfile
+      if typeof(mstmts) == "array" and len(mstmts) > 0 then
+        for msi = 0 to len(mstmts) - 1
+          state = cg_emit_stmt(state, mstmts[msi])
+        end for
+      end if
+      state._module_init_active = old_module_active
+      state._module_init_active_file = old_module_file
+      state.asm = a.mov_r64_imm64(state.asm, "rax", 2)
+      state.asm = a.mov_rip_qword_rax(state.asm, status_lbl2)
+      state.asm = a.mark(state.asm, done_lbl2)
+    end for
   end if
   state = _mem_probe(state, "top_level_done")
 

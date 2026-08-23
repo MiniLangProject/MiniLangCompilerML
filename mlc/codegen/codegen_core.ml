@@ -1410,6 +1410,8 @@ function _is_internal_helper_label(lbl)
   if _starts_with(lbl, "fn_") == false then return false end if
   if _starts_with(lbl, "fn_user_") then return false end if
   if _starts_with(lbl, "fn_extern_") then return false end if
+  if _starts_with(lbl, "fn_ret_") then return false end if
+  if _starts_with(lbl, "fn_defer_") then return false end if
   return true
 end function
 
@@ -1689,16 +1691,19 @@ function _helper_rank(lbl)
   return 1 << 20
 end function
 
-function _collect_pending_helpers(state)
+function _collect_pending_helpers(state, emitted_index)
   vals = []
+  pending_index = t.fastmap_new(512)
   tracked = a.get_tracked_helpers(state.asm)
   if typeof(tracked) == "array" and len(tracked) > 0 then
     for i = 0 to len(tracked) - 1
       lbl = tracked[i]
       if typeof(lbl) != "string" then continue end if
       if _is_internal_helper_label(lbl) == false then continue end if
-      if _arr_contains(state.emitted_helpers, lbl) then continue end if
-      vals = _append_unique(vals, lbl)
+      if t.fastmap_has(emitted_index, lbl) then continue end if
+      if t.fastmap_has(pending_index, lbl) then continue end if
+      vals = vals + [lbl]
+      pending_index = t.fastmap_set(pending_index, lbl, 1)
     end for
   end if
 
@@ -1708,8 +1713,10 @@ function _collect_pending_helpers(state)
       lbl2 = hs[j]
       if typeof(lbl2) != "string" then continue end if
       if _is_internal_helper_label(lbl2) == false then continue end if
-      if _arr_contains(state.emitted_helpers, lbl2) then continue end if
-      vals = _append_unique(vals, lbl2)
+      if t.fastmap_has(emitted_index, lbl2) then continue end if
+      if t.fastmap_has(pending_index, lbl2) then continue end if
+      vals = vals + [lbl2]
+      pending_index = t.fastmap_set(pending_index, lbl2, 1)
     end for
   end if
   return vals
@@ -1718,8 +1725,23 @@ end function
 function emit_used_helpers(state)
   if typeof(state.emitted_helpers) != "array" then state.emitted_helpers = [] end if
 
+  // Helper discovery is iterative because emitting one helper can reference
+  // another. Keep membership and stable-rank lookups indexed: rescanning the
+  // complete emitted set and the fixed rank table in every round made a full
+  // self-host support tail quadratic in hundreds of helper labels.
+  emitted_index = t.fastmap_new(512)
+  if len(state.emitted_helpers) > 0 then
+    for ei = 0 to len(state.emitted_helpers) - 1
+      emitted_label = state.emitted_helpers[ei]
+      if typeof(emitted_label) == "string" and emitted_label != "" then
+        emitted_index = t.fastmap_set(emitted_index, emitted_label, 1)
+      end if
+    end for
+  end if
+  rank_cache = t.fastmap_new(512)
+
   while true
-    pending = _collect_pending_helpers(state)
+    pending = _collect_pending_helpers(state, emitted_index)
     if typeof(pending) != "array" or len(pending) <= 0 then
       break
     end if
@@ -1729,8 +1751,12 @@ function emit_used_helpers(state)
     for i = 0 to len(pending) - 1
       lbl = pending[i]
       if typeof(lbl) != "string" then continue end if
-      if _arr_contains(state.emitted_helpers, lbl) then continue end if
-      rank = _helper_rank(lbl)
+      rank = t.fastmap_get(rank_cache, lbl, -1)
+      if typeof(rank) != "int" or rank < 0 then
+        rank = _helper_rank(lbl)
+        if typeof(rank) != "int" then rank = 1048576 end if
+        rank_cache = t.fastmap_set(rank_cache, lbl, rank)
+      end if
       if typeof(rank) != "int" then rank = 1048576 end if
       if best == "" then
         best = lbl
@@ -1751,6 +1777,7 @@ function emit_used_helpers(state)
     if best == "" then break end if
 
     state.emitted_helpers = state.emitted_helpers + [best]
+    emitted_index = t.fastmap_set(emitted_index, best, 1)
     if _helper_supported(best) == false then
       state.diagnostics = state.diagnostics + ["Unknown internal helper referenced: " + best]
       continue

@@ -413,17 +413,27 @@ end function
 
 function cg_resolve_binding_for_write(state, name)
   if typeof(name) != "string" then return 0 end if
-  b = cg_resolve_binding(state, name)
+  // Match the Python backend: an explicit `global x` inside a packaged or
+  // namespaced function maps the source name to its qualified root binding
+  // before lookup. Looking up `x` first made analysis invent a phantom local
+  // when only `pkg.x` existed, shifting every later stack slot by eight bytes.
+  mapped = ""
+  lookup_name = name
+  if state.in_function then
+    mapped = _func_global_lookup(state.func_global_map_index, name)
+    if mapped == "" then
+      mapped = _func_global_lookup(state.func_global_map, name)
+    end if
+    if mapped != "" then lookup_name = mapped end if
+  end if
+
+  b = cg_resolve_binding(state, lookup_name)
   if typeof(b) != "struct" then return 0 end if
 
   // Inside functions, plain assignments must create/update locals by default.
   // A global binding is writable only when it is explicitly mapped via `global x`
   // (func_global_map) or when the target is already qualified (contains dot).
   if state.in_function then
-    mapped = _func_global_lookup(state.func_global_map_index, name)
-    if mapped == "" then
-      mapped = _func_global_lookup(state.func_global_map, name)
-    end if
     if mapped == "" and _name_has_dot(name) == false then
       if b.kind == "global" then
         return 0

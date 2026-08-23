@@ -133,6 +133,35 @@ function Invoke-CompilerVersionCheck {
   }
 }
 
+function Compare-BinaryArtifacts {
+  param(
+    [string]$Name,
+    [string]$ExpectedPath,
+    [string]$ActualPath
+  )
+
+  $timer = [System.Diagnostics.Stopwatch]::StartNew()
+  $same = (Test-Path -LiteralPath $ExpectedPath) -and (Test-Path -LiteralPath $ActualPath)
+  $expectedHash = ""
+  $actualHash = ""
+  if ($same) {
+    $expectedHash = (Get-FileHash -LiteralPath $ExpectedPath -Algorithm SHA256).Hash
+    $actualHash = (Get-FileHash -LiteralPath $ActualPath -Algorithm SHA256).Hash
+    $same = $expectedHash -ceq $actualHash
+  }
+  $timer.Stop()
+
+  $label = if ($same) { "[PASS]" } else { "[FAIL]" }
+  $detail = "$label $Name expected=$expectedHash actual=$actualHash"
+  Write-Host $detail
+  Write-LogLine $detail
+  return [pscustomobject]@{
+    Name = $Name
+    ExitCode = $(if ($same) { 0 } else { 1 })
+    Seconds = $timer.Elapsed.TotalSeconds
+  }
+}
+
 function Remove-TestArtifacts {
   if ($KeepArtifacts) { return }
 
@@ -225,6 +254,39 @@ try {
 
   $runnerArgs = @($Compiler) + $effectiveCompilerArgs
   $results += Invoke-NativeStep "run ML test harness" $runnerExe $runnerArgs
+
+  # The object pipeline is a serialization boundary for one canonical codegen
+  # stream. Guard both optimization-heavy and cross-module programs so layout,
+  # constant pooling and module initialization cannot drift from normal builds.
+  $parityCompilerArgs = @($effectiveCompilerArgs | Where-Object { $_ -ne "--object-pipeline" })
+  $objectParityCases = @(
+    [pscustomobject]@{
+      Name = "codegen optimizations"
+      Source = Join-Path $Root "tests\codegen_optimizations.ml"
+      Includes = @($Root)
+    },
+    [pscustomobject]@{
+      Name = "module initialization"
+      Source = Join-Path $Root "tests\ported_py\test_module_init_order\main_modinit_order.ml"
+      Includes = @((Join-Path $Root "tests\ported_py\test_module_init_order"), $Root)
+    }
+  )
+  foreach ($parityCase in $objectParityCases) {
+    $stem = ($parityCase.Name -replace '[^A-Za-z0-9]+', '_').Trim('_').ToLowerInvariant()
+    $monoExe = Join-Path $script:ResolvedArtifactsDir ($stem + "_monolithic.exe")
+    $objectExe = Join-Path $script:ResolvedArtifactsDir ($stem + "_object.exe")
+    $includeArgs = @()
+    foreach ($includeRoot in $parityCase.Includes) {
+      $includeArgs += @("-I", $includeRoot)
+    }
+    $monoArgs = @($parityCase.Source, $monoExe) + $includeArgs + $parityCompilerArgs
+    $objectArgs = @($parityCase.Source, $objectExe) + $includeArgs + $parityCompilerArgs + @("--object-pipeline")
+    $results += Invoke-NativeStep ("compile parity monolithic: " + $parityCase.Name) $Compiler $monoArgs
+    if ($results[-1].ExitCode -ne 0) { continue }
+    $results += Invoke-NativeStep ("compile parity object: " + $parityCase.Name) $Compiler $objectArgs
+    if ($results[-1].ExitCode -ne 0) { continue }
+    $results += Compare-BinaryArtifacts ("object byte identity: " + $parityCase.Name) $monoExe $objectExe
+  }
 
   $inputSrc = Join-Path $Root "tests\input_length_regression.ml"
   $inputExe = Join-Path $script:ResolvedArtifactsDir "input_length_regression.exe"

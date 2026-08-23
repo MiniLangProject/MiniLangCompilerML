@@ -108,8 +108,8 @@ function Invoke-LinkFallback {
   if ($mloCount -le 0) {
     return $false
   }
-  $supportObject = Join-Path $objDir "000_support.mlo"
-  if (-not (Test-Path -LiteralPath $supportObject)) {
+  $supportObjects = @(Get-ChildItem -LiteralPath $objDir -Filter "*_support.mlo" -File -ErrorAction SilentlyContinue)
+  if ($supportObjects.Count -ne 1) {
     return $false
   }
 

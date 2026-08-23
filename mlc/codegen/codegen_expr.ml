@@ -6584,16 +6584,14 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
             state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
             return state
           end if
-          // Guarded devirtualization preserves runtime rebinding semantics.  Object
-          // units deliberately stay on generic dispatch because cross-module rel32
-          // calls are not representable by the current .mlo relocation format.
-          if _expr_heap_cfg_bool(state, "cg_object_pipeline", false) == false then
-            obj_lbl_dg = _strpair_get(state.function_static_obj_labels, dg_name)
-            if obj_lbl_dg != "" then
-              direct_guard_obj_lbl = obj_lbl_dg
-              direct_guard_call_lbl = "fn_user_" + dg_name
-              direct_guard_builtin_nargs = false
-            end if
+          // Guarded devirtualization preserves runtime rebinding semantics.
+          // Canonical .mlo fragments support the same cross-fragment rel32
+          // relocations, so both pipelines make the same lowering choice.
+          obj_lbl_dg = _strpair_get(state.function_static_obj_labels, dg_name)
+          if obj_lbl_dg != "" then
+            direct_guard_obj_lbl = obj_lbl_dg
+            direct_guard_call_lbl = "fn_user_" + dg_name
+            direct_guard_builtin_nargs = false
           end if
         else
           sp_code = ""

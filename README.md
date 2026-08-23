@@ -324,23 +324,28 @@ Notes:
   rescans of an ever-growing patch set. Only section/data/IAT relocations then
   remain pending for PE assembly; generated executable bytes are unchanged.
 - For very large multi-module targets, pass `--object-pipeline`. It bounds the
-  live assembler graph per object and links in a fresh compiler process. The
-  MiniQuake regression fixture (112 modules / 656 objects) builds successfully
-  through this path and its `--help` runtime smoke exits with code 0.
+  live assembler graph per fragment and links in a fresh compiler process.
+  Canonical entry/function/support order, shared constant pools and exact
+  section boundaries make the final PE byte-identical to the normal self-hosted
+  and Python compiler outputs. Automated gates compare optimization-heavy and
+  cross-module fixtures byte for byte. The current MiniQuake build completes
+  all 492 function fragments, the support tail and the fresh-process link; its
+  final PE is byte-identical to both monolithic compiler outputs.
 - Pass `--profile-compiler` to the self-hosted compiler to print wall-clock
   timings for module loading, declaration planning, object emission and each
   linker phase. The flag is diagnostic only and does not change target bytes.
 - Append-heavy compiler tables use capacity-backed internal vectors and are
-  frozen to ordinary arrays at established codegen boundaries. Object clones
-  use a sparse, read-only index of support labels instead of copying the full
-  support `.data`/`.rdata` buffers and label arrays for every function chunk.
+  frozen to ordinary arrays at established codegen boundaries. The object
+  writer isolates short-lived semantic batches while append-only data builders
+  and constant pools stay shared; completed assembler fragments are discarded.
   The hot-path guard in `scripts/check_hotpath_concats.ps1` prevents the main
   declaration/scope paths from regressing to growing-array concatenation.
 - Compiler-internal `.rdata` and `.data` labels use chunked, indexed builders;
-  section relocation records are chunked as well. The complete parsed
-  AST/codegen graph remains an explicit GC root for the whole emission phase.
-  Target `--gc-limit` values configure only the generated executable; they no
-  longer change the compiler's own collection cadence.
+  section relocation records are chunked as well. The parsed AST and active
+  codegen graph remain explicit GC roots through canonical function emission,
+  then their analysis state is released before the support-helper tail. The
+  compiler uses a 3 GiB internal periodic-GC limit for large canonical builds;
+  target `--gc-limit` values still configure only the generated executable.
 - By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 
@@ -366,7 +371,7 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **93 passed, 0 failed**.
+- Latest complete run for this revision: **94 passed, 0 failed**.
 
 ### Compiler parity and self-hosting
 
@@ -377,22 +382,27 @@ language/standard-library suites, GC stress, compiler-GC liveness,
 extern/native interop, global rebinding, native threads and managed thread
 pools; every pair matches by SHA-256.
 
-The compiler executables themselves differ because the production self-build
-uses the MiniLang-only `.mlo` object pipeline. A compiler built through that
-pipeline nevertheless produced the same byte-identical language-suite target
-as the Python-bootstrap-built compiler. Exact hashes, test counts, boundaries
-and reproduction commands are recorded in
+The production self-build uses the MiniLang-only `.mlo` object pipeline. Its
+canonical layout is covered by automated byte-identity gates against both the
+normal self-hosted path and the Python bootstrap. Exact hashes, test counts,
+boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
-The last recorded 112-module / 656-object MiniQuake benchmark predates the
-`defer`/managed-FFI/project-manifest revision: the memory-bounded self-hosted
-object pipeline took 420.095 seconds and the matching Python monolithic build
-took 69.089 seconds. Treat these as historical measurements, not promises for
-later revisions.
+For the current MiniQuake revision, the Python build took 63.713 seconds, the
+corrected self-hosted monolithic build took 978.854 seconds and the canonical
+self-hosted `.mlo` build took 561.666 seconds. The `.mlo` measurement includes
+426.781 seconds for 492 function fragments, 3.516 seconds for runtime helpers
+and 114.219 seconds in the fresh linker process. All three builds produced the
+same 56,537,600-byte PE with SHA-256
+`39552E607826FD652529198664026A1D9FC66828359D17A748D95C6EE9B36BD7`.
+The object writer preserves the stream-wide inline budget across fragments and
+filters local `fn_ret_*` / `fn_defer_*` labels out of helper discovery. The
+older 420.095-second non-canonical `.mlo` measurement remains historical.
 
-The 1.0.0 source reaches a binary fixed point: the latest two 301-object
-`.mlo` stages took 181.644 and 470.513 seconds and produced identical
-54,650,368-byte compiler images (SHA-256 is recorded in the parity report).
+The released 1.0.0 source reached a binary fixed point. Earlier 301-object
+timing and hash measurements remain in the parity report as historical data.
+For the current source, the parity report distinguishes measured target-output
+identity from historical full compiler-image fixed-point results.
 
 
 ---

@@ -940,6 +940,16 @@ function arr_chunk_finish(builder)
   return arr_chunked_finish(b.chunks, b.tail)
 end function
 
+function arr_chunk_count(builder)
+  if typeof(builder) != "struct" then return 0 end if
+  return arr_chunked_count(builder.chunks, builder.tail, builder.cap)
+end function
+
+function arr_chunk_get(builder, idx, defaultv)
+  if typeof(builder) != "struct" then return defaultv end if
+  return arr_chunked_get(builder.chunks, builder.tail, idx, builder.cap, defaultv)
+end function
+
 function arr_chunk_push_all(builder, values)
   b = builder
   if typeof(values) != "array" or len(values) <= 0 then return b end if

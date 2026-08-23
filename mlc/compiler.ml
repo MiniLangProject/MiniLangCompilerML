@@ -144,6 +144,19 @@ struct MloObject
   imports,
 end struct
 
+// Immutable section boundary used while one logical monolithic stream is
+// spilled into independently serializable .mlo fragments.
+struct MloStateCheckpoint
+  rdata_used,
+  data_used,
+  bss_size,
+  rdata_label_count,
+  rdata_patch_count,
+  data_label_count,
+  data_patch_count,
+  bss_label_count,
+end struct
+
 // Capacity-backed binary writer and reader for the .mlo file format.
 struct ObjBuf
   parts,
@@ -1671,9 +1684,11 @@ function _compiler_gc_limit_from_config(runtime_config)
     // `gc_bytes_limit` belongs to the generated target.  Reusing it for the
     // self-hosted compiler made target flags such as `--gc-limit 1m` trigger
     // collections inside virtually every emitter call and could change the
-    // generated program.  Large compiler phases perform explicit, rooted
-    // collections; keep automatic compiler GC at its independent safe cadence.
-    compiler_gc_limit = 1536 << 20
+    // generated program. Canonical object builds retain shared section pages
+    // until the support tail is complete; the compiler image itself can make
+    // that live set exceed 1.5 GiB. Large phases perform explicit, rooted
+    // collections, so keep automatic compiler GC above that live set.
+    compiler_gc_limit = 3072 << 20
   end if
   return compiler_gc_limit
 end function
@@ -2229,6 +2244,84 @@ function _mlo_patches_after(patches, prefix_off)
   return t.arr_chunk_finish(out_b)
 end function
 
+function _mlo_label_name_at(labels, offset)
+  if typeof(labels) != "array" or len(labels) <= 0 then return "" end if
+  for i = 0 to len(labels) - 1
+    lb = labels[i]
+    if typeof(lb) != "struct" then continue end if
+    if typeof(lb.offset) == "int" and lb.offset == offset then
+      return _coerce_name(lb.name)
+    end if
+  end for
+  return ""
+end function
+
+// A later canonical fragment may intern a constant that was first emitted by
+// an earlier fragment.  Its new source-level label then aliases an offset that
+// is not part of the later .mlo payload.  Redirect relocations to the original
+// label so cross-fragment pooling remains byte-identical to monolithic output.
+function _mlo_rdata_alias_map(labels, base_labels, prefix_off)
+  aliases = t.fastmap_new(64)
+  if typeof(labels) != "array" or len(labels) <= 0 then return aliases end if
+  for i = 0 to len(labels) - 1
+    lb = labels[i]
+    if typeof(lb) != "struct" then continue end if
+    if typeof(lb.offset) != "int" or lb.offset >= prefix_off then continue end if
+    old_name = _coerce_name(lb.name)
+    if old_name == "" then continue end if
+    canonical_name = _mlo_label_name_at(base_labels, lb.offset)
+    if canonical_name != "" and canonical_name != old_name then
+      aliases = t.fastmap_set(aliases, old_name, canonical_name)
+    end if
+  end for
+  return aliases
+end function
+
+function _mlo_resolve_rdata_alias_patches(patches, rb)
+  if typeof(patches) != "array" or len(patches) <= 0 then return patches end if
+  out_b = t.arr_chunk_new(64)
+  for i = 0 to len(patches) - 1
+    pt = patches[i]
+    if typeof(pt) != "struct" then continue end if
+    target = _coerce_name(try(pt.target))
+    kind = _coerce_name(try(pt.kind))
+    offset = try(pt.offset)
+    if typeof(offset) != "int" then offset = 0 end if
+    if target == "" or kind == "" then continue end if
+    out_b = t.arr_chunk_push(out_b, MloPatch(offset, d.rdata_resolve_alias(rb, target), kind))
+  end for
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _mlo_state_checkpoint(st)
+  rdata_used = 0
+  data_used = 0
+  bss_size = 0
+  rdata_label_count = 0
+  rdata_patch_count = 0
+  data_label_count = 0
+  data_patch_count = 0
+  bss_label_count = 0
+  if typeof(st) != "struct" then
+    return MloStateCheckpoint(rdata_used, data_used, bss_size, rdata_label_count, rdata_patch_count, data_label_count, data_patch_count, bss_label_count)
+  end if
+  if typeof(st.rdata) == "struct" then
+    if typeof(st.rdata.used) == "int" then rdata_used = st.rdata.used end if
+    rdata_label_count = d.rdata_label_count(st.rdata)
+    rdata_patch_count = d.rdata_patch_count(st.rdata)
+  end if
+  if typeof(st.data) == "struct" then
+    if typeof(st.data.used) == "int" then data_used = st.data.used end if
+    data_label_count = d.data_label_count(st.data)
+    data_patch_count = d.data_patch_count(st.data)
+  end if
+  if typeof(st.bss) == "struct" then
+    if typeof(st.bss.size) == "int" then bss_size = st.bss.size end if
+    if typeof(st.bss.labels) == "array" then bss_label_count = len(st.bss.labels) end if
+  end if
+  return MloStateCheckpoint(rdata_used, data_used, bss_size, rdata_label_count, rdata_patch_count, data_label_count, data_patch_count, bss_label_count)
+end function
+
 function _mlo_align_down8(value)
   v = value
   if typeof(v) != "int" or v <= 0 then return 0 end if
@@ -2266,41 +2359,75 @@ function _mlo_patches_after_cut(patches, min_off, cut_off)
 end function
 
 function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
-  obj = _mlo_from_state(kind, module_file, entry_label, st)
-  if typeof(base_state) != "struct" then return obj end if
+  if typeof(base_state) != "struct" then return _mlo_from_state(kind, module_file, entry_label, st) end if
 
-  rdata_prefix = 0
-  if typeof(base_state.rdata) == "struct" and typeof(base_state.rdata.used) == "int" then
-    rdata_prefix = base_state.rdata.used
-  end if
-  if rdata_prefix > 0 and len(obj.rdata) >= rdata_prefix then
-    rdata_cut = _mlo_align_down8(rdata_prefix)
-    obj.rdata = slice(obj.rdata, rdata_cut, len(obj.rdata) - rdata_cut)
-    obj.rdata_labels = _mlo_labels_after_cut(obj.rdata_labels, rdata_prefix, rdata_cut)
-    obj.rdata_patches = _mlo_patches_after_cut(obj.rdata_patches, rdata_prefix, rdata_cut)
+  asm_labels = []
+  asm_patches = []
+  text_buf = bytes(0)
+  if typeof(st.asm) == "struct" then
+    asm_labels = a.get_labels(st.asm)
+    asm_patches = a.get_patches(st.asm)
+    st.asm = a.materialize(st.asm)
+    if typeof(st.asm.buf) == "bytes" then text_buf = _slice_used_bytes(st.asm.buf, st.asm.size) end if
   end if
 
-  data_prefix = 0
-  if typeof(base_state.data) == "struct" and typeof(base_state.data.used) == "int" then
-    data_prefix = base_state.data.used
-  end if
-  if data_prefix > 0 and len(obj.data) >= data_prefix then
-    data_cut = _mlo_align_down8(data_prefix)
-    obj.data = slice(obj.data, data_cut, len(obj.data) - data_cut)
-    obj.data_labels = _mlo_labels_after_cut(obj.data_labels, data_prefix, data_cut)
-    obj.data_patches = _mlo_patches_after_cut(obj.data_patches, data_prefix, data_cut)
-  end if
-
-  bss_prefix = 0
-  if typeof(base_state.bss) == "struct" and typeof(base_state.bss.size) == "int" then
-    bss_prefix = base_state.bss.size
-  end if
-  if obj.bss_size >= bss_prefix then
-    bss_cut = _mlo_align_down8(bss_prefix)
-    obj.bss_size = obj.bss_size - bss_cut
-    obj.bss_labels = _mlo_labels_after_cut(obj.bss_labels, bss_prefix, bss_cut)
+  rdata_prefix = base_state.rdata_used
+  rdata_used = rdata_prefix
+  rdata_buf = bytes(0)
+  rdata_labels = []
+  rdata_patches = []
+  if typeof(st.rdata) == "struct" then
+    if typeof(st.rdata.used) == "int" then rdata_used = st.rdata.used end if
+    if rdata_used > rdata_prefix then rdata_buf = slice(st.rdata.data, rdata_prefix, rdata_used - rdata_prefix) end if
+    raw_rdata_labels = d.rdata_get_labels_after(st.rdata, base_state.rdata_label_count)
+    rdata_labels = _mlo_labels_after(_mlo_labels_from_arr(raw_rdata_labels), rdata_prefix)
+    raw_rdata_patches = d.rdata_get_patches_after(st.rdata, base_state.rdata_patch_count)
+    rdata_patches = _mlo_patches_after(_mlo_patches_from_data(raw_rdata_patches), rdata_prefix)
   end if
 
+  data_prefix = base_state.data_used
+  data_used = data_prefix
+  data_buf = bytes(0)
+  data_labels = []
+  data_patches = []
+  if typeof(st.data) == "struct" then
+    if typeof(st.data.used) == "int" then data_used = st.data.used end if
+    if data_used > data_prefix then data_buf = slice(st.data.data, data_prefix, data_used - data_prefix) end if
+    raw_data_labels = d.data_get_labels_after(st.data, base_state.data_label_count)
+    data_labels = _mlo_labels_after(_mlo_labels_from_arr(raw_data_labels), data_prefix)
+    raw_data_patches = d.data_get_patches_after(st.data, base_state.data_patch_count)
+    data_patches = _mlo_patches_after(_mlo_patches_from_data(raw_data_patches), data_prefix)
+  end if
+
+  bss_prefix = base_state.bss_size
+  bss_size = 0
+  bss_labels_b = t.arr_chunk_new(16)
+  if typeof(st.bss) == "struct" then
+    if typeof(st.bss.size) == "int" and st.bss.size >= bss_prefix then bss_size = st.bss.size - bss_prefix end if
+    if typeof(st.bss.labels) == "array" and len(st.bss.labels) > base_state.bss_label_count then
+      for bi = base_state.bss_label_count to len(st.bss.labels) - 1
+        lb = st.bss.labels[bi]
+        if typeof(lb) != "struct" then continue end if
+        bss_labels_b = t.arr_chunk_push(bss_labels_b, MloLabel(_coerce_name(lb.name), lb.offset - bss_prefix))
+      end for
+    end if
+  end if
+
+  obj = MloObject(
+    kind, module_file, entry_label,
+    text_buf, rdata_buf, data_buf, bss_size,
+    _mlo_labels_from_asm_labels(asm_labels), _mlo_patches_from_asm(asm_patches),
+    rdata_labels, rdata_patches, data_labels, data_patches,
+    t.arr_chunk_finish(bss_labels_b), _mlo_imports_from_state(st.imports)
+  )
+
+  // Resolve pooled aliases in O(1) through the builder index. Only patches in
+  // this fragment are visited; prior labels and relocations are never rescanned.
+  if typeof(st.rdata) == "struct" then
+    obj.asm_patches = _mlo_resolve_rdata_alias_patches(obj.asm_patches, st.rdata)
+    obj.rdata_patches = _mlo_resolve_rdata_alias_patches(obj.rdata_patches, st.rdata)
+    obj.data_patches = _mlo_resolve_rdata_alias_patches(obj.data_patches, st.rdata)
+  end if
   return obj
 end function
 
@@ -3929,6 +4056,11 @@ function _is_internal_helper_label_local(lbl)
   if _startsWith(lbl, "fn_") == false then return false end if
   if _startsWith(lbl, "fn_user_") then return false end if
   if _startsWith(lbl, "fn_extern_") then return false end if
+  // These are local control-flow labels, not runtime support routines. A
+  // MiniQuake-sized build has roughly one return label per user function;
+  // admitting them here turns the iterative helper closure into O(n^2) work.
+  if _startsWith(lbl, "fn_ret_") then return false end if
+  if _startsWith(lbl, "fn_defer_") then return false end if
   return true
 end function
 
@@ -4362,36 +4494,13 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       entry_label = obj.entry_label
     end if
 
+    // Object files are canonical section fragments, not independently linked
+    // translation units.  Their builders already contain exactly the padding
+    // emitted by the monolithic compiler, so concatenate them byte-for-byte.
     text_obj_off = text_off
-    if _section_has_payload(obj.text, obj.asm_labels, obj.asm_patches, 0) then
-      text_pad = t.align_up(text_off, 16) - text_off
-      text_parts_b = _append_zero_pad(text_parts_b, text_pad)
-      text_obj_off = text_off + text_pad
-      text_off = text_obj_off
-    end if
-
     rdata_obj_off = rdata_off
-    if _section_has_payload(obj.rdata, obj.rdata_labels, obj.rdata_patches, 0) then
-      rdata_pad = t.align_up(rdata_off, 8) - rdata_off
-      rdata_parts_b = _append_zero_pad(rdata_parts_b, rdata_pad)
-      rdata_obj_off = rdata_off + rdata_pad
-      rdata_off = rdata_obj_off
-    end if
-
     data_obj_off = data_off
-    if _section_has_payload(obj.data, obj.data_labels, obj.data_patches, 0) then
-      data_pad = t.align_up(data_off, 8) - data_off
-      data_parts_b = _append_zero_pad(data_parts_b, data_pad)
-      data_obj_off = data_off + data_pad
-      data_off = data_obj_off
-    end if
-
     bss_obj_off = bss_off
-    if _section_has_payload(bytes(0), obj.bss_labels, [], obj.bss_size) then
-      bss_pad = t.align_up(bss_off, 8) - bss_off
-      bss_obj_off = bss_off + bss_pad
-      bss_off = bss_obj_off
-    end if
 
     text_parts_b = t.arr_chunk_push(text_parts_b, obj.text)
     rdata_parts_b = t.arr_chunk_push(rdata_parts_b, obj.rdata)
@@ -4788,9 +4897,10 @@ function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg
   end if
 
   helper_union = _merge_string_arrays(helper_union, mst.used_helpers)
-  mod_obj = _mlo_from_sparse_state_delta("module", module_file, entry_label, mst, base_state)
-  mod_obj.data_labels = _mlo_strip_shared_runtime_data_labels(mod_obj.data_labels)
-  mod_obj = _mlo_namespace_object(mod_obj, "objm_" + obj_index, true)
+  mod_obj = _mlo_from_state_delta("module", module_file, entry_label, mst, base_state)
+  // Canonical fragments share one global label-id stream and therefore need
+  // no per-object namespace. Keeping original names also lets pooled-constant
+  // aliases target labels emitted by an earlier fragment.
   helper_union = _collect_internal_helper_targets(helper_union, mod_obj.asm_patches)
   helper_union = _collect_internal_helper_targets(helper_union, mod_obj.rdata_patches)
   helper_union = _collect_internal_helper_targets(helper_union, mod_obj.data_patches)
@@ -5461,126 +5571,18 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   helper_union = []
   if typeof(st.used_helpers) == "array" then helper_union = st.used_helpers end if
   module_obj_paths_b = t.arr_chunk_new(128)
-  support_path = _tmp_obj_path(tmp_dir, "000", input_abs, "support")
+  entry_path = _tmp_obj_path(tmp_dir, "000", input_abs, "entry")
   module_object_seq = 1
-  // Most modules benefit from wider chunks that amortize state cloning, GC,
-  // serialization, and file I/O. The three backend-heavy modules contain
-  // several thousand-line functions, so they use tighter chunks below.
-  module_fn_chunk_size = 8
 
-  visited = load.visited
-  if typeof(visited) != "array" or len(visited) <= 0 then
-    visited = [input_abs]
-  end if
-
-  // Keep the merged AST rooted while module objects are emitted.  The object
-  // pipeline still references function bodies through the codegen state; if the
-  // original program root is dropped here, deeply nested expression nodes can be
-  // collected and later reused as unrelated compiler objects.
+  // Keep the merged AST rooted while canonical fragments are emitted.  The
+  // large assembler graph is still bounded to one entry/function chunk/tail.
   _heap_probe("compile:post_plan_gc")
 
-  _progress_phase("emitting module objects")
-  for mi = 0 to len(visited) - 1
-    module_file = visited[mi]
-    _progress_obj("module " + (mi + 1) + "/" + len(visited) + ": " + module_file)
-    mrec = _module_init_rec_for_file(module_init_recs, module_file)
-    if typeof(mrec) == "array" and len(mrec) >= 5 then
-      entry_label = _coerce_name(mrec[2])
-      // Module objects contain only their own deltas. Seeding every clone with
-      // the complete support .data/.rdata copied tens of megabytes hundreds of
-      // times, even though _mlo_from_state_delta discarded that prefix again.
-      mod_cg = codegen.clone_for_object(cg, false)
-      if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
-        print "CompileError: failed to clone module codegen state"
-        return 2
-      end if
-      mod_cg.state.label_id = cg.state.label_id
-      mod_cg = codegen.emit_module_init_object(mod_cg, mrec)
-      fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, module_file, entry_label, mod_cg, cg.state, helper_union, module_obj_paths_b)
-      if fin[0] != 0 then
-        print "CompileError: " + fin[1]
-        return fin[0]
-      end if
-      helper_union = fin[2]
-      module_obj_paths_b = fin[3]
-      cg.state.label_id = fin[4]
-      module_object_seq = module_object_seq + 1
-      mod_cg = 0
-      fin = 0
-      // Automatic GC remains governed by the compiler heap limit. A full mark
-      // scan after every eight tiny objects dominates self-hosted builds.
-      if (module_object_seq % 64) == 0 then gc_collect() end if
-    end if
-
-    fn_entries = codegen.module_function_entries(cg, module_file)
-    fn_chunk_size = module_fn_chunk_size
-    if s.endsWith(module_file, "codegen_builtins_alloc.ml") then fn_chunk_size = 4 end if
-    if s.endsWith(module_file, "codegen_expr.ml") or s.endsWith(module_file, "codegen_stmt.ml") or s.endsWith(module_file, "compiler.ml") then
-      fn_chunk_size = 4
-    end if
-    fn_start = 0
-    while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
-      mod_cg = codegen.clone_for_object(cg, false)
-      if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
-        print "CompileError: failed to clone module codegen state"
-        return 2
-      end if
-      mod_cg.state.label_id = cg.state.label_id
-      mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, fn_chunk_size)
-      fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, module_file, "", mod_cg, cg.state, helper_union, module_obj_paths_b)
-      if fin[0] != 0 then
-        print "CompileError: " + fin[1]
-        return fin[0]
-      end if
-      helper_union = fin[2]
-      module_obj_paths_b = fin[3]
-      cg.state.label_id = fin[4]
-      module_object_seq = module_object_seq + 1
-      fn_start = fn_start + fn_chunk_size
-      mod_cg = 0
-      fin = 0
-      if (module_object_seq % 64) == 0 then gc_collect() end if
-    end while
-
-    if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
-      for ri = 0 to len(module_init_recs) - 1
-        r = module_init_recs[ri]
-        if typeof(r) != "array" or len(r) < 5 then continue end if
-        if _path_eq(_coerce_name(r[0]), module_file) then
-          r[1] = []
-          module_init_recs[ri] = r
-        end if
-      end for
-    end if
-    if typeof(load.parsed_modules) == "struct" or typeof(load.parsed_modules) == "array" then
-      pm = _parsed_module_get(load.parsed_modules, module_file)
-      if typeof(pm) == "struct" then
-        load.parsed_modules = _parsed_module_set(load.parsed_modules, module_file, "", [])
-      end if
-    end if
-    // Module object emission creates large transient asm/rdata/patch arrays.
-    // Drop roots immediately, but amortize the expensive full-heap scan across
-    // four modules; the configured automatic GC limit remains the safety net.
-    mod_cg = 0
-    mrec = 0
-    fn_entries = 0
-    pm = 0
-    if ((mi + 1) % 4) == 0 then gc_collect() end if
-    if ((mi + 1) % 4) == 0 then
-      _heap_probe("compile:module_" + (mi + 1))
-    end if
-  end for
-
-  _progress_phase("emitting support object")
-  cg.state.used_helpers = helper_union
+  _progress_phase("emitting canonical entry object")
   cg = codegen.emit_entry_object(cg, module_init_recs, max_call_args_main, main_name)
-  cg = codegen.emit_extern_stubs(cg)
-  cg = codegen.emit_used_helpers(cg)
-  _heap_probe("compile:support_done")
-
   st = cg.state
   if typeof(st) != "struct" then
-    print "CompileError: invalid support codegen state"
+    print "CompileError: invalid entry codegen state"
     return 2
   end if
   if typeof(st.diagnostics) == "array" and len(st.diagnostics) > 0 then
@@ -5592,21 +5594,130 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     return 2
   end if
 
-  support_obj = _mlo_from_state("support", input_abs, "__ml_entry", st)
-  wr_sup = _write_mlo_file(support_path, support_obj)
-  if typeof(wr_sup) == "error" then
+  helper_union = _merge_string_arrays(helper_union, st.used_helpers)
+  entry_obj = _mlo_from_state("entry", input_abs, "__ml_entry", st)
+  helper_union = _collect_internal_helper_targets(helper_union, entry_obj.asm_patches)
+  helper_union = _collect_internal_helper_targets(helper_union, entry_obj.rdata_patches)
+  helper_union = _collect_internal_helper_targets(helper_union, entry_obj.data_patches)
+  wr_entry = _write_mlo_file(entry_path, entry_obj)
+  if typeof(wr_entry) == "error" then
     msg = "writeAllBytes failed"
-    if typeof(wr_sup.message) == "string" then msg = wr_sup.message end if
-    print "CompileError: " + msg + " (" + support_path + ")"
+    if typeof(wr_entry.message) == "string" then msg = wr_entry.message end if
+    print "CompileError: " + msg + " (" + entry_path + ")"
     return 2
   end if
-  _progress_obj("wrote " + support_path)
+  _progress_obj("wrote " + entry_path)
 
-  obj_paths = [support_path]
+  _progress_phase("emitting canonical function objects")
+  fn_entries = codegen.all_function_entries(cg)
+  fn_start = 0
+  while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
+    fn_chunk_size = 8
+    first_name = ""
+    if typeof(fn_entries[fn_start]) == "array" and len(fn_entries[fn_start]) >= 2 then
+      first_name = _coerce_name(fn_entries[fn_start][1])
+    end if
+    if _startsWith(first_name, "mlc.codegen.codegen_builtins_alloc.") or _startsWith(first_name, "mlc.codegen.codegen_expr.") or _startsWith(first_name, "mlc.codegen.codegen_stmt.") or _startsWith(first_name, "mlc.compiler.") then
+      fn_chunk_size = 4
+    end if
+
+    section_checkpoint = _mlo_state_checkpoint(cg.state)
+    mod_cg = codegen.clone_for_object(cg, false)
+    if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
+      print "CompileError: failed to clone function codegen state"
+      return 2
+    end if
+    mod_cg.state.label_id = cg.state.label_id
+    // Section builders are append-only across the canonical stream. Share
+    // them directly so a batch does not copy every prior byte, label and pool
+    // entry merely to append its own delta.
+    mod_cg.state.rdata = cg.state.rdata
+    mod_cg.state.data = cg.state.data
+    mod_cg.state.bss = cg.state.bss
+    mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, fn_chunk_size)
+    fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, first_name, "", mod_cg, section_checkpoint, helper_union, module_obj_paths_b)
+    if fin[0] != 0 then
+      print "CompileError: " + fin[1]
+      return fin[0]
+    end if
+    helper_union = fin[2]
+    module_obj_paths_b = fin[3]
+    cg.state.label_id = fin[4]
+    // Carry stream-wide optimization accounting into the next fragment. The
+    // monolithic backend applies one cumulative inline budget and call count;
+    // resetting either at an .mlo boundary changes generated instructions.
+    cg.state._inline_emitted_bytes = mod_cg.state._inline_emitted_bytes
+    cg.state.call_total_count = mod_cg.state.call_total_count
+    cg.state.call_indirect_count = mod_cg.state.call_indirect_count
+    cg.state.inline_only_functions = mod_cg.state.inline_only_functions
+    cg.state.pruned_inline_functions = mod_cg.state.pruned_inline_functions
+    // Preserve canonical section bytes and the shared constant pools while
+    // dropping analysis state that is local to the completed function batch.
+    cg.state.rdata = mod_cg.state.rdata
+    cg.state.data = mod_cg.state.data
+    cg.state.bss = mod_cg.state.bss
+    module_object_seq = module_object_seq + 1
+    fn_start = fn_start + fn_chunk_size
+    mod_cg = 0
+    section_checkpoint = 0
+    fin = 0
+    if (module_object_seq % 64) == 0 then gc_collect() end if
+  end while
+
+  // The function stream is complete. Release its AST/index roots before
+  // emitting the support tail; otherwise a large self-build reaches the
+  // compiler GC limit with almost exclusively live analysis data and spends
+  // most of the tail phase rescanning it. This mirrors the monolithic cleanup
+  // and cannot affect already serialized text or section order.
+  fn_entries = []
+  load.source = ""
+  load.program = []
+  load.aliases = []
+  load.sources = []
+  load.visited = []
+  load.parsed_modules = []
+  load.diagnostics = []
+  module_init_recs = []
+  prep = 0
+  st = 0
+  cg = codegen.clear_program_function_state(cg)
+  _compile_codegen_keepalive = [load, cg]
+  gc_collect()
+
+  _progress_phase("emitting canonical support tail")
+  tail_checkpoint = _mlo_state_checkpoint(cg.state)
+  tail_cg = codegen.clone_for_object(cg, false)
+  if typeof(tail_cg) != "struct" or typeof(tail_cg.state) != "struct" then
+    print "CompileError: failed to clone support codegen state"
+    return 2
+  end if
+  tail_cg.state.label_id = cg.state.label_id
+  tail_cg.state.rdata = cg.state.rdata
+  tail_cg.state.data = cg.state.data
+  tail_cg.state.bss = cg.state.bss
+  tail_cg.state.used_helpers = helper_union
+  _progress_phase("emitting canonical extern stubs")
+  tail_cg = codegen.emit_extern_stubs(tail_cg)
+  _progress_phase("emitting canonical runtime helpers")
+  tail_cg = codegen.emit_used_helpers(tail_cg)
+  _progress_phase("serializing canonical support tail")
+  tail_obj = _mlo_from_state_delta("support", input_abs, "", tail_cg.state, tail_checkpoint)
+  tail_path = _tmp_obj_path(tmp_dir, "" + module_object_seq, input_abs, "support")
+  wr_tail = _write_mlo_file(tail_path, tail_obj)
+  if typeof(wr_tail) == "error" then
+    msg2 = "writeAllBytes failed"
+    if typeof(wr_tail.message) == "string" then msg2 = wr_tail.message end if
+    print "CompileError: " + msg2 + " (" + tail_path + ")"
+    return 2
+  end if
+  _progress_obj("wrote " + tail_path)
+
+  obj_paths = [entry_path]
   module_obj_paths = t.arr_chunk_finish(module_obj_paths_b)
   if typeof(module_obj_paths) == "array" and len(module_obj_paths) > 0 then
     obj_paths = obj_paths + module_obj_paths
   end if
+  obj_paths = obj_paths + [tail_path]
   _progress_phase("object emission complete")
   _progress_obj("objects=" + len(obj_paths))
 
@@ -5620,8 +5731,12 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   module_init_recs = []
   module_obj_paths_b = 0
   module_obj_paths = []
-  support_obj = 0
-  wr_sup = 0
+  entry_obj = 0
+  wr_entry = 0
+  tail_obj = 0
+  wr_tail = 0
+  tail_cg = 0
+  tail_checkpoint = 0
   helper_union = []
   prep = 0
   st = 0

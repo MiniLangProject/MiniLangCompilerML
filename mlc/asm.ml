@@ -208,6 +208,12 @@ function _track_helper_label(asm, label)
   if _starts_with_text(label, "fn_") == false then return asm end if
   if _starts_with_text(label, "fn_user_") then return asm end if
   if _starts_with_text(label, "fn_extern_") then return asm end if
+  // Per-function return/defer targets share the fn_ prefix with runtime
+  // helpers, but they are ordinary labels in the current text fragment.
+  // Tracking them as helpers makes large programs feed thousands of local
+  // labels into the iterative support-tail emitter.
+  if _starts_with_text(label, "fn_ret_") then return asm end if
+  if _starts_with_text(label, "fn_defer_") then return asm end if
   if typeof(asm.tracked_helpers) != "array" then asm.tracked_helpers = [] end if
   if _array_contains_text(asm.tracked_helpers, label) == false then
     asm.tracked_helpers = asm.tracked_helpers + [label]

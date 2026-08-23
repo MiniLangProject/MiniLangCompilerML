@@ -164,6 +164,7 @@ function _copy_rdata_builder(rb)
   out_rb.pool_raw = _copy_fastmap(rb.pool_raw)
   out_rb.pool_obj_string = _copy_fastmap(rb.pool_obj_string)
   out_rb.pool_obj_float = _copy_fastmap(rb.pool_obj_float)
+  out_rb.alias_index = _copy_fastmap(rb.alias_index)
   out_rb.used = rb.used
   return out_rb
 end function
@@ -185,6 +186,7 @@ function _sparse_rdata_builder(base_rb)
   out_rb.pool_raw = t.fastmap_new(256)
   out_rb.pool_obj_string = t.fastmap_new(256)
   out_rb.pool_obj_float = t.fastmap_new(64)
+  out_rb.alias_index = t.fastmap_new(64)
   out_rb.used = 0
   return out_rb
 end function
@@ -269,8 +271,8 @@ function _clone_state_for_object(base, seed_runtime)
   st.builtin_static_obj_labels = base.builtin_static_obj_labels
   st.extern_static_obj_labels = base.extern_static_obj_labels
   st.diagnostics = []
-  st.call_total_count = 0
-  st.call_indirect_count = 0
+  st.call_total_count = base.call_total_count
+  st.call_indirect_count = base.call_indirect_count
   st.callprof_entries = base.callprof_entries
   st.callprof_index = base.callprof_index
   st.callprof_name_labels = base.callprof_name_labels
@@ -312,12 +314,15 @@ function _clone_state_for_object(base, seed_runtime)
   st._cold_block_stack = []
   st._inline_param_stack = stmt.cg_emit_stmt
   st._inline_call_stack = []
-  st._inline_emitted_bytes = t.fastmap_new(128)
+  // The inline byte budget is global to the canonical function stream. A
+  // fresh budget per object batch changes which later calls are inlined and
+  // therefore changes both code size and layout versus monolithic emission.
+  st._inline_emitted_bytes = _copy_fastmap(base._inline_emitted_bytes)
   st.known_int_names = []
   st.known_value_types = []
   st.loop_index_fast_stack = []
-  st.inline_only_functions = []
-  st.pruned_inline_functions = []
+  st.inline_only_functions = _copy_array(base.inline_only_functions)
+  st.pruned_inline_functions = _copy_array(base.pruned_inline_functions)
   st.ext_widebuf_labels = base.ext_widebuf_labels
   st.decl_site_bindings = []
   st.function_local_ids = []
@@ -332,9 +337,6 @@ function _clone_state_for_object(base, seed_runtime)
     st.data = _copy_data_builder(base.data)
     st.bss = _copy_bss_builder(base.bss)
     st.rdata = _copy_rdata_builder(base.rdata)
-    st.rdata.pool_raw = t.fastmap_new(256)
-    st.rdata.pool_obj_string = t.fastmap_new(256)
-    st.rdata.pool_obj_float = t.fastmap_new(64)
   else
     st.data = _sparse_data_builder(base.data)
     st.bss = _copy_bss_builder(base.bss)
@@ -348,6 +350,17 @@ function clone_for_object(cg, seed_runtime)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
   return Codegen(_clone_state_for_object(cg.state, seed_runtime))
+end function
+
+// Start a new serialized text fragment without resetting semantic codegen
+// state. Re-root the statement callback because object serialization may run
+// a collection between function batches.
+function start_object_fragment(cg)
+  if typeof(cg) != "struct" then return cg end if
+  if typeof(cg.state) != "struct" then return cg end if
+  cg.state.asm = a.newAsmBuilder()
+  cg.state._inline_param_stack = stmt.cg_emit_stmt
+  return cg
 end function
 
 function prepare_program_for_objects(cg, program)
@@ -393,6 +406,12 @@ function module_function_entries(cg, module_file)
   return stmt.module_function_entries(cg.state, module_file)
 end function
 
+function all_function_entries(cg)
+  if typeof(cg) != "struct" then return [] end if
+  if typeof(cg.state) != "struct" then return [] end if
+  return stmt.all_function_entries(cg.state)
+end function
+
 function emit_module_function_entries(cg, entries, start_index, count)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -412,6 +431,17 @@ function emit_used_helpers(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
   cg.state = core.emit_used_helpers(cg.state)
+  return cg
+end function
+
+// Drop program-analysis records once every user function has been emitted.
+// Runtime helpers and extern stubs only need the prepared metadata and section
+// builders; retaining the full function AST here makes large object builds
+// repeatedly collect an almost entirely live compiler heap.
+function clear_program_function_state(cg)
+  if typeof(cg) != "struct" then return cg end if
+  if typeof(cg.state) != "struct" then return cg end if
+  cg.state = stmt._clear_program_function_state(cg.state)
   return cg
 end function
 
