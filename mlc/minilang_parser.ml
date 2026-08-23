@@ -979,9 +979,30 @@ function _hex_value(ch)
 end function
 
 function _charFromCode(v)
-  if v < 0 then return "" end if
-  b = bytes(1, 0)
-  b[0] = v & 255
+  // Build the UTF-8 sequence used by MiniLang strings. This also keeps \x
+  // escapes above ASCII aligned with Python's chr(...).encode("utf-8").
+  if v < 0 or v > 0x10FFFF then return "" end if
+  if v >= 0xD800 and v <= 0xDFFF then return "" end if
+  b = bytes(0, 0)
+  if v <= 0x7F then
+    b = bytes(1, 0)
+    b[0] = v
+  else if v <= 0x7FF then
+    b = bytes(2, 0)
+    b[0] = 0xC0 | (v >> 6)
+    b[1] = 0x80 | (v & 0x3F)
+  else if v <= 0xFFFF then
+    b = bytes(3, 0)
+    b[0] = 0xE0 | (v >> 12)
+    b[1] = 0x80 | ((v >> 6) & 0x3F)
+    b[2] = 0x80 | (v & 0x3F)
+  else
+    b = bytes(4, 0)
+    b[0] = 0xF0 | (v >> 18)
+    b[1] = 0x80 | ((v >> 12) & 0x3F)
+    b[2] = 0x80 | ((v >> 6) & 0x3F)
+    b[3] = 0x80 | (v & 0x3F)
+  end if
   d = decode(b)
   if typeof(d) != "string" then return "" end if
   return d
@@ -1015,6 +1036,34 @@ function _decode_string_raw(raw, pos)
       if h1 < 0 or h2 < 0 then _set_error("Invalid \\x escape", pos + i) ; return end if
       decoded = decoded + _charFromCode(h1 * 16 + h2)
       i = i + 4
+      continue
+    end if
+    if esc == "u" then
+      if i + 5 >= len(raw) then _set_error("Invalid \\u escape", pos + i) ; return end if
+      cp = 0
+      for j = 2 to 5
+        hd = _hex_value(raw[i + j])
+        if hd < 0 then _set_error("Invalid \\u escape", pos + i) ; return end if
+        cp = cp * 16 + hd
+      end for
+      uch = _charFromCode(cp)
+      if uch == "" then _set_error("Invalid \\u escape", pos + i) ; return end if
+      decoded = decoded + uch
+      i = i + 6
+      continue
+    end if
+    if esc == "U" then
+      if i + 9 >= len(raw) then _set_error("Invalid \\U escape", pos + i) ; return end if
+      cp = 0
+      for j = 2 to 9
+        hd = _hex_value(raw[i + j])
+        if hd < 0 then _set_error("Invalid \\U escape", pos + i) ; return end if
+        cp = cp * 16 + hd
+      end for
+      uch = _charFromCode(cp)
+      if uch == "" then _set_error("Invalid \\U escape", pos + i) ; return end if
+      decoded = decoded + uch
+      i = i + 10
       continue
     end if
     decoded = decoded + esc

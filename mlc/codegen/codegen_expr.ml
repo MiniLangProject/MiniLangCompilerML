@@ -611,7 +611,13 @@ function _qualify_identifier(state, name)
   qkey = bid0 + "|" + qpref0 + "|" + fpref0 + "|" + name
   if typeof(state.qualify_cache) == "struct" then
     hitq = t.fastmap_get(state.qualify_cache, qkey, 0)
-    if typeof(hitq) == "string" then return hitq end if
+    if typeof(hitq) == "string" then
+      // A previous unresolved lookup may have fallen back to the raw name.
+      // Function analysis installs explicit global bindings incrementally, so
+      // only reuse cache entries that still resolve to a binding or symbol.
+      hitb = scope.cg_resolve_binding(state, hitq)
+      if typeof(hitb) == "struct" or _compile_symbol_has(state, hitq) then return hitq end if
+    end if
   else
     state.qualify_cache = t.fastmap_new(1024)
   end if
@@ -674,7 +680,8 @@ function _qualify_identifier(state, name)
     end if
   end if
 
-  state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, n1)
+  // Do not cache an unresolved raw fallback: a later `global` declaration in
+  // the same analysis scope can make the package-qualified candidate valid.
   return n1
 end function
 
@@ -881,7 +888,7 @@ function _try_const_bin(op, lv, rv)
   return ConstEvalResult(false, 0)
 end function
 
-function cg_expr_try_const_value(state, expr)
+function _cg_expr_try_const_value(state, expr, preserve_unary_float)
   if typeof(expr) != "struct" then return ConstEvalResult(false, 0) end if
 
   k = _coerce_name(try(expr.node_kind))
@@ -909,12 +916,22 @@ function cg_expr_try_const_value(state, expr)
   end if
 
   if k == "Unary" then
-    rv = cg_expr_try_const_value(state, try(expr.right))
+    rv = _cg_expr_try_const_value(state, try(expr.right), preserve_unary_float)
     if rv.ok == false then return ConstEvalResult(false, 0) end if
     opu = _coerce_name(try(expr.op))
     if opu == "not" then return ConstEvalResult(true, not _opt_truthy(rv.value)) end if
     if opu == "-" then
       if _is_number_no_bool(rv.value) == false then return ConstEvalResult(false, 0) end if
+      if preserve_unary_float and typeof(rv.value) == "float" then
+        // MiniLang arithmetic normalizes exact integral float results to int.
+        // Const evaluation must preserve Python's unary-minus float type so
+        // both compilers encode values such as `-16.0` identically.
+        encf = t.try_enc_float_immediate(rv.value)
+        if typeof(encf) == "int" then
+          return ConstEvalResult(true, nativeValueFromRaw(encf ^ (1 << 34)))
+        end if
+        return ConstEvalResult(true, toFloat(0 - rv.value))
+      end if
       return ConstEvalResult(true, 0 - rv.value)
     end if
     if opu == "~" then
@@ -925,7 +942,7 @@ function cg_expr_try_const_value(state, expr)
   end if
 
   if k == "Bin" then
-    lv = cg_expr_try_const_value(state, try(expr.left))
+    lv = _cg_expr_try_const_value(state, try(expr.left), preserve_unary_float)
     if lv.ok == false then return ConstEvalResult(false, 0) end if
 
     opb = _coerce_name(try(expr.op))
@@ -936,7 +953,7 @@ function cg_expr_try_const_value(state, expr)
       return ConstEvalResult(true, true)
     end if
 
-    rv = cg_expr_try_const_value(state, try(expr.right))
+    rv = _cg_expr_try_const_value(state, try(expr.right), preserve_unary_float)
     if rv.ok == false then return ConstEvalResult(false, 0) end if
     return _try_const_bin(opb, lv.value, rv.value)
   end if
@@ -1086,6 +1103,16 @@ function _emit_std_math_roundlike_intrinsic(state, callee_name, arg)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   state.asm = a.mark(state.asm, l_done)
   return [state, true]
+end function
+
+function cg_expr_try_const_value(state, expr)
+  // Optimizer folding follows runtime arithmetic normalization.
+  return _cg_expr_try_const_value(state, expr, false)
+end function
+
+function cg_expr_try_const_decl_value(state, expr)
+  // Declaration constexpr evaluation matches Python's source-value typing.
+  return _cg_expr_try_const_value(state, expr, true)
 end function
 
 function _extern_struct_get(state, qname)
@@ -1852,19 +1879,22 @@ function _emit_expr_unary(state, expr)
   if expr.op == "~" then
     lid_b = _next_lid(state)
     lid_v = _next_lid(state)
-    l_done_b = "ubnot_done_" + lid_b
-    l_end_b = "ubnot_end_" + lid_b
+    l_ok_b = "bnot_ok_" + lid_b
+    l_fail_b = "bnot_fail_" + lid_b
+    l_end_b = "bnot_end_" + lid_b
     l_nvoid_b = "bnot_nvoid_" + lid_v
-    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-    state.asm = a.and_r64_imm(state.asm, "r10", 7)
-    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
-    state.asm = a.jcc(state.asm, "ne", l_done_b)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "e", l_ok_b)
+    state.asm = a.jmp(state.asm, l_fail_b)
+    state.asm = a.mark(state.asm, l_ok_b)
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
     state.asm = a.xor_r64_imm(state.asm, "rax", -1)
     state.asm = a.shl_rax_imm8(state.asm, 3)
     state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
     state.asm = a.jmp(state.asm, l_end_b)
-    state.asm = a.mark(state.asm, l_done_b)
+    state.asm = a.mark(state.asm, l_fail_b)
     state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
     state.asm = a.and_r64_imm(state.asm, "rdx", 7)
     state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)

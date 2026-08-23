@@ -1288,7 +1288,7 @@ function cg_emit_stmt(state, stmt)
       return state
     end if
 
-    cv = exprmod.cg_expr_try_const_value(state, stmt.expr)
+    cv = exprmod.cg_expr_try_const_decl_value(state, stmt.expr)
     bct = scope.cg_resolve_binding(state, qn_c)
     if typeof(bct) != "struct" then
       state = scope.declare_global_binding_root(state, qn_c, stmt, true, stmt.expr)
@@ -1325,7 +1325,20 @@ function cg_emit_stmt(state, stmt)
     old_sync_depth = 0
     if typeof(state.errprop_sync_depth) == "int" then old_sync_depth = state.errprop_sync_depth end if
     if is_sync_write then state.errprop_sync_depth = old_sync_depth + 1 end if
-    state = exprmod.cg_emit_expr(state, stmt.expr)
+    // Match Python's top-level constexpr assignment folding. In particular,
+    // source values such as `-1.0` must retain their float type instead of
+    // passing through runtime arithmetic normalization and becoming int.
+    folded_top_level = false
+    if state.in_function == false and _is_constexpr_expr(state, stmt.expr) then
+      cva = exprmod.cg_expr_try_const_decl_value(state, stmt.expr)
+      if cva.ok then
+        state = exprmod._opt_emit_const_value(state, cva.value)
+        folded_top_level = true
+      end if
+    end if
+    if folded_top_level == false then
+      state = exprmod.cg_emit_expr(state, stmt.expr)
+    end if
     if is_sync_write then state.errprop_sync_depth = old_sync_depth end if
     state = scope.emit_store_var_scoped(state, qn_a, stmt)
     if is_sync_write then state.asm = a.call(state.asm, "fn_sync_leave") end if
@@ -2979,30 +2992,20 @@ function _scan_stmt_children(st)
   if typeof(st) != "struct" then return kids end if
 
   body0 = try(st.body)
-  if typeof(body0) == "array" and len(body0) > 0 then
-    kids = kids + body0
-  end if
+  if typeof(body0) == "array" and len(body0) > 0 then kids = kids + body0 end if
   then0 = try(st.then_body)
-  if typeof(then0) == "array" and len(then0) > 0 then
-    kids = kids + then0
-  end if
+  if typeof(then0) == "array" and len(then0) > 0 then kids = kids + then0 end if
   else0 = try(st.else_body)
-  if typeof(else0) == "array" and len(else0) > 0 then
-    kids = kids + else0
-  end if
+  if typeof(else0) == "array" and len(else0) > 0 then kids = kids + else0 end if
   def0 = try(st.default_body)
-  if typeof(def0) == "array" and len(def0) > 0 then
-    kids = kids + def0
-  end if
+  if typeof(def0) == "array" and len(def0) > 0 then kids = kids + def0 end if
 
   cases0 = try(st.cases)
   if typeof(cases0) == "array" and len(cases0) > 0 then
     for ci = 0 to len(cases0) - 1
       cs = cases0[ci]
       cs_body = try(cs.body)
-      if typeof(cs) == "struct" and typeof(cs_body) == "array" and len(cs_body) > 0 then
-        kids = kids + cs_body
-      end if
+      if typeof(cs) == "struct" and typeof(cs_body) == "array" and len(cs_body) > 0 then kids = kids + cs_body end if
     end for
   end if
 
@@ -3010,13 +3013,87 @@ function _scan_stmt_children(st)
   if typeof(elifs0) == "array" and len(elifs0) > 0 then
     for ei = 0 to len(elifs0) - 1
       eb = elifs0[ei]
-      if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" and len(eb[1]) > 0 then
-        kids = kids + eb[1]
-      end if
+      if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" and len(eb[1]) > 0 then kids = kids + eb[1] end if
     end for
   end if
-
   return kids
+end function
+
+function _scan_stmt_for_global_decls_lifo(state, st, qpref, fpref)
+  if typeof(st) != "struct" then return state end if
+
+  if _coerce_name(try(st.node_kind)) == "GlobalDecl" then
+    names0 = try(st.names)
+    if typeof(names0) != "array" or len(names0) <= 0 then return state end if
+    for j = 0 to len(names0) - 1
+      nm = _coerce_name(names0[j])
+      if nm == "" then continue end if
+      tgt = _resolve_global_target_scan(state, nm, qpref, fpref)
+      if tgt == "" then continue end if
+      state = scope.declare_global_binding_root(state, tgt, st, false, 0)
+    end for
+    return state
+  end if
+
+  // Python appends statement-valued dataclass fields in declaration order and
+  // pops them from a LIFO worklist. Visit those fields directly in the reverse
+  // order here. This avoids array slicing/concatenation and temporary worklist
+  // allocations while producing the exact same declaration order.
+  methods0 = try(st.methods)
+  if typeof(methods0) == "array" and len(methods0) > 0 then
+    mi = len(methods0) - 1
+    while mi >= 0
+      state = _scan_stmt_for_global_decls_lifo(state, methods0[mi], qpref, fpref)
+      mi = mi - 1
+    end while
+  end if
+
+  def0 = try(st.default_body)
+  if typeof(def0) == "array" and len(def0) > 0 then
+    di = len(def0) - 1
+    while di >= 0
+      state = _scan_stmt_for_global_decls_lifo(state, def0[di], qpref, fpref)
+      di = di - 1
+    end while
+  end if
+
+  cases0 = try(st.cases)
+  if typeof(cases0) == "array" and len(cases0) > 0 then
+    ci = len(cases0) - 1
+    while ci >= 0
+      state = _scan_stmt_for_global_decls_lifo(state, cases0[ci], qpref, fpref)
+      ci = ci - 1
+    end while
+  end if
+
+  else0 = try(st.else_body)
+  if typeof(else0) == "array" and len(else0) > 0 then
+    ei = len(else0) - 1
+    while ei >= 0
+      state = _scan_stmt_for_global_decls_lifo(state, else0[ei], qpref, fpref)
+      ei = ei - 1
+    end while
+  end if
+
+  then0 = try(st.then_body)
+  if typeof(then0) == "array" and len(then0) > 0 then
+    ti = len(then0) - 1
+    while ti >= 0
+      state = _scan_stmt_for_global_decls_lifo(state, then0[ti], qpref, fpref)
+      ti = ti - 1
+    end while
+  end if
+
+  body0 = try(st.body)
+  if typeof(body0) == "array" and len(body0) > 0 then
+    bi = len(body0) - 1
+    while bi >= 0
+      state = _scan_stmt_for_global_decls_lifo(state, body0[bi], qpref, fpref)
+      bi = bi - 1
+    end while
+  end if
+
+  return state
 end function
 
 function _scan_function_for_global_decls(state, fn_node)
@@ -3033,69 +3110,12 @@ function _scan_function_for_global_decls(state, fn_node)
   fpref = ""
   if fn_file != "" then fpref = _strpair_get(state.file_prefix_map, fn_file) end if
 
-  stack = []
   body_fn = try(fn_node.body)
   if typeof(body_fn) != "array" then return state end if
-  if typeof(body_fn) == "array" and len(body_fn) > 0 then stack = body_fn end if
-
-  // Match Python's LIFO walk while retaining the source order of names inside
-  // each top-level `global a, b` declaration.
   bi0 = len(body_fn) - 1
   while bi0 >= 0
-    st0 = body_fn[bi0]
-    if typeof(st0) == "struct" and _coerce_name(st0.node_kind) == "GlobalDecl" then
-      names1 = try(st0.names)
-      if typeof(names1) == "array" and len(names1) > 0 then
-        for bj0 = 0 to len(names1) - 1
-          nm1 = _coerce_name(names1[bj0])
-          if nm1 == "" then continue end if
-          tgt1 = _resolve_global_target_scan(state, nm1, qpref, fpref)
-          if tgt1 != "" then state = scope.declare_global_binding_root(state, tgt1, st0, false, 0) end if
-        end for
-      end if
-    end if
+    state = _scan_stmt_for_global_decls_lifo(state, body_fn[bi0], qpref, fpref)
     bi0 = bi0 - 1
-  end while
-
-  while typeof(stack) == "array" and len(stack) > 0
-    top_i = len(stack) - 1
-    st = stack[top_i]
-    if top_i <= 0 then
-      stack = []
-    else
-      stack2 = slice(stack, 0, top_i)
-      if typeof(stack2) == "array" then
-        stack = stack2
-      else
-        stack = []
-      end if
-    end if
-    if typeof(st) != "struct" then continue end if
-
-    st_kind = _coerce_name(st.node_kind)
-    if st_kind == "GlobalDecl" then
-      names0 = try(st.names)
-      if typeof(names0) != "array" or len(names0) <= 0 then continue end if
-      for j = 0 to len(names0) - 1
-        nm = _coerce_name(names0[j])
-        if nm == "" then continue end if
-        tgt = _resolve_global_target_scan(state, nm, qpref, fpref)
-        if tgt == "" then continue end if
-        state = scope.declare_global_binding_root(state, tgt, st, false, 0)
-      end for
-      continue
-    end if
-
-    kids = _scan_stmt_children(st)
-    if typeof(kids) == "array" and len(kids) > 0 then
-      for ki = 0 to len(kids) - 1
-        child = kids[ki]
-        if typeof(child) == "struct" then
-          if typeof(stack) != "array" then stack = [] end if
-          stack = stack + [child]
-        end if
-      end for
-    end if
   end while
 
   return state
@@ -3937,7 +3957,12 @@ function _analysis_scan_stmt(state, st)
         if gi < 0 or gi >= gn then break end if
         gnm = _coerce_name(st.names[gi])
         if gnm == "" then continue end if
-        state = scope.declare_function_global(state, gnm, gnm)
+        // Analysis must use the same package/namespace qualification as the
+        // emission pass.  Creating an unqualified shadow slot here makes a
+        // later implicit read resolve to an uninitialized global instead of
+        // the module global written by the explicitly declared writer.
+        gq = _resolve_global_target_scan(state, gnm, state.current_qname_prefix, state.current_file_prefix)
+        state = scope.declare_function_global(state, gnm, gq)
       end for
     end if
     return state
@@ -6407,7 +6432,7 @@ function _precompute_top_level_const_bindings(state, program)
       state.current_qname_prefix = pref
       state.current_file_prefix = pref
 
-      cv = exprmod.cg_expr_try_const_value(state, st.expr)
+      cv = exprmod.cg_expr_try_const_decl_value(state, st.expr)
       if cv.ok then
         state = scope.cg_precompute_const_binding_value(state, qn, cv.value)
         progress = true

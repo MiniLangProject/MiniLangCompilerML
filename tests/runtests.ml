@@ -402,6 +402,7 @@ function main(args)
   if _test_adv(compiler_path, repo_root, "py_import_self_ignored", "tests/ported_py/test_import_self_ignored/main_self_import_ok.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_module_init_order", "tests/ported_py/test_module_init_order/main_modinit_order.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_module_init_once_cycle", "tests/ported_py/test_module_init_once_in_cycle/main_modinit_once_cycle.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test_adv(compiler_path, repo_root, "package_global_resolution", "tests/package_global_resolution/main.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_import_decl_only", "tests/ported_py/test_import_decl_only_violation/main_bad.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
 
   if _test_adv(compiler_path, repo_root, "py_call_arity", "tests/ported_py/test_call_arity_mismatch/arity_bad.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if

@@ -1053,6 +1053,14 @@ function _resolve_import(requested, base_dir, include_dirs)
     end if
   end if
 
+  // GetFullPathNameW canonicalizes mixed module-style separators to the
+  // backslash form produced by Python's pathlib on Windows. Keep that display
+  // path on AST nodes as well as using the case-folded form for lookup keys.
+  if resolved != "" then
+    resolved_abs = _path_abspath(resolved)
+    if resolved_abs != "" then resolved = resolved_abs end if
+  end if
+
   tried = t.arr_chunk_finish(tried_b)
   matches = t.arr_chunk_finish(matches_b)
   return ResolveResult(resolved, tried, matches, resolved_kind, resolved_root)
