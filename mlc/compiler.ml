@@ -12,8 +12,8 @@ import mlc.project as project
 import mlc.asm as a
 import mlc.data as d
 
-const COMPILER_VERSION = "1.0.0"
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.0.0"
+const COMPILER_VERSION = "1.1.0"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.1.0"
 
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool

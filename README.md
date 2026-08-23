@@ -1,6 +1,7 @@
 ﻿# MiniLang - Self-Hosted Compiler
 
-Current stable release: **1.0.0**.
+Current stable release: **1.1.0**. See the [changelog](CHANGELOG.md) and
+[release notes](RELEASE_NOTES_1.1.0.md).
 
 MiniLang (`.ml`) is a small, dynamically typed language that compiles to a
 native Windows x64 executable (PE32+) with the self-hosted compiler produced by
@@ -167,7 +168,7 @@ Common options:
   changing target bytes
 
 `.\build\mlc_win64.exe -version` and `--version` both print
-`MiniLang Compiler 1.0.0`. `.\build\mlc_win64.exe --help` prints a short usage
+`MiniLang Compiler 1.1.0`. `.\build\mlc_win64.exe --help` prints a short usage
 summary.
 
 Notes (current implementation):
@@ -388,21 +389,26 @@ normal self-hosted path and the Python bootstrap. Exact hashes, test counts,
 boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
-For the current MiniQuake revision, the Python build took 63.713 seconds, the
-corrected self-hosted monolithic build took 978.854 seconds and the canonical
-self-hosted `.mlo` build took 561.666 seconds. The `.mlo` measurement includes
-426.781 seconds for 492 function fragments, 3.516 seconds for runtime helpers
-and 114.219 seconds in the fresh linker process. All three builds produced the
-same 56,537,600-byte PE with SHA-256
-`39552E607826FD652529198664026A1D9FC66828359D17A748D95C6EE9B36BD7`.
-The object writer preserves the stream-wide inline budget across fragments and
-filters local `fn_ret_*` / `fn_defer_*` labels out of helper discovery. The
-older 420.095-second non-canonical `.mlo` measurement remains historical.
+For the 1.1.0 acceptance pass, a 142-file snapshot of the current MiniQuake
+worktree at commit `1036b1c3b551d00de777c67293d262a6cc5c2739` plus 18 dirty
+entries was built through all three paths. Python took 67.528 seconds, the
+self-hosted monolithic compiler took 2,024.375 seconds and the canonical
+self-hosted `.mlo` build took 431.789 seconds. The `.mlo` run emitted 494
+function fragments in 361.500 seconds, runtime helpers in 3.781 seconds and
+linked in a fresh process in 42.375 seconds. All three builds produced the same
+57,005,568-byte PE with SHA-256
+`3071B78B6F2C72B8C3036E5D62010831758F6EA3E7FFA3F6AF908BB9756003B3`.
+Retail Quake data passed a 120-frame runtime smoke and deterministic trace; a
+1,000-frame E1M1 baseline measured about 1,404.5 headless frames/s and 166.8
+rendered FPS. The object writer preserves the stream-wide inline budget across
+fragments and filters local return/defer labels out of helper discovery.
 
-The released 1.0.0 source reached a binary fixed point. Earlier 301-object
-timing and hash measurements remain in the parity report as historical data.
-For the current source, the parity report distinguishes measured target-output
-identity from historical full compiler-image fixed-point results.
+The 1.1.0 source reaches a binary fixed point: Stage 2 and Stage 3 are
+byte-identical 55,712,256-byte compiler images with SHA-256
+`431C7E74BB0A200EA17BB1831D726C8CB5755DB3008A07687916375E717AD71F`.
+The Python-built Stage 1 has the same size but a different layout. The parity
+report therefore distinguishes the bootstrap image, the measured self-hosted
+fixed point and byte-identical target output explicitly.
 
 
 ---
