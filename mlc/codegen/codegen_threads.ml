@@ -195,6 +195,7 @@ function emit_gc_safepoint_function(state)
   l_done = "gcsafe_done_" + lid
   l_wait = "gcsafe_wait_" + lid
   l_recheck = "gcsafe_recheck_" + lid
+  l_park = "gcsafe_park_" + lid
   l_resume = "gcsafe_resume_" + lid
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_requested")
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
@@ -206,6 +207,7 @@ function emit_gc_safepoint_function(state)
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_requested")
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
   state.asm = a.jcc(state.asm, "e", l_resume)
+  state.asm = a.mark(state.asm, l_park)
   state.asm = a.mov_r11_gs_qword_28(state.asm)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_GC_STATE, GC_THREAD_PARKED, false)
   state.asm = a.lea_rax_rip(state.asm, "gc_coord_monitor")
@@ -226,7 +228,9 @@ function emit_gc_safepoint_function(state)
   state.asm = a.call_rax(state.asm)
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_requested")
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
-  state.asm = a.jcc(state.asm, "ne", l_resume)
+  // A back-to-back collection must observe this thread as parked before it
+  // waits. Publish the state while the coordination monitor is still held.
+  state.asm = a.jcc(state.asm, "ne", l_park)
   state.asm = a.mov_r11_gs_qword_28(state.asm)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_GC_STATE, GC_THREAD_RUNNING, false)
   state.asm = a.mark(state.asm, l_resume)
@@ -236,7 +240,9 @@ function emit_gc_safepoint_function(state)
   state.asm = a.call_rax(state.asm)
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_requested")
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
-  state.asm = a.jcc(state.asm, "ne", l_wait)
+  // Reacquire the monitor before waiting so a newly requested collection
+  // cannot see RUNNING while this thread spins for the request to clear.
+  state.asm = a.jcc(state.asm, "ne", l_recheck)
   state.asm = a.mark(state.asm, l_done)
   state.asm = a.add_rsp_imm8(state.asm, 0x28)
   state.asm = a.ret(state.asm)
