@@ -1171,6 +1171,22 @@ function mov_rax_imm64(asm, imm)
   return mov_r64_imm64(asm, "rax", imm)
 end function
 
+function mov_r64_tagged_int(asm, dst, value)
+  // Shifting a compiler-host integer is only exact while the tagged result
+  // still fits MiniLang's own signed-61 payload. Split wider results into
+  // two u32 halves so minimum/maximum target integers keep every raw bit.
+  if value >= -144115188075855872 and value <= 144115188075855871 then
+    return mov_r64_imm64(asm, dst, t.enc_int(value))
+  end if
+  lo32 = ((value & 0x1FFFFFFF) << 3) | 1
+  hi32 = (value >> 29) & 0xFFFFFFFF
+  return mov_r64_u64_hi_lo_exact(asm, dst, hi32, lo32)
+end function
+
+function mov_rax_tagged_int(asm, value)
+  return mov_r64_tagged_int(asm, "rax", value)
+end function
+
 function mov_r64_u64_hi_lo_exact(asm, dst, hi32, lo32)
   rd = _rid_any(dst)
   if rd < 0 then return asm end if
@@ -2304,6 +2320,7 @@ function roundsd_xmm_xmm_imm8(asm, dst_xmm, src_xmm, imm8)
   return asm
 end function
 
+// Move one tagged 64-bit value into the low qword of an XMM register.
 function movq_xmm_r64(asm, dst_xmm, src_reg)
   d = _xmm_id(dst_xmm)
   sr = _rid_any(src_reg)
@@ -2316,6 +2333,7 @@ function movq_xmm_r64(asm, dst_xmm, src_reg)
   return asm
 end function
 
+// Restore one tagged 64-bit value from the low qword of an XMM register.
 function movq_r64_xmm(asm, dst_reg, src_xmm)
   d = _rid_any(dst_reg)
   sr = _xmm_id(src_xmm)

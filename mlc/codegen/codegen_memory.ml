@@ -1569,8 +1569,10 @@ function emit_gc_collect_function(state)
   state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "rbx", c.GC_HEADER_SIZE)
   state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rdx", 0)
   state.asm = a.test_r32_r32(state.asm, "ecx", "ecx")
+  // Live blocks stay out of the rebuilt free list.
   state.asm = a.jcc(state.asm, "ne", L_REBUILD_NEXT)
 
+  // Merge adjacent dead blocks before linking one maximal free range.
   state.asm = a.mark(state.asm, L_COAL_LOOP)
   state.asm = a.mov_r64_r64(state.asm, "r11", "rbx")
   state.asm = a.add_r64_r64(state.asm, "r11", "r10")
@@ -1588,12 +1590,14 @@ function emit_gc_collect_function(state)
   state.asm = a.jmp(state.asm, L_COAL_LOOP)
 
   state.asm = a.mark(state.asm, L_COAL_DONE)
+  // Link the maximal coalesced range into the rebuilt free list.
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_free_head")
   state.asm = a.mov_membase_disp_r64(state.asm, "rbx", 8, "rax")
   state.asm = a.mov_r64_r64(state.asm, "rax", "rbx")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_head")
 
   state.asm = a.mark(state.asm, L_REBUILD_NEXT)
+  // r10 contains the complete coalesced size, so one step skips every merge.
   state.asm = a.add_r64_r64(state.asm, "rbx", "r10")
   state.asm = a.jmp(state.asm, L_REBUILD_LOOP)
 

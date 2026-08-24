@@ -969,7 +969,10 @@ function _opt_try_const_immediate_encoded(state, expr)
   cv = cg_expr_try_const_value(state, expr)
   if cv.ok == false then return 0 end if
   if typeof(cv.value) == "bool" then return t.enc_bool(cv.value) end if
-  if typeof(cv.value) == "int" then return t.enc_int(cv.value) end if
+  if typeof(cv.value) == "int" then
+    if cv.value < -144115188075855872 or cv.value > 144115188075855871 then return 0 end if
+    return t.enc_int(cv.value)
+  end if
   if typeof(cv.value) == "float" then
     enc = t.try_enc_float_immediate(cv.value)
     if typeof(enc) == "int" then return enc end if
@@ -1259,7 +1262,7 @@ end function
 function _emit_expr_num(state, expr)
   val_num = try(expr.value)
   if typeof(val_num) == "int" then
-    state.asm = a.mov_rax_imm64(state.asm, t.enc_int(val_num))
+    state.asm = a.mov_rax_tagged_int(state.asm, val_num)
     return state
   end if
   if typeof(val_num) == "float" then
@@ -1452,7 +1455,7 @@ function _emit_expr_is_type(state, expr)
         state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_bool(cv_v.value))
       else
         if cv_v.ok and typeof(cv_v.value) == "int" then
-          state.asm = a.mov_r64_imm64(state.asm, "rdx", t.enc_int(cv_v.value))
+          state.asm = a.mov_r64_tagged_int(state.asm, "rdx", cv_v.value)
         else
           if cv_v.ok and typeof(cv_v.value) == "string" then
             lbl_ve = "cstr_ve_" + d.rdata_label_count(state.rdata)
@@ -1964,6 +1967,18 @@ function _intflow_name_has(arr, name)
   return false
 end function
 
+function _opt_const_nonzero_number(state, ex)
+  cv = cg_expr_try_const_value(state, ex)
+  if typeof(cv) != "struct" or cv.ok == false then return false end if
+  tv = typeof(cv.value)
+  return (tv == "int" or tv == "float") and cv.value != 0
+end function
+
+function _opt_const_nonnegative_int(state, ex)
+  cv = cg_expr_try_const_value(state, ex)
+  return typeof(cv) == "struct" and cv.ok and typeof(cv.value) == "int" and cv.value >= 0
+end function
+
 function _opt_expr_known_int(state, ex)
   if typeof(ex) != "struct" then return false end if
   cv = cg_expr_try_const_value(state, ex)
@@ -1985,9 +2000,12 @@ function _opt_expr_known_int(state, ex)
   end if
   if k == "Bin" then
     op_b = _coerce_name(try(ex.op))
-    if op_b == "+" or op_b == "-" or op_b == "*" or op_b == "%" or op_b == "&" or op_b == "|" or op_b == "^" or op_b == "<<" or op_b == ">>" then
-      return _opt_expr_known_int(state, try(ex.left)) and _opt_expr_known_int(state, try(ex.right))
-    end if
+    left_b = try(ex.left)
+    right_b = try(ex.right)
+    operands_int = _opt_expr_known_int(state, left_b) and _opt_expr_known_int(state, right_b)
+    if op_b == "+" or op_b == "-" or op_b == "*" or op_b == "&" or op_b == "|" or op_b == "^" then return operands_int end if
+    if op_b == "%" then return operands_int and _opt_const_nonzero_number(state, right_b) end if
+    if op_b == "<<" or op_b == ">>" then return operands_int and _opt_const_nonnegative_int(state, right_b) end if
   end if
   return false
 end function
@@ -2068,19 +2086,31 @@ function _opt_expr_known_type(state, ex)
     numeric_r_cmp = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "<" or op_b == "<=" or op_b == ">" or op_b == ">=") and numeric_l_cmp and numeric_r_cmp then return "bool" end if
     if (op_b == "and" or op_b == "or") and lb != "" and rb2 != "" then return "bool" end if
-    if (op_b == "&" or op_b == "|" or op_b == "^" or op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" then return "int" end if
-    if (op_b == "+" or op_b == "-" or op_b == "*" or op_b == "%") and lb == "int" and rb2 == "int" then return "int" end if
+    right_b = try(ex.right)
+    if (op_b == "&" or op_b == "|" or op_b == "^") and lb == "int" and rb2 == "int" then return "int" end if
+    if (op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" and _opt_const_nonnegative_int(state, right_b) then return "int" end if
+    if (op_b == "+" or op_b == "-" or op_b == "*") and lb == "int" and rb2 == "int" then return "int" end if
+    if op_b == "%" and lb == "int" and rb2 == "int" and _opt_const_nonzero_number(state, right_b) then return "int" end if
     numeric_l = lb == "int" or lb == "float" or lb == "number"
     numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
-    if (op_b == "+" or op_b == "-" or op_b == "*" or op_b == "/" or op_b == "%") and numeric_l and numeric_r then return "number" end if
+    if (op_b == "+" or op_b == "-" or op_b == "*") and numeric_l and numeric_r then return "number" end if
+    if (op_b == "/" or op_b == "%") and numeric_l and numeric_r and _opt_const_nonzero_number(state, right_b) then return "number" end if
     return ""
   end if
   if k == "Index" then
-    tb = _opt_type_base(_opt_expr_known_type(state, try(ex.target)))
-    if tb == "bytes" then return "int" end if
-    if tb == "string" then return "string" end if
+    target_type = _opt_expr_known_type(state, try(ex.target))
+    tb = _opt_type_base(target_type)
+    exact_len = _opt_type_exact_length(target_type)
+    index_cv = cg_expr_try_const_value(state, try(ex.index))
+    if tb == "bytes" and exact_len >= 0 and typeof(index_cv) == "struct" and index_cv.ok and typeof(index_cv.value) == "int" and index_cv.value >= 0 - exact_len and index_cv.value < exact_len then return "int" end if
   end if
   return ""
+end function
+
+function _opt_type_query_can_elide_evaluation(ex)
+  if typeof(ex) != "struct" then return false end if
+  k = _coerce_name(try(ex.node_kind))
+  return k == "Num" or k == "Bool" or k == "Str" or k == "Var"
 end function
 
 function _opt_known_index_plan(state, ex)
@@ -2193,6 +2223,7 @@ function _opt_emit_known_index(state, expr, plan)
   return state
 end function
 
+// Return log2(value), or -1 when value is not a positive power of two.
 function _positive_power_of_two_shift(value)
   if typeof(value) != "int" or value <= 0 then return -1 end if
   shift = 0
@@ -2206,6 +2237,9 @@ function _positive_power_of_two_shift(value)
 end function
 
 function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
+  // Operands in r10/r11 are proven tagged integers. Every specialization must
+  // preserve the generic path's wraparound and void/error behavior.
+  // Tagged add/sub immediates must fit the sign-extended x64 imm32 encoding.
   if op == "+" then
     if rhs_ok and rhs_const >= -268435456 and rhs_const < 268435456 then
       state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
@@ -2217,6 +2251,7 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
         tagged_delta = lhs_const * 8
         if tagged_delta != 0 then state.asm = a.add_r64_imm(state.asm, "rax", tagged_delta) end if
       else
+        // Each encoded operand contains TAG_INT; remove one duplicate tag.
         state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
         state.asm = a.add_r64_r64(state.asm, "rax", "r11")
         state.asm = a.sub_rax_imm8(state.asm, 1)
@@ -2289,6 +2324,8 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
       end if
       divisor_shift = _positive_power_of_two_shift(divisor)
       if divisor <= 2147483648 and divisor_shift >= 0 then
+        // For a positive power-of-two divisor this mask also implements
+        // Python-style modulo for negative dividends.
         state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
         state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
         state.asm = a.and_r64_imm(state.asm, "rax", divisor - 1)
@@ -2299,16 +2336,31 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
     end if
     lid_m = _next_lid(state)
     l_ok_m = "known_mod_ok_" + lid_m
-    l_fail_m = "known_mod_fail_" + lid_m
-    l_done_m = "known_mod_done_" + lid_m
+    dynamic_divisor_m = rhs_ok == false
+    l_fail_m = ""
+    l_done_m = ""
+    if dynamic_divisor_m then
+      l_fail_m = "known_mod_fail_" + lid_m
+      l_done_m = "known_mod_done_" + lid_m
+    end if
+    l_divide_m = "known_mod_divide_" + lid_m
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
     if rhs_ok and rhs_const >= -2147483648 and rhs_const < 2147483648 then
       state.asm = a.mov_r64_imm64(state.asm, "r11", rhs_const)
     else
       state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
-      state.asm = a.test_r64_r64(state.asm, "r11", "r11")
-      state.asm = a.jcc(state.asm, "e", l_fail_m)
+      if dynamic_divisor_m then
+        state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+        state.asm = a.jcc(state.asm, "e", l_fail_m)
+        // Avoid the sole signed-idiv overflow case. Modulo by -1 is zero
+        // for every MiniLang integer, including the minimum tagged value.
+        state.asm = a.cmp_r64_imm(state.asm, "r11", -1)
+        state.asm = a.jcc(state.asm, "ne", l_divide_m)
+        state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+        state.asm = a.jmp(state.asm, l_ok_m)
+        state.asm = a.mark(state.asm, l_divide_m)
+      end if
     end if
     state.asm = a.cqo(state.asm)
     state.asm = a.idiv_r64(state.asm, "r11")
@@ -2323,10 +2375,12 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
     state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
     state.asm = a.shl_rax_imm8(state.asm, 3)
     state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
-    state.asm = a.jmp(state.asm, l_done_m)
-    state.asm = a.mark(state.asm, l_fail_m)
-    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
-    state.asm = a.mark(state.asm, l_done_m)
+    if dynamic_divisor_m then
+      state.asm = a.jmp(state.asm, l_done_m)
+      state.asm = a.mark(state.asm, l_fail_m)
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.mark(state.asm, l_done_m)
+    end if
     return state
   end if
   if op == "&" or op == "|" or op == "^" then
@@ -2351,6 +2405,7 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
       end if
       state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
       state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      // x64 masks variable shift counts to six bits; do the same at compile time.
       shift_const = rhs_const & 63
       if shift_const != 0 then
         if op == "<<" then
@@ -3106,11 +3161,17 @@ function _emit_expr_bin(state, expr)
 
     if op == "%" then
       l_mod_ok = "mod_ok_" + lid_arith
+      l_mod_divide = "mod_divide_" + lid_arith
       state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
       state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
       state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
       state.asm = a.test_r64_r64(state.asm, "r11", "r11")
       state.asm = a.jcc(state.asm, "e", l_arith_fail)
+      state.asm = a.cmp_r64_imm(state.asm, "r11", -1)
+      state.asm = a.jcc(state.asm, "ne", l_mod_divide)
+      state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+      state.asm = a.jmp(state.asm, l_mod_ok)
+      state.asm = a.mark(state.asm, l_mod_divide)
       state.asm = a.cqo(state.asm)
       state.asm = a.idiv_r64(state.asm, "r11")
       state.asm = a.test_r64_r64(state.asm, "rdx", "rdx")
@@ -3412,6 +3473,7 @@ function _emit_expr_bin(state, expr)
     lid_mod = _next_lid(state)
     l_modz = "bin_modz_" + lid_mod
     l_modok = "bin_modok_" + lid_mod
+    l_moddivide = "bin_moddivide_" + lid_mod
     state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
     state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
@@ -3420,6 +3482,11 @@ function _emit_expr_bin(state, expr)
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
     state.asm = a.mov_r64_r64(state.asm, "r11", "r11")
     state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
+    state.asm = a.cmp_r64_imm(state.asm, "r11", -1)
+    state.asm = a.jcc(state.asm, "ne", l_moddivide)
+    state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+    state.asm = a.jmp(state.asm, l_modok)
+    state.asm = a.mark(state.asm, l_moddivide)
     state.asm = a.cqo(state.asm)
     state.asm = a.idiv_r64(state.asm, "r11")
     state.asm = a.test_r64_r64(state.asm, "rdx", "rdx")
@@ -3896,7 +3963,6 @@ function _emit_expr_call(state, expr)
     if typeof(tgt_dyn) != "struct" then tgt_dyn = obj_dyn end if
 
     if mname_dyn != "" and typeof(state.struct_methods) == "array" and len(state.struct_methods) > 0 then
-      cand_b = t.arr_chunk_new(16)
       total_dyn = nargs + 1
 
       // A concrete receiver fact makes runtime tag/type checks, struct-id
@@ -3918,11 +3984,6 @@ function _emit_expr_call(state, expr)
         known_arity_dyn = len(known_def_dyn.params)
       end if
       if known_arity_dyn == total_dyn then
-        known_args_b = t.arr_chunk_new(total_dyn)
-        known_args_b = t.arr_chunk_push(known_args_b, tgt_dyn)
-        if nargs > 0 then known_args_b = t.arr_chunk_push_all(known_args_b, call_args) end if
-        known_args_dyn = t.arr_chunk_finish(known_args_b)
-
         known_inline_used = 0
         if typeof(state._inline_emitted_bytes) == "struct" then
           known_inline_used = t.fastmap_get(state._inline_emitted_bytes, known_method_dyn, 0)
@@ -3930,6 +3991,12 @@ function _emit_expr_call(state, expr)
         end if
         known_is_inline = typeof(try(known_def_dyn.is_inline)) == "bool" and known_def_dyn.is_inline
         if known_inline_used < 4096 and known_is_inline and _inline_call_eligible(known_def_dyn) then
+          // Only the inliner needs a synthetic receiver-plus-arguments array;
+          // the common direct-call path emits from the original AST arrays.
+          known_args_b = t.arr_chunk_new(total_dyn)
+          known_args_b = t.arr_chunk_push(known_args_b, tgt_dyn)
+          if nargs > 0 then known_args_b = t.arr_chunk_push_all(known_args_b, call_args) end if
+          known_args_dyn = t.arr_chunk_finish(known_args_b)
           state = _emit_inline_call(state, known_method_dyn, known_args_dyn)
           state = _emit_auto_errprop(state)
           return state
@@ -3967,6 +4034,9 @@ function _emit_expr_call(state, expr)
         return state
       end if
 
+      // Candidate storage is needed only when the concrete receiver was not
+      // proven and runtime method dispatch must be emitted.
+      cand_b = t.arr_chunk_new(16)
       for smi = 0 to len(state.struct_methods) - 1
         sm_it = state.struct_methods[smi]
         sqn_dyn = ""
@@ -4487,6 +4557,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
     arg0 = call_args[0]
     known_ty = _opt_try_known_type_label(state, arg0, false)
     if known_ty != "" then
+      if _opt_type_query_can_elide_evaluation(arg0) == false then state = cg_emit_expr(state, arg0) end if
       state.asm = a.mark(state.asm, "known_type_label_fast_" + _next_lid(state))
       state.asm = a.lea_rax_rip(state.asm, known_ty)
       return [state, true]
@@ -4528,6 +4599,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
     arg1 = call_args[0]
     known_tn = _opt_try_known_type_label(state, arg1, true)
     if known_tn != "" then
+      if _opt_type_query_can_elide_evaluation(arg1) == false then state = cg_emit_expr(state, arg1) end if
       state.asm = a.mark(state.asm, "known_type_label_fast_" + _next_lid(state))
       state.asm = a.lea_rax_rip(state.asm, known_tn)
       return [state, true]
@@ -8966,7 +9038,7 @@ function _opt_emit_const_value(state, value)
     return state
   end if
   if tv == "int" then
-    state.asm = a.mov_rax_imm64(state.asm, t.enc_int(value))
+    state.asm = a.mov_rax_tagged_int(state.asm, value)
     return state
   end if
   if tv == "float" then

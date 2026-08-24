@@ -1940,7 +1940,7 @@ function cg_emit_stmt(state, stmt)
       state = scope.cg_scope_enter(state)
       state = scope.declare_fresh_binding(state, qv, stmt, bind_kind_for)
       for ui = 0 to len(unroll_vals) - 1
-        state.asm = a.mov_rax_imm64(state.asm, t.enc_int(unroll_vals[ui]))
+        state.asm = a.mov_rax_tagged_int(state.asm, unroll_vals[ui])
         state = scope.emit_store_var_scoped(state, qv, stmt)
         state = scope.cg_scope_enter(state)
         state = _emit_stmt_list(state, stmt.body)
@@ -2044,11 +2044,11 @@ function cg_emit_stmt(state, stmt)
     state = th.emit_thread_cancellation_poll(state)
     state = scope.emit_load_var_scoped(state, qv)
     if const_bounds_f then
-      encoded_end_f = t.enc_int(const_end_f)
-      if encoded_end_f >= -2147483648 and encoded_end_f <= 2147483647 then
+      if const_end_f >= -268435456 and const_end_f <= 268435455 then
+        encoded_end_f = t.enc_int(const_end_f)
         state.asm = a.cmp_r64_imm(state.asm, "rax", encoded_end_f)
       else
-        state.asm = a.mov_r64_imm64(state.asm, "r10", encoded_end_f)
+        state.asm = a.mov_r64_tagged_int(state.asm, "r10", const_end_f)
         state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
       end if
     else
@@ -2825,11 +2825,23 @@ function _typeflow_expr_type(state, ex, known)
     numeric_r_cmp = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "<" or op_b == "<=" or op_b == ">" or op_b == ">=") and numeric_l_cmp and numeric_r_cmp then return "bool" end if
     if (op_b == "and" or op_b == "or") and lb != "" and rb2 != "" then return "bool" end if
-    if (op_b == "&" or op_b == "|" or op_b == "^" or op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" then return "int" end if
-    if (op_b == "+" or op_b == "-" or op_b == "*" or op_b == "%") and lb == "int" and rb2 == "int" then return "int" end if
+    right_b = try(ex.right)
+    right_cv = exprmod.cg_expr_try_const_value(state, right_b)
+    right_nonzero = false
+    right_nonnegative_int = false
+    if typeof(right_cv) == "struct" and right_cv.ok then
+      right_tv = typeof(right_cv.value)
+      right_nonzero = (right_tv == "int" or right_tv == "float") and right_cv.value != 0
+      right_nonnegative_int = right_tv == "int" and right_cv.value >= 0
+    end if
+    if (op_b == "&" or op_b == "|" or op_b == "^") and lb == "int" and rb2 == "int" then return "int" end if
+    if (op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" and right_nonnegative_int then return "int" end if
+    if (op_b == "+" or op_b == "-" or op_b == "*") and lb == "int" and rb2 == "int" then return "int" end if
+    if op_b == "%" and lb == "int" and rb2 == "int" and right_nonzero then return "int" end if
     numeric_l = lb == "int" or lb == "float" or lb == "number"
     numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
-    if (op_b == "+" or op_b == "-" or op_b == "*" or op_b == "/" or op_b == "%") and numeric_l and numeric_r then return "number" end if
+    if (op_b == "+" or op_b == "-" or op_b == "*") and numeric_l and numeric_r then return "number" end if
+    if (op_b == "/" or op_b == "%") and numeric_l and numeric_r and right_nonzero then return "number" end if
     return ""
   end if
   if k == "Index" then
@@ -2847,11 +2859,20 @@ function _typeflow_expr_type(state, ex, known)
     if raw == "typeof" or raw == "typeName" then return "string" end if
     if raw == "bytes" or raw == "byteBuffer" then
       if len(args) == 0 then return "bytes:0" end if
-      if len(args) == 1 or len(args) == 2 then
+      if len(args) == 1 then
         sz = _intflow_const_int(state, args[0])
-        if sz[0] and sz[1] >= 0 then return "bytes:" + sz[1] end if
+        if sz[0] and sz[1] >= 0 and sz[1] <= 2147483647 then return "bytes:" + sz[1] end if
+        arg_type = _typeflow_expr_type(state, args[0], known)
+        arg_base = _typeflow_base(arg_type)
+        if arg_base == "string" then return "bytes" end if
+        if arg_base == "bytes" then return arg_type end if
       end if
-      return "bytes"
+      if len(args) == 2 then
+        sz2 = _intflow_const_int(state, args[0])
+        fill2 = _intflow_const_int(state, args[1])
+        if sz2[0] and sz2[1] >= 0 and sz2[1] <= 2147483647 and fill2[0] and fill2[1] >= 0 and fill2[1] <= 255 then return "bytes:" + sz2[1] end if
+      end if
+      return ""
     end if
     sq = _typeflow_struct_qname(state, cal)
     if sq != "" then return "struct:" + sq end if
@@ -2986,10 +3007,12 @@ function _infer_known_value_types(state, fn_node)
     end for
   end if
 
-  stack = body + []
+  // Grow the statement worklist in place; repeated array concatenation makes
+  // compiler-sized functions quadratic in both copying and allocation.
+  stack = t.arr_vec_from_array(body, 256)
   pos = 0
-  while pos < len(stack)
-    st = stack[pos]
+  while pos < t.arr_vec_count(stack)
+    st = t.arr_vec_get(stack, pos, void)
     pos = pos + 1
     if typeof(st) != "struct" then continue end if
     k = _coerce_name(try(st.node_kind))
@@ -3013,7 +3036,9 @@ function _infer_known_value_types(state, fn_node)
     if k == "For" then loop_names = _arr_add_unique(loop_names, _coerce_name(try(st.var))) end if
     if _is_foreach_stmt(st) then excluded = _arr_add_unique(excluded, _foreach_var_name(st)) end if
     kids = _scan_stmt_children(st)
-    if typeof(kids) == "array" and len(kids) > 0 then stack = stack + kids end if
+    if typeof(kids) == "array" and len(kids) > 0 then
+      for each child_stmt in kids stack = t.arr_vec_push(stack, child_stmt) end for
+    end if
   end while
 
   if len(loop_names) > 0 then
@@ -3081,6 +3106,8 @@ function _infer_known_value_types(state, fn_node)
   return facts
 end function
 
+// Collect only assignment targets inside loops. Scanning statements rather
+// than every expression keeps this analysis cheap on compiler-sized programs.
 function _promotion_scan_stmts(hot_names, stmts, loop_depth)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return hot_names end if
   for each st in stmts
@@ -3124,13 +3151,18 @@ function _promotion_scan_stmts(hot_names, stmts, loop_depth)
   return hot_names
 end function
 
+// Mirror at most two unique, proven immediate-only locals in Win64 nonvolatile
+// XMM registers. Pointer-like, boxed, captured and ambiguous bindings stay on
+// the canonical stack path so no GC root can disappear into a register.
 function _select_promoted_local_registers(state, fn_node, known_types)
   hot_names = t.fastmap_new(64)
   hot_names = _promotion_scan_stmts(hot_names, try(fn_node.body), 0)
-  bindings = scope.frame_finish(state.function_locals)
+  bindings = state.function_locals
+  binding_count = scope.frame_count(bindings)
   counts = t.fastmap_new(64)
-  if typeof(bindings) == "array" and len(bindings) > 0 then
-    for each binding in bindings
+  if binding_count > 0 then
+    for binding_index = 0 to binding_count - 1
+      binding = scope.frame_get(bindings, binding_index)
       if typeof(binding) != "struct" then continue end if
       nm = _coerce_name(try(binding.name))
       if nm != "" then counts = t.fastmap_set(counts, nm, t.fastmap_get(counts, nm, 0) + 1) end if
@@ -3139,8 +3171,9 @@ function _select_promoted_local_registers(state, fn_node, known_types)
   end if
   assigned = []
   registers = ["xmm6", "xmm7"]
-  if typeof(bindings) == "array" and len(bindings) > 0 then
-    for each binding in bindings
+  if binding_count > 0 then
+    for binding_index2 = 0 to binding_count - 1
+      binding = scope.frame_get(bindings, binding_index2)
       if len(assigned) >= len(registers) then break end if
       if typeof(binding) != "struct" then continue end if
       nm = _coerce_name(try(binding.name))
@@ -7387,22 +7420,8 @@ end function
 function _emit_program_functions_all(state)
   global _phase_codegen_keepalive
   entries = _all_function_entries(state)
-  pending = []
-  // Bounded inline expansion remains active, but the safety policy above keeps
-  // every callable native fallback body. `pending` therefore stays empty.
-  if typeof(state.inline_only_functions) == "array" then pending = state.inline_only_functions + [] end if
-  regular_b = t.arr_chunk_new(128)
-  if typeof(entries) == "array" and len(entries) > 0 then
-    for ei0 = 0 to len(entries) - 1
-      ent0 = entries[ei0]
-      defer0 = false
-      if typeof(ent0) == "array" and len(ent0) >= 2 and ent0[0] == 0 then
-        defer0 = _arr_has(pending, ent0[1])
-      end if
-      if defer0 == false then regular_b = t.arr_chunk_push(regular_b, ent0) end if
-    end for
-  end if
-  entries = t.arr_chunk_finish(regular_b)
+  // Native-body pruning is disabled for relocation safety, so emit the
+  // canonical function list directly without copying/filtering it first.
   state = _mem_probe(state, "user_fn_emit_start")
   i = 0
   total = len(entries)
@@ -7419,74 +7438,24 @@ function _emit_program_functions_all(state)
     // wider GC cadence: scanning a multi-gigabyte compiler heap every 128
     // functions dominates large builds such as MiniQuake.
     if (i % 512) == 0 then
-      _phase_codegen_keepalive = [state, entries, pending]
+      _phase_codegen_keepalive = [state, entries]
       gc_collect()
       phase_roots = _phase_codegen_keepalive
       state = phase_roots[0]
       entries = phase_roots[1]
-      pending = phase_roots[2]
       _phase_codegen_keepalive = 0
       state = _mem_probe(state, "mid_user_fn_phase_gc")
     end if
     if _heap_cfg_get_bool(state, "cg_collect_during_codegen", false) then
-      _phase_codegen_keepalive = [state, entries, pending]
+      _phase_codegen_keepalive = [state, entries]
       gc_collect()
       phase_roots2 = _phase_codegen_keepalive
       state = phase_roots2[0]
       entries = phase_roots2[1]
-      pending = phase_roots2[2]
       _phase_codegen_keepalive = 0
     end if
   end while
-
-  while len(pending) > 0
-    patches0 = a.get_patches(state.asm)
-    needed = []
-    for pi0 = 0 to len(pending) - 1
-      nm0 = pending[pi0]
-      used0 = 0
-      if typeof(state._inline_emitted_bytes) == "struct" then
-        used0 = t.fastmap_get(state._inline_emitted_bytes, nm0, 0)
-        if typeof(used0) != "int" then used0 = 0 end if
-      end if
-      has_patch0 = false
-      target0 = "fn_user_" + nm0
-      if typeof(patches0) == "array" and len(patches0) > 0 then
-        for pj0 = 0 to len(patches0) - 1
-          pp0 = patches0[pj0]
-          if typeof(pp0) == "struct" and _coerce_name(try(pp0.target)) == target0 then has_patch0 = true end if
-        end for
-      end if
-      if used0 <= 0 or has_patch0 then needed = needed + [nm0] end if
-    end for
-    if len(needed) <= 0 then break end if
-    for ni0 = 0 to len(needed) - 1
-      nm1 = needed[ni0]
-      state = emit_module_function_entries(state, [[0, nm1]], 0, 1)
-      pending = _arr_remove_value(pending, nm1)
-    end for
-  end while
-
-  if len(pending) > 0 then
-    pending_rdata_patches = d.rdata_get_patches(state.rdata)
-    kept_patches = []
-    if len(pending_rdata_patches) > 0 then
-      for rpi0 = 0 to len(pending_rdata_patches) - 1
-        rp0 = pending_rdata_patches[rpi0]
-        drop0 = false
-        if typeof(rp0) == "struct" then
-          rt0 = _coerce_name(try(rp0.target))
-          if s.startsWith(rt0, "fn_user_") then
-            rnm0 = s.substr(rt0, 8, len(rt0) - 8)
-            if _arr_has(pending, rnm0) then drop0 = true end if
-          end if
-        end if
-        if drop0 == false then kept_patches = kept_patches + [rp0] end if
-      end for
-    end if
-    state.rdata = d.rdata_set_patches(state.rdata, kept_patches)
-  end if
-  state.pruned_inline_functions = pending
+  state.pruned_inline_functions = []
   state = _mem_probe(state, "user_fn_emit_done")
   return state
 end function
@@ -8633,6 +8602,8 @@ function emit_user_function(state, fn_node)
   if out_stack_bytes > out_overlap then out_overlap = out_stack_bytes end if
   dbg_save_size = 24
   dbg_save_base = 0x20 + out_overlap
+  // XMM6-XMM7 are nonvolatile under the Win64 ABI. Save their full incoming
+  // values outside the GC root interval and restore them in the shared epilogue.
   promoted_save_base = dbg_save_base + dbg_save_size
   promoted_save_size = len(promoted_local_regs) * 16
   out_reserve = out_overlap + dbg_save_size + promoted_save_size

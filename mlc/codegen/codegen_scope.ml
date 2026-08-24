@@ -6,6 +6,8 @@ import mlc.data as d
 import mlc.tools as t
 
 // One resolved variable binding, including storage, capture and const metadata.
+// promoted_xmm is an optional nonvolatile register mirror; the stack slot stays
+// authoritative so GC metadata, diagnostics and native interop remain stable.
 struct VarBinding
   id,
   name,
@@ -590,7 +592,7 @@ function cg_set_const_binding_value(state, name, pyv)
           if typeof(pyv) == "bool" then
             b.const_value_encoded = t.enc_bool(pyv)
           else if typeof(pyv) == "int" then
-            b.const_value_encoded = t.enc_int(pyv)
+            if pyv >= -144115188075855872 and pyv <= 144115188075855871 then b.const_value_encoded = t.enc_int(pyv) end if
           else if typeof(pyv) == "float" then
             enc = t.try_enc_float_immediate(pyv)
             if typeof(enc) == "int" then
@@ -1268,11 +1270,16 @@ function emit_load_var_scoped(state, name)
   end if
   if b.is_const and b.const_initialized then
     const_ready = typeof(b.const_value_encoded) == "int"
+    if typeof(b.const_value_py) == "int" then const_ready = true end if
     if typeof(b.const_value_label) == "string" and b.const_value_label != "" then const_ready = true end if
     if const_ready == false then
       bname_materialize = b.name
       state = cg_set_const_binding_value(state, bname_materialize, b.const_value_py)
       b = resolve_binding(state, bname_materialize)
+    end if
+    if typeof(b.const_value_py) == "int" then
+      state.asm = a.mov_rax_tagged_int(state.asm, b.const_value_py)
+      return state
     end if
     if typeof(b.const_value_encoded) == "int" then
       state.asm = a.mov_rax_imm64(state.asm, b.const_value_encoded)

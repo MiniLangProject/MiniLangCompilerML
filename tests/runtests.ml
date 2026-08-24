@@ -318,6 +318,16 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
     print "[FAIL] " + name + " (known struct method retained dynamic dispatch or missed inlining)"
     return false
   end if
+  wide_method_labels = _label_function_block(labels, "known_wide_method_call")
+  if wide_method_labels == "" or s.contains(wide_method_labels, "mcall_ic_") then
+    print "[FAIL] " + name + " (wide known method retained dynamic dispatch)"
+    return false
+  end if
+  invalid_bytes_labels = _label_function_block(labels, "invalid_bytes_index")
+  if invalid_bytes_labels == "" or s.contains(invalid_bytes_labels, "idx_fast_bytes_") then
+    print "[FAIL] " + name + " (fallible bytes construction received an unsafe bytes type fact)"
+    return false
+  end if
   strength_labels = _label_function_block(labels, "constant_strength_reduction")
   if strength_labels == "" or s.contains(strength_labels, "known_mod_") or s.contains(strength_labels, "known_shift_") then
     print "[FAIL] " + name + " (constant integer operations retained generic control flow)"
@@ -471,6 +481,7 @@ function main(args)
   if _test_adv(compiler_path, repo_root, "py_enum_unknown", "tests/ported_py/test_enum_unknown_variant/enum_unknown_variant.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_enum_duplicate", "tests/ported_py/test_enum_duplicate_variant/enum_duplicate_variant.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_const_reassign", "tests/ported_py/test_const_reassign_rejected/const_reassign.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "constexpr_bool_arithmetic_invalid", "tests\\constexpr_bool_arithmetic_invalid.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_enum_autoinc", "tests/ported_py/test_enum_autoinc_ignores_strings/enum_autoinc_ignore_strings.ml", "run_ok", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_typequalified_this", "tests/ported_py/test_typequalified_instance_method_uses_this_rejected/typequalified_uses_this.ml", "compile_fail", "", "") then pass = pass + 1 else fail = fail + 1 end if
   if _test_adv(compiler_path, repo_root, "py_member_call_arity_diag", "tests/ported_py/test_member_call_arity_error_message/member_call_arity_diag.ml", "run_rc1", "", "") then pass = pass + 1 else fail = fail + 1 end if
