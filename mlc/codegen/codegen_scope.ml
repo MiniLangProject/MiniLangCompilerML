@@ -23,6 +23,7 @@ struct VarBinding
   const_value_py,
   const_value_encoded,
   const_value_label,
+  promoted_xmm,
 end struct
 
 function inline _is_ascii_digit(ch)
@@ -509,6 +510,7 @@ function cg_declare_binding(state, name, kind, is_const, const_expr, const_value
   false,
   const_value_py,
   void,
+  "",
   ""
   )
 
@@ -846,6 +848,7 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   false,
   void,
   void,
+  "",
   ""
   )
 
@@ -939,6 +942,7 @@ function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
   false,
   void,
   void,
+  "",
   ""
   )
 
@@ -1317,6 +1321,11 @@ function emit_load_var_scoped(state, name)
   end if
 
   if b.kind == "param" or b.kind == "local" then
+    promoted_xmm = _coerce_name(try(b.promoted_xmm))
+    if promoted_xmm != "" then
+      state.asm = a.movq_r64_xmm(state.asm, "rax", promoted_xmm)
+      return state
+    end if
     off = 0
     if typeof(b.offset) == "int" then off = b.offset end if
     state.asm = a.mov_rax_rsp_disp32(state.asm, off)
@@ -1454,6 +1463,10 @@ function emit_store_var_scoped(state, name, node)
       return state
     end if
     state.asm = a.mov_rsp_disp32_rax(state.asm, off)
+    promoted_xmm = _coerce_name(try(b.promoted_xmm))
+    if promoted_xmm != "" then
+      state.asm = a.movq_xmm_r64(state.asm, promoted_xmm, "rax")
+    end if
     return state
   end if
 

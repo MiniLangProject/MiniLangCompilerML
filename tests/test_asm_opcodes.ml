@@ -101,12 +101,17 @@ function main(args)
     print "FAIL: asm_opcodes_golden.json has no vectors field"
     return 4
   end if
-  if s.contains(txt, "\"count\": 227") == false then
-    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 227-vector set"
+  if s.contains(txt, "\"count\": 228") == false then
+    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 228-vector set"
     return 5
   end if
 
   failures = 0
+
+  b = a.newAsmBuilder()
+  b = a.movq_r64_xmm(b, "r10", "xmm9")
+  failures = failures + checkOpcode("movq_r64_xmm", b, "664d0f7eca")
+
   b = a.newAsmBuilder()
   b = a.add_r32_imm(b, "r11d", 0x11223344)
   failures = failures + checkOpcode("add_r32_imm", b, "4181c344332211")

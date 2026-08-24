@@ -3081,6 +3081,83 @@ function _infer_known_value_types(state, fn_node)
   return facts
 end function
 
+function _promotion_scan_stmts(hot_names, stmts, loop_depth)
+  if typeof(stmts) != "array" or len(stmts) <= 0 then return hot_names end if
+  for each st in stmts
+    if typeof(st) != "struct" then continue end if
+    k = _coerce_name(try(st.node_kind))
+    if k == "FunctionDef" then continue end if
+    is_loop = k == "While" or k == "DoWhile" or k == "For" or _is_foreach_stmt(st)
+    depth = loop_depth
+    if is_loop then depth = depth + 1 end if
+    if depth > 0 and (k == "Assign" or k == "ConstDecl") then
+      nm = _coerce_name(try(st.name))
+      if nm != "" then hot_names = t.fastmap_set(hot_names, nm, 1) end if
+    end if
+    if depth > 0 and k == "For" then
+      nm_for = _coerce_name(try(st.var))
+      if nm_for != "" then hot_names = t.fastmap_set(hot_names, nm_for, 1) end if
+    end if
+    if k == "If" then
+      hot_names = _promotion_scan_stmts(hot_names, try(st.then_body), depth)
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
+        for each branch in elifs
+          if typeof(branch) == "array" and len(branch) >= 2 then
+            hot_names = _promotion_scan_stmts(hot_names, branch[1], depth)
+          end if
+        end for
+      end if
+      hot_names = _promotion_scan_stmts(hot_names, try(st.else_body), depth)
+    else
+      if k == "Switch" then
+        cases = try(st.cases)
+        if typeof(cases) == "array" and len(cases) > 0 then
+          for each case_node in cases hot_names = _promotion_scan_stmts(hot_names, try(case_node.body), depth) end for
+        end if
+        hot_names = _promotion_scan_stmts(hot_names, try(st.default_body), depth)
+      else
+        hot_names = _promotion_scan_stmts(hot_names, try(st.body), depth)
+      end if
+    end if
+  end for
+  return hot_names
+end function
+
+function _select_promoted_local_registers(state, fn_node, known_types)
+  hot_names = t.fastmap_new(64)
+  hot_names = _promotion_scan_stmts(hot_names, try(fn_node.body), 0)
+  bindings = scope.frame_finish(state.function_locals)
+  counts = t.fastmap_new(64)
+  if typeof(bindings) == "array" and len(bindings) > 0 then
+    for each binding in bindings
+      if typeof(binding) != "struct" then continue end if
+      nm = _coerce_name(try(binding.name))
+      if nm != "" then counts = t.fastmap_set(counts, nm, t.fastmap_get(counts, nm, 0) + 1) end if
+      binding.promoted_xmm = ""
+    end for
+  end if
+  assigned = []
+  registers = ["xmm6", "xmm7"]
+  if typeof(bindings) == "array" and len(bindings) > 0 then
+    for each binding in bindings
+      if len(assigned) >= len(registers) then break end if
+      if typeof(binding) != "struct" then continue end if
+      nm = _coerce_name(try(binding.name))
+      fact = _typeflow_base(_typeflow_get(known_types, nm))
+      capture_index = try(binding.capture_index)
+      captured = typeof(capture_index) == "int" and capture_index >= 0
+      if nm == "" or t.fastmap_has(hot_names, nm) == false or t.fastmap_get(counts, nm, 0) != 1 then continue end if
+      if fact != "int" and fact != "bool" then continue end if
+      if (typeof(try(binding.boxed)) == "bool" and binding.boxed) or captured then continue end if
+      reg = registers[len(assigned)]
+      binding.promoted_xmm = reg
+      assigned = assigned + [reg]
+    end for
+  end if
+  return [state, assigned]
+end function
+
 function _fast_target_add(items, name, expr)
   if name == "" then return items end if
   if typeof(items) != "array" then items = [] end if
@@ -5860,6 +5937,7 @@ function _closure_declare_capture_bindings(state, fn_node)
       false,
       void,
       void,
+      "",
       ""
     )
 
@@ -8536,6 +8614,10 @@ function emit_user_function(state, fn_node)
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.isBlank" then
     print "[dbg][stage] " + code_name + " analysis_prepare_done"
   end if
+  known_value_types_for_fn = _infer_known_value_types(state, fn_node)
+  promoted_result = _select_promoted_local_registers(state, fn_node, known_value_types_for_fn)
+  state = promoted_result[0]
+  promoted_local_regs = promoted_result[1]
   n_locals = 0
   if t.arr_vec_is(state.function_locals) then
     n_locals = t.arr_vec_count(state.function_locals)
@@ -8551,7 +8633,9 @@ function emit_user_function(state, fn_node)
   if out_stack_bytes > out_overlap then out_overlap = out_stack_bytes end if
   dbg_save_size = 24
   dbg_save_base = 0x20 + out_overlap
-  out_reserve = out_overlap + dbg_save_size
+  promoted_save_base = dbg_save_base + dbg_save_size
+  promoted_save_size = len(promoted_local_regs) * 16
+  out_reserve = out_overlap + dbg_save_size + promoted_save_size
   local_base = t.align_up(0x20 + out_reserve, 16)
   env_root_off = local_base
   locals_base = local_base + 8
@@ -8660,7 +8744,7 @@ function emit_user_function(state, fn_node)
   state._current_root_rec_off = root_rec_off
   state._current_root_static_qwords = (root_top - root_base) / 8
   state.known_int_names = _infer_known_int_names(state, fn_node)
-  state.known_value_types = _infer_known_value_types(state, fn_node)
+  state.known_value_types = known_value_types_for_fn
   state.loop_index_fast_stack = []
   state.current_fn_boxed_names = boxed_names
   state.current_fn_env_index = env_index
@@ -8689,6 +8773,12 @@ function emit_user_function(state, fn_node)
   state.asm = a.push_r14(state.asm)
   state.asm = a.push_r15(state.asm)
   state.asm = a.sub_rsp_imm32(state.asm, frame)
+
+  if len(promoted_local_regs) > 0 then
+    for pri = 0 to len(promoted_local_regs) - 1
+      state.asm = a.movdqu_membase_disp_xmm(state.asm, "rsp", promoted_save_base + pri * 16, promoted_local_regs[pri])
+    end for
+  end if
 
   if state.call_profile then
     cp_idx = _named_int_get(state.callprof_index, code_name, -1)
@@ -9032,6 +9122,11 @@ function emit_user_function(state, fn_node)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", dbg_save_line)
   state.asm = a.mov_rip_qword_r11(state.asm, "dbg_loc_line")
   if threaded_debug then state.asm = a.mark(state.asm, dbg_restore_skip) end if
+  if len(promoted_local_regs) > 0 then
+    for pri2 = 0 to len(promoted_local_regs) - 1
+      state.asm = a.movdqu_xmm_membase_disp(state.asm, promoted_local_regs[pri2], "rsp", promoted_save_base + pri2 * 16)
+    end for
+  end if
   state.asm = a.add_rsp_imm32(state.asm, frame)
   state.asm = a.pop_r15(state.asm)
   state.asm = a.pop_r14(state.asm)

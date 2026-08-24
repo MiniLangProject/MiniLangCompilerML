@@ -313,6 +313,16 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
     print "[FAIL] " + name + " (negative fixed index incorrectly elided normalization/bounds checks)"
     return false
   end if
+  known_method_labels = _label_function_block(labels, "known_method_calls")
+  if known_method_labels == "" or s.contains(known_method_labels, "inline_end_") == false or s.contains(known_method_labels, "mcall_ic_") then
+    print "[FAIL] " + name + " (known struct method retained dynamic dispatch or missed inlining)"
+    return false
+  end if
+  strength_labels = _label_function_block(labels, "constant_strength_reduction")
+  if strength_labels == "" or s.contains(strength_labels, "known_mod_") or s.contains(strength_labels, "known_shift_") then
+    print "[FAIL] " + name + " (constant integer operations retained generic control flow)"
+    return false
+  end if
 
   small_src = _path_join(repo_root, "tests\\root_frame_small.ml")
   small_out = _path_join(repo_root, "tests\\_rt_root_frame_small.exe")

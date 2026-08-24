@@ -2316,6 +2316,18 @@ function movq_xmm_r64(asm, dst_xmm, src_reg)
   return asm
 end function
 
+function movq_r64_xmm(asm, dst_reg, src_xmm)
+  d = _rid_any(dst_reg)
+  sr = _xmm_id(src_xmm)
+  if d < 0 or sr < 0 then return asm end if
+  asm = _emit8(asm, 0x66)
+  asm = _emit_rex(asm, 1, (sr >> 3) & 1, 0, (d >> 3) & 1, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x7E)
+  asm = _emit_modrm(asm, 3, sr & 7, d & 7)
+  return asm
+end function
+
 function movd_r32_xmm(asm, dst, src)
   if _is_r32_name(dst) == false then return error(1, "movd_r32_xmm requires 32-bit dst") end if
   d = _rid_any(dst)

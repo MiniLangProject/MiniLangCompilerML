@@ -120,6 +120,10 @@ function inline _state_struct_fields_get(state, key)
   return _state_named_array_get(state.struct_fields_index, state.struct_fields, key)
 end function
 
+function inline _state_struct_methods_get(state, key)
+  return _state_named_array_get(state.struct_methods_index, state.struct_methods, key)
+end function
+
 function inline _state_enum_variants_get(state, key)
   return _state_named_array_get(state.enum_variants_index, state.enum_variants, key)
 end function
@@ -2189,66 +2193,123 @@ function _opt_emit_known_index(state, expr, plan)
   return state
 end function
 
+function _positive_power_of_two_shift(value)
+  if typeof(value) != "int" or value <= 0 then return -1 end if
+  shift = 0
+  probe = value
+  while probe > 1
+    if (probe & 1) != 0 then return -1 end if
+    probe = probe >> 1
+    shift = shift + 1
+  end while
+  return shift
+end function
+
 function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
   if op == "+" then
-    if rhs_ok and rhs_const == 1 then
+    if rhs_ok and rhs_const >= -268435456 and rhs_const < 268435456 then
       state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-      state.asm = a.add_rax_imm8(state.asm, 8)
+      tagged_delta = rhs_const * 8
+      if tagged_delta != 0 then state.asm = a.add_r64_imm(state.asm, "rax", tagged_delta) end if
     else
-      if rhs_ok and rhs_const == -1 then
-        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-        state.asm = a.sub_rax_imm8(state.asm, 8)
+      if lhs_ok and lhs_const >= -268435456 and lhs_const < 268435456 then
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+        tagged_delta = lhs_const * 8
+        if tagged_delta != 0 then state.asm = a.add_r64_imm(state.asm, "rax", tagged_delta) end if
       else
-        if lhs_ok and lhs_const == 1 then
-          state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-          state.asm = a.add_rax_imm8(state.asm, 8)
-        else
-          if lhs_ok and lhs_const == -1 then
-            state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-            state.asm = a.sub_rax_imm8(state.asm, 8)
-          else
-            state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-            state.asm = a.add_r64_r64(state.asm, "rax", "r11")
-            state.asm = a.sub_rax_imm8(state.asm, 1)
-          end if
-        end if
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+        state.asm = a.add_r64_r64(state.asm, "rax", "r11")
+        state.asm = a.sub_rax_imm8(state.asm, 1)
       end if
     end if
     return state
   end if
   if op == "-" then
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-    if rhs_ok and rhs_const == 1 then
-      state.asm = a.sub_rax_imm8(state.asm, 8)
+    if rhs_ok and rhs_const >= -268435456 and rhs_const < 268435456 then
+      tagged_delta = rhs_const * 8
+      if tagged_delta != 0 then state.asm = a.sub_r64_imm(state.asm, "rax", tagged_delta) end if
     else
-      if rhs_ok and rhs_const == -1 then
-        state.asm = a.add_rax_imm8(state.asm, 8)
-      else
-        state.asm = a.sub_r64_r64(state.asm, "rax", "r11")
-        state.asm = a.add_rax_imm8(state.asm, 1)
-      end if
+      state.asm = a.sub_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.add_rax_imm8(state.asm, 1)
     end if
     return state
   end if
   if op == "*" then
-    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    const_ok = rhs_ok or lhs_ok
+    const_value = 0
+    value_reg = "r11"
+    if rhs_ok then
+      const_value = rhs_const
+      value_reg = "r10"
+    else
+      if lhs_ok then const_value = lhs_const end if
+    end if
+    if const_ok and const_value == 0 then
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_int(0))
+      return state
+    end if
+    if const_ok and const_value == 1 then
+      state.asm = a.mov_r64_r64(state.asm, "rax", value_reg)
+      return state
+    end if
+    state.asm = a.mov_r64_r64(state.asm, "rax", value_reg)
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
-    state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
-    state.asm = a.imul_r64_r64(state.asm, "rax", "r11")
+    if const_ok and const_value >= -2147483648 and const_value < 2147483648 then
+      factor_shift = _positive_power_of_two_shift(const_value)
+      if const_value == -1 then
+        state.asm = a.neg_r64(state.asm, "rax")
+      else
+        if factor_shift >= 0 then
+          state.asm = a.shl_rax_imm8(state.asm, factor_shift)
+        else
+          state.asm = a.imul_r64_r64_imm(state.asm, "rax", "rax", const_value)
+        end if
+      end if
+    else
+      other_reg = "r10"
+      if value_reg == "r10" then other_reg = "r11" end if
+      state.asm = a.sar_r64_imm8(state.asm, other_reg, 3)
+      state.asm = a.imul_r64_r64(state.asm, "rax", other_reg)
+    end if
     state.asm = a.shl_rax_imm8(state.asm, 3)
     state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
     return state
   end if
   if op == "%" then
+    if rhs_ok then
+      divisor = rhs_const
+      if divisor == 0 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      if divisor == -1 or divisor == 1 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_int(0))
+        return state
+      end if
+      divisor_shift = _positive_power_of_two_shift(divisor)
+      if divisor <= 2147483648 and divisor_shift >= 0 then
+        state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+        state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+        state.asm = a.and_r64_imm(state.asm, "rax", divisor - 1)
+        state.asm = a.shl_rax_imm8(state.asm, 3)
+        state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+        return state
+      end if
+    end if
     lid_m = _next_lid(state)
     l_ok_m = "known_mod_ok_" + lid_m
     l_fail_m = "known_mod_fail_" + lid_m
     l_done_m = "known_mod_done_" + lid_m
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
-    state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
-    state.asm = a.test_r64_r64(state.asm, "r11", "r11")
-    state.asm = a.jcc(state.asm, "e", l_fail_m)
+    if rhs_ok and rhs_const >= -2147483648 and rhs_const < 2147483648 then
+      state.asm = a.mov_r64_imm64(state.asm, "r11", rhs_const)
+    else
+      state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
+      state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+      state.asm = a.jcc(state.asm, "e", l_fail_m)
+    end if
     state.asm = a.cqo(state.asm)
     state.asm = a.idiv_r64(state.asm, "r11")
     state.asm = a.test_r64_r64(state.asm, "rdx", "rdx")
@@ -2283,6 +2344,25 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
     return state
   end if
   if op == "<<" or op == ">>" then
+    if rhs_ok then
+      if rhs_const < 0 then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      shift_const = rhs_const & 63
+      if shift_const != 0 then
+        if op == "<<" then
+          state.asm = a.shl_rax_imm8(state.asm, shift_const)
+        else
+          state.asm = a.sar_r64_imm8(state.asm, "rax", shift_const)
+        end if
+      end if
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+      return state
+    end if
     lid_s = _next_lid(state)
     l_fail_s = "known_shift_fail_" + lid_s
     l_done_s = "known_shift_done_" + lid_s
@@ -3818,6 +3898,74 @@ function _emit_expr_call(state, expr)
     if mname_dyn != "" and typeof(state.struct_methods) == "array" and len(state.struct_methods) > 0 then
       cand_b = t.arr_chunk_new(16)
       total_dyn = nargs + 1
+
+      // A concrete receiver fact makes runtime tag/type checks, struct-id
+      // dispatch and the polymorphic cache redundant. It also gives a small
+      // inline method to the existing source-level inliner.
+      known_type_dyn = _opt_expr_known_type(state, tgt_dyn)
+      known_qname_dyn = ""
+      if s.startsWith(known_type_dyn, "struct:") then
+        known_qname_dyn = s.substr(known_type_dyn, 7, len(known_type_dyn) - 7)
+      end if
+      known_method_dyn = ""
+      if known_qname_dyn != "" then
+        known_method_dyn = _method_map_get(_state_struct_methods_get(state, known_qname_dyn), mname_dyn)
+      end if
+      known_def_dyn = 0
+      if known_method_dyn != "" then known_def_dyn = _user_function_get(state, known_method_dyn) end if
+      known_arity_dyn = -1
+      if typeof(known_def_dyn) == "struct" and typeof(try(known_def_dyn.params)) == "array" then
+        known_arity_dyn = len(known_def_dyn.params)
+      end if
+      if known_arity_dyn == total_dyn then
+        known_args_b = t.arr_chunk_new(total_dyn)
+        known_args_b = t.arr_chunk_push(known_args_b, tgt_dyn)
+        if nargs > 0 then known_args_b = t.arr_chunk_push_all(known_args_b, call_args) end if
+        known_args_dyn = t.arr_chunk_finish(known_args_b)
+
+        known_inline_used = 0
+        if typeof(state._inline_emitted_bytes) == "struct" then
+          known_inline_used = t.fastmap_get(state._inline_emitted_bytes, known_method_dyn, 0)
+          if typeof(known_inline_used) != "int" then known_inline_used = 0 end if
+        end if
+        known_is_inline = typeof(try(known_def_dyn.is_inline)) == "bool" and known_def_dyn.is_inline
+        if known_inline_used < 4096 and known_is_inline and _inline_call_eligible(known_def_dyn) then
+          state = _emit_inline_call(state, known_method_dyn, known_args_dyn)
+          state = _emit_auto_errprop(state)
+          return state
+        end if
+
+        known_base_dyn = core.alloc_expr_temps(state, total_dyn * 8)
+        if typeof(known_base_dyn) != "int" or known_base_dyn <= 0 then known_base_dyn = 0x300 end if
+        state = cg_emit_expr(state, tgt_dyn)
+        state.asm = a.mov_rsp_disp32_rax(state.asm, known_base_dyn)
+        if nargs > 0 then
+          for kai_dyn = 0 to nargs - 1
+            state = cg_emit_expr(state, call_args[kai_dyn])
+            state.asm = a.mov_rsp_disp32_rax(state.asm, known_base_dyn + (kai_dyn + 1) * 8)
+          end for
+        end if
+        if total_dyn >= 1 then state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", known_base_dyn) end if
+        if total_dyn >= 2 then state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", known_base_dyn + 8) end if
+        if total_dyn >= 3 then state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", known_base_dyn + 16) end if
+        if total_dyn >= 4 then state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", known_base_dyn + 24) end if
+        if total_dyn > 4 then
+          for ksi_dyn = 4 to total_dyn - 1
+            state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", known_base_dyn + ksi_dyn * 8)
+            state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20 + (ksi_dyn - 4) * 8, "r11")
+          end for
+        end if
+        state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+        state.asm = a.call(state.asm, "fn_user_" + known_method_dyn)
+        state = _emit_auto_errprop(state)
+        state = core.free_expr_temps(state, total_dyn * 8)
+        if total_dyn > 4 then
+          for kci_dyn = 4 to total_dyn - 1
+            state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x20 + (kci_dyn - 4) * 8, t.enc_void(), true)
+          end for
+        end if
+        return state
+      end if
 
       for smi = 0 to len(state.struct_methods) - 1
         sm_it = state.struct_methods[smi]
