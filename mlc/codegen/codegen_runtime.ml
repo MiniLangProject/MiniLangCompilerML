@@ -3506,6 +3506,9 @@ function emit_builtin_gc_collect_function(state)
 end function
 
 function emit_builtin_gc_set_limit_function(state)
+  // Retire prepaid allocation bytes so the new limit applies to the caller's
+  // very next allocation instead of only after its current TLAB is exhausted.
+  state.used_helpers = state.used_helpers + ["fn_alloc"]
   state.asm = a.mark(state.asm, "fn_builtin_gc_set_limit")
 
   lid = state.label_id
@@ -3552,6 +3555,9 @@ function emit_builtin_gc_set_limit_function(state)
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_young_bytes_since")
 
   state.asm = a.mark(state.asm, l_done)
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+  state.asm = a.call(state.asm, "tlab_retire_internal")
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   state.asm = a.ret(state.asm)
 

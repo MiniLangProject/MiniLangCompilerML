@@ -18,12 +18,18 @@ const THREAD_ROOTS = 48
 const THREAD_TMP0 = 56
 const THREAD_NEXT = 120
 const THREAD_GC_STATE = 128
-const THREAD_ALLOC_CURSOR = 136
+// Cursor for the four allocation-handoff roots at THREAD_TMP0+32.
+const THREAD_HANDOFF_CURSOR = 136
+const THREAD_ALLOC_CURSOR = THREAD_HANDOFF_CURSOR
 const THREAD_ARG = 144
 const THREAD_LOGICAL_ID = 152
 const THREAD_ARITY = 160
 const THREAD_HEAP_BYPASS_DEPTH = 168
-const THREAD_CONTEXT_SIZE = 176
+// Per-thread allocation ranges carved from the shared process heap.
+const THREAD_TLAB_START = 176
+const THREAD_TLAB_CURSOR = 184
+const THREAD_TLAB_END = 192
+const THREAD_CONTEXT_SIZE = 200
 
 // Public lifecycle states stored in THREAD_STATUS.
 const THREAD_CREATED = 0
@@ -105,11 +111,14 @@ function emit_sync_init(state)
   end for
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_NEXT, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_GC_STATE, GC_THREAD_RUNNING, false)
-  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ALLOC_CURSOR, 0, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HANDOFF_CURSOR, 0, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARG, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_LOGICAL_ID, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARITY, 0, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HEAP_BYPASS_DEPTH, 0, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_START, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_CURSOR, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_END, 0, true)
   state.asm = a.mov_rip_qword_rax(state.asm, "thread_contexts_head")
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_requested")
@@ -569,13 +578,16 @@ function emit_thread_new_function(state)
     state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TMP0 + i * 8, t.enc_void(), true)
   end for
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_GC_STATE, GC_THREAD_INACTIVE, false)
-  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ALLOC_CURSOR, 0, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HANDOFF_CURSOR, 0, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARG, t.enc_void(), true)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x48)
   state.asm = a.mov_membase_disp_r64(state.asm, "rax", THREAD_LOGICAL_ID, "r11")
   state.asm = a.mov_r32_membase_disp(state.asm, "r11d", "rsp", 0x40)
   state.asm = a.mov_membase_disp_r32(state.asm, "rax", THREAD_ARITY, "r11d")
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HEAP_BYPASS_DEPTH, 0, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_START, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_CURSOR, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_END, 0, true)
   state.asm = a.lea_rax_rip(state.asm, "gc_coord_monitor")
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_EnterCriticalSection")
@@ -826,6 +838,9 @@ function emit_thread_close_function(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_RESULT, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_ARG, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_LOGICAL_ID, t.enc_void(), true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_START, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_CURSOR, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_END, 0, true)
   for i = 0 to 7
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TMP0 + i * 8, t.enc_void(), true)
   end for
@@ -871,6 +886,8 @@ end function
 function emit_thread_entry_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_managed_exit")
+  // fn_alloc also emits the private TLAB-retirement helper used below.
+  state.used_helpers = _append_unique(state.used_helpers, "fn_alloc")
   state.asm = a.mark(state.asm, "fn_thread_entry")
   state.asm = a.push_reg(state.asm, "rbx")
   state.asm = a.push_reg(state.asm, "r12")
@@ -918,6 +935,7 @@ function emit_thread_entry_function(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r12", THREAD_STATUS, THREAD_STOPPED, false)
   state.asm = a.jmp(state.asm, l_finish)
   state.asm = a.mark(state.asm, l_finish)
+  state.asm = a.call(state.asm, "tlab_retire_internal")
   state.asm = a.call(state.asm, "fn_gc_managed_exit")
   state = _emit_managed_thread_count_delta(state, -1)
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")

@@ -336,6 +336,29 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
   return true
 end function
 
+function _test_tlab_shared_heap(compiler_path, repo_root, extra_flags)
+  name = "tlab_shared_heap"
+  src_abs = _path_join(repo_root, "tests\\tlab_shared_heap.ml")
+  out_abs = _path_join(repo_root, "tests\\_rt_tlab_shared_heap.exe")
+  labels_abs = _path_join(repo_root, "tests\\_rt_tlab_shared_heap.labels")
+  if fs.exists(out_abs) then fs.delete(out_abs) end if
+  if fs.exists(labels_abs) then fs.delete(labels_abs) end if
+
+  mode_flags = "--dump-labels " + _q(labels_abs)
+  rc_compile = _run_compile(compiler_path, src_abs, out_abs, repo_root, extra_flags, mode_flags)
+  if rc_compile != 0 or _run_exe(out_abs, "") != 0 then
+    print "[FAIL] " + name + " (compile/runtime regression)"
+    return false
+  end if
+  labels = fs.readAllText(labels_abs)
+  if typeof(labels) != "string" or s.contains(labels, "[label] tlab_refill_") == false or s.contains(labels, "[label] tlab_retire_internal ") == false or s.contains(labels, "[label] fn_heap_enter ") == false or s.contains(labels, "[label] gc_context_loop_") == false then
+    print "[FAIL] " + name + " (generated TLAB runtime shape is missing)"
+    return false
+  end if
+  print "[PASS] " + name
+  return true
+end function
+
 function main(args)
   if typeof(args) != "array" or len(args) < 1 then
     print "Usage: runtests.exe <compiler.exe> [extra compiler args...]"
@@ -373,6 +396,7 @@ function main(args)
   if _test_project_manifest(compiler_path, repo_root) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "global_function_rebind", "tests\\global_function_rebind.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_features", "tests\\thread_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test_tlab_shared_heap(compiler_path, repo_root, extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "threading_stdlib", "tests\\threading_stdlib.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_pool", "tests\\thread_pool.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "type_checks", "tests\\type_checks.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

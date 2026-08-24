@@ -13,6 +13,16 @@ const HEAP_RESERVE_DEFAULT = 1024 * 1024 * 1024 * 4
 const HEAP_RESERVE_MIN = HEAP_SIZE_DEFAULT
 const HEAP_GROW_MIN = 0x01000000
 const ALLOC_MIN_SPLIT = 32
+// TLABs are formatted ranges inside the one shared heap, never private heaps.
+const TLAB_SIZE = 0x10000
+// Keep the lock-free path aligned with the runtime's young-object class.
+// Larger arrays/strings/byte buffers go through the exact central path.
+const TLAB_MAX_OBJECT_SIZE = 0x100
+const THREAD_HANDOFF_CURSOR_OFFSET = 136
+const THREAD_HANDOFF_ROOT_BASE_OFFSET = 88
+const THREAD_TLAB_START_OFFSET = 176
+const THREAD_TLAB_CURSOR_OFFSET = 184
+const THREAD_TLAB_END_OFFSET = 192
 const GC_MARK_STACK_QWORDS = 8388608
 const GC_DEFAULT_BYTES_LIMIT = 64 << 20
 const GC_DISABLE_PERIODIC_LIMIT = 0x7FFFFFFFFFFFFFFF
@@ -428,13 +438,184 @@ function emit_alloc_function(state)
   oom_used_len = d.rdata_label_length(rb, "oom_used")
   oom_nl_len = d.rdata_label_length(rb, "oom_nl")
 
+  // Public TLAB wrapper. The owned remainder is always a valid free block, so
+  // the cooperative collector can linearly parse the heap at every safepoint.
+  threaded_heap = state.native_threads_possible
   state.asm = a.mark(state.asm, "fn_alloc")
+  // Single-threaded targets do not initialize MiniLang's GS context slot.
+  // Avoid interpreting Windows' arbitrary TEB user pointer as a TLAB context.
+  if threaded_heap == false then
+    state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+    state.asm = a.jmp(state.asm, "alloc_slow_internal")
+  end if
+  lid_tlab = state.label_id
+  state.label_id = state.label_id + 1
+  l_tlab_refill = "tlab_refill_" + lid_tlab
+  l_tlab_consume = "tlab_consume_" + lid_tlab
+  l_tlab_return = "tlab_return_" + lid_tlab
+  l_tlab_refill_consume = "tlab_refill_consume_" + lid_tlab
+  l_tlab_refill_return = "tlab_refill_return_" + lid_tlab
+  l_alloc_direct = "alloc_direct_slow_" + lid_tlab
 
-  state.asm = a.sub_rsp_imm8(state.asm, 0x48)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rcx")
+  state.asm = a.add_r64_imm(state.asm, "r10", c.GC_HEADER_SIZE + 7)
+  state.asm = a.and_r64_imm(state.asm, "r10", -8)
+  state.asm = a.cmp_r64_imm(state.asm, "r10", TLAB_MAX_OBJECT_SIZE)
+  state.asm = a.jcc(state.asm, "a", l_alloc_direct)
+
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+  state.asm = a.jcc(state.asm, "e", l_alloc_direct)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", THREAD_TLAB_CURSOR_OFFSET)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "e", l_tlab_refill)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "r11", THREAD_TLAB_END_OFFSET)
+  state.asm = a.cmp_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.jcc(state.asm, "ae", l_tlab_refill)
+
+  state.asm = a.mov_r64_r64(state.asm, "r8", "rdx")
+  state.asm = a.sub_r64_r64(state.asm, "r8", "rax")
+  state.asm = a.cmp_r64_r64(state.asm, "r8", "r10")
+  state.asm = a.jcc(state.asm, "b", l_tlab_refill)
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "r8")
+  state.asm = a.sub_r64_r64(state.asm, "rcx", "r10")
+  state.asm = a.test_r64_r64(state.asm, "rcx", "rcx")
+  state.asm = a.jcc(state.asm, "e", l_tlab_consume)
+  state.asm = a.cmp_r64_imm(state.asm, "rcx", ALLOC_MIN_SPLIT)
+  state.asm = a.jcc(state.asm, "b", l_tlab_consume)
+
+  state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+  state.asm = a.add_r64_r64(state.asm, "rdx", "r10")
+  state.asm = a.or_r64_imm(state.asm, "rcx", c.GC_BLOCK_FREE_BIT)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rdx", 0, "rcx")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rax", 0, "r10")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", THREAD_TLAB_CURSOR_OFFSET, "rdx")
+  state.asm = a.jmp(state.asm, l_tlab_return)
+
+  state.asm = a.mark(state.asm, l_tlab_consume)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rax", 0, "r8")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", THREAD_TLAB_CURSOR_OFFSET, "rdx")
+
+  state.asm = a.mark(state.asm, l_tlab_return)
+  state.asm = a.add_rax_imm8(state.asm, c.GC_HEADER_SIZE)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_HANDOFF_CURSOR_OFFSET)
+  state.asm = a.and_r64_imm(state.asm, "r10", 3)
+  state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, THREAD_HANDOFF_ROOT_BASE_OFFSET, "rax")
+  state.asm = a.inc_r32(state.asm, "r10d")
+  state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_HANDOFF_CURSOR_OFFSET, "r10d")
+  state.asm = a.ret(state.asm)
+
+  // Refill via one centrally accounted 64-KiB block, then partition its first
+  // object and leave the rest as the next private free tail.
+  state.asm = a.mark(state.asm, l_tlab_refill)
+  state.asm = a.sub_rsp_imm8(state.asm, 0x38)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "r10")
+  state.asm = a.call(state.asm, "tlab_retire_internal")
+  state.asm = a.mov_rcx_imm32(state.asm, TLAB_SIZE - c.GC_HEADER_SIZE)
+  state.asm = a.mov_r32_imm32(state.asm, "edx", 1)
+  state.asm = a.call(state.asm, "alloc_slow_internal")
+  state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "rax", 0 - c.GC_HEADER_SIZE)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x20)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rdx", 0)
+  state.asm = a.and_r64_imm(state.asm, "rcx", c.GC_BLOCK_SIZE_MASK)
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", THREAD_TLAB_START_OFFSET, "rdx")
+  state.asm = a.mov_r64_r64(state.asm, "r8", "rdx")
+  state.asm = a.add_r64_r64(state.asm, "r8", "rcx")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", THREAD_TLAB_END_OFFSET, "r8")
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rcx")
+  state.asm = a.sub_r64_r64(state.asm, "r9", "r10")
+  state.asm = a.cmp_r64_imm(state.asm, "r9", ALLOC_MIN_SPLIT)
+  state.asm = a.jcc(state.asm, "b", l_tlab_refill_consume)
+  state.asm = a.mov_r64_r64(state.asm, "r8", "rdx")
+  state.asm = a.add_r64_r64(state.asm, "r8", "r10")
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "r9")
+  state.asm = a.or_r64_imm(state.asm, "rcx", c.GC_BLOCK_FREE_BIT)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r8", 0, "rcx")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rdx", 0, "r10")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", THREAD_TLAB_CURSOR_OFFSET, "r8")
+  state.asm = a.jmp(state.asm, l_tlab_refill_return)
+
+  state.asm = a.mark(state.asm, l_tlab_refill_consume)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rdx", 0, "rcx")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", THREAD_TLAB_CURSOR_OFFSET, "r8")
+  state.asm = a.mark(state.asm, l_tlab_refill_return)
+  state.asm = a.lea_r64_membase_disp(state.asm, "rax", "rdx", c.GC_HEADER_SIZE)
+  state.asm = a.add_rsp_imm8(state.asm, 0x38)
+  state.asm = a.ret(state.asm)
+
+  state.asm = a.mark(state.asm, l_alloc_direct)
+  state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.jmp(state.asm, "alloc_slow_internal")
+
+  // Return the current private tail to the central free list. A collection
+  // that wins while heap_enter parks us clears the cursor and rebuilds the
+  // list itself, so the locked recheck prevents duplicate insertion.
+  state.asm = a.mark(state.asm, "tlab_retire_internal")
+  if threaded_heap == false then
+    state.asm = a.ret(state.asm)
+  end if
+  lid_retire = state.label_id
+  state.label_id = state.label_id + 1
+  l_retire_clear = "tlab_retire_clear_" + lid_retire
+  l_retire_locked_empty = "tlab_retire_locked_empty_" + lid_retire
+  l_retire_done = "tlab_retire_done_" + lid_retire
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+  state.asm = a.jcc(state.asm, "e", l_retire_done)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r8", "r11", THREAD_TLAB_CURSOR_OFFSET)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r9", "r11", THREAD_TLAB_END_OFFSET)
+  state.asm = a.test_r64_r64(state.asm, "r8", "r8")
+  state.asm = a.jcc(state.asm, "e", l_retire_clear)
+  state.asm = a.cmp_r64_r64(state.asm, "r8", "r9")
+  state.asm = a.jcc(state.asm, "ae", l_retire_clear)
+  if threaded_heap then state.asm = a.call(state.asm, "fn_heap_enter") end if
+  state.asm = a.mov_r11_gs_qword_28(state.asm)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r8", "r11", THREAD_TLAB_CURSOR_OFFSET)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r9", "r11", THREAD_TLAB_END_OFFSET)
+  state.asm = a.test_r64_r64(state.asm, "r8", "r8")
+  state.asm = a.jcc(state.asm, "e", l_retire_locked_empty)
+  state.asm = a.cmp_r64_r64(state.asm, "r8", "r9")
+  state.asm = a.jcc(state.asm, "ae", l_retire_locked_empty)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_START_OFFSET, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_CURSOR_OFFSET, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_END_OFFSET, 0, true)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "r9")
+  state.asm = a.sub_r64_r64(state.asm, "r10", "r8")
+  state.asm = a.or_r64_imm(state.asm, "r10", c.GC_BLOCK_FREE_BIT)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r8", 0, "r10")
+  state.asm = a.mov_rax_rip_qword(state.asm, "gc_free_head")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r8", c.GC_OFF_NEXT_FREE, "rax")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_head")
+  if threaded_heap then state.asm = a.call(state.asm, "fn_heap_leave") end if
+  state.asm = a.jmp(state.asm, l_retire_done)
+
+  state.asm = a.mark(state.asm, l_retire_locked_empty)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_START_OFFSET, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_CURSOR_OFFSET, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_END_OFFSET, 0, true)
+  if threaded_heap then state.asm = a.call(state.asm, "fn_heap_leave") end if
+  state.asm = a.jmp(state.asm, l_retire_done)
+
+  state.asm = a.mark(state.asm, l_retire_clear)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_START_OFFSET, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_CURSOR_OFFSET, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_END_OFFSET, 0, true)
+  state.asm = a.mark(state.asm, l_retire_done)
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.ret(state.asm)
+
+  // Central free-list/bump/grow/GC path. RDX=1 identifies a TLAB batch so the
+  // young-pressure counter is charged once per refill instead of per object.
+  state.asm = a.mark(state.asm, "alloc_slow_internal")
+
+  state.asm = a.sub_rsp_imm8(state.asm, 0x58)
 
   state.asm = a.mov_r64_r64(state.asm, "rax", "rcx")
   state.asm = a.mov_rsp_disp32_rax(state.asm, 0x38)
-  threaded_heap = state.native_threads_possible
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x48, "rdx")
   if threaded_heap then
     state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
     state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
@@ -556,6 +737,7 @@ function emit_alloc_function(state)
   l_retry = "alloc_retry_" + lid
   l_periodic_done = "alloc_periodic_done_" + lid
   l_young_skip = "alloc_young_skip_" + lid
+  l_young_account = "alloc_young_account_" + lid
   l_try_free = "alloc_try_free_" + lid
   l_free_loop = "alloc_free_loop_" + lid
   l_free_advance = "alloc_free_adv_" + lid
@@ -583,8 +765,12 @@ function emit_alloc_function(state)
   state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_bytes_since")
 
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x48)
+  state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+  state.asm = a.jcc(state.asm, "ne", l_young_account)
   state.asm = a.cmp_r64_imm(state.asm, "rcx", GC_YOUNG_OBJECT_MAX_BYTES)
   state.asm = a.jcc(state.asm, "a", l_young_skip)
+  state.asm = a.mark(state.asm, l_young_account)
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_young_bytes_since")
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
   state.asm = a.add_r64_r64(state.asm, "r10", "rcx")
@@ -670,14 +856,14 @@ function emit_alloc_function(state)
   state.asm = a.add_rax_imm8(state.asm, c.GC_HEADER_SIZE)
   if threaded_heap then
     state.asm = a.mov_r11_gs_qword_28(state.asm)
-    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 136)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_HANDOFF_CURSOR_OFFSET)
     state.asm = a.and_r64_imm(state.asm, "r10", 3)
-    state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, 88, "rax")
+    state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, THREAD_HANDOFF_ROOT_BASE_OFFSET, "rax")
     state.asm = a.inc_r32(state.asm, "r10d")
-    state.asm = a.mov_membase_disp_r32(state.asm, "r11", 136, "r10d")
+    state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_HANDOFF_CURSOR_OFFSET, "r10d")
   end if
   if threaded_heap then state.asm = a.call(state.asm, "fn_heap_leave") end if
-  state.asm = a.add_rsp_imm8(state.asm, 0x48)
+  state.asm = a.add_rsp_imm8(state.asm, 0x58)
   state.asm = a.ret(state.asm)
 
   state.asm = a.mark(state.asm, l_bump)
@@ -851,14 +1037,14 @@ function emit_alloc_function(state)
   state.asm = a.add_rax_imm8(state.asm, c.GC_HEADER_SIZE)
   if threaded_heap then
     state.asm = a.mov_r11_gs_qword_28(state.asm)
-    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 136)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_HANDOFF_CURSOR_OFFSET)
     state.asm = a.and_r64_imm(state.asm, "r10", 3)
-    state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, 88, "rax")
+    state.asm = a.mov_mem_bis_r64(state.asm, "r11", "r10", 8, THREAD_HANDOFF_ROOT_BASE_OFFSET, "rax")
     state.asm = a.inc_r32(state.asm, "r10d")
-    state.asm = a.mov_membase_disp_r32(state.asm, "r11", 136, "r10d")
+    state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_HANDOFF_CURSOR_OFFSET, "r10d")
   end if
   if threaded_heap then state.asm = a.call(state.asm, "fn_heap_leave") end if
-  state.asm = a.add_rsp_imm8(state.asm, 0x48)
+  state.asm = a.add_rsp_imm8(state.asm, 0x58)
   state.asm = a.ret(state.asm)
   return state
 end function
@@ -1073,6 +1259,11 @@ function emit_gc_collect_function(state)
     state.asm = a.mark(state.asm, L_CONTEXT_LOOP)
     state.asm = a.test_r64_r64(state.asm, "rdi", "rdi")
     state.asm = a.jcc(state.asm, "e", L_MARK_LOOP)
+    // Stop-the-world collection revokes every private allocation range before
+    // sweep/coalescing; resumed threads must refill from the rebuilt heap.
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rdi", THREAD_TLAB_START_OFFSET, 0, true)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rdi", THREAD_TLAB_CURSOR_OFFSET, 0, true)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rdi", THREAD_TLAB_END_OFFSET, 0, true)
     state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 24)
     state.asm = a.call(state.asm, L_MARK_VALUE)
     state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rdi", 40)
