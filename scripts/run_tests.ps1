@@ -341,6 +341,20 @@ try {
     }
   }
 
+  # Use a deliberately small initial commitment to exercise the allocator's
+  # grow-before-emergency-GC path independently of the normal suite defaults.
+  $heapGrowthSource = Join-Path $Root "tests\heap_growth_precedes_gc.ml"
+  $heapGrowthExe = Join-Path $script:ResolvedArtifactsDir "heap_growth_precedes_gc.exe"
+  $heapGrowthArgs = @(
+    $heapGrowthSource, $heapGrowthExe, "-I", $Root,
+    "--heap-reserve", "64m", "--heap-commit", "1m",
+    "--heap-grow", "1m", "--gc-limit", "64m"
+  )
+  $results += Invoke-NativeStep "compile heap growth before emergency GC" $Compiler $heapGrowthArgs
+  if ($results[-1].ExitCode -eq 0) {
+    $results += Invoke-NativeStep "run heap growth before emergency GC" $heapGrowthExe @()
+  }
+
   # The object pipeline is a serialization boundary for one canonical codegen
   # stream. Guard both optimization-heavy and cross-module programs so layout,
   # constant pooling and module initialization cannot drift from normal builds.

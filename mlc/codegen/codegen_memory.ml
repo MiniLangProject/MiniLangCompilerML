@@ -781,7 +781,6 @@ function emit_alloc_function(state)
   l_grow = "alloc_grow_" + lid
   l_ok = "alloc_ok_" + lid
   l_oom = "alloc_oom_" + lid
-  l_do_grow = "alloc_do_grow_" + lid
   l_free_return = "alloc_free_return_" + lid
 
   state.asm = a.mark(state.asm, l_retry)
@@ -911,22 +910,18 @@ function emit_alloc_function(state)
   state.asm = a.jcc(state.asm, "be", l_ok)
 
   state.asm = a.mark(state.asm, l_grow)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x30)
-  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
-  state.asm = a.jcc(state.asm, "nz", l_do_grow)
-
-  state.asm = a.mov_rax_imm64(state.asm, 1)
-  state.asm = a.mov_rsp_disp32_rax(state.asm, 0x30)
-  state.asm = a.call(state.asm, "fn_gc_collect")
-  state.asm = a.jmp(state.asm, l_retry)
-
-  state.asm = a.mark(state.asm, l_do_grow)
+  // The address space is already reserved. Commit the next growth quantum
+  // before forcing a full collection so gc_bytes_limit remains effective for
+  // large live graphs that cross committed-heap boundaries.
   state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
   state.asm = a.call(state.asm, "fn_heap_grow")
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
   state.asm = a.jcc(state.asm, "nz", l_retry)
-  state.asm = a.jmp(state.asm, l_oom)
 
+  // At the reserved ceiling, allow one emergency collection before OOM.
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x30)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "nz", l_oom)
   state.asm = a.mov_rax_imm64(state.asm, 1)
   state.asm = a.mov_rsp_disp32_rax(state.asm, 0x30)
   state.asm = a.call(state.asm, "fn_gc_collect")
