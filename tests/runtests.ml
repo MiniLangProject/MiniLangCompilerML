@@ -231,6 +231,21 @@ function _label_function_block(labels, fn_name)
   return s.substr(labels, start, next_start - start)
 end function
 
+function _all_user_functions_aligned(labels, alignment)
+  if typeof(labels) != "string" or typeof(alignment) != "int" or alignment <= 0 then return false end if
+  lines = s.split(labels, "\n")
+  found = false
+  for each line in lines
+    if s.startsWith(line, "[label] fn_user_") == false then continue end if
+    found = true
+    separator = s.lastIndexOf(line, " ")
+    if separator < 0 or separator + 1 >= len(line) then return false end if
+    offset = toNumber(s.substr(line, separator + 1, len(line) - separator - 1))
+    if typeof(offset) != "int" or (offset % alignment) != 0 then return false end if
+  end for
+  return found
+end function
+
 function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
   name = "codegen_optimizations"
   src_abs = _path_join(repo_root, "tests\\codegen_optimizations.ml")
@@ -258,6 +273,10 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
   labels = fs.readAllText(labels_abs)
   if typeof(labels) != "string" then
     print "[FAIL] " + name + " (missing label dump)"
+    return false
+  end if
+  if _all_user_functions_aligned(labels, 16) == false then
+    print "[FAIL] " + name + " (user functions are not 16-byte aligned)"
     return false
   end if
   if s.contains(labels, "[label] fn_user_pruned_add ") == false or s.contains(labels, "[label] fn_user_kept_add ") == false or s.contains(labels, "[label] fn_user_budget_add ") == false or s.contains(labels, "[label] fn_user_loop_inline ") == false then
@@ -324,8 +343,18 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
     return false
   end if
   invalid_bytes_labels = _label_function_block(labels, "invalid_bytes_index")
-  if invalid_bytes_labels == "" or s.contains(invalid_bytes_labels, "idx_fast_bytes_") then
-    print "[FAIL] " + name + " (fallible bytes construction received an unsafe bytes type fact)"
+  if invalid_bytes_labels == "" or s.contains(invalid_bytes_labels, "idx_fast_bytes_checked_") == false then
+    print "[FAIL] " + name + " (fallible bytes construction missed its guarded specialized index path)"
+    return false
+  end if
+  checked_bytes_labels = _label_function_block(labels, "checked_bytes_roundtrip")
+  if checked_bytes_labels == "" or s.contains(checked_bytes_labels, "idx_fast_bytes_checked_") == false or s.contains(checked_bytes_labels, "seti_fast_bytes_checked_") == false or s.contains(checked_bytes_labels, "idx_fast_bad_target_") == false or s.contains(checked_bytes_labels, "seti_fast_bad_target_") == false then
+    print "[FAIL] " + name + " (checked bytes reads/writes lost their runtime target guards)"
+    return false
+  end if
+  context_enum_labels = _label_function_block(labels, "tests.codegen_context_values.enumValueFlow")
+  if context_enum_labels == "" or s.contains(context_enum_labels, "eq_lhs_not_bytes_") then
+    print "[FAIL] " + name + " (package enum constants missed function-context integer flow)"
     return false
   end if
   strength_labels = _label_function_block(labels, "constant_strength_reduction")

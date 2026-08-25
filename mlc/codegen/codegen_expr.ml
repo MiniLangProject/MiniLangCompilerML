@@ -2103,6 +2103,12 @@ function _opt_expr_known_type(state, ex)
     exact_len = _opt_type_exact_length(target_type)
     index_cv = cg_expr_try_const_value(state, try(ex.index))
     if tb == "bytes" and exact_len >= 0 and typeof(index_cv) == "struct" and index_cv.ok and typeof(index_cv.value) == "int" and index_cv.value >= 0 - exact_len and index_cv.value < exact_len then return "int" end if
+    index_base = _opt_type_base(_opt_expr_known_type(state, try(ex.index)))
+    // Specialized indexing propagates target and bounds errors. Its normal
+    // continuation has a stable result type even when bytes(...) still needs
+    // a runtime target guard.
+    if (tb == "bytes" or tb == "bytes?") and index_base == "int" then return "int" end if
+    if tb == "string" and index_base == "int" then return "string" end if
   end if
   return ""
 end function
@@ -2120,7 +2126,8 @@ function _opt_known_index_plan(state, ex)
   if typeof(target) != "struct" or _coerce_name(try(target.node_kind)) != "Var" then return [] end if
   fact = _opt_expr_known_type(state, target)
   kind = _opt_type_base(fact)
-  if kind != "array" and kind != "bytes" and kind != "string" then return [] end if
+  if kind == "bytes?" then kind = "bytes_checked" end if
+  if kind != "array" and kind != "bytes" and kind != "bytes_checked" and kind != "string" then return [] end if
   if _opt_type_base(_opt_expr_known_type(state, index)) != "int" then return [] end if
   target_binding = scope.cg_resolve_binding(state, _coerce_name(try(target.name)))
   if typeof(target_binding) != "struct" then return [] end if
@@ -2164,6 +2171,7 @@ function _opt_emit_known_index(state, expr, plan)
   bounds_proven = plan[2]
   lid = _next_lid(state)
   l_oob = "idx_fast_oob_" + lid
+  l_bad_target = "idx_fast_bad_target_" + lid
   l_done = "idx_fast_done_" + lid
   state.asm = a.mark(state.asm, "idx_fast_" + kind + "_" + lid)
   if bounds_proven then
@@ -2184,6 +2192,17 @@ function _opt_emit_known_index(state, expr, plan)
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", spill)
     state = core.free_expr_temps(state, 8)
   end if
+  if kind == "bytes_checked" then
+    // The constructor fact is conditional on normal completion. Validate the
+    // tagged object before selecting the compact byte-buffer layout.
+    state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
+    state.asm = a.and_r64_imm(state.asm, "r10", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_bad_target)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", c.OBJ_BYTES)
+    state.asm = a.jcc(state.asm, "ne", l_bad_target)
+  end if
   if bounds_proven == false then
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
     l_nonnegative = "idx_fast_nonnegative_" + lid
@@ -2199,7 +2218,7 @@ function _opt_emit_known_index(state, expr, plan)
   if kind == "array" then
     state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r11", "rcx", 8, 8)
   else
-    if kind == "bytes" then
+    if kind == "bytes" or kind == "bytes_checked" then
       state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r11", "rcx", 1, 8)
       state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "rax", 0)
       state.asm = a.shl_rax_imm8(state.asm, 3)
@@ -2212,14 +2231,22 @@ function _opt_emit_known_index(state, expr, plan)
       state.asm = a.add_r64_r64(state.asm, "rax", "r11")
     end if
   end if
-  if bounds_proven == false then
+  if bounds_proven == false or kind == "bytes_checked" then
     state.asm = a.jmp(state.asm, l_done)
+  end if
+  if kind == "bytes_checked" then
+    state.asm = a.mark(state.asm, l_bad_target)
+    state = core.emit_dbg_line(state, expr)
+    state = _emit_make_error_const(state, c.ERR_INDEX_TARGET_TYPE, "Indexing requires array, string, or bytes")
+    state = _emit_auto_errprop(state)
+  end if
+  if bounds_proven == false then
     state.asm = a.mark(state.asm, l_oob)
     state = core.emit_dbg_line(state, expr)
     state = _emit_make_error_const(state, c.ERR_INDEX_OOB, "Array index out of bounds")
     state = _emit_auto_errprop(state)
-    state.asm = a.mark(state.asm, l_done)
   end if
+  if bounds_proven == false or kind == "bytes_checked" then state.asm = a.mark(state.asm, l_done) end if
   return state
 end function
 

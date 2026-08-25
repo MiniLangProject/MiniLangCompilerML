@@ -5599,6 +5599,9 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   helper_union = _collect_internal_helper_targets(helper_union, entry_obj.asm_patches)
   helper_union = _collect_internal_helper_targets(helper_union, entry_obj.rdata_patches)
   helper_union = _collect_internal_helper_targets(helper_union, entry_obj.data_patches)
+  // Function objects use local assembler buffers. Carry the canonical text
+  // offset so their leading alignment padding matches monolithic emission.
+  text_stream_offset = len(entry_obj.text)
   wr_entry = _write_mlo_file(entry_path, entry_obj)
   if typeof(wr_entry) == "error" then
     msg = "writeAllBytes failed"
@@ -5634,7 +5637,9 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     mod_cg.state.rdata = cg.state.rdata
     mod_cg.state.data = cg.state.data
     mod_cg.state.bss = cg.state.bss
+    mod_cg.state.heap_config = _cfg_set(mod_cg.state.heap_config, "cg_object_text_base", text_stream_offset)
     mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, fn_chunk_size)
+    fragment_text_size = a.pos(mod_cg.state.asm)
     fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, first_name, "", mod_cg, section_checkpoint, helper_union, module_obj_paths_b)
     if fin[0] != 0 then
       print "CompileError: " + fin[1]
@@ -5656,6 +5661,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     cg.state.rdata = mod_cg.state.rdata
     cg.state.data = mod_cg.state.data
     cg.state.bss = mod_cg.state.bss
+    text_stream_offset = text_stream_offset + fragment_text_size
     module_object_seq = module_object_seq + 1
     fn_start = fn_start + fn_chunk_size
     mod_cg = 0

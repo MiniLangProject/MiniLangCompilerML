@@ -1456,7 +1456,7 @@ function cg_emit_stmt(state, stmt)
 
   if k == "SetIndex" then
     fast_store = exprmod._opt_known_index_plan(state, stmt)
-    if typeof(fast_store) == "array" and len(fast_store) >= 3 and (fast_store[0] == "array" or fast_store[0] == "bytes") then
+    if typeof(fast_store) == "array" and len(fast_store) >= 3 and (fast_store[0] == "array" or fast_store[0] == "bytes" or fast_store[0] == "bytes_checked") then
       return _opt_emit_known_setindex(state, stmt, fast_store)
     end if
 
@@ -2575,7 +2575,9 @@ function _intflow_expr_is_int(state, ex, known)
 
   k = _coerce_name(try(ex.node_kind))
   if k == "Var" then
-    return _arr_has(known, _coerce_name(try(ex.name)))
+    known_name = _coerce_name(try(ex.name))
+    if typeof(known) == "struct" then return t.fastmap_get(known, known_name, 0) != 0 end if
+    return _arr_has(known, known_name)
   end if
   if k == "Unary" then
     op_u = _coerce_name(try(ex.op))
@@ -2683,41 +2685,46 @@ function _infer_known_int_names(state, fn_node)
     candidates = kept0
   end if
 
+  // This lattice only removes optimistic integer candidates. Keep membership
+  // indexed so the few monotone validation passes avoid the quadratic array
+  // searches that dominated compiler-sized parser functions. Building a full
+  // reverse graph costs more here than revisiting the compact candidate set.
+  candidate_index = t.fastmap_new((len(candidates) * 2) + 64)
+  for each candidate_name in candidates candidate_index = t.fastmap_set(candidate_index, candidate_name, 1) end for
+
   changed = true
   while changed
     changed = false
-    kept = []
-    if len(candidates) > 0 then
-      for i = 0 to len(candidates) - 1
-        nm_c = candidates[i]
-        ok = true
-        vals_a = _intflow_map_get(assignments, nm_c)
-        if len(vals_a) > 0 then
-          for j = 0 to len(vals_a) - 1
-            if _intflow_expr_is_int(state, vals_a[j], candidates) == false then ok = false end if
-          end for
-        end if
-        vals_l = _intflow_map_get(loop_bounds, nm_c)
-        if ok and len(vals_l) > 0 then
-          for j = 0 to len(vals_l) - 1
-            pair = vals_l[j]
-            if typeof(pair) != "array" or len(pair) < 2 then
-              ok = false
-            else
-              if _intflow_expr_is_int(state, pair[0], candidates) == false or _intflow_expr_is_int(state, pair[1], candidates) == false then ok = false end if
-            end if
-          end for
-        end if
-        if ok then
-          kept = kept + [nm_c]
-        else
-          changed = true
-        end if
+    for each nm_c in candidates
+      if t.fastmap_get(candidate_index, nm_c, 0) == 0 then continue end if
+      ok = true
+      vals_a = _intflow_map_get(assignments, nm_c)
+      for each assigned_expr in vals_a
+        if _intflow_expr_is_int(state, assigned_expr, candidate_index) == false then ok = false; break end if
       end for
-    end if
-    candidates = kept
+      vals_l = _intflow_map_get(loop_bounds, nm_c)
+      if ok then
+        for each pair in vals_l
+          if typeof(pair) != "array" or len(pair) < 2 then
+            ok = false
+          else if _intflow_expr_is_int(state, pair[0], candidate_index) == false or _intflow_expr_is_int(state, pair[1], candidate_index) == false then
+            ok = false
+          end if
+          if ok == false then break end if
+        end for
+      end if
+      if ok == false then
+        candidate_index = t.fastmap_set(candidate_index, nm_c, 0)
+        changed = true
+      end if
+    end for
   end while
-  return candidates
+
+  kept_b = t.arr_chunk_new(len(candidates))
+  for each candidate_name in candidates
+    if t.fastmap_get(candidate_index, candidate_name, 0) != 0 then kept_b = t.arr_chunk_push(kept_b, candidate_name) end if
+  end for
+  return t.arr_chunk_finish(kept_b)
 end function
 
 function inline _typeflow_base(type_name)
@@ -2744,6 +2751,11 @@ function _typeflow_exact_length(type_name)
 end function
 
 function _typeflow_get(items, name)
+  if typeof(items) == "struct" then
+    value = t.fastmap_get(items, name, "")
+    if typeof(value) == "string" then return value end if
+    return ""
+  end if
   if typeof(items) != "array" or len(items) <= 0 then return "" end if
   for i = 0 to len(items) - 1
     rec = items[i]
@@ -2846,7 +2858,7 @@ function _typeflow_expr_type(state, ex, known)
   end if
   if k == "Index" then
     tb = _typeflow_base(_typeflow_expr_type(state, try(ex.target), known))
-    if tb == "bytes" then return "int" end if
+    if tb == "bytes" or tb == "bytes?" then return "int" end if
     if tb == "string" then return "string" end if
     return ""
   end if
@@ -2872,7 +2884,10 @@ function _typeflow_expr_type(state, ex, known)
         fill2 = _intflow_const_int(state, args[1])
         if sz2[0] and sz2[1] >= 0 and sz2[1] <= 2147483647 and fill2[0] and fill2[1] >= 0 and fill2[1] <= 255 then return "bytes:" + sz2[1] end if
       end if
-      return ""
+      // Preserve the successful bytes layout without claiming that a fallible
+      // constructor can never produce an error. Specialized consumers retain
+      // an explicit tag and object-type guard for this fact.
+      return "bytes?"
     end if
     sq = _typeflow_struct_qname(state, cal)
     if sq != "" then return "struct:" + sq end if
@@ -2976,6 +2991,44 @@ function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, dir
   return [initialized, read_before]
 end function
 
+function _typeflow_dependency_add(dependents, dependency, owner)
+  if dependency == "" or owner == "" then return dependents end if
+  owners = t.fastmap_get(dependents, dependency, [])
+  if typeof(owners) != "array" then owners = [] end if
+  if _arr_has(owners, owner) == false then
+    owners = owners + [owner]
+    dependents = t.fastmap_set(dependents, dependency, owners)
+  end if
+  return dependents
+end function
+
+// Build reverse variable dependencies once so fixed-point propagation only
+// revisits facts affected by a change instead of rescanning every candidate.
+function _typeflow_scan_expr_dependencies(dependents, owner, ex)
+  if typeof(ex) != "struct" then return dependents end if
+  k = _coerce_name(try(ex.node_kind))
+  if k == "Var" then
+    return _typeflow_dependency_add(dependents, _coerce_name(try(ex.name)), owner)
+  end if
+  child = try(ex.left); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.right); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.expr); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.target); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.index); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.callee); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.obj); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  groups = [try(ex.args), try(ex.items), try(ex.values)]
+  for each group in groups
+    if typeof(group) != "array" or len(group) <= 0 then continue end if
+    for each value in group
+      value_expr = value
+      if typeof(value) == "array" and len(value) >= 2 then value_expr = value[1] end if
+      dependents = _typeflow_scan_expr_dependencies(dependents, owner, value_expr)
+    end for
+  end for
+  return dependents
+end function
+
 function _infer_known_value_types(state, fn_node)
   if typeof(fn_node) != "struct" then return [] end if
   assignments = []
@@ -3059,50 +3112,104 @@ function _infer_known_value_types(state, fn_node)
   if len(assignments) > 0 then for i = 0 to len(assignments) - 1 if _arr_has(initialized, assignments[i][0]) and _arr_has(excluded, assignments[i][0]) == false then candidates = _arr_add_unique(candidates, assignments[i][0]) end if end for end if
   if len(loop_names) > 0 then for i = 0 to len(loop_names) - 1 if _arr_has(excluded, loop_names[i]) == false then candidates = _arr_add_unique(candidates, loop_names[i]) end if end for end if
 
-  facts = []
-  if len(loop_names) > 0 then for i = 0 to len(loop_names) - 1 if _arr_has(candidates, loop_names[i]) then facts = _typeflow_set(facts, loop_names[i], "int") end if end for end if
+  // Compiler-sized functions can contain hundreds of candidates and deeply
+  // chained aliases. Keep the fixed-point facts in an indexed table so each
+  // expression lookup stays O(1); materialize the canonical ordered pairs only
+  // after convergence for the rest of code generation.
+  facts_index = t.fastmap_new((len(candidates) * 2) + 64)
+  fact_names = []
+  if len(loop_names) > 0 then
+    for i = 0 to len(loop_names) - 1
+      if _arr_has(candidates, loop_names[i]) then
+        facts_index = t.fastmap_set(facts_index, loop_names[i], "int")
+        fact_names = _arr_add_unique(fact_names, loop_names[i])
+      end if
+    end for
+  end if
   if len(direct_initializers) > 0 then
     for i = 0 to len(direct_initializers) - 1
       rec0 = direct_initializers[i]
-      if _arr_has(candidates, rec0[0]) and _typeflow_get(facts, rec0[0]) == "" then
-        ft0 = _typeflow_expr_type(state, rec0[1], facts)
-        if ft0 != "" then facts = _typeflow_set(facts, rec0[0], ft0) end if
+      if _arr_has(candidates, rec0[0]) and _typeflow_get(facts_index, rec0[0]) == "" then
+        ft0 = _typeflow_expr_type(state, rec0[1], facts_index)
+        if ft0 != "" then
+          facts_index = t.fastmap_set(facts_index, rec0[0], ft0)
+          fact_names = _arr_add_unique(fact_names, rec0[0])
+        end if
       end if
     end for
   end if
 
-  rounds = len(candidates) + 1
-  for round = 0 to rounds - 1
-    changed = false
-    if len(candidates) > 0 then
-      for i = 0 to len(candidates) - 1
-        nm_c = candidates[i]
-        vals = _intflow_map_get(assignments, nm_c)
-        if len(vals) <= 0 then continue end if
-        inferred = []
-        for j = 0 to len(vals) - 1 inferred = inferred + [_typeflow_expr_type(state, vals[j], facts)] end for
-        merged = _typeflow_merge(inferred)
-        if merged != "" and _typeflow_get(facts, nm_c) != merged then facts = _typeflow_set(facts, nm_c, merged); changed = true end if
-      end for
-    end if
-    if changed == false then break end if
+  dependents = t.fastmap_new((len(candidates) * 2) + 64)
+  for each candidate_name in candidates
+    candidate_values = _intflow_map_get(assignments, candidate_name)
+    for each candidate_expr in candidate_values
+      dependents = _typeflow_scan_expr_dependencies(dependents, candidate_name, candidate_expr)
+    end for
   end for
 
-  changed2 = true
-  while changed2
-    changed2 = false
-    snapshot = facts + []
-    if len(snapshot) > 0 then
-      for i = 0 to len(snapshot) - 1
-        nm_v = snapshot[i][0]
-        if _arr_has(loop_names, nm_v) and len(_intflow_map_get(assignments, nm_v)) <= 0 then continue end if
-        vals_v = _intflow_map_get(assignments, nm_v)
-        inferred_v = []
-        for j = 0 to len(vals_v) - 1 inferred_v = inferred_v + [_typeflow_expr_type(state, vals_v[j], facts)] end for
-        if len(vals_v) <= 0 or _typeflow_merge(inferred_v) == "" then facts = _typeflow_remove(facts, nm_v); changed2 = true end if
+  pending = t.arr_vec_new(len(candidates) + 16)
+  queued = t.fastmap_new((len(candidates) * 2) + 64)
+  for each candidate_name in candidates
+    pending = t.arr_vec_push(pending, candidate_name)
+    queued = t.fastmap_set(queued, candidate_name, 1)
+  end for
+  pending_pos = 0
+  while pending_pos < t.arr_vec_count(pending)
+    nm_c = t.arr_vec_get(pending, pending_pos, "")
+    pending_pos = pending_pos + 1
+    queued = t.fastmap_set(queued, nm_c, 0)
+    vals = _intflow_map_get(assignments, nm_c)
+    if len(vals) <= 0 then continue end if
+    inferred = []
+    for j = 0 to len(vals) - 1 inferred = inferred + [_typeflow_expr_type(state, vals[j], facts_index)] end for
+    merged = _typeflow_merge(inferred)
+    if merged == "" or _typeflow_get(facts_index, nm_c) == merged then continue end if
+    facts_index = t.fastmap_set(facts_index, nm_c, merged)
+    fact_names = _arr_add_unique(fact_names, nm_c)
+    affected = t.fastmap_get(dependents, nm_c, [])
+    if typeof(affected) == "array" then
+      for each affected_name in affected
+        if t.fastmap_get(queued, affected_name, 0) == 0 then
+          pending = t.arr_vec_push(pending, affected_name)
+          queued = t.fastmap_set(queued, affected_name, 1)
+        end if
       end for
     end if
   end while
+
+  // Remove facts invalidated by unresolved assignments and propagate each
+  // removal only to facts that actually read it.
+  validate_pending = t.arr_vec_from_array(fact_names, 16)
+  validate_queued = t.fastmap_new((len(fact_names) * 2) + 64)
+  for each fact_name in fact_names validate_queued = t.fastmap_set(validate_queued, fact_name, 1) end for
+  validate_pos = 0
+  while validate_pos < t.arr_vec_count(validate_pending)
+    nm_v = t.arr_vec_get(validate_pending, validate_pos, "")
+    validate_pos = validate_pos + 1
+    validate_queued = t.fastmap_set(validate_queued, nm_v, 0)
+    if _typeflow_get(facts_index, nm_v) == "" then continue end if
+    if _arr_has(loop_names, nm_v) and len(_intflow_map_get(assignments, nm_v)) <= 0 then continue end if
+    vals_v = _intflow_map_get(assignments, nm_v)
+    inferred_v = []
+    for j = 0 to len(vals_v) - 1 inferred_v = inferred_v + [_typeflow_expr_type(state, vals_v[j], facts_index)] end for
+    if len(vals_v) > 0 and _typeflow_merge(inferred_v) != "" then continue end if
+    facts_index = t.fastmap_set(facts_index, nm_v, "")
+    invalidated = t.fastmap_get(dependents, nm_v, [])
+    if typeof(invalidated) == "array" then
+      for each invalidated_name in invalidated
+        if t.fastmap_get(validate_queued, invalidated_name, 0) == 0 then
+          validate_pending = t.arr_vec_push(validate_pending, invalidated_name)
+          validate_queued = t.fastmap_set(validate_queued, invalidated_name, 1)
+        end if
+      end for
+    end if
+  end while
+  facts_b = t.arr_chunk_new(32)
+  for each fact_name in fact_names
+    fact_value = _typeflow_get(facts_index, fact_name)
+    if fact_value != "" then facts_b = t.arr_chunk_push(facts_b, [fact_name, fact_value]) end if
+  end for
+  facts = t.arr_chunk_finish(facts_b)
   return facts
 end function
 
@@ -3314,6 +3421,7 @@ function _opt_emit_known_setindex(state, stmt, plan)
   state.label_id = state.label_id + 1
   l_rhs_void = "seti_fast_rhs_void_" + lid
   l_oob = "seti_fast_oob_" + lid
+  l_bad_target = "seti_fast_bad_target_" + lid
   l_bad_byte = "seti_fast_bad_byte_" + lid
   l_done = "seti_fast_done_" + lid
   state.asm = a.mark(state.asm, "seti_fast_" + kind + "_" + lid)
@@ -3342,6 +3450,17 @@ function _opt_emit_known_setindex(state, stmt, plan)
   state.asm = a.jcc(state.asm, "e", l_rhs_void)
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
   state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+  if kind == "bytes_checked" then
+    // Match the generic store's target error before using the known bytes
+    // layout on the constructor's successful continuation.
+    state.asm = a.mov_r64_r64(state.asm, "r8", "r11")
+    state.asm = a.and_r64_imm(state.asm, "r8", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_bad_target)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r11", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "r8d", c.OBJ_BYTES)
+    state.asm = a.jcc(state.asm, "ne", l_bad_target)
+  end if
   if bounds_proven == false then
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
     l_nonnegative = "seti_fast_nonnegative_" + lid
@@ -3394,7 +3513,14 @@ function _opt_emit_known_setindex(state, stmt, plan)
     state = exprmod._emit_auto_errprop(state)
     state.asm = a.jmp(state.asm, l_done)
   end if
-  if kind == "bytes" then
+  if kind == "bytes_checked" then
+    state.asm = a.mark(state.asm, l_bad_target)
+    state = core.emit_dbg_line(state, stmt)
+    state = exprmod._emit_make_error_const(state, c.ERR_INDEX_TARGET_TYPE, "Index assignment requires array or bytes")
+    state = exprmod._emit_auto_errprop(state)
+    state.asm = a.jmp(state.asm, l_done)
+  end if
+  if kind == "bytes" or kind == "bytes_checked" then
     state.asm = a.mark(state.asm, l_bad_byte)
     state = core.emit_dbg_line(state, stmt)
     state = exprmod._emit_make_error_const(state, c.ERR_VOID_OP, "Byte value must be an int in range 0..255")
@@ -8553,6 +8679,7 @@ function emit_user_function(state, fn_node)
   qn = _coerce_name(fn_node.name)
   code_name = _fn_codegen_name(state, fn_node)
   if code_name == "" then return state end if
+
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) then
     print "[mem][cg] emit_user_function_start name=" + code_name
   end if
@@ -8714,7 +8841,35 @@ function emit_user_function(state, fn_node)
   state.expr_temp_top = 0
   state._current_root_rec_off = root_rec_off
   state._current_root_static_qwords = (root_top - root_base) / 8
+  // Resolve package-qualified integer and value-enum constants in the same
+  // context used by body emission. The broader value-flow pass intentionally
+  // keeps its historical context; combining both extra fact sets can perturb
+  // hot internal loop placement without adding a required safety fact.
+  intflow_saved_qpref = state.current_qname_prefix
+  intflow_saved_fpref = state.current_file_prefix
+  intflow_qpref = ""
+  if s.contains(qn, ".") then
+    intflow_parts = s.split(qn, ".")
+    if len(intflow_parts) > 1 then
+      for intflow_pi = 0 to len(intflow_parts) - 2
+        intflow_seg = _coerce_name(intflow_parts[intflow_pi])
+        if intflow_seg == "" then continue end if
+        if intflow_qpref != "" then intflow_qpref = intflow_qpref + "." end if
+        intflow_qpref = intflow_qpref + intflow_seg
+      end for
+      if intflow_qpref != "" then intflow_qpref = intflow_qpref + "." end if
+    end if
+  end if
+  state.current_qname_prefix = intflow_qpref
+  intflow_file = _st_file(fn_node)
+  if typeof(intflow_file) == "string" and intflow_file != "" then
+    state.current_file_prefix = _strpair_get(state.file_prefix_map, intflow_file)
+  else
+    state.current_file_prefix = ""
+  end if
   state.known_int_names = _infer_known_int_names(state, fn_node)
+  state.current_qname_prefix = intflow_saved_qpref
+  state.current_file_prefix = intflow_saved_fpref
   state.known_value_types = known_value_types_for_fn
   state.loop_index_fast_stack = []
   state.current_fn_boxed_names = boxed_names
@@ -8737,6 +8892,13 @@ function emit_user_function(state, fn_node)
   state.scope_index_stack = [base_global_index_emit, t.fastmap_new(128)]
   state.scope_declared_index_stack = [base_decl_index_emit, t.fastmap_new(128)]
 
+  // Stabilize instruction-fetch boundaries so a local size reduction cannot
+  // shift every later hot function onto an unlucky cache/decode boundary.
+  stream_pos = a.pos(state.asm) + _heap_cfg_get_int(state, "cg_object_text_base", 0)
+  while (stream_pos & 15) != 0
+    state.asm = a.nop(state.asm)
+    stream_pos = stream_pos + 1
+  end while
   state.asm = a.mark(state.asm, fn_lbl)
   state.asm = a.push_rbx(state.asm)
   state.asm = a.push_r12(state.asm)
