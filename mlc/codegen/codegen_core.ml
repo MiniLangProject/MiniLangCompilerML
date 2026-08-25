@@ -383,7 +383,7 @@ function _seed_data(cg)
   return cg
 end function
 
-function cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target)
+function cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target, heap_config)
   base_imports =[
   NamedArray("kernel32.dll", ["GetStdHandle", "ReadFile", "WriteFile", "WriteConsoleW", "MultiByteToWideChar", "SetConsoleOutputCP", "FreeConsole", "ExitProcess", "VirtualAlloc", "VirtualFree", "GetCommandLineW", "LocalFree", "WideCharToMultiByte", "CreateThread", "WaitForSingleObject", "CloseHandle", "Sleep", "InitializeCriticalSection", "EnterCriticalSection", "LeaveCriticalSection"]),
   NamedArray("msvcrt.dll", ["_gcvt", "fmod"]),
@@ -396,7 +396,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   extern_sigs,
   extern_structs,
   [],
-  [],
+  heap_config,
   false,
   false,
   false,

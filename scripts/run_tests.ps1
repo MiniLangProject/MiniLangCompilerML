@@ -133,6 +133,30 @@ function Invoke-CompilerVersionCheck {
   }
 }
 
+function Invoke-ExpectedCompilerFailure {
+  param(
+    [string]$Name,
+    [string]$CompilerPath,
+    [string[]]$Arguments,
+    [string]$ExpectedText
+  )
+  Write-Host ""
+  Write-Host "== $Name =="
+  Write-LogLine ""
+  Write-LogLine "== $Name =="
+  $timer = [System.Diagnostics.Stopwatch]::StartNew()
+  $lines = @(& $CompilerPath @Arguments 2>&1 | ForEach-Object { "" + $_ })
+  $nativeExit = [int]$LASTEXITCODE
+  foreach ($line in $lines) { Write-Host $line; Write-LogLine $line }
+  $passed = $nativeExit -ne 0 -and (($lines -join "`n") -like ("*" + $ExpectedText + "*"))
+  $timer.Stop()
+  return [pscustomobject]@{
+    Name = $Name
+    ExitCode = $(if ($passed) { 0 } else { 1 })
+    Seconds = $timer.Elapsed.TotalSeconds
+  }
+}
+
 function Compare-BinaryArtifacts {
   param(
     [string]$Name,
@@ -240,6 +264,10 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "Compiler hot-path concatenation guard failed." }
 
   $results += Invoke-CompilerVersionCheck "compiler version CLI" $Compiler
+  $invalidLinuxFfiOutput = Join-Path $script:ResolvedArtifactsDir "invalid-linux-ffi.elf"
+  $invalidLinuxFfiArgs = @((Join-Path $Root "tests\linux_windows_ffi_error.ml"), $invalidLinuxFfiOutput,
+                           "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
+  $results += Invoke-ExpectedCompilerFailure "linux-x64 rejects Windows DLL imports" $Compiler $invalidLinuxFfiArgs "cannot be imported by the linux-x64 target"
 
   # Cross-compile representative static, dynamic-FFI and threaded Linux ELF
   # programs, then execute them through WSL on the Windows test host.
@@ -251,7 +279,8 @@ try {
       [pscustomobject]@{ Name = "Linux standard library"; Source = "stdlib_unit_tests.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux threading standard library"; Source = "threading_stdlib.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux platform crypto"; Source = "crypto_cng.ml"; RunArgs = @() },
-      [pscustomobject]@{ Name = "Linux shared-value snapshots"; Source = "shared_value.ml"; RunArgs = @() }
+      [pscustomobject]@{ Name = "Linux shared-value snapshots"; Source = "shared_value.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux platform services"; Source = "platform_services.ml"; RunArgs = @() }
     )
     foreach ($linuxCase in $linuxCases) {
       $linuxSource = Join-Path $Root ("tests\" + $linuxCase.Source)
@@ -298,7 +327,8 @@ try {
     [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },
     [pscustomobject]@{ Name = "SIMD search differential"; Source = "simd_search.ml" },
     [pscustomobject]@{ Name = "platform crypto vectors"; Source = "crypto_cng.ml" },
-    [pscustomobject]@{ Name = "portable shared-value snapshots"; Source = "shared_value.ml" }
+    [pscustomobject]@{ Name = "portable shared-value snapshots"; Source = "shared_value.ml" },
+    [pscustomobject]@{ Name = "portable platform services"; Source = "platform_services.ml" }
   )
   foreach ($nativeCase in $nativePrimitiveCases) {
     $nativeSource = Join-Path $Root ("tests\" + $nativeCase.Source)

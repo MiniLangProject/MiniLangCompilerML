@@ -192,13 +192,13 @@ function _sparse_rdata_builder(base_rb)
 end function
 
 function newCodegen(source, filename, import_aliases, extern_sigs, extern_structs)
-  st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, "windows-x64")
+  st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, "windows-x64", [])
   st = scope.cg_scope_setup(st)
   return Codegen(st)
 end function
 
-function newCodegenForTarget(source, filename, import_aliases, extern_sigs, extern_structs, target)
-  st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target)
+function newCodegenForTarget(source, filename, import_aliases, extern_sigs, extern_structs, target, heap_config)
+  st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target, heap_config)
   st = scope.cg_scope_setup(st)
   return Codegen(st)
 end function
@@ -234,10 +234,10 @@ end function
 
 function _clone_state_for_object(base, seed_runtime)
   if typeof(base) != "struct" then
-    return core.cg_core_new("", "", [], [], [], "windows-x64")
+    return core.cg_core_new("", "", [], [], [], "windows-x64", [])
   end if
 
-  st = core.cg_core_new(base.source, base.filename, base.import_aliases, base.extern_sigs, base.extern_abi_structs, base.target)
+  st = core.cg_core_new(base.source, base.filename, base.import_aliases, base.extern_sigs, base.extern_abi_structs, base.target, base.heap_config)
   st.heap_config = base.heap_config
   st.call_profile = base.call_profile
   st.trace_calls = base.trace_calls

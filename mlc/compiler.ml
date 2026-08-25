@@ -4289,6 +4289,9 @@ function validate_extern_sigs(extern_sigs, extern_struct_names)
     if typeof(sig.dll) != "string" or s.trim(sig.dll) == "" then
       return "extern function " + sig.qname + " missing DLL name"
     end if
+    if _compile_target == "linux-x64" and s.endsWith(s.toLowerAscii(s.trim(sig.dll)), ".dll") then
+      return "extern function " + sig.qname + ": Windows DLL '" + sig.dll + "' cannot be imported by the linux-x64 target; guard the declaration with TARGET_OS or use a Linux shared library"
+    end if
     seen_out = false
     if typeof(sig.params) == "array" and len(sig.params) > 0 then
       for pi = 0 to len(sig.params) - 1
@@ -5118,11 +5121,10 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     return 2
   end if
   _compiler_profile_phase("initializing code generator")
-  cg = codegen.newCodegenForTarget(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names, _compile_target)
+  cg = codegen.newCodegenForTarget(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names, _compile_target, runtime_config)
   cg = codegen.set_target(cg, _compile_target)
   if typeof(cg) == "struct" and typeof(cg.state) == "struct" then
     cg.state.dbg_line_starts = load.sources
-    cg.state.heap_config = runtime_config
     cg.state.call_profile = call_profile
     cg.state.trace_calls = trace_calls
     cg.state.is_windows_subsystem = (subsystem == 2)
@@ -5674,7 +5676,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   end if
   _progress_phase("initializing code generator")
   _heap_probe("compile:before_new_codegen")
-  cg = codegen.newCodegenForTarget(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names, _compile_target)
+  cg = codegen.newCodegenForTarget(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names, _compile_target, runtime_config)
   cg = codegen.set_target(cg, _compile_target)
   _heap_probe("compile:new_codegen_done")
   if typeof(cg) != "struct" or typeof(cg.state) != "struct" then
@@ -5683,7 +5685,6 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   end if
 
   cg.state.dbg_line_starts = load.sources
-  cg.state.heap_config = runtime_config
   cg.state.call_profile = call_profile
   cg.state.trace_calls = trace_calls
   cg.state.is_windows_subsystem = (subsystem == 2)

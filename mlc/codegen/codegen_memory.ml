@@ -25,7 +25,9 @@ const THREAD_TLAB_CURSOR_OFFSET = 184
 const THREAD_TLAB_END_OFFSET = 192
 const GC_MARK_STACK_QWORDS = 8388608
 const GC_DEFAULT_BYTES_LIMIT = 64 << 20
-const GC_DISABLE_PERIODIC_LIMIT = 0x7FFFFFFFFFFFFFFF
+// Sentinel for the unboxed signed-i64 maximum. Tagged MiniLang integers cannot
+// represent 0x7FFFFFFFFFFFFFFF directly, so the data helper writes its bytes.
+const GC_DISABLE_PERIODIC_LIMIT = -1
 const GC_YOUNG_DEFAULT_BYTES_LIMIT = 8 << 20
 const GC_YOUNG_OBJECT_MAX_BYTES = 256
 const MEMORY_ENABLE_REFCOUNT = false
@@ -62,6 +64,14 @@ end function
 
 function _ensure_data_u64(db, name, value)
   if d.data_has_label(db, name) then return db end if
+  return d.data_add_u64(db, name, value)
+end function
+
+function _ensure_gc_limit_data(db, name, value)
+  if d.data_has_label(db, name) then return db end if
+  if value == GC_DISABLE_PERIODIC_LIMIT then
+    return d.data_add_bytes(db, name, bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F]))
+  end if
   return d.data_add_u64(db, name, value)
 end function
 
@@ -115,6 +125,13 @@ function _heap_cfg_has_any(state)
   return typeof(cfg) == "array" and len(cfg) > 0
 end function
 
+function _configured_gc_limits(state)
+  configured_limits = _configured_gc_limits(state)
+  periodic_limit = configured_limits[0]
+  young_limit = configured_limits[1]
+  return [periodic_limit, young_limit]
+end function
+
 function __init__(state)
   return state
 end function
@@ -125,10 +142,25 @@ function ensure_gc_data(state)
 
   db = _ensure_data_u64(db, "gc_roots_head", 0)
   db = _ensure_data_u64(db, "gc_free_head", 0)
+
+  // Target GC CLI settings must initialize both pressure counters.  Keeping
+  // these values only in the compiler's parsed configuration made
+  // --gc-limit ineffective in generated programs and diverged from Python.
+  periodic_limit = GC_DEFAULT_BYTES_LIMIT
+  young_limit = GC_YOUNG_DEFAULT_BYTES_LIMIT
+  configured_limit = _heap_cfg_get_any(state, "gc_bytes_limit")
+  if typeof(configured_limit) == "int" and configured_limit > 0 then
+    periodic_limit = configured_limit
+    young_limit = configured_limit
+  end if
+  if _heap_cfg_get_any(state, "gc_disable_periodic") == true then
+    periodic_limit = GC_DISABLE_PERIODIC_LIMIT
+    young_limit = GC_DISABLE_PERIODIC_LIMIT
+  end if
   db = _ensure_data_u64(db, "gc_bytes_since", 0)
-  db = _ensure_data_u64(db, "gc_bytes_limit", GC_DEFAULT_BYTES_LIMIT)
+  db = _ensure_gc_limit_data(db, "gc_bytes_limit", periodic_limit)
   db = _ensure_data_u64(db, "gc_young_bytes_since", 0)
-  db = _ensure_data_u64(db, "gc_young_bytes_limit", GC_YOUNG_DEFAULT_BYTES_LIMIT)
+  db = _ensure_gc_limit_data(db, "gc_young_bytes_limit", young_limit)
 
   for i = 0 to 7
     nm = "gc_tmp" + i
