@@ -3082,7 +3082,94 @@ function emit_init_argvw_function(state)
   return state
 end function
 
+function _emit_build_args_linux(state)
+  state.asm = a.mark(state.asm, "fn_build_args")
+  state.asm = a.sub_rsp_imm32(state.asm, 0x88)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x78, "rsi")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x80, "rdi")
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_zero = "linux_args_zero_" + lid
+  l_alloc = "linux_args_alloc_" + lid
+  l_loop = "linux_args_loop_" + lid
+  l_done = "linux_args_done_" + lid
+
+  state.asm = a.mov_eax_rip_dword(state.asm, "ml_argc")
+  state.asm = a.cmp_r32_imm(state.asm, "eax", 1)
+  state.asm = a.jcc(state.asm, "le", l_zero)
+  state.asm = a.dec_r32(state.asm, "eax")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x48, "eax")
+  state.asm = a.jmp(state.asm, l_alloc)
+  state.asm = a.mark(state.asm, l_zero)
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x48, "eax")
+
+  state.asm = a.mark(state.asm, l_alloc)
+  state.asm = a.mov_rax_rip_qword(state.asm, "ml_argvw")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x50, "rax")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 0x4C, 0, false)
+  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x48)
+  state.asm = a.shl_r32_imm8(state.asm, "ecx", 3)
+  state.asm = a.add_r32_imm(state.asm, "ecx", 8)
+  state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.mov_r11_rax(state.asm)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x48)
+  state.asm = a.mov_membase_disp_r32(state.asm, "r11", 4, "eax")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x40, "r11")
+  state.asm = a.mov_rip_qword_r11(state.asm, "gc_tmp0")
+
+  state.asm = a.mark(state.asm, l_loop)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x4C)
+  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x48)
+  state.asm = a.cmp_r32_r32(state.asm, "eax", "ecx")
+  state.asm = a.jcc(state.asm, "ge", l_done)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.inc_r32(state.asm, "edx")
+  state.asm = a.shl_r64_imm8(state.asm, "rdx", 3)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x50)
+  state.asm = a.add_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rax", 0)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x58, "rcx")
+  state.asm = a.call(state.asm, "fn_strlen")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x60, "edx")
+
+  state.asm = a.mov_r32_r32(state.asm, "ecx", "edx")
+  state.asm = a.add_r32_imm(state.asm, "ecx", 9)
+  state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x68, "rax")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 0, c.OBJ_STRING, false)
+  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x60)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rax", 4, "ecx")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rsi", "rsp", 0x58)
+  state.asm = a.lea_r64_membase_disp(state.asm, "rdi", "rax", 8)
+  state.asm = a.rep_movsb(state.asm)
+  state.asm = a.mov_membase_disp_imm8(state.asm, "rdi", 0, 0)
+
+  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 0x40)
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rsp", 0x4C)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x68)
+  state.asm = a.mov_mem_bis_r64(state.asm, "r10", "rdx", 8, 8, "r11")
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x4C)
+  state.asm = a.inc_r32(state.asm, "eax")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x4C, "eax")
+  state.asm = a.jmp(state.asm, l_loop)
+
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.mov_rip_dword_eax(state.asm, "ml_argc")
+  state.asm = a.xor_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.mov_rip_qword_rax(state.asm, "ml_argvw")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x40)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rsi", "rsp", 0x78)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rdi", "rsp", 0x80)
+  state.asm = a.add_rsp_imm32(state.asm, 0x88)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
 function emit_build_args_function(state)
+  if state.is_linux_target then return _emit_build_args_linux(state) end if
   state.asm = a.mark(state.asm, "fn_build_args")
   // Frame:
   // [rsp+0x40] array_base (qword)

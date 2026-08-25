@@ -192,9 +192,24 @@ function _sparse_rdata_builder(base_rb)
 end function
 
 function newCodegen(source, filename, import_aliases, extern_sigs, extern_structs)
-  st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs)
+  st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, "windows-x64")
   st = scope.cg_scope_setup(st)
   return Codegen(st)
+end function
+
+function newCodegenForTarget(source, filename, import_aliases, extern_sigs, extern_structs, target)
+  st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target)
+  st = scope.cg_scope_setup(st)
+  return Codegen(st)
+end function
+
+// Configure target-only state without perturbing the historical Windows seed layout.
+function set_target(cg, target)
+  if typeof(cg) != "struct" or typeof(cg.state) != "struct" then return cg end if
+  normalized = "" + target
+  cg.state.target = normalized
+  cg.state.is_linux_target = normalized == "linux-x64"
+  return cg
 end function
 
 function __init__(cg)
@@ -219,10 +234,10 @@ end function
 
 function _clone_state_for_object(base, seed_runtime)
   if typeof(base) != "struct" then
-    return core.cg_core_new("", "", [], [], [])
+    return core.cg_core_new("", "", [], [], [], "windows-x64")
   end if
 
-  st = core.cg_core_new(base.source, base.filename, base.import_aliases, base.extern_sigs, base.extern_abi_structs)
+  st = core.cg_core_new(base.source, base.filename, base.import_aliases, base.extern_sigs, base.extern_abi_structs, base.target)
   st.heap_config = base.heap_config
   st.call_profile = base.call_profile
   st.trace_calls = base.trace_calls
@@ -278,6 +293,8 @@ function _clone_state_for_object(base, seed_runtime)
   st.callprof_name_labels = base.callprof_name_labels
   st.callprof_n = base.callprof_n
   st.is_windows_subsystem = base.is_windows_subsystem
+  st.target = base.target
+  st.is_linux_target = base.is_linux_target
   st.func_ret_label = ""
   st.func_frame_size = 0
   st.errprop_suppression = 0

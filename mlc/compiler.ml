@@ -11,6 +11,8 @@ import mlc.tools as t
 import mlc.project as project
 import mlc.asm as a
 import mlc.data as d
+import mlc.elf as elf
+import mlc.linux_runtime as linuxrt
 
 const COMPILER_VERSION = "1.1.0"
 const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.1.0"
@@ -184,6 +186,7 @@ _asm_show_code = true
 _asm_dump_data = false
 _asm_dump_pe = false
 _compiler_profile_enabled = false
+_compile_target = "windows-x64"
 _compiler_profile_started = 0
 _compiler_profile_phase_started = 0
 _compiler_profile_phase_name = ""
@@ -220,6 +223,7 @@ function _usage()
   print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
   print "Build internals:"
   print "  --object-pipeline    use the memory-bounded .mlo pipeline (self-builds)"
+  print "  --target TARGET      windows-x64 (default) or linux-x64"
   print "Conditional compilation:"
   print "  -DNAME[=VALUE] | --define NAME[=VALUE]"
 end function
@@ -2265,6 +2269,20 @@ function _mlo_patches_after(patches, prefix_off)
     end for
   end if
   return t.arr_chunk_finish(out_b)
+end function
+
+function _get_target(args)
+  i = 0
+  while i < len(args)
+    if args[i] == "--target" then
+      if i + 1 >= len(args) then return [false, "windows-x64"] end if
+      value = s.toLowerAscii(s.trim(args[i + 1]))
+      if value == "windows-x64" or value == "linux-x64" then return [true, value] end if
+      return [false, value]
+    end if
+    i = i + 1
+  end while
+  return [true, "windows-x64"]
 end function
 
 function _mlo_label_name_at(labels, offset)
@@ -4948,6 +4966,113 @@ function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg
 end function
 
 // Compile and link one complete program in memory.
+function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_buf, output_exe, dynamic_imports)
+  layout = elf.plan(len(text_buf), len(rdata_buf), len(data_buf), elf.dynamic_size(dynamic_imports))
+  // A non-trivial program can expose tens of thousands of code/data labels.
+  // Build the flattened table in chunks so Linux linking stays linear instead
+  // of repeatedly copying an ever-growing array.
+  label_chunks = []
+  label_tail = []
+  if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
+    for i = 0 to len(asm_labels) - 1
+      lb = asm_labels[i]
+      if typeof(lb) == "struct" and typeof(lb.name) == "string" and typeof(lb.pos) == "int" then
+        appended = t.arr_chunked_push(label_chunks, label_tail, StrIntPair(lb.name, layout.text_off + lb.pos), 1024)
+        label_chunks = appended[0]
+        label_tail = appended[1]
+      end if
+    end for
+  end if
+  rdlabels = d.rdata_get_labels(st.rdata)
+  if len(rdlabels) > 0 then
+    for i = 0 to len(rdlabels) - 1
+      lb = rdlabels[i]
+      appended = t.arr_chunked_push(label_chunks, label_tail, StrIntPair(lb.name, layout.rdata_off + lb.offset), 1024)
+      label_chunks = appended[0]
+      label_tail = appended[1]
+    end for
+  end if
+  dtlabels = d.data_get_labels(st.data)
+  if len(dtlabels) > 0 then
+    for i = 0 to len(dtlabels) - 1
+      lb = dtlabels[i]
+      appended = t.arr_chunked_push(label_chunks, label_tail, StrIntPair(lb.name, layout.data_off + lb.offset), 1024)
+      label_chunks = appended[0]
+      label_tail = appended[1]
+    end for
+  end if
+  if typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" and len(st.bss.labels) > 0 then
+    for i = 0 to len(st.bss.labels) - 1
+      lb = st.bss.labels[i]
+      appended = t.arr_chunked_push(label_chunks, label_tail, StrIntPair(lb.name, layout.bss_off + lb.offset), 1024)
+      label_chunks = appended[0]
+      label_tail = appended[1]
+    end for
+  end if
+  labels = t.arr_chunked_finish(label_chunks, label_tail)
+  label_map = t.fastmap_new((len(labels) * 2) + 64)
+  for i = 0 to len(labels) - 1
+    label_map = t.fastmap_set(label_map, labels[i].key, labels[i].value)
+  end for
+
+  if typeof(patches) == "array" and len(patches) > 0 then
+    for i = 0 to len(patches) - 1
+      pt = patches[i]
+      trg = t.fastmap_get(label_map, pt.target, -1)
+      if typeof(trg) != "int" or trg < 0 then
+        print "CompileError: unknown Linux patch target: " + pt.target
+        return 2
+      end if
+      if pt.kind != "rip32" and pt.kind != "rel32" then
+        print "CompileError: unknown Linux patch kind: " + pt.kind
+        return 2
+      end if
+      b4 = t.u32(trg - (layout.text_off + pt.pos + 4))
+      for bi = 0 to 3 text_buf[pt.pos + bi] = b4[bi] end for
+    end for
+  end if
+
+  patch_sets = [[rdata_buf, d.rdata_get_patches(st.rdata)], [data_buf, d.data_get_patches(st.data)]]
+  for psi = 0 to 1
+    blob = patch_sets[psi][0]
+    dpatches = patch_sets[psi][1]
+    if len(dpatches) > 0 then
+      for j = 0 to len(dpatches) - 1
+        pt = dpatches[j]
+        trg = t.fastmap_get(label_map, pt.target, -1)
+        if typeof(trg) != "int" or trg < 0 then
+          print "CompileError: unknown Linux data patch target: " + pt.target
+          return 2
+        end if
+        if pt.kind != "abs64" then
+          print "CompileError: unknown Linux data patch kind: " + pt.kind
+          return 2
+        end if
+        b8 = t.u64(layout.base + trg)
+        for bi = 0 to 7 blob[pt.offset + bi] = b8[bi] end for
+      end for
+    end if
+    if psi == 0 then rdata_buf = blob else data_buf = blob end if
+  end for
+
+  bss_size = 0
+  if typeof(st.bss) == "struct" and typeof(st.bss.size) == "int" then bss_size = st.bss.size end if
+  entry = t.fastmap_get(label_map, "_start", layout.text_off) - layout.text_off
+  image = elf.build(text_buf, rdata_buf, data_buf, bss_size, entry, dynamic_imports)
+  if typeof(image) == "error" then
+    print "CompileError: failed to build ELF image: " + image.message
+    return 2
+  end if
+  wr = fs.writeAllBytes(output_exe, image)
+  if typeof(wr) == "error" then
+    print "CompileError: writeAllBytes failed"
+    return 2
+  end if
+  print "OK: wrote " + output_exe + " (native x64 ELF, MiniLang self-hosted compiler " + COMPILER_VERSION + ")"
+  return 0
+end function
+
+// Compile and link one complete program in memory.
 function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
   global _pe_state_keepalive
@@ -4993,7 +5118,8 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     return 2
   end if
   _compiler_profile_phase("initializing code generator")
-  cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names)
+  cg = codegen.newCodegenForTarget(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names, _compile_target)
+  cg = codegen.set_target(cg, _compile_target)
   if typeof(cg) == "struct" and typeof(cg.state) == "struct" then
     cg.state.dbg_line_starts = load.sources
     cg.state.heap_config = runtime_config
@@ -5004,11 +5130,20 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   // The monolithic/default path needs the same synthetic callStat metadata as
   // the object pipeline before member access is planned.
   cg = codegen.enable_call_profile_metadata(cg)
+  if _compile_target == "linux-x64" then cg.state = linuxrt.emit_startup(cg.state) end if
   _compile_codegen_keepalive = [load, cg]
   _compiler_profile_phase("emitting program")
   cg = codegen.emit_program(cg, load.program)
+  if _compile_target == "linux-x64" then cg.state = linuxrt.emit_runtime(cg.state) end if
   _heap_probe("compile:codegen_done")
   st = cg.state
+  linux_dynamic_imports = []
+  if _compile_target == "linux-x64" then
+    prepared_imports = linuxrt.prepare_dynamic_imports(st)
+    st = prepared_imports.state
+    linux_dynamic_imports = prepared_imports.imports
+    cg.state = st
+  end if
   _compile_codegen_keepalive = st
   _pe_state_keepalive = st
   load.program = []
@@ -5108,6 +5243,10 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     gc_collect()
   end if
   _heap_probe("compile:buffers_compacted")
+
+  if _compile_target == "linux-x64" then
+    return _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_buf, output_exe, linux_dynamic_imports)
+  end if
 
   _compiler_profile_phase("building PE layout")
   p = pe.newPEBuilder()
@@ -5535,7 +5674,8 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   end if
   _progress_phase("initializing code generator")
   _heap_probe("compile:before_new_codegen")
-  cg = codegen.newCodegen(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names)
+  cg = codegen.newCodegenForTarget(load.source, input_abs, load.aliases, extern_sigs, extern_struct_names, _compile_target)
+  cg = codegen.set_target(cg, _compile_target)
   _heap_probe("compile:new_codegen_done")
   if typeof(cg) != "struct" or typeof(cg.state) != "struct" then
     print "CompileError: failed to initialize code generator"
@@ -5785,6 +5925,12 @@ end function
 
 // Dispatch to the selected monolithic or object-pipeline implementation.
 function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  // Linux currently shares the canonical monolithic linker for both CLI
+  // modes, guaranteeing byte-identical target output while the .mlo container
+  // remains PE-oriented.
+  if _compile_target == "linux-x64" then
+    return compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  end if
   if _object_pipeline_enabled then
     return compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   end if
@@ -5823,6 +5969,7 @@ function run_cli(args)
   global _asm_dump_data
   global _asm_dump_pe
   global _compiler_profile_enabled
+  global _compile_target
   if len(args) == 1 and (args[0] == "-version" or args[0] == "--version") then
     print COMPILER_VERSION_TEXT
     return 0
@@ -5879,6 +6026,18 @@ function run_cli(args)
   if len(args) < 2 then
     _usage()
     return 1
+  end if
+
+  target_result = _get_target(args)
+  if target_result[0] == false then
+    print "CompileError: invalid target (use windows-x64 or linux-x64)"
+    return 2
+  end if
+  _compile_target = target_result[1]
+  configured_target = parser.set_compile_target(_compile_target)
+  if typeof(configured_target) == "struct" and typeof(try(configured_target.message)) == "string" then
+    print "CompileOptionError: " + configured_target.message
+    return 2
   end if
 
   compile_define_result = _collect_compile_defines(args)

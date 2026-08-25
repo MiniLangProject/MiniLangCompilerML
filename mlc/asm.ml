@@ -589,6 +589,12 @@ function _emit32(asm, x)
   return _emit8(asm, (x >> 24) & 0xFF)
 end function
 
+// Add a relocation owned by a separately assembled fragment. This keeps large
+// parent assemblers out of the fragment's per-instruction update path.
+function add_patch(asm, position, label, kind)
+  return _patch_push(asm, AsmPatch(position, label, kind))
+end function
+
 function _emit64(asm, x)
   dst = asm.size
   need = dst + 8

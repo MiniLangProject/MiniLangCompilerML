@@ -412,6 +412,9 @@ struct CompileFrame
 end struct
 
 _compile_external_values = []
+_compile_target_os = "windows"
+_compile_target_abi = "win64"
+_compile_target_format = "pe"
 
 _keywords =[
 "print", "if", "then", "else", "end", "while", "loop", "true", "false", "and", "or", "not",
@@ -835,6 +838,10 @@ function tokenize(code)
 end function
 
 function _repeat(text, n)
+  // MiniLang's inclusive `for` range also visits descending bounds. An empty
+  // physical line must therefore bypass the loop so directive pruning keeps
+  // every following source byte at its original offset.
+  if typeof(n) != "int" or n <= 0 then return "" end if
   rep = ""
   for i = 1 to n
     rep = rep + text
@@ -2630,7 +2637,7 @@ function _compile_value_type(value)
 end function
 
 function _compile_is_predefined(name)
-  return name == "TARGET_OS" or name == "TARGET_ARCH" or name == "POINTER_SIZE" or name == "MINILANG_VERSION"
+  return name == "TARGET_OS" or name == "TARGET_ARCH" or name == "TARGET_ABI" or name == "TARGET_FORMAT" or name == "POINTER_SIZE" or name == "MINILANG_VERSION"
 end function
 
 function _compile_env_find(env, name)
@@ -2664,11 +2671,34 @@ end function
 
 function _compile_predefined_values()
   return [
-    CompileValue("TARGET_OS", "windows"),
+    CompileValue("TARGET_OS", _compile_target_os),
     CompileValue("TARGET_ARCH", "x64"),
+    CompileValue("TARGET_ABI", _compile_target_abi),
+    CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
     CompileValue("MINILANG_VERSION", "1.1.0")
   ]
+end function
+
+// Select immutable values for subsequent source parses.
+function set_compile_target(target)
+  global _compile_target_os
+  global _compile_target_abi
+  global _compile_target_format
+  normalized = s.toLowerAscii(s.trim("" + target))
+  if normalized == "windows-x64" or normalized == "windows" or normalized == "win64" then
+    _compile_target_os = "windows"
+    _compile_target_abi = "win64"
+    _compile_target_format = "pe"
+    return true
+  end if
+  if normalized == "linux-x64" or normalized == "linux" or normalized == "linux64" then
+    _compile_target_os = "linux"
+    _compile_target_abi = "sysv"
+    _compile_target_format = "elf"
+    return true
+  end if
+  return ParseError("unsupported target: " + normalized, 0, "<command-line>")
 end function
 
 function _compile_node_pos(expr, base_pos)

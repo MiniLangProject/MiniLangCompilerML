@@ -241,6 +241,45 @@ try {
 
   $results += Invoke-CompilerVersionCheck "compiler version CLI" $Compiler
 
+  # Cross-compile representative static, dynamic-FFI and threaded Linux ELF
+  # programs, then execute them through WSL on the Windows test host.
+  if ($null -ne (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
+    $linuxCases = @(
+      [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
+      [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux shared heap and threads"; Source = "thread_features.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux standard library"; Source = "stdlib_unit_tests.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux threading standard library"; Source = "threading_stdlib.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux platform crypto"; Source = "crypto_cng.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux shared-value snapshots"; Source = "shared_value.ml"; RunArgs = @() }
+    )
+    foreach ($linuxCase in $linuxCases) {
+      $linuxSource = Join-Path $Root ("tests\" + $linuxCase.Source)
+      $linuxStem = [System.IO.Path]::GetFileNameWithoutExtension($linuxCase.Source)
+      $linuxImage = Join-Path $script:ResolvedArtifactsDir ($linuxStem + ".elf")
+      $linuxArgs = @($linuxSource, $linuxImage, "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
+      $results += Invoke-NativeStep ("compile " + $linuxCase.Name) $Compiler $linuxArgs
+      if ($results[-1].ExitCode -ne 0) { continue }
+      $magic = [System.IO.File]::ReadAllBytes($linuxImage)
+      if ($magic.Length -lt 4 -or $magic[0] -ne 0x7F -or $magic[1] -ne 0x45 -or $magic[2] -ne 0x4C -or $magic[3] -ne 0x46) {
+        $results += [pscustomobject]@{ Name = ("verify " + $linuxCase.Name + " ELF magic"); ExitCode = 1; Seconds = 0.0 }
+        continue
+      }
+      $linuxPath = @(& wsl.exe wslpath -a -u ($linuxImage.Replace('\', '/')) 2>&1)[0]
+      & wsl.exe chmod +x $linuxPath
+      $results += Invoke-NativeStep ("run " + $linuxCase.Name) "wsl.exe" (@("timeout", "120s", $linuxPath) + $linuxCase.RunArgs)
+    }
+
+    $linuxObjectImage = Join-Path $script:ResolvedArtifactsDir "linux_target_smoke_object.elf"
+    $linuxObjectArgs = @((Join-Path $Root "tests\linux_target_smoke.ml"), $linuxObjectImage,
+                         "-I", $Root, "--target", "linux-x64", "--object-pipeline") + $effectiveCompilerArgs
+    $results += Invoke-NativeStep "compile Linux object-pipeline parity" $Compiler $linuxObjectArgs
+    if ($results[-1].ExitCode -eq 0) {
+      $linuxMonoImage = Join-Path $script:ResolvedArtifactsDir "linux_target_smoke.elf"
+      $results += Compare-BinaryArtifacts "Linux --object-pipeline compatibility byte identity" $linuxMonoImage $linuxObjectImage
+    }
+  }
+
   $runnerSrc = Join-Path $Root "tests\runtests.ml"
   $runnerExe = Join-Path $script:ResolvedArtifactsDir "runtests.exe"
 
@@ -258,7 +297,8 @@ try {
   $nativePrimitiveCases = @(
     [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },
     [pscustomobject]@{ Name = "SIMD search differential"; Source = "simd_search.ml" },
-    [pscustomobject]@{ Name = "CNG crypto vectors"; Source = "crypto_cng.ml" }
+    [pscustomobject]@{ Name = "platform crypto vectors"; Source = "crypto_cng.ml" },
+    [pscustomobject]@{ Name = "portable shared-value snapshots"; Source = "shared_value.ml" }
   )
   foreach ($nativeCase in $nativePrimitiveCases) {
     $nativeSource = Join-Path $Root ("tests\" + $nativeCase.Source)

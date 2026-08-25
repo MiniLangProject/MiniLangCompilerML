@@ -109,7 +109,7 @@ function _parse_string_array(value)
 end function
 
 function _is_known_key(key)
-  return key == "entry" or key == "input" or key == "output" or key == "include" or key == "import_paths" or key == "subsystem" or key == "object_pipeline" or key == "incremental" or key == "cache_dir" or key == "compiler_args"
+  return key == "entry" or key == "input" or key == "output" or key == "include" or key == "import_paths" or key == "subsystem" or key == "target" or key == "object_pipeline" or key == "incremental" or key == "cache_dir" or key == "compiler_args"
 end function
 
 function _valid_define_name(name)
@@ -156,6 +156,7 @@ function expandArgs(args)
   output = ""
   include_dirs = []
   subsystem = ""
+  target = ""
   object_pipeline = false
   incremental = true
   cache_dir_value = ".minilang-cache"
@@ -196,6 +197,9 @@ function expandArgs(args)
     else if key == "subsystem" then
       subsystem = _unquote(value)
       if typeof(subsystem) == "error" then return ProjectExpansion(false, [], void, "subsystem must be a quoted string") end if
+    else if key == "target" then
+      target = _unquote(value)
+      if typeof(target) == "error" then return ProjectExpansion(false, [], void, "target must be a quoted string") end if
     else if key == "cache_dir" then
       cache_dir_value = _unquote(value)
       if typeof(cache_dir_value) == "error" then return ProjectExpansion(false, [], void, "cache_dir must be a quoted string") end if
@@ -221,6 +225,7 @@ function expandArgs(args)
     end for
   end if
   if subsystem != "" then expanded = expanded + ["--subsystem", subsystem] end if
+  if target != "" then expanded = expanded + ["--target", target] end if
   if object_pipeline then expanded = expanded + ["--object-pipeline"] end if
   if len(define_args) > 0 then expanded = expanded + define_args end if
   if len(compiler_args) > 0 then expanded = expanded + compiler_args end if

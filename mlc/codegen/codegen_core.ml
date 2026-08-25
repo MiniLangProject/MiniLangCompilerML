@@ -130,6 +130,8 @@ struct CgState
   _module_init_status_labels,
   native_threads_possible,
   synchronized_globals,
+  target,
+  is_linux_target,
 end struct
 
 // Compatibility lookup records used where older compiler images pass arrays.
@@ -361,6 +363,10 @@ function _seed_data(cg)
   cg.data = d.data_add_u32(cg.data, "bytesRead", 0)
   cg.data = d.data_add_u32(cg.data, "ml_argc", 0)
   cg.data = d.data_add_u64(cg.data, "ml_argvw", 0)
+  if cg.is_linux_target then
+    cg.data = d.data_add_u64(cg.data, "linux_initial_rsp", 0)
+    cg.data = d.data_add_bytes(cg.data, "linux_gs_area", bytes(64, 0))
+  end if
   cg.data = d.data_add_u64(cg.data, "printSrcPtr", 0)
   cg.data = d.data_add_u32(cg.data, "printSrcLen", 0)
 
@@ -377,7 +383,7 @@ function _seed_data(cg)
   return cg
 end function
 
-function cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs)
+function cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target)
   base_imports =[
   NamedArray("kernel32.dll", ["GetStdHandle", "ReadFile", "WriteFile", "WriteConsoleW", "MultiByteToWideChar", "SetConsoleOutputCP", "FreeConsole", "ExitProcess", "VirtualAlloc", "VirtualFree", "GetCommandLineW", "LocalFree", "WideCharToMultiByte", "CreateThread", "WaitForSingleObject", "CloseHandle", "Sleep", "InitializeCriticalSection", "EnterCriticalSection", "LeaveCriticalSection"]),
   NamedArray("msvcrt.dll", ["_gcvt", "fmod"]),
@@ -499,7 +505,9 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   [],
   [],
   true,
-  []
+  [],
+  target,
+  target == "linux-x64"
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)
