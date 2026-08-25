@@ -218,7 +218,11 @@ function parse_program(path)
     return r
   end if
   code = normalize_code_for_tokenizer(r)
-  prog = parser.parse_program(code, path)
+  source_for_tokens = parser.preprocess_compile_directives(code, path)
+  if typeof(source_for_tokens) == "struct" and typeof(try(source_for_tokens.message)) == "string" then
+    return FrontendParseResult(code, [], [_normalize_frontend_error(source_for_tokens, path)])
+  end if
+  prog = parser.parse_program(source_for_tokens, path)
   if typeof(prog) == "struct" and typeof(prog.message) == "string" then
     return FrontendParseResult(code,[], [_normalize_frontend_error(prog, path)])
   end if
@@ -239,7 +243,11 @@ function parse_program_keepgoing(path, max_errors)
     return r
   end if
   code = normalize_code_for_tokenizer(r)
-  keep = parser.parse_program_keepgoing(code, path, max_errors)
+  source_for_tokens = parser.preprocess_compile_directives(code, path)
+  if typeof(source_for_tokens) == "struct" and typeof(try(source_for_tokens.message)) == "string" then
+    return FrontendParseResult(code, [], [_normalize_frontend_error(source_for_tokens, path)])
+  end if
+  keep = parser.parse_program_keepgoing(source_for_tokens, path, max_errors)
   if typeof(keep) == "struct" then
     return FrontendParseResult(code, keep.program, _normalize_frontend_errors(keep.errors, path))
   end if

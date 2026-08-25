@@ -220,6 +220,8 @@ function _usage()
   print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
   print "Build internals:"
   print "  --object-pipeline    use the memory-bounded .mlo pipeline (self-builds)"
+  print "Conditional compilation:"
+  print "  -DNAME[=VALUE] | --define NAME[=VALUE]"
 end function
 
 function _get_flag_value(args, flag)
@@ -1691,6 +1693,27 @@ function _compiler_gc_limit_from_config(runtime_config)
     compiler_gc_limit = 3072 << 20
   end if
   return compiler_gc_limit
+end function
+
+function _collect_compile_defines(args)
+  specs = []
+  i = 0
+  while i < len(args)
+    value = args[i]
+    if value == "-D" or value == "--define" then
+      if i + 1 >= len(args) then return parser.newParseError(value + " expects NAME[=VALUE]", 0, "<command-line>") end if
+      specs = specs + [args[i + 1]]
+      i = i + 2
+      continue
+    end if
+    if _startsWith(value, "-D") and len(value) > 2 then
+      specs = specs + [s.substr(value, 2, len(value) - 2)]
+    else if _startsWith(value, "--define=") and len(value) > 9 then
+      specs = specs + [s.substr(value, 9, len(value) - 9)]
+    end if
+    i = i + 1
+  end while
+  return parser.set_compile_defines(specs)
 end function
 
 function _fresh_link_gc_limit_from_config(runtime_config)
@@ -5856,6 +5879,12 @@ function run_cli(args)
   if len(args) < 2 then
     _usage()
     return 1
+  end if
+
+  compile_define_result = _collect_compile_defines(args)
+  if typeof(compile_define_result) == "struct" and typeof(try(compile_define_result.message)) == "string" then
+    print "CompileOptionError: " + compile_define_result.message
+    return 2
   end if
 
   inp = args[0]

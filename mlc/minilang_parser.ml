@@ -396,6 +396,23 @@ struct ParseKeepResult
   errors,
 end struct
 
+// One typed value available while evaluating conditional-compilation directives.
+struct CompileValue
+  name,
+  value,
+end struct
+
+// Mutable state for one nested #if/#elif/#else group.
+struct CompileFrame
+  parent_active,
+  active,
+  taken,
+  else_seen,
+  pos,
+end struct
+
+_compile_external_values = []
+
 _keywords =[
 "print", "if", "then", "else", "end", "while", "loop", "true", "false", "and", "or", "not",
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
@@ -2590,6 +2607,512 @@ function parse_expression(source, filename)
     return ParseError("Trailing tokens after expression", _peek().pos, filename)
   end if
   return e
+end function
+
+function _compile_is_error(value)
+  return typeof(value) == "struct" and typeof(try(value.message)) == "string" and typeof(try(value.pos)) == "int"
+end function
+
+function _compile_valid_name(name)
+  if typeof(name) != "string" or len(name) <= 0 or _isIdentStart(name[0]) == false then return false end if
+  if len(name) > 1 then
+    for i = 1 to len(name) - 1
+      if _isIdentPart(name[i]) == false then return false end if
+    end for
+  end if
+  return true
+end function
+
+function _compile_value_type(value)
+  ty = typeof(value)
+  if ty == "bool" or ty == "int" or ty == "string" then return ty end if
+  return ""
+end function
+
+function _compile_is_predefined(name)
+  return name == "TARGET_OS" or name == "TARGET_ARCH" or name == "POINTER_SIZE" or name == "MINILANG_VERSION"
+end function
+
+function _compile_env_find(env, name)
+  if typeof(env) != "array" or len(env) <= 0 then return -1 end if
+  for i = 0 to len(env) - 1
+    if typeof(env[i]) == "struct" and try(env[i].name) == name then return i end if
+  end for
+  return -1
+end function
+
+function _compile_env_has(env, name)
+  return _compile_env_find(env, name) >= 0
+end function
+
+function _compile_env_get(env, name)
+  idx = _compile_env_find(env, name)
+  if idx < 0 then return void end if
+  return env[idx].value
+end function
+
+function _compile_env_set(env, name, value)
+  idx = _compile_env_find(env, name)
+  if idx >= 0 then
+    item = env[idx]
+    item.value = value
+    env[idx] = item
+    return env
+  end if
+  return env + [CompileValue(name, value)]
+end function
+
+function _compile_predefined_values()
+  return [
+    CompileValue("TARGET_OS", "windows"),
+    CompileValue("TARGET_ARCH", "x64"),
+    CompileValue("POINTER_SIZE", 8),
+    CompileValue("MINILANG_VERSION", "1.1.0")
+  ]
+end function
+
+function _compile_node_pos(expr, base_pos)
+  p = try(expr._pos)
+  if typeof(p) != "int" then p = 0 end if
+  return base_pos + p
+end function
+
+function _compile_string_compare(left, right)
+  left_bytes = bytes(left)
+  right_bytes = bytes(right)
+  count = len(left_bytes)
+  if len(right_bytes) < count then count = len(right_bytes) end if
+  if count > 0 then
+    for i = 0 to count - 1
+      if left_bytes[i] < right_bytes[i] then return -1 end if
+      if left_bytes[i] > right_bytes[i] then return 1 end if
+    end for
+  end if
+  if len(left_bytes) < len(right_bytes) then return -1 end if
+  if len(left_bytes) > len(right_bytes) then return 1 end if
+  return 0
+end function
+
+function _compile_eval_node(expr, env, filename, base_pos)
+  if typeof(expr) != "struct" then return ParseError("unsupported compile-time expression", base_pos, filename) end if
+  kind = try(expr.node_kind)
+  pos = _compile_node_pos(expr, base_pos)
+  if kind == "Bool" then return expr.value end if
+  if kind == "Num" then
+    if typeof(expr.value) == "int" then return expr.value end if
+    return ParseError("compile-time values do not support floats", pos, filename)
+  end if
+  if kind == "Str" then return expr.value end if
+  if kind == "Var" then
+    if _compile_env_has(env, expr.name) == false then
+      return ParseError("unknown compile-time value: " + expr.name, pos, filename)
+    end if
+    return _compile_env_get(env, expr.name)
+  end if
+  if kind == "Call" and typeof(expr.callee) == "struct" and try(expr.callee.node_kind) == "Var" and try(expr.callee.name) == "defined" then
+    if typeof(expr.args) != "array" or len(expr.args) != 1 or typeof(expr.args[0]) != "struct" then
+      return ParseError("defined(...) expects one name or string", pos, filename)
+    end if
+    arg = expr.args[0]
+    arg_kind = try(arg.node_kind)
+    if arg_kind == "Var" then return _compile_env_has(env, arg.name) end if
+    if arg_kind == "Str" then return _compile_env_has(env, arg.value) end if
+    return ParseError("defined(...) expects one name or string", pos, filename)
+  end if
+  if kind == "Unary" then
+    value = _compile_eval_node(expr.right, env, filename, base_pos)
+    if _compile_is_error(value) then return value end if
+    if expr.op == "not" and typeof(value) == "bool" then return value == false end if
+    if expr.op == "-" and typeof(value) == "int" then return 0 - value end if
+    if expr.op == "~" and typeof(value) == "int" then return ~value end if
+    return ParseError("invalid compile-time unary operation: " + expr.op, pos, filename)
+  end if
+  if kind == "Bin" then
+    left = _compile_eval_node(expr.left, env, filename, base_pos)
+    if _compile_is_error(left) then return left end if
+    if expr.op == "and" then
+      if typeof(left) != "bool" then return ParseError("compile-time 'and' expects booleans", pos, filename) end if
+      if left == false then return false end if
+      right_and = _compile_eval_node(expr.right, env, filename, base_pos)
+      if _compile_is_error(right_and) then return right_and end if
+      if typeof(right_and) != "bool" then return ParseError("compile-time 'and' expects booleans", pos, filename) end if
+      return right_and
+    end if
+    if expr.op == "or" then
+      if typeof(left) != "bool" then return ParseError("compile-time 'or' expects booleans", pos, filename) end if
+      if left then return true end if
+      right_or = _compile_eval_node(expr.right, env, filename, base_pos)
+      if _compile_is_error(right_or) then return right_or end if
+      if typeof(right_or) != "bool" then return ParseError("compile-time 'or' expects booleans", pos, filename) end if
+      return right_or
+    end if
+
+    right = _compile_eval_node(expr.right, env, filename, base_pos)
+    if _compile_is_error(right) then return right end if
+    if expr.op == "==" or expr.op == "!=" then
+      equal = typeof(left) == typeof(right) and left == right
+      if expr.op == "==" then return equal end if
+      return equal == false
+    end if
+    if expr.op == "<" or expr.op == "<=" or expr.op == ">" or expr.op == ">=" then
+      if typeof(left) != typeof(right) or (typeof(left) != "int" and typeof(left) != "string") then
+        return ParseError("compile-time '" + expr.op + "' expects matching int or string operands", pos, filename)
+      end if
+      if typeof(left) == "string" then
+        ordering = _compile_string_compare(left, right)
+        if expr.op == "<" then return ordering < 0 end if
+        if expr.op == "<=" then return ordering <= 0 end if
+        if expr.op == ">" then return ordering > 0 end if
+        return ordering >= 0
+      end if
+      if expr.op == "<" then return left < right end if
+      if expr.op == "<=" then return left <= right end if
+      if expr.op == ">" then return left > right end if
+      return left >= right
+    end if
+    if expr.op == "+" and typeof(left) == "string" and typeof(right) == "string" then return left + right end if
+    if typeof(left) != "int" or typeof(right) != "int" then
+      return ParseError("compile-time '" + expr.op + "' expects integer operands", pos, filename)
+    end if
+    if expr.op == "+" then return left + right end if
+    if expr.op == "-" then return left - right end if
+    if expr.op == "*" then return left * right end if
+    if expr.op == "%" then
+      if right == 0 then return ParseError("compile-time modulo by zero", pos, filename) end if
+      return left % right
+    end if
+    if expr.op == "&" then return left & right end if
+    if expr.op == "|" then return left | right end if
+    if expr.op == "^" then return left ^ right end if
+    if expr.op == "<<" or expr.op == ">>" then
+      if right < 0 then return ParseError("negative compile-time shift count", pos, filename) end if
+      if expr.op == "<<" then return left << (right & 63) end if
+      return left >> (right & 63)
+    end if
+    return ParseError("unsupported compile-time operation: " + expr.op, pos, filename)
+  end if
+  return ParseError("unsupported compile-time expression", pos, filename)
+end function
+
+function _compile_eval(text, env, filename, base_pos)
+  expr = parse_expression(text, filename)
+  if _compile_is_error(expr) then
+    expr.pos = base_pos + expr.pos
+    return expr
+  end if
+  return _compile_eval_node(expr, env, filename, base_pos)
+end function
+
+function _compile_numeric_text(raw)
+  if typeof(raw) != "string" or len(raw) <= 0 then return false end if
+  i = 0
+  if raw[0] == "-" then
+    if len(raw) <= 1 then return false end if
+    i = 1
+  end if
+  return _isDigit(raw[i])
+end function
+
+function _compile_parse_cli_value(raw)
+  raw = s.trim(raw)
+  if raw == "true" then return true end if
+  if raw == "false" then return false end if
+  if raw == "" then return ParseError("compile definition value must not be empty", 0, "<command-line>") end if
+  quoted = len(raw) >= 2 and raw[0] == "\"" and raw[len(raw) - 1] == "\""
+  if quoted or _compile_numeric_text(raw) then
+    value = _compile_eval(raw, [], "<command-line>", 0)
+    if _compile_is_error(value) then return value end if
+    if quoted and typeof(value) != "string" then return ParseError("quoted compile definition must be a string", 0, "<command-line>") end if
+    if quoted == false and typeof(value) != "int" then return ParseError("invalid numeric compile definition", 0, "<command-line>") end if
+    return value
+  end if
+  return raw
+end function
+
+// Install command-line/project values. Later -D occurrences override earlier ones.
+function set_compile_defines(specs)
+  global _compile_external_values
+  values = []
+  if typeof(specs) != "array" then specs = [] end if
+  if len(specs) > 0 then
+    for i = 0 to len(specs) - 1
+      raw = specs[i]
+      if typeof(raw) != "string" then return ParseError("compile definition must be a string", 0, "<command-line>") end if
+      name = ""
+      value = true
+      eq = s.indexOf(raw, "=", 0)
+      if typeof(eq) == "int" and eq >= 0 then
+        name = s.trim(_substr(raw, 0, eq))
+        value = _compile_parse_cli_value(_substr(raw, eq + 1, len(raw) - eq - 1))
+        if _compile_is_error(value) then return value end if
+      else
+        name = s.trim(raw)
+        value = true
+      end if
+      if _compile_valid_name(name) == false then return ParseError("invalid compile definition name: " + name, 0, "<command-line>") end if
+      if _compile_is_predefined(name) then return ParseError("predefined compile value " + name + " cannot be overridden", 0, "<command-line>") end if
+      values = _compile_env_set(values, name, value)
+    end for
+  end if
+  _compile_external_values = values
+  return true
+end function
+
+function _compile_external_has(name)
+  return _compile_env_has(_compile_external_values, name)
+end function
+
+function _compile_ltrim_index(line)
+  i = 0
+  while i < len(line) and (line[i] == " " or line[i] == "\t")
+    i = i + 1
+  end while
+  return i
+end function
+
+function _compile_split_command(body)
+  body = s.trim(body)
+  i = 0
+  while i < len(body) and body[i] != " " and body[i] != "\t"
+    i = i + 1
+  end while
+  command = s.toLowerAscii(_substr(body, 0, i))
+  return [command, s.trim(_substr(body, i, len(body) - i))]
+end function
+
+function _compile_block_comment_state(line, in_block)
+  i = 0
+  in_string = false
+  escaped = false
+  while i < len(line)
+    if in_block then
+      close_pos = s.indexOf(line, "*/", i)
+      if typeof(close_pos) != "int" or close_pos < 0 then return true end if
+      in_block = false
+      i = close_pos + 2
+      continue
+    end if
+    ch = line[i]
+    if in_string then
+      if escaped then
+        escaped = false
+      else if ch == "\\" then
+        escaped = true
+      else if ch == "\"" then
+        in_string = false
+      end if
+      i = i + 1
+      continue
+    end if
+    if ch == "\"" then
+      in_string = true
+      i = i + 1
+      continue
+    end if
+    if ch == "/" and i + 1 < len(line) and line[i + 1] == "/" then return false end if
+    if ch == "/" and i + 1 < len(line) and line[i + 1] == "*" then
+      in_block = true
+      i = i + 2
+      continue
+    end if
+    i = i + 1
+  end while
+  return in_block
+end function
+
+function _compile_frames_active(frames)
+  if typeof(frames) != "array" or len(frames) <= 0 then return true end if
+  return frames[len(frames) - 1].active
+end function
+
+function _compile_frames_pop(frames)
+  if typeof(frames) != "array" or len(frames) <= 1 then return [] end if
+  kept = []
+  for i = 0 to len(frames) - 2
+    kept = kept + [frames[i]]
+  end for
+  return kept
+end function
+
+function _compile_argument_pos(line, argument, line_start, hash_col)
+  if argument == "" then return line_start + hash_col end if
+  p = s.indexOf(line, argument, 0)
+  if typeof(p) != "int" or p < 0 then p = hash_col + 1 end if
+  return line_start + p
+end function
+
+function _compile_option_parts(argument, filename, argument_pos)
+  eq = s.indexOf(argument, "=", 0)
+  if typeof(eq) != "int" or eq <= 0 or eq + 1 >= len(argument) then
+    return ParseError("#option expects NAME: bool|int|string = expression", argument_pos, filename)
+  end if
+  left = s.trim(_substr(argument, 0, eq))
+  value_text = s.trim(_substr(argument, eq + 1, len(argument) - eq - 1))
+  colon = s.indexOf(left, ":", 0)
+  if typeof(colon) != "int" or colon <= 0 or colon + 1 >= len(left) then
+    return ParseError("#option expects NAME: bool|int|string = expression", argument_pos, filename)
+  end if
+  name = s.trim(_substr(left, 0, colon))
+  declared_type = s.trim(_substr(left, colon + 1, len(left) - colon - 1))
+  if _compile_valid_name(name) == false or (declared_type != "bool" and declared_type != "int" and declared_type != "string") or value_text == "" then
+    return ParseError("#option expects NAME: bool|int|string = expression", argument_pos, filename)
+  end if
+  return [name, declared_type, value_text]
+end function
+
+function _compile_maybe_has_directive(code)
+  search_from = 0
+  while search_from < len(code)
+    pos = s.indexOf(code, "#", search_from)
+    if typeof(pos) != "int" or pos < 0 then return false end if
+    before = pos - 1
+    while before >= 0 and (code[before] == " " or code[before] == "\t")
+      before = before - 1
+    end while
+    if before < 0 or code[before] == "\n" then return true end if
+    search_from = pos + 1
+  end while
+  return false
+end function
+
+// Evaluate line-oriented directives and retain every original byte offset.
+function preprocess_compile_directives(code, filename)
+  if typeof(code) != "string" then return "" end if
+  if _compile_maybe_has_directive(code) == false then return code end if
+  env = _compile_predefined_values()
+  if len(_compile_external_values) > 0 then
+    for ei = 0 to len(_compile_external_values) - 1
+      env = _compile_env_set(env, _compile_external_values[ei].name, _compile_external_values[ei].value)
+    end for
+  end if
+  option_names = []
+  frames = []
+  chunks = []
+  tail = []
+  line_start = 0
+  in_block_comment = false
+  lines = s.split(code, "\n")
+  for li = 0 to len(lines) - 1
+    line = lines[li]
+    ending = ""
+    if li + 1 < len(lines) then ending = "\n" end if
+    active = _compile_frames_active(frames)
+    hash_col = _compile_ltrim_index(line)
+    stripped = _substr(line, hash_col, len(line) - hash_col)
+    is_directive = len(stripped) > 0 and stripped[0] == "#" and (active == false or in_block_comment == false)
+    blank = _repeat(" ", len(line)) + ending
+
+    if is_directive == false then
+      if active then
+        app_line = t.arr_chunked_push(chunks, tail, line + ending, 256)
+        chunks = app_line[0]
+        tail = app_line[1]
+        in_block_comment = _compile_block_comment_state(line, in_block_comment)
+      else
+        app_blank = t.arr_chunked_push(chunks, tail, blank, 256)
+        chunks = app_blank[0]
+        tail = app_blank[1]
+      end if
+      line_start = line_start + len(line) + len(ending)
+      continue
+    end if
+
+    app_directive = t.arr_chunked_push(chunks, tail, blank, 256)
+    chunks = app_directive[0]
+    tail = app_directive[1]
+    split = _compile_split_command(_substr(stripped, 1, len(stripped) - 1))
+    command = split[0]
+    argument = split[1]
+    directive_pos = line_start + hash_col
+    argument_pos = _compile_argument_pos(line, argument, line_start, hash_col)
+
+    if command == "if" then
+      parent_active = active
+      condition = false
+      if parent_active then
+        value_if = _compile_eval(argument, env, filename, argument_pos)
+        if _compile_is_error(value_if) then return value_if end if
+        if typeof(value_if) != "bool" then return ParseError("#if expression must produce bool", argument_pos, filename) end if
+        condition = value_if
+      end if
+      frames = frames + [CompileFrame(parent_active, parent_active and condition, parent_active and condition, false, directive_pos)]
+    else if command == "elif" then
+      if len(frames) <= 0 then return ParseError("#elif without matching #if", directive_pos, filename) end if
+      fi = len(frames) - 1
+      frame = frames[fi]
+      if frame.else_seen then return ParseError("#elif is not allowed after #else", directive_pos, filename) end if
+      condition_elif = false
+      if frame.parent_active and frame.taken == false then
+        value_elif = _compile_eval(argument, env, filename, argument_pos)
+        if _compile_is_error(value_elif) then return value_elif end if
+        if typeof(value_elif) != "bool" then return ParseError("#elif expression must produce bool", argument_pos, filename) end if
+        condition_elif = value_elif
+      end if
+      frame.active = frame.parent_active and frame.taken == false and condition_elif
+      frame.taken = frame.taken or frame.active
+      frames[fi] = frame
+    else if command == "else" then
+      if argument != "" then return ParseError("#else does not accept an expression", argument_pos, filename) end if
+      if len(frames) <= 0 then return ParseError("#else without matching #if", directive_pos, filename) end if
+      fe = len(frames) - 1
+      frame_else = frames[fe]
+      if frame_else.else_seen then return ParseError("duplicate #else", directive_pos, filename) end if
+      frame_else.else_seen = true
+      frame_else.active = frame_else.parent_active and frame_else.taken == false
+      frame_else.taken = frame_else.taken or frame_else.active
+      frames[fe] = frame_else
+    else if command == "endif" then
+      if argument != "" then return ParseError("#endif does not accept an expression", argument_pos, filename) end if
+      if len(frames) <= 0 then return ParseError("#endif without matching #if", directive_pos, filename) end if
+      frames = _compile_frames_pop(frames)
+    else if command == "option" or command == "const" or command == "error" then
+      if active then
+        if command == "option" then
+          parts = _compile_option_parts(argument, filename, argument_pos)
+          if _compile_is_error(parts) then return parts end if
+          name_option = parts[0]
+          declared_type = parts[1]
+          default_text = parts[2]
+          if _compile_is_predefined(name_option) then return ParseError("predefined compile value " + name_option + " cannot be declared as an option", argument_pos, filename) end if
+          if _compile_env_has(option_names, name_option) then return ParseError("duplicate compile option: " + name_option, argument_pos, filename) end if
+          default_offset = s.indexOf(line, default_text, 0)
+          if typeof(default_offset) != "int" or default_offset < 0 then default_offset = hash_col end if
+          default_value = _compile_eval(default_text, env, filename, line_start + default_offset)
+          if _compile_is_error(default_value) then return default_value end if
+          option_names = option_names + [CompileValue(name_option, true)]
+          selected_value = default_value
+          if _compile_external_has(name_option) then selected_value = _compile_env_get(env, name_option) end if
+          actual_type = _compile_value_type(selected_value)
+          if actual_type != declared_type then return ParseError("compile option " + name_option + " expects " + declared_type + ", got " + actual_type, argument_pos, filename) end if
+          env = _compile_env_set(env, name_option, selected_value)
+        else if command == "const" then
+          eq_const = s.indexOf(argument, "=", 0)
+          if typeof(eq_const) != "int" or eq_const <= 0 or eq_const + 1 >= len(argument) then return ParseError("#const expects NAME = expression", argument_pos, filename) end if
+          name_const = s.trim(_substr(argument, 0, eq_const))
+          value_text = s.trim(_substr(argument, eq_const + 1, len(argument) - eq_const - 1))
+          if _compile_valid_name(name_const) == false or value_text == "" then return ParseError("#const expects NAME = expression", argument_pos, filename) end if
+          if _compile_env_has(env, name_const) then return ParseError("compile-time value already defined: " + name_const, argument_pos, filename) end if
+          value_offset = s.indexOf(line, value_text, 0)
+          if typeof(value_offset) != "int" or value_offset < 0 then value_offset = hash_col end if
+          const_value = _compile_eval(value_text, env, filename, line_start + value_offset)
+          if _compile_is_error(const_value) then return const_value end if
+          env = _compile_env_set(env, name_const, const_value)
+        else
+          error_value = _compile_eval(argument, env, filename, argument_pos)
+          if _compile_is_error(error_value) then return error_value end if
+          if typeof(error_value) != "string" then return ParseError("#error expects a string expression", argument_pos, filename) end if
+          return ParseError(error_value, directive_pos, filename)
+        end if
+      end if
+    else
+      unknown = command
+      if unknown == "" then unknown = "<empty>" end if
+      return ParseError("unknown compile directive: #" + unknown, directive_pos, filename)
+    end if
+    line_start = line_start + len(line) + len(ending)
+  end for
+  if len(frames) > 0 then return ParseError("unterminated #if (missing #endif)", frames[len(frames) - 1].pos, filename) end if
+  return s.join(t.arr_chunked_finish(chunks, tail), "")
 end function
 
 function parse_program(source, filename)

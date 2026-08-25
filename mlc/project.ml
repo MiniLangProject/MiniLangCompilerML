@@ -112,6 +112,35 @@ function _is_known_key(key)
   return key == "entry" or key == "input" or key == "output" or key == "include" or key == "import_paths" or key == "subsystem" or key == "object_pipeline" or key == "incremental" or key == "cache_dir" or key == "compiler_args"
 end function
 
+function _valid_define_name(name)
+  if typeof(name) != "string" or len(name) <= 0 then return false end if
+  first = bytes(name[0])[0]
+  if ((first >= 65 and first <= 90) or (first >= 97 and first <= 122) or first == 95) == false then return false end if
+  if len(name) > 1 then
+    for i = 1 to len(name) - 1
+      c = bytes(name[i])[0]
+      if ((c >= 65 and c <= 90) or (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or c == 95) == false then return false end if
+    end for
+  end if
+  return true
+end function
+
+function _valid_define_value(value)
+  value = s.trim(value)
+  if value == "true" or value == "false" then return true end if
+  if len(value) >= 2 and value[0] == "\"" and value[len(value) - 1] == "\"" then
+    return typeof(_unquote(value)) == "string"
+  end if
+  if value == "" then return false end if
+  i = 0
+  if value[0] == "-" then
+    if len(value) <= 1 then return false end if
+    i = 1
+  end if
+  c = bytes(value[i])[0]
+  return c >= 48 and c <= 57
+end function
+
 // Replace --project arguments with validated ordinary compiler arguments.
 function expandArgs(args)
   if typeof(args) != "array" or len(args) < 1 or args[0] != "--project" then
@@ -131,20 +160,29 @@ function expandArgs(args)
   incremental = true
   cache_dir_value = ".minilang-cache"
   compiler_args = []
+  define_args = []
   in_project = false
+  in_defines = false
   lines = s.split(text, "\n")
   for li = 0 to len(lines) - 1
     line = s.trim(lines[li])
     if line == "" or line[0] == "#" then continue end if
     if line[0] == "[" then
       in_project = line == "[project]"
+      in_defines = line == "[defines]"
       continue
     end if
-    if in_project == false then continue end if
     eq = s.indexOf(line, "=", 0)
+    if in_project == false and in_defines == false then continue end if
     if typeof(eq) != "int" or eq <= 0 then return ProjectExpansion(false, [], void, "invalid project line " + (li + 1)) end if
     key = s.trim(s.substr(line, 0, eq))
     value = s.trim(s.substr(line, eq + 1, len(line) - eq - 1))
+    if in_defines then
+      if _valid_define_name(key) == false then return ProjectExpansion(false, [], void, "invalid compile definition name: " + key) end if
+      if _valid_define_value(value) == false then return ProjectExpansion(false, [], void, "compile definition " + key + " must be bool, int, or string") end if
+      define_args = define_args + ["-D", key + "=" + value]
+      continue
+    end if
     if _is_known_key(key) == false then return ProjectExpansion(false, [], void, "unknown project field: " + key) end if
     if key == "entry" or key == "input" then
       entry = _unquote(value)
@@ -184,6 +222,7 @@ function expandArgs(args)
   end if
   if subsystem != "" then expanded = expanded + ["--subsystem", subsystem] end if
   if object_pipeline then expanded = expanded + ["--object-pipeline"] end if
+  if len(define_args) > 0 then expanded = expanded + define_args end if
   if len(compiler_args) > 0 then expanded = expanded + compiler_args end if
   if len(args) > 2 then
     for ai = 2 to len(args) - 1

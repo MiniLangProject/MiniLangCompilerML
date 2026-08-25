@@ -280,16 +280,25 @@ try {
       Name = "entry initializer inline"
       Source = Join-Path $Root "tests\object_entry_inline.ml"
       Includes = @($Root)
+      Args = @()
     },
     [pscustomobject]@{
       Name = "codegen optimizations"
       Source = Join-Path $Root "tests\codegen_optimizations.ml"
       Includes = @($Root)
+      Args = @()
     },
     [pscustomobject]@{
       Name = "module initialization"
       Source = Join-Path $Root "tests\ported_py\test_module_init_order\main_modinit_order.ml"
       Includes = @((Join-Path $Root "tests\ported_py\test_module_init_order"), $Root)
+      Args = @()
+    },
+    [pscustomobject]@{
+      Name = "conditional compilation"
+      Source = Join-Path $Root "tests\conditional_compilation.ml"
+      Includes = @($Root)
+      Args = @("-DFEATURE=true", '-DLABEL="enabled"')
     }
   )
   foreach ($parityCase in $objectParityCases) {
@@ -300,8 +309,8 @@ try {
     foreach ($includeRoot in $parityCase.Includes) {
       $includeArgs += @("-I", $includeRoot)
     }
-    $monoArgs = @($parityCase.Source, $monoExe) + $includeArgs + $parityCompilerArgs
-    $objectArgs = @($parityCase.Source, $objectExe) + $includeArgs + $parityCompilerArgs + @("--object-pipeline")
+    $monoArgs = @($parityCase.Source, $monoExe) + $includeArgs + $parityCompilerArgs + $parityCase.Args
+    $objectArgs = @($parityCase.Source, $objectExe) + $includeArgs + $parityCompilerArgs + $parityCase.Args + @("--object-pipeline")
     $results += Invoke-NativeStep ("compile parity monolithic: " + $parityCase.Name) $Compiler $monoArgs
     if ($results[-1].ExitCode -ne 0) { continue }
     $results += Invoke-NativeStep ("compile parity object: " + $parityCase.Name) $Compiler $objectArgs
