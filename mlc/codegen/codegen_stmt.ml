@@ -416,9 +416,47 @@ function _rdata_label_offset(rb, name)
   return -1
 end function
 
-function _for_unroll_body_ok(stmts, loop_var)
+function _for_unroll_budget_take(budget)
+  if typeof(budget) != "array" or len(budget) != 1 or budget[0] <= 0 then return false end if
+  budget[0] = budget[0] - 1
+  return true
+end function
+
+// Walk expression children only to enforce the same conservative shared
+// complexity budget as the reference compiler; this is not a semantic filter.
+function _for_unroll_expr_child_ok(child, budget)
+  if typeof(child) == "array" then
+    if len(child) > 0 then
+      for i = 0 to len(child) - 1
+        if _for_unroll_expr_child_ok(child[i], budget) == false then return false end if
+      end for
+    end if
+    return true
+  end if
+  if typeof(child) != "struct" or _coerce_name(try(child.node_kind)) == "" then return true end if
+  return _for_unroll_expr_ok(child, budget)
+end function
+
+function _for_unroll_expr_ok(expr, budget)
+  if typeof(expr) != "struct" or _coerce_name(try(expr.node_kind)) == "" then return true end if
+  if _for_unroll_budget_take(budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.left), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.right), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.expr), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.cond), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.value), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.target), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.index), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.start), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.end_expr), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.iterable), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.args), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.items), budget) == false then return false end if
+  return true
+end function
+
+function _for_unroll_body_ok_budget(stmts, loop_var, budget)
   if typeof(stmts) != "array" then return false end if
-  if len(stmts) > 12 then return false end if
   n = len(stmts)
   i = 0
   while i < n
@@ -426,6 +464,7 @@ function _for_unroll_body_ok(stmts, loop_var)
     st = try(stmts[i])
     i = i + 1
     if typeof(st) != "struct" then return false end if
+    if _for_unroll_budget_take(budget) == false then return false end if
     nk = st.node_kind
     if nk == "Break" or nk == "Continue" or nk == "FunctionDef" or nk == "Switch" or nk == "While" or nk == "DoWhile" or nk == "For" or _is_foreach_stmt(st) then
       return false
@@ -434,20 +473,26 @@ function _for_unroll_body_ok(stmts, loop_var)
       if _coerce_name(st.name) == loop_var then return false end if
     end if
     if nk == "If" then
-      if typeof(st.then_body) == "array" and _for_unroll_body_ok(st.then_body, loop_var) == false then return false end if
+      if _for_unroll_expr_ok(try(st.cond), budget) == false then return false end if
+      if typeof(st.then_body) == "array" and _for_unroll_body_ok_budget(st.then_body, loop_var, budget) == false then return false end if
       if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
         for j = 0 to len(st.elifs) - 1
           eb = st.elifs[j]
           if typeof(eb) == "array" and len(eb) >= 2 then
+            if _for_unroll_expr_ok(try(eb[0]), budget) == false then return false end if
             eb_body = try(eb[1])
-            if typeof(eb_body) == "array" and _for_unroll_body_ok(eb_body, loop_var) == false then return false end if
+            if typeof(eb_body) == "array" and _for_unroll_body_ok_budget(eb_body, loop_var, budget) == false then return false end if
           end if
         end for
       end if
-      if typeof(st.else_body) == "array" and _for_unroll_body_ok(st.else_body, loop_var) == false then return false end if
+      if typeof(st.else_body) == "array" and _for_unroll_body_ok_budget(st.else_body, loop_var, budget) == false then return false end if
     end if
   end while
   return true
+end function
+
+function _for_unroll_body_ok(stmts, loop_var)
+  return _for_unroll_body_ok_budget(stmts, loop_var, [12])
 end function
 
 function _for_unroll_values(state, s)
@@ -7434,9 +7479,7 @@ function _reindex_extern_sigs(arr, cap_hint)
     it = arr[i]
     if typeof(it) != "struct" then continue end if
     qn = _coerce_name(it.qname)
-    nm = _coerce_name(it.name)
     if qn != "" then idx = t.fastmap_set(idx, qn, it) end if
-    if nm != "" then idx = t.fastmap_set(idx, nm, it) end if
   end for
   return idx
 end function

@@ -276,11 +276,14 @@ try {
       [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
       [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared heap and threads"; Source = "thread_features.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux managed thread pool"; Source = "thread_pool.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux standard library"; Source = "stdlib_unit_tests.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux threading standard library"; Source = "threading_stdlib.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux platform crypto"; Source = "crypto_cng.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared-value snapshots"; Source = "shared_value.ml"; RunArgs = @() },
-      [pscustomobject]@{ Name = "Linux platform services"; Source = "platform_services.ml"; RunArgs = @() }
+      [pscustomobject]@{ Name = "Linux platform services"; Source = "platform_services.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux extern/user basename collision"; Source = "extern_user_name_collision\main.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux GC safepoint publication"; Source = "gc_back_to_back_safepoint.ml"; RunArgs = @() }
     )
     foreach ($linuxCase in $linuxCases) {
       $linuxSource = Join-Path $Root ("tests\" + $linuxCase.Source)
@@ -328,7 +331,8 @@ try {
     [pscustomobject]@{ Name = "SIMD search differential"; Source = "simd_search.ml" },
     [pscustomobject]@{ Name = "platform crypto vectors"; Source = "crypto_cng.ml" },
     [pscustomobject]@{ Name = "portable shared-value snapshots"; Source = "shared_value.ml" },
-    [pscustomobject]@{ Name = "portable platform services"; Source = "platform_services.ml" }
+    [pscustomobject]@{ Name = "portable platform services"; Source = "platform_services.ml" },
+    [pscustomobject]@{ Name = "extern/user basename collision"; Source = "extern_user_name_collision\main.ml" }
   )
   foreach ($nativeCase in $nativePrimitiveCases) {
     $nativeSource = Join-Path $Root ("tests\" + $nativeCase.Source)
@@ -427,6 +431,39 @@ try {
       ExitCode = $inputExit
       Seconds = $inputTimer.Elapsed.TotalSeconds
     }
+  }
+
+  # Keep the constant-loop optimization bounded by one shared statement and
+  # expression budget. The simple loops in main should disappear, whereas the
+  # TLS-shaped condition in budgetedLoop must retain a real loop.
+  $unrollSrc = Join-Path $Root "tests\for_unroll_budget.ml"
+  $unrollExe = Join-Path $script:ResolvedArtifactsDir "for_unroll_budget.exe"
+  $unrollLabels = Join-Path $script:ResolvedArtifactsDir "for_unroll_budget.labels"
+  $unrollArgs = @(
+    $unrollSrc, $unrollExe, "-I", $Root,
+    "--dump-labels", $unrollLabels
+  ) + $effectiveCompilerArgs
+  $results += Invoke-NativeStep "compile bounded for-unroll regression" $Compiler $unrollArgs
+  if ($results[-1].ExitCode -eq 0) {
+    $results += Invoke-NativeStep "run bounded for-unroll regression" $unrollExe @()
+    $unrollOk = Test-Path -LiteralPath $unrollLabels
+    if ($unrollOk) {
+      $unrollText = Get-Content -LiteralPath $unrollLabels -Raw
+      $mainBlock = [regex]::Match($unrollText, '(?ms)^\[label\] fn_user_main .*?(?=^\[label\] fn_user_|\z)').Value
+      $budgetBlock = [regex]::Match($unrollText, '(?ms)^\[label\] fn_user_budgetedLoop .*?(?=^\[label\] fn_user_|\z)').Value
+      $unrollOk = $mainBlock.Length -gt 0 -and $budgetBlock.Length -gt 0 -and
+                  $mainBlock -notmatch 'for_top_|for_cont_|for_end_|__for_end_|__for_step_' -and
+                  $budgetBlock.Contains('for_top_') -and $budgetBlock.Contains('for_end_')
+    }
+    $unrollResult = [pscustomobject]@{
+      Name = "verify bounded for-unroll structure"
+      ExitCode = $(if ($unrollOk) { 0 } else { 1 })
+      Seconds = 0.0
+    }
+    $results += $unrollResult
+    $unrollLabel = if ($unrollOk) { "[PASS]" } else { "[FAIL]" }
+    Write-Host ($unrollLabel + " bounded for-unroll structure")
+    Write-LogLine ($unrollLabel + " bounded for-unroll structure")
   }
 
   $listingSrc = Join-Path $Root "tests\native_raw_value_smoke.ml"
