@@ -182,7 +182,7 @@ function _test_project_manifest(compiler_path, repo_root)
   manifest_abs = _path_join(repo_root, "build\\_rt_project_manifest.toml")
   source_abs = _path_join(repo_root, "build\\_rt_project_source.ml")
   output_abs = _path_join(repo_root, "build\\_rt_project_output.exe")
-  manifest_text = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 0\n"
+  manifest_text = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = false\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 0\n"
   if typeof(fs.writeAllText(manifest_abs, manifest_text)) == "error" then
     print "[FAIL] " + name + " (could not write manifest)"
     return false
@@ -195,6 +195,11 @@ function _test_project_manifest(compiler_path, repo_root)
   cmd = "call " + _q(compiler_path) + " --project " + _q(manifest_abs)
   if _wsystem(cmd) != 0 or _run_exe(output_abs, "") != 0 then
     print "[FAIL] " + name + " (initial build/run failed)"
+    return false
+  end if
+  cache_abs = _path_join(repo_root, "build\\_rt_project_cache")
+  if fs.exists(_path_join(cache_abs, "build.exe")) == false or fs.exists(_path_join(cache_abs, "build.state")) == false or fs.exists(_path_join(cache_abs, "build.exe.tmp")) or fs.exists(_path_join(cache_abs, "build.state.tmp")) then
+    print "[FAIL] " + name + " (cache publication left incomplete files)"
     return false
   end if
 
@@ -220,13 +225,75 @@ function _test_project_manifest(compiler_path, repo_root)
   end if
 
   // A changed typed definition is part of the cache identity and selects code.
-  manifest_changed = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 1\n"
+  manifest_changed = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = false\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 1\n"
   if typeof(fs.writeAllText(manifest_abs, manifest_changed)) == "error" or _wsystem(cmd) != 0 then
     print "[FAIL] " + name + " (define-change rebuild failed)"
     return false
   end if
   if _run_exe(output_abs, "") != 8 then
     print "[FAIL] " + name + " (manifest define was not applied)"
+    return false
+  end if
+  print "[PASS] " + name
+  return true
+end function
+
+function _test_pipeline_determinism(compiler_path, repo_root)
+  name = "object_pipeline_determinism"
+  src_abs = _path_join(repo_root, "tests\\codegen_optimizations.ml")
+  mono_abs = _path_join(repo_root, "build\\_rt_pipeline_mono.exe")
+  serial_abs = _path_join(repo_root, "build\\_rt_pipeline_serial.exe")
+  repeat_abs = _path_join(repo_root, "build\\_rt_pipeline_repeat.exe")
+  if _run_compile(compiler_path, src_abs, mono_abs, repo_root, "", "--no-object-pipeline") != 0 then
+    print "[FAIL] " + name + " (monolithic compile failed)"
+    return false
+  end if
+  if _run_compile(compiler_path, src_abs, serial_abs, repo_root, "", "--object-pipeline") != 0 then
+    print "[FAIL] " + name + " (first object compile failed)"
+    return false
+  end if
+  if _run_compile(compiler_path, src_abs, repeat_abs, repo_root, "", "--object-pipeline") != 0 then
+    print "[FAIL] " + name + " (repeat object compile failed)"
+    return false
+  end if
+  mono_bytes = fs.readAllBytes(mono_abs)
+  serial_bytes = fs.readAllBytes(serial_abs)
+  repeat_bytes = fs.readAllBytes(repeat_abs)
+  if typeof(mono_bytes) != "bytes" or mono_bytes != serial_bytes or mono_bytes != repeat_bytes then
+    print "[FAIL] " + name + " (pipeline/repeat output differs)"
+    return false
+  end if
+  // The first length-prefixed field is the four-byte "MLO1" magic, so the
+  // little-endian format version starts at byte offset eight.
+  object_abs = _path_join(repo_root, "build\\tmp\\_rt_pipeline_repeat\\000_codegen_optimizations.mlo")
+  object_bytes = fs.readAllBytes(object_abs)
+  if typeof(object_bytes) != "bytes" or len(object_bytes) < 12 or object_bytes[8] != 1 or object_bytes[9] != 0 or object_bytes[10] != 0 or object_bytes[11] != 0 then
+    print "[FAIL] " + name + " (object pipeline did not emit the canonical MLO version)"
+    return false
+  end if
+  auto_src = _path_join(repo_root, "build\\_rt_pipeline_auto.ml")
+  auto_abs = _path_join(repo_root, "build\\_rt_pipeline_auto.exe")
+  auto_mono_abs = _path_join(repo_root, "build\\_rt_pipeline_auto_mono.exe")
+  auto_text = "function main(args)\n  return 0\nend function\n//" + s.repeat("x", 263000) + "\n"
+  if typeof(fs.writeAllText(auto_src, auto_text)) == "error" then
+    print "[FAIL] " + name + " (could not create automatic-selection fixture)"
+    return false
+  end if
+  if _run_compile(compiler_path, auto_src, auto_abs, repo_root, "", "") != 0 then
+    print "[FAIL] " + name + " (automatic object compile failed)"
+    return false
+  end if
+  if _run_compile(compiler_path, auto_src, auto_mono_abs, repo_root, "", "--no-object-pipeline") != 0 then
+    print "[FAIL] " + name + " (automatic-selection reference compile failed)"
+    return false
+  end if
+  if fs.readAllBytes(auto_abs) != fs.readAllBytes(auto_mono_abs) then
+    print "[FAIL] " + name + " (automatic pipeline changed target bytes)"
+    return false
+  end if
+  auto_object_abs = _path_join(repo_root, "build\\tmp\\_rt_pipeline_auto\\000__rt_pipeline_auto.mlo")
+  if fs.exists(auto_object_abs) == false then
+    print "[FAIL] " + name + " (large source did not select object pipeline)"
     return false
   end if
   print "[PASS] " + name
@@ -454,6 +521,7 @@ function main(args)
   if _test(compiler_path, repo_root, "extern_out_runtime", "tests\\extern_out_runtime.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "defer_features", "tests\\defer_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test_project_manifest(compiler_path, repo_root) then pass = pass + 1 else fail = fail + 1 end if
+  if _test_pipeline_determinism(compiler_path, repo_root) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "conditional_default", "tests\\conditional_compilation.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   conditional_enabled_flags = extra_flags
   if conditional_enabled_flags != "" then conditional_enabled_flags = conditional_enabled_flags + " " end if

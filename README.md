@@ -176,7 +176,10 @@ Common options:
   subsystem selection does not apply to Linux
 
 **Self-host build options**
-- `--object-pipeline` use the memory-bounded `.mlo` object/link path
+- Large import graphs automatically use the memory-bounded `.mlo` object/link
+  path; small programs keep the lower-overhead monolithic path
+- `--object-pipeline` force `.mlo` mode; `--no-object-pipeline` force
+  monolithic mode (useful for parity and benchmark gates)
 - The canonical linker supports both Windows PE and Linux ELF. Section and
   relocation streaming keep large links bounded, while monolithic and `.mlo`
   target files remain byte-identical.
@@ -238,7 +241,7 @@ All paths are relative to the manifest. The supported project fields are:
 | `include` / `import_paths` | array of import roots |
 | `target` | `windows-x64` (default) or `linux-x64` |
 | `subsystem` | Windows only: `console` or `windows` (aliases accepted by the CLI) |
-| `object_pipeline` | request the self-hosted `.mlo` pipeline (Windows or Linux) |
+| `object_pipeline` | optional force switch: `true` selects `.mlo`, `false` selects monolithic; omit it for automatic selection |
 | `incremental` | enable the exact-hit artifact cache (default `true`) |
 | `cache_dir` | cache directory (default `.minilang-cache`) |
 | `compiler_args` | array of additional compiler arguments |
@@ -264,10 +267,12 @@ manifest, effective compiler arguments, compiler executable identity and every
 `.ml` source below the entry/include roots. An exact hit restores the already
 linked executable. Any relevant change performs a full build; this is artifact
 caching, not per-module incremental compilation. Listing, label-dump and
-self-frontcheck builds bypass the cache. Set `object_pipeline = true` for the
-memory-bounded Windows or Linux `.mlo` path. The same manifest works with the
-Python compiler, which accepts the field but emits the equivalent monolithic
-image.
+self-frontcheck builds bypass the cache. Omit `object_pipeline` to let the
+self-hosted compiler select by the recursively measured import graph, or set it
+explicitly to force either pipeline. The same manifest works with the Python
+compiler, which accepts both values but emits the equivalent monolithic image.
+Cache artifacts and validation metadata are published atomically, so an
+interrupted update becomes a miss instead of restoring a partial build.
 
 ### Conditional compilation
 
@@ -428,13 +433,15 @@ Notes:
   generation and are revisited once after helper emission, avoiding repeated
   rescans of an ever-growing patch set. Only section/data/IAT relocations then
   remain pending for PE assembly; generated executable bytes are unchanged.
-- For very large multi-module targets, pass `--object-pipeline`. It bounds the
-  live assembler graph per fragment and links in a fresh compiler process.
+- Very large multi-module targets automatically select `--object-pipeline`; it
+  bounds the live assembler graph per fragment. A small coordinator starts the
+  memory-heavy emitter, waits for it to exit, and only then links the retained
+  objects, preventing emitter and linker heaps from overlapping.
   Canonical entry/function/support order, shared constant pools and exact
   section boundaries make the final PE byte-identical to the normal self-hosted
   and Python compiler outputs. Automated gates compare optimization-heavy and
   cross-module fixtures byte for byte. The current MiniQuake build completes
-  all 492 function fragments, the support tail and the fresh-process link; its
+  all 495 function fragments, the support tail and the fresh-process link; its
   final PE is byte-identical to both monolithic compiler outputs.
 - Pass `--profile-compiler` to the self-hosted compiler to print wall-clock
   timings for module loading, declaration planning, object emission and each
@@ -453,6 +460,10 @@ Notes:
   then their analysis state is released before the support-helper tail. The
   compiler uses a 3 GiB internal periodic-GC limit for large canonical builds;
   target `--gc-limit` values still configure only the generated executable.
+- The streaming linker skips unneeded object payloads without copying them and
+  keeps only a compact fallback cache for uncommon relocation targets. Object
+  emission retains the canonical v1 representation because dictionary-based
+  compression cost more CPU overall than it saved during the later link.
 - By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 
@@ -478,7 +489,7 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **104 passed, 0 failed**.
+- Latest complete run for this revision: **105 passed, 0 failed**.
 
 ### Compiler parity and self-hosting
 

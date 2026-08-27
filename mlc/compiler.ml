@@ -19,6 +19,7 @@ import mlc.linux_runtime as linuxrt
 const COMPILER_VERSION = "1.1.0"
 const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.1.0"
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
+const AUTO_OBJECT_PIPELINE_SCORE = 262144
 
 #if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
@@ -184,6 +185,7 @@ _front_resolve_cache = []
 _pe_state_keepalive = 0
 _compile_codegen_keepalive = 0
 _object_pipeline_enabled = false
+_object_emit_only = false
 _asm_listing_enabled = false
 _asm_listing_path = ""
 _asm_show_addr = true
@@ -228,7 +230,8 @@ function _usage()
   print "  --asm [--asm-out <path>] [--asm-cols addr,opcodes,code]"
   print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
   print "Build internals:"
-  print "  --object-pipeline    use the memory-bounded .mlo pipeline (self-builds)"
+  print "  --object-pipeline    force the memory-bounded .mlo pipeline"
+  print "  --no-object-pipeline force the monolithic pipeline"
   print "  --target TARGET      windows-x64 (default) or linux-x64"
   print "Conditional compilation:"
   print "  -DNAME[=VALUE] | --define NAME[=VALUE]"
@@ -748,6 +751,20 @@ function _objreader_read_string(rd)
   rd = rb[0]
   raw = rb[1]
   return [rd, decode(raw)]
+end function
+
+// Advance over a length-prefixed blob without allocating a copy. Layout scans
+// and the patch applier often need only the following field position.
+function _objreader_skip_bytes(rd)
+  rlen = _objreader_read_u32(rd)
+  if typeof(rlen) == "error" then return rlen end if
+  rd = rlen[0]
+  n = rlen[1]
+  if typeof(n) != "int" or n < 0 or rd.pos < 0 or rd.pos + n > len(rd.buf) then
+    return error(1, "truncated object blob while skipping")
+  end if
+  rd.pos = rd.pos + n
+  return rd
 end function
 
 function inline _node_pos(st)
@@ -1749,6 +1766,67 @@ function _compiler_gc_limit_from_config(runtime_config)
     compiler_gc_limit = 3072 << 20
   end if
   return compiler_gc_limit
+end function
+
+// Extract the path-like portion of a top-level import for the lightweight
+// automatic-pipeline graph scan. The real parser still owns validation.
+function _auto_import_request(line)
+  text = s.trim(line)
+  if _startsWith(text, "import ") == false then return "" end if
+  text = s.trim(s.substr(text, 7, len(text) - 7))
+  if text == "" then return "" end if
+  if text[0] == "\"" then
+    close = s.indexOf(text, "\"", 1)
+    if typeof(close) != "int" or close <= 1 then return "" end if
+    return s.substr(text, 1, close - 1)
+  end if
+  stop = len(text)
+  for i = 0 to len(text) - 1
+    if text[i] == " " or text[i] == "\t" or text[i] == "\r" then
+      stop = i
+      break
+    end if
+  end for
+  module_name = s.substr(text, 0, stop)
+  if module_name == "" then return "" end if
+  return s.replaceAll(module_name, ".", "/") + ".ml"
+end function
+
+// Walk only enough of the import graph to cross the large-build threshold.
+// This avoids a second parse while still seeing thin entrypoints that import a
+// large compiler or application module. Read/resolve failures merely keep the
+// conservative monolithic default; the real frontend reports them later.
+function _auto_object_pipeline_score_visit(path, include_dirs, seen, score)
+  if score >= AUTO_OBJECT_PIPELINE_SCORE then return [AUTO_OBJECT_PIPELINE_SCORE, seen] end if
+  absolute = _path_abspath(path)
+  if absolute == "" then absolute = path end if
+  key = _path_norm_cached(absolute)
+  if t.fastmap_has(seen, key) then return [score, seen] end if
+  seen = t.fastmap_set(seen, key, 1)
+  source = fs.readAllText(absolute)
+  if typeof(source) != "string" then return [score, seen] end if
+  score = score + len(source)
+  if score >= AUTO_OBJECT_PIPELINE_SCORE then return [AUTO_OBJECT_PIPELINE_SCORE, seen] end if
+  lines = s.split(source, "\n")
+  if typeof(lines) == "array" and len(lines) > 0 then
+    for i = 0 to len(lines) - 1
+      request = _auto_import_request(lines[i])
+      if request == "" then continue end if
+      rr = _resolve_import(request, _dirname(absolute), include_dirs)
+      if typeof(rr) == "struct" and typeof(rr.resolved) == "string" and rr.resolved != "" then
+        visited = _auto_object_pipeline_score_visit(rr.resolved, include_dirs, seen, score)
+        score = visited[0]
+        seen = visited[1]
+        if score >= AUTO_OBJECT_PIPELINE_SCORE then break end if
+      end if
+    end for
+  end if
+  return [score, seen]
+end function
+
+function _auto_object_pipeline_score(input_ml, include_dirs)
+  result = _auto_object_pipeline_score_visit(input_ml, include_dirs, t.fastmap_new(128), 0)
+  return result[0]
 end function
 
 function _collect_compile_defines(args)
@@ -3049,7 +3127,8 @@ function _read_mlo_file(path)
   rver = _objreader_read_u32(rd)
   if typeof(rver) == "error" then return rver end if
   rd = rver[0]
-  if rver[1] != 1 then return error(1, "unsupported MiniLang object version") end if
+  version = rver[1]
+  if version != 1 then return error(1, "unsupported MiniLang object version") end if
 
   rk = _objreader_read_string(rd)
   if typeof(rk) == "error" then return rk end if
@@ -3535,9 +3614,9 @@ function _mlo_skip_labels(rd)
   count = rc[1]
   if count > 0 then
     for i = 0 to count - 1
-      rn = _objreader_read_string(rd)
+      rn = _objreader_skip_bytes(rd)
       if typeof(rn) == "error" then return rn end if
-      rd = rn[0]
+      rd = rn
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return ro end if
       rd = ro[0]
@@ -3556,12 +3635,12 @@ function _mlo_skip_patches(rd)
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return ro end if
       rd = ro[0]
-      rt = _objreader_read_string(rd)
+      rt = _objreader_skip_bytes(rd)
       if typeof(rt) == "error" then return rt end if
-      rd = rt[0]
-      rk = _objreader_read_string(rd)
+      rd = rt
+      rk = _objreader_skip_bytes(rd)
       if typeof(rk) == "error" then return rk end if
-      rd = rk[0]
+      rd = rk
     end for
   end if
   return rd
@@ -3580,7 +3659,8 @@ function _read_mlo_file_for_layout(path)
   rver = _objreader_read_u32(rd)
   if typeof(rver) == "error" then return rver end if
   rd = rver[0]
-  if rver[1] != 1 then return error(1, "unsupported MiniLang object version") end if
+  version = rver[1]
+  if version != 1 then return error(1, "unsupported MiniLang object version") end if
 
   rkind = _objreader_read_string(rd)
   if typeof(rkind) == "error" then return rkind end if
@@ -3654,96 +3734,6 @@ function _read_mlo_file_for_layout(path)
   imports = r8[1]
 
   return MloObject(kind, module_file, entry_label, text, rdata, data, bss_size, asm_labels, [], rdata_labels, [], data_labels, [], bss_labels, imports)
-end function
-
-function _mlo_read_patch_triplets(rd, default_kind)
-  rc = _objreader_read_u32(rd)
-  if typeof(rc) == "error" then return rc end if
-  rd = rc[0]
-  count = rc[1]
-  out_b = t.arr_chunk_new(64)
-  if count > 0 then
-    for i = 0 to count - 1
-      ro = _objreader_read_u32(rd)
-      if typeof(ro) == "error" then return ro end if
-      rd = ro[0]
-      off = ro[1]
-      rt = _objreader_read_string(rd)
-      if typeof(rt) == "error" then return rt end if
-      rd = rt[0]
-      trg = rt[1]
-      rk = _objreader_read_string(rd)
-      if typeof(rk) == "error" then return rk end if
-      rd = rk[0]
-      kind = rk[1]
-      if typeof(trg) != "string" or trg == "" or trg == "unknown" then
-        continue
-      end if
-      if typeof(kind) != "string" or kind == "" or kind == "unknown" then
-        kind = default_kind
-      end if
-      out_b = t.arr_chunk_push(out_b, [off, trg, kind])
-    end for
-  end if
-  return [rd, t.arr_chunk_finish(out_b)]
-end function
-
-function _read_mlo_patch_triplets(path)
-  raw = fs.readAllBytes(path)
-  if typeof(raw) == "error" then return raw end if
-  rd = _objreader_new(raw)
-
-  rmagic = _objreader_read_string(rd)
-  if typeof(rmagic) == "error" then return rmagic end if
-  rd = rmagic[0]
-  if rmagic[1] != "MLO1" then return error(1, "invalid MiniLang object magic") end if
-
-  rver = _objreader_read_u32(rd)
-  if typeof(rver) == "error" then return rver end if
-  rd = rver[0]
-  if rver[1] != 1 then return error(1, "unsupported MiniLang object version") end if
-
-  for i = 0 to 2
-    rs = _objreader_read_string(rd)
-    if typeof(rs) == "error" then return rs end if
-    rd = rs[0]
-  end for
-  for i = 0 to 2
-    rb = _objreader_read_bytes(rd)
-    if typeof(rb) == "error" then return rb end if
-    rd = rb[0]
-  end for
-  rbss = _objreader_read_u32(rd)
-  if typeof(rbss) == "error" then return rbss end if
-  rd = rbss[0]
-
-  r1 = _mlo_skip_labels(rd)
-  if typeof(r1) == "error" then return r1 end if
-  rd = r1
-
-  r2 = _mlo_read_patch_triplets(rd, "rel32")
-  if typeof(r2) == "error" then return r2 end if
-  rd = r2[0]
-  asm_patches = r2[1]
-
-  r3 = _mlo_skip_labels(rd)
-  if typeof(r3) == "error" then return r3 end if
-  rd = r3
-
-  r4 = _mlo_read_patch_triplets(rd, "abs64")
-  if typeof(r4) == "error" then return r4 end if
-  rd = r4[0]
-  rdata_patches = r4[1]
-
-  r5 = _mlo_skip_labels(rd)
-  if typeof(r5) == "error" then return r5 end if
-  rd = r5
-
-  r6 = _mlo_read_patch_triplets(rd, "abs64")
-  if typeof(r6) == "error" then return r6 end if
-  data_patches = r6[1]
-
-  return [asm_patches, rdata_patches, data_patches]
 end function
 
 function _label_key(name)
@@ -3863,123 +3853,6 @@ function _link_direct_patch_target(label_map, obj_index_map, target)
   return t.fastmap_get(label_map, target, -1)
 end function
 
-function _link_local_label_add(local_label_map, local_labels_b, name, value)
-  nm = _label_key(name)
-  if nm == "" then return [local_label_map, local_labels_b] end if
-  local_label_map = t.fastmap_set(local_label_map, nm, value)
-  local_labels_b = t.arr_chunk_push(local_labels_b, StrIntPair(nm, value))
-  return [local_label_map, local_labels_b]
-end function
-
-function _link_scan_local_labels(raw, obj_text_off, obj_rdata_off, obj_data_off, obj_bss_off, text_rva, rdata_rva, data_rva, bss_rva)
-  local_label_cap = 2048
-  if typeof(raw) == "bytes" then
-    if len(raw) > 1000000 then
-      local_label_cap = 65536
-    else
-      if len(raw) > 200000 then local_label_cap = 16384 end if
-    end if
-  end if
-  local_label_map = t.fastmap_new(local_label_cap)
-  local_labels_b = t.arr_chunk_new(128)
-  rd = _objreader_new(raw)
-
-  rmagic = _objreader_read_string(rd)
-  if typeof(rmagic) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-  rd = rmagic[0]
-  rver = _objreader_read_u32(rd)
-  if typeof(rver) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-  rd = rver[0]
-  for i = 0 to 2
-    rs = _objreader_read_string(rd)
-    if typeof(rs) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-    rd = rs[0]
-  end for
-  for i = 0 to 2
-    rb = _objreader_read_bytes(rd)
-    if typeof(rb) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-    rd = rb[0]
-  end for
-  rbss = _objreader_read_u32(rd)
-  if typeof(rbss) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-  rd = rbss[0]
-
-  r1 = _mlo_read_labels(rd)
-  if typeof(r1) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-  rd = r1[0]
-  labs = r1[1]
-  if typeof(labs) == "array" and len(labs) > 0 then
-    for li = 0 to len(labs) - 1
-      lb = labs[li]
-      if typeof(lb) != "struct" then continue end if
-      lb_name = _coerce_name(try(lb.name))
-      lb_off = try(lb.offset)
-      if lb_name == "" or typeof(lb_off) != "int" then continue end if
-      rr = _link_local_label_add(local_label_map, local_labels_b, lb_name, text_rva + obj_text_off + lb_off)
-      local_label_map = rr[0]
-      local_labels_b = rr[1]
-    end for
-  end if
-  rd = _mlo_skip_patches(rd)
-  if typeof(rd) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-
-  r2 = _mlo_read_labels(rd)
-  if typeof(r2) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-  rd = r2[0]
-  labs = r2[1]
-  if typeof(labs) == "array" and len(labs) > 0 then
-    for li = 0 to len(labs) - 1
-      lb = labs[li]
-      if typeof(lb) != "struct" then continue end if
-      lb_name = _coerce_name(try(lb.name))
-      lb_off = try(lb.offset)
-      if lb_name == "" or typeof(lb_off) != "int" then continue end if
-      rr = _link_local_label_add(local_label_map, local_labels_b, lb_name, rdata_rva + obj_rdata_off + lb_off)
-      local_label_map = rr[0]
-      local_labels_b = rr[1]
-    end for
-  end if
-  rd = _mlo_skip_patches(rd)
-  if typeof(rd) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-
-  r3 = _mlo_read_labels(rd)
-  if typeof(r3) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-  rd = r3[0]
-  labs = r3[1]
-  if typeof(labs) == "array" and len(labs) > 0 then
-    for li = 0 to len(labs) - 1
-      lb = labs[li]
-      if typeof(lb) != "struct" then continue end if
-      lb_name = _coerce_name(try(lb.name))
-      lb_off = try(lb.offset)
-      if lb_name == "" or typeof(lb_off) != "int" then continue end if
-      rr = _link_local_label_add(local_label_map, local_labels_b, lb_name, data_rva + obj_data_off + lb_off)
-      local_label_map = rr[0]
-      local_labels_b = rr[1]
-    end for
-  end if
-  rd = _mlo_skip_patches(rd)
-  if typeof(rd) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-
-  r4 = _mlo_read_labels(rd)
-  if typeof(r4) == "error" then return [local_label_map, t.arr_chunk_finish(local_labels_b)] end if
-  labs = r4[1]
-  if typeof(labs) == "array" and len(labs) > 0 then
-    for li = 0 to len(labs) - 1
-      lb = labs[li]
-      if typeof(lb) != "struct" then continue end if
-      lb_name = _coerce_name(try(lb.name))
-      lb_off = try(lb.offset)
-      if lb_name == "" or typeof(lb_off) != "int" then continue end if
-      rr = _link_local_label_add(local_label_map, local_labels_b, lb_name, bss_rva + obj_bss_off + lb_off)
-      local_label_map = rr[0]
-      local_labels_b = rr[1]
-    end for
-  end if
-
-  return [local_label_map, t.arr_chunk_finish(local_labels_b)]
-end function
-
 function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, obj_bss_off, label_map, obj_index_map, obj_index_lists, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, image_base, buf, rdata_buf, data_buf, patch_index)
   raw = fs.readAllBytes(src_patch)
   if typeof(raw) == "error" then
@@ -4000,7 +3873,8 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   rver = _objreader_read_u32(rd)
   if typeof(rver) == "error" then return [2, label_map, patch_index] end if
   rd = rver[0]
-  if rver[1] != 1 then
+  version = rver[1]
+  if version != 1 then
     print "CompileError: unsupported MiniLang object version (" + src_patch + ")"
     return [2, label_map, patch_index]
   end if
@@ -4026,15 +3900,9 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   local_labels = []
   last_target = ""
   last_value = -1
-  target_cache_cap = 4096
-  if typeof(raw) == "bytes" then
-    if len(raw) > 1000000 then
-      target_cache_cap = 65536
-    else
-      if len(raw) > 200000 then target_cache_cap = 16384 end if
-    end if
-  end if
-  target_cache = t.fastmap_new(target_cache_cap)
+  // This cache contains only uncommon legacy targets that miss the direct
+  // global/object indexes. Keeping it compact avoids oversized empty tables.
+  target_cache = t.fastmap_new(1024)
 
   rskip1 = _mlo_skip_labels(rd)
   if typeof(rskip1) == "error" then return [2, label_map, patch_index] end if
@@ -4045,6 +3913,8 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   text_patch_count = rct[1]
   if text_patch_count > 0 then
     for i = 0 to text_patch_count - 1
+      pt_target = ""
+      pt_off = 0
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return [2, label_map, patch_index] end if
       rd = ro[0]
@@ -4053,9 +3923,9 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       if typeof(rt) == "error" then return [2, label_map, patch_index] end if
       rd = rt[0]
       pt_target = rt[1]
-      rk = _objreader_read_string(rd)
+      rk = _objreader_skip_bytes(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
-      rd = rk[0]
+      rd = rk
       if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
         continue
       end if
@@ -4105,6 +3975,8 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   rdata_patch_count = rcr[1]
   if rdata_patch_count > 0 then
     for i = 0 to rdata_patch_count - 1
+      pt_target = ""
+      pt_off = 0
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return [2, label_map, patch_index] end if
       rd = ro[0]
@@ -4113,9 +3985,9 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       if typeof(rt) == "error" then return [2, label_map, patch_index] end if
       rd = rt[0]
       pt_target = rt[1]
-      rk = _objreader_read_string(rd)
+      rk = _objreader_skip_bytes(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
-      rd = rk[0]
+      rd = rk
       if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
         continue
       end if
@@ -4160,6 +4032,8 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   data_patch_count = rcd[1]
   if data_patch_count > 0 then
     for i = 0 to data_patch_count - 1
+      pt_target = ""
+      pt_off = 0
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return [2, label_map, patch_index] end if
       rd = ro[0]
@@ -4168,9 +4042,9 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       if typeof(rt) == "error" then return [2, label_map, patch_index] end if
       rd = rt[0]
       pt_target = rt[1]
-      rk = _objreader_read_string(rd)
+      rk = _objreader_skip_bytes(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
-      rd = rk[0]
+      rd = rk
       if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
         continue
       end if
@@ -5292,6 +5166,32 @@ function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_b
   return 0
 end function
 
+// Run only object emission in a child compiler. The small coordinating parent
+// then links after the emitter has exited, so two multi-gigabyte managed heaps
+// are never resident at the same time.
+function _emit_obj_dir_in_fresh_process(args)
+  self_exe = _self_exe_path()
+  if self_exe == "" then return 2 end if
+#if TARGET_OS == "linux"
+  cmd = _cmd_quote_arg(self_exe)
+#else
+  cmd = "call " + _cmd_quote_arg(self_exe)
+#endif
+  if typeof(args) == "array" and len(args) > 0 then
+    for ai = 0 to len(args) - 1
+      cmd = cmd + " " + _cmd_quote_arg(args[ai])
+    end for
+  end if
+  cmd = cmd + " --object-pipeline --object-emit-only"
+  _progress_phase("emitting objects in fresh compiler process")
+  rc = _host_system(cmd)
+  if typeof(rc) != "int" or rc != 0 then
+    print "CompileError: object-emission subprocess failed"
+    return 2
+  end if
+  return 0
+end function
+
 // Compile and link one complete program in memory.
 function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
@@ -5935,6 +5835,7 @@ end function
 function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   global _dump_labels_path
   global _compile_codegen_keepalive
+  global _object_emit_only
   runtime_config = _cfg_set(runtime_config, "cg_object_pipeline", true)
   compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
   gc_set_limit(compiler_gc_limit)
@@ -6080,8 +5981,8 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   end if
   _progress_obj("wrote " + entry_path)
 
-  _progress_phase("emitting canonical function objects")
   fn_entries = codegen.all_function_entries(cg)
+  _progress_phase("emitting canonical function objects")
   fn_start = 0
   while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
     fn_chunk_size = 8
@@ -6092,7 +5993,6 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     if _startsWith(first_name, "mlc.codegen.codegen_builtins_alloc.") or _startsWith(first_name, "mlc.codegen.codegen_expr.") or _startsWith(first_name, "mlc.codegen.codegen_stmt.") or _startsWith(first_name, "mlc.compiler.") then
       fn_chunk_size = 4
     end if
-
     section_checkpoint = _mlo_state_checkpoint(cg.state)
     mod_cg = codegen.clone_for_object(cg, false)
     if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
@@ -6228,6 +6128,11 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   _compile_codegen_keepalive = 0
   _heap_probe("compile:pre_link_gc")
 
+  if _object_emit_only then
+    print "OK: wrote " + len(obj_paths) + " canonical object files to " + tmp_dir
+    return 0
+  end if
+
   if _link_should_use_fresh_process(obj_paths) then
     gc_collect()
     fresh_link = _link_obj_dir_in_fresh_process(input_abs, tmp_dir, output_exe, subsystem, runtime_config)
@@ -6269,6 +6174,7 @@ function run_cli(args)
   global _mem_probe_enabled
   global _dump_labels_path
   global _object_pipeline_enabled
+  global _object_emit_only
   global _asm_listing_enabled
   global _asm_listing_path
   global _asm_show_addr
@@ -6297,7 +6203,8 @@ function run_cli(args)
   _compiler_profile_enabled = _has_flag(args, "--profile-compiler")
   _compiler_profile_reset()
   _dump_labels_path = _get_flag_value(args, "--dump-labels")
-  _object_pipeline_enabled = _has_flag(args, "--object-pipeline")
+  _object_pipeline_enabled = false
+  _object_emit_only = _has_flag(args, "--object-emit-only")
   _asm_listing_enabled = _has_flag(args, "--asm") and _has_flag(args, "--no-asm") == false
   _asm_listing_path = _get_flag_value(args, "--asm-out")
   _asm_show_addr = true
@@ -6356,13 +6263,34 @@ function run_cli(args)
 
   inp = args[0]
   out_path = args[1]
+  include_dirs = _collect_include_dirs(args)
+  force_object_pipeline = _has_flag(args, "--object-pipeline")
+  force_monolithic = _has_flag(args, "--no-object-pipeline")
+  if force_object_pipeline and force_monolithic then
+    print "CompileError: --object-pipeline and --no-object-pipeline are mutually exclusive"
+    return 2
+  end if
+  object_score = 0
+  if force_object_pipeline then
+    _object_pipeline_enabled = true
+  else if force_monolithic == false and _asm_listing_enabled == false and _dump_labels_path == "" and _has_flag(args, "--link-obj-dir") == false then
+    object_score = _auto_object_pipeline_score(inp, include_dirs)
+    _object_pipeline_enabled = object_score >= AUTO_OBJECT_PIPELINE_SCORE
+  end if
+  if _compiler_profile_enabled then
+    object_mode = "monolithic"
+    if _object_pipeline_enabled then object_mode = "object" end if
+    object_reason = "auto"
+    if force_object_pipeline then object_reason = "forced" end if
+    if force_monolithic then object_reason = "disabled" end if
+    print "[profile] object_pipeline=" + object_mode + " selection=" + object_reason + " score=" + object_score + " threshold=" + AUTO_OBJECT_PIPELINE_SCORE
+  end if
   if typeof(project_build) == "struct" then
     if project.ensureOutputDirectory(out_path) == false then
       print "ProjectError: failed to create output directory"
       return 2
     end if
   end if
-  include_dirs = _collect_include_dirs(args)
   keep_going = _has_flag(args, "--keep-going")
   max_errors = _get_max_errors(args)
   size_err = _validate_size_flags(args)
@@ -6424,7 +6352,19 @@ function run_cli(args)
     return link_rc
   end if
 
-  compile_rc = compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  compile_rc = 0
+  if _object_pipeline_enabled and _object_emit_only == false then
+    // The coordinator no longer needs import-scan source buffers while the
+    // emitter owns the large compiler heap. Collect before spawning so those
+    // two memory sets do not overlap for the duration of code generation.
+    gc_collect()
+    compile_rc = _emit_obj_dir_in_fresh_process(args)
+    if compile_rc == 0 then
+      compile_rc = link_obj_dir_to_exe(_tmp_obj_dir(out_path), out_path, subsystem)
+    end if
+  else
+    compile_rc = compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  end if
   if compile_rc == 0 and project_cache_enabled then
     cache_store = project.store(project_build, project_digest, out_path)
     if typeof(cache_store) == "error" then

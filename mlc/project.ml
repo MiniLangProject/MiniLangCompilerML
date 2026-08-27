@@ -10,9 +10,11 @@ import std.sort as sort
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" returns u32
 extern function GetFileAttributesExW(path as wstr, level as int, info as bytes) from "kernel32.dll" returns bool
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" returns bool
+extern function MoveFileExW(source as wstr, destination as wstr, flags as u32) from "kernel32.dll" returns bool
 #else
 extern function _project_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
 extern function _project_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
+extern function _project_rename(source as cstr, destination as cstr) from "libc.so.6" symbol "rename" returns i32
 #endif
 
 // Expanded project configuration carried through compilation and caching.
@@ -206,6 +208,7 @@ function expandArgs(args)
   subsystem = ""
   target = ""
   object_pipeline = false
+  object_pipeline_set = false
   incremental = true
   cache_dir_value = ".minilang-cache"
   compiler_args = []
@@ -257,6 +260,7 @@ function expandArgs(args)
     else if key == "object_pipeline" then
       if value != "true" and value != "false" then return ProjectExpansion(false, [], void, "object_pipeline must be true or false") end if
       object_pipeline = value == "true"
+      object_pipeline_set = true
     else if key == "incremental" then
       if value != "true" and value != "false" then return ProjectExpansion(false, [], void, "incremental must be true or false") end if
       incremental = value == "true"
@@ -274,7 +278,13 @@ function expandArgs(args)
   end if
   if subsystem != "" then expanded = expanded + ["--subsystem", subsystem] end if
   if target != "" then expanded = expanded + ["--target", target] end if
-  if object_pipeline then expanded = expanded + ["--object-pipeline"] end if
+  if object_pipeline_set then
+    if object_pipeline then
+      expanded = expanded + ["--object-pipeline"]
+    else
+      expanded = expanded + ["--no-object-pipeline"]
+    end if
+  end if
   if len(define_args) > 0 then expanded = expanded + define_args end if
   if len(compiler_args) > 0 then expanded = expanded + compiler_args end if
   if len(args) > 2 then
@@ -458,13 +468,33 @@ function restore(pb, digest, output_path)
 end function
 
 // Atomically update the cached artifact and its validation metadata.
+function _atomic_replace(source_path, destination_path)
+#if TARGET_OS == "windows"
+  // REPLACE_EXISTING | WRITE_THROUGH publishes the completed temporary file
+  // as one durable directory-entry update.
+  if MoveFileExW(source_path, destination_path, 9) then return true end if
+#else
+  if _project_rename(source_path, destination_path) == 0 then return true end if
+#endif
+  return error(1, "failed to atomically publish cache file")
+end function
+
 function store(pb, digest, output_path)
   if typeof(pb) != "struct" or pb.incremental == false then return true end if
   if _ensure_dir(pb.cache_dir) == false then return error(1, "failed to create project cache directory") end if
   artifact_path = _join(pb.cache_dir, "build.exe")
-  copied = fs.copyFile(output_path, artifact_path, true)
+  state_path = _join(pb.cache_dir, "build.state")
+  artifact_tmp = artifact_path + ".tmp"
+  state_tmp = state_path + ".tmp"
+  copied = fs.copyFile(output_path, artifact_tmp, true)
   if typeof(copied) == "error" then return copied end if
-  return fs.writeAllText(_join(pb.cache_dir, "build.state"), digest + "\n")
+  written = fs.writeAllText(state_tmp, digest + "\n")
+  if typeof(written) == "error" then return written end if
+  moved_artifact = _atomic_replace(artifact_tmp, artifact_path)
+  if typeof(moved_artifact) == "error" then return moved_artifact end if
+  // Publish metadata last. A crash between the two moves can only produce a
+  // cache miss because the old digest no longer validates the new artifact.
+  return _atomic_replace(state_tmp, state_path)
 end function
 
 // Create the parent directory required by a configured output path.
