@@ -20,6 +20,8 @@ const COMPILER_VERSION = "1.1.0"
 const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.1.0"
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 const AUTO_OBJECT_PIPELINE_SCORE = 262144
+const OBJECT_FUNCTION_BATCH_SIZE = 8
+const OBJECT_COMPILER_BATCH_SIZE = 4
 
 #if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
@@ -5983,16 +5985,24 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
 
   fn_entries = codegen.all_function_entries(cg)
   _progress_phase("emitting canonical function objects")
+  fn_batch_count = 0
+  fn_setup_ms = 0
+  fn_codegen_ms = 0
+  fn_serialize_ms = 0
   fn_start = 0
   while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
-    fn_chunk_size = 8
+    // Small text fragments keep assembler growth linear. Compiler functions
+    // are larger still and therefore retain the narrower historical batch.
+    fn_chunk_size = OBJECT_FUNCTION_BATCH_SIZE
     first_name = ""
     if typeof(fn_entries[fn_start]) == "array" and len(fn_entries[fn_start]) >= 2 then
       first_name = _coerce_name(fn_entries[fn_start][1])
     end if
     if _startsWith(first_name, "mlc.codegen.codegen_builtins_alloc.") or _startsWith(first_name, "mlc.codegen.codegen_expr.") or _startsWith(first_name, "mlc.codegen.codegen_stmt.") or _startsWith(first_name, "mlc.compiler.") then
-      fn_chunk_size = 4
+      fn_chunk_size = OBJECT_COMPILER_BATCH_SIZE
     end if
+    fn_step_started = 0
+    if _compiler_profile_enabled then fn_step_started = mtime.ticks() end if
     section_checkpoint = _mlo_state_checkpoint(cg.state)
     mod_cg = codegen.clone_for_object(cg, false)
     if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
@@ -6007,9 +6017,23 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     mod_cg.state.data = cg.state.data
     mod_cg.state.bss = cg.state.bss
     mod_cg.state.heap_config = _cfg_set(mod_cg.state.heap_config, "cg_object_text_base", text_stream_offset)
+    if _compiler_profile_enabled then
+      fn_step_finished = mtime.ticks()
+      fn_setup_ms = fn_setup_ms + (fn_step_finished - fn_step_started)
+      fn_step_started = fn_step_finished
+    end if
     mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, fn_chunk_size)
     fragment_text_size = a.pos(mod_cg.state.asm)
+    if _compiler_profile_enabled then
+      fn_step_finished = mtime.ticks()
+      fn_codegen_ms = fn_codegen_ms + (fn_step_finished - fn_step_started)
+      fn_step_started = fn_step_finished
+    end if
     fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, first_name, "", mod_cg, section_checkpoint, helper_union, module_obj_paths_b)
+    if _compiler_profile_enabled then
+      fn_step_finished = mtime.ticks()
+      fn_serialize_ms = fn_serialize_ms + (fn_step_finished - fn_step_started)
+    end if
     if fin[0] != 0 then
       print "CompileError: " + fin[1]
       return fin[0]
@@ -6033,11 +6057,15 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     text_stream_offset = text_stream_offset + fragment_text_size
     module_object_seq = module_object_seq + 1
     fn_start = fn_start + fn_chunk_size
+    fn_batch_count = fn_batch_count + 1
     mod_cg = 0
     section_checkpoint = 0
     fin = 0
     if (module_object_seq % 64) == 0 then gc_collect() end if
   end while
+  if _compiler_profile_enabled then
+    print "[profile] object_function_batches=" + fn_batch_count + " setup_ms=" + fn_setup_ms + " codegen_ms=" + fn_codegen_ms + " serialize_ms=" + fn_serialize_ms
+  end if
 
   // The function stream is complete. Release its AST/index roots before
   // emitting the support tail; otherwise a large self-build reaches the

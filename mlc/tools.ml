@@ -57,6 +57,7 @@ struct FastMap
   used,
   cap,
   size,
+  epoch,
 end struct
 
 _arr_void_sentinel = ArrayChunkVoidSentinel(0xA11D)
@@ -226,6 +227,7 @@ function _fm_is_valid(mapv)
   if typeof(mapv.values) != "array" then return false end if
   if typeof(mapv.used) != "array" then return false end if
   if typeof(mapv.cap) != "int" or mapv.cap <= 0 then return false end if
+  if typeof(mapv.epoch) != "int" or mapv.epoch <= 0 then return false end if
   if len(mapv.keys) != mapv.cap then return false end if
   if len(mapv.values) != mapv.cap then return false end if
   if len(mapv.used) != mapv.cap then return false end if
@@ -235,17 +237,24 @@ end function
 // FastMap operations use deterministic hashing and linear probing.
 function fastmap_new(initial_cap)
   cap = _fm_next_pow2(initial_cap)
-  return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), _arr_fill(cap, 0), cap, 0)
+  return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), _arr_fill(cap, 0), cap, 0, 1)
 end function
 
 function fastmap_clear(mapv)
   m = mapv
   if _fm_is_valid(m) == false then return fastmap_new(64) end if
-  if typeof(m.used) == "array" and len(m.used) > 0 then
-    for i = 0 to len(m.used) - 1
-      m.used[i] = 0
-    end for
+  next_epoch = m.epoch + 1
+  // Epoch wrap is practically unreachable, but retain a deterministic full
+  // reset so a very long-lived compiler process can never revive stale slots.
+  if next_epoch <= 0 or next_epoch >= 0x3FFFFFFF then
+    if typeof(m.used) == "array" and len(m.used) > 0 then
+      for i = 0 to len(m.used) - 1
+        m.used[i] = 0
+      end for
+    end if
+    next_epoch = 1
   end if
+  m.epoch = next_epoch
   m.size = 0
   return m
 end function
@@ -256,7 +265,7 @@ function _fm_probe_slot(mapv, key)
   idx = _fm_hash_any(key) & mask
   steps = 0
   while steps < mapv.cap
-    if mapv.used[idx] == 0 then return [idx, false] end if
+    if mapv.used[idx] != mapv.epoch then return [idx, false] end if
     if mapv.keys[idx] == key then return [idx, true] end if
     idx = (idx + 1) & mask
     steps = steps + 1
@@ -268,6 +277,7 @@ function _fm_insert_no_resize(mapv, key, value)
   used_arr = mapv.used
   keys_arr = mapv.keys
   vals_arr = mapv.values
+  epoch = mapv.epoch
   if typeof(used_arr) != "array" then return mapv end if
   if typeof(keys_arr) != "array" then return mapv end if
   if typeof(vals_arr) != "array" then return mapv end if
@@ -275,8 +285,8 @@ function _fm_insert_no_resize(mapv, key, value)
   idx = _fm_hash_any(key) & mask
   steps = 0
   while steps < mapv.cap
-    if used_arr[idx] == 0 then
-      used_arr[idx] = 1
+    if used_arr[idx] != epoch then
+      used_arr[idx] = epoch
       keys_arr[idx] = key
       vals_arr[idx] = value
       mapv.size = mapv.size + 1
@@ -300,7 +310,7 @@ function _fm_rehash(mapv, new_cap)
   nm = fastmap_new(new_cap)
   if _fm_is_valid(mapv) == false then return nm end if
   for i = 0 to mapv.cap - 1
-    if mapv.used[i] != 0 then
+    if mapv.used[i] == mapv.epoch then
       nm = _fm_insert_no_resize(nm, mapv.keys[i], mapv.values[i])
     end if
   end for
@@ -322,7 +332,7 @@ function fastmap_get(mapv, key, defaultv)
   idx = _fm_hash_any(key) & mask
   steps = 0
   while steps < mapv.cap
-    if mapv.used[idx] == 0 then return defaultv end if
+    if mapv.used[idx] != mapv.epoch then return defaultv end if
     if mapv.keys[idx] == key then return mapv.values[idx] end if
     idx = (idx + 1) & mask
     steps = steps + 1
@@ -336,7 +346,7 @@ function fastmap_has(mapv, key)
   idx = _fm_hash_any(key) & mask
   steps = 0
   while steps < mapv.cap
-    if mapv.used[idx] == 0 then return false end if
+    if mapv.used[idx] != mapv.epoch then return false end if
     if mapv.keys[idx] == key then return true end if
     idx = (idx + 1) & mask
     steps = steps + 1
@@ -354,7 +364,7 @@ function fastmap_items(mapv)
   out_b = arr_chunk_new(64)
   if _fm_is_valid(mapv) == false then return arr_chunk_finish(out_b) end if
   for i = 0 to mapv.cap - 1
-    if mapv.used[i] != 0 then
+    if mapv.used[i] == mapv.epoch then
       out_b = arr_chunk_push(out_b, [mapv.keys[i], mapv.values[i]])
     end if
   end for

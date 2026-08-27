@@ -454,6 +454,12 @@ Notes:
   and constant pools stay shared; completed assembler fragments are discarded.
   The hot-path guard in `scripts/check_hotpath_concats.ps1` prevents the main
   declaration/scope paths from regressing to growing-array concatenation.
+- Function-object emission uses bounded batches of eight functions, or four for
+  the compiler backend's largest function groups. Per-function qualification
+  maps use generation-stamped clearing, so resetting a large open-addressing
+  table is O(1) while lookup order and emitted bytes remain deterministic.
+  `--profile-compiler` also separates batch setup, code generation and object
+  serialization time to make future object-pipeline work measurable.
 - Compiler-internal `.rdata` and `.data` labels use chunked, indexed builders;
   section relocation records are chunked as well. The parsed AST and active
   codegen graph remain explicit GC roots through canonical function emission,
@@ -489,7 +495,7 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **105 passed, 0 failed**.
+- Latest complete run for this revision: **106 passed, 0 failed**.
 
 ### Compiler parity and self-hosting
 

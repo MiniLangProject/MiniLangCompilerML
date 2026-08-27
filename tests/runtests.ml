@@ -1,7 +1,28 @@
 import std.fs as fs
 import std.string as s
+import mlc.tools as t
 
 extern function _wsystem(cmd as wstr) from "msvcrt.dll" returns int
+
+function _test_fastmap_clear()
+  name = "fastmap_generation_clear"
+  mapv = t.fastmap_new(8)
+  mapv = t.fastmap_set(mapv, "old", 11)
+  mapv = t.fastmap_set(mapv, "collision-a", 22)
+  mapv = t.fastmap_clear(mapv)
+  if t.fastmap_size(mapv) != 0 or t.fastmap_has(mapv, "old") or t.fastmap_get(mapv, "collision-a", -1) != -1 or len(t.fastmap_items(mapv)) != 0 then
+    print "[FAIL] " + name + " (stale entry survived clear)"
+    return false
+  end if
+  mapv = t.fastmap_set(mapv, "new", 33)
+  mapv = t.fastmap_set(mapv, "old", 44)
+  if t.fastmap_size(mapv) != 2 or t.fastmap_get(mapv, "new", -1) != 33 or t.fastmap_get(mapv, "old", -1) != 44 then
+    print "[FAIL] " + name + " (insert after clear failed)"
+    return false
+  end if
+  print "[PASS] " + name
+  return true
+end function
 
 function _q(x)
   if typeof(x) != "string" then return "\"\"" end if
@@ -502,6 +523,8 @@ function main(args)
 
   pass = 0
   fail = 0
+
+  if _test_fastmap_clear() then pass = pass + 1 else fail = fail + 1 end if
 
   // Suite-style runtime tests
   if _test(compiler_path, repo_root, "array_vector", "tests\\array_vector.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

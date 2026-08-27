@@ -134,6 +134,7 @@ function _copy_fastmap(mapv)
   out_map.used = _copy_array(mapv.used)
   out_map.cap = cap
   out_map.size = size
+  if typeof(mapv.epoch) == "int" and mapv.epoch > 0 then out_map.epoch = mapv.epoch end if
   return out_map
 end function
 
