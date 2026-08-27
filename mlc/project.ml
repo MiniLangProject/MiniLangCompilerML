@@ -2,13 +2,18 @@
 package mlc.project
 
 import std.fs as fs
+import std.process as process
 import std.string as s
 import std.sort as sort
 
+#if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" returns u32
-extern function GetModuleFileNameW(module as ptr, buffer as buffer, bufferLen as u32) from "kernel32.dll" returns u32
 extern function GetFileAttributesExW(path as wstr, level as int, info as bytes) from "kernel32.dll" returns bool
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" returns bool
+#else
+extern function _project_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
+extern function _project_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
+#endif
 
 // Expanded project configuration carried through compilation and caching.
 struct ProjectBuild
@@ -49,7 +54,11 @@ function _join(a, b)
   if typeof(a) != "string" or a == "" or a == "." then return b end if
   if typeof(b) != "string" or b == "" then return a end if
   if a[len(a) - 1] == "\\" or a[len(a) - 1] == "/" then return a + b end if
+#if TARGET_OS == "linux"
+  return a + "/" + b
+#else
   return a + "\\" + b
+#endif
 end function
 
 function _is_abs(path)
@@ -60,12 +69,47 @@ function _is_abs(path)
 end function
 
 function _abspath(path)
+#if TARGET_OS == "linux"
+  if _is_abs(path) then return _canon_linux(path) end if
+  cwd = process.currentDirectory()
+  if typeof(cwd) != "string" or cwd == "" then return _canon_linux(path) end if
+  return _canon_linux(_join(cwd, path))
+#else
   buf = bytes(8192, 0)
   n = GetFullPathNameW(path, 4096, buf, 0)
   if typeof(n) != "int" or n <= 0 then return path end if
   abs_value = decode16Z(buf)
   if typeof(abs_value) != "string" or abs_value == "" then return path end if
   return abs_value
+#endif
+end function
+
+// Normalize a POSIX path lexically so output paths need not exist yet.
+function _canon_linux(path)
+  if typeof(path) != "string" or path == "" then return "." end if
+  absolute = path[0] == "/"
+  parts = s.split(path, "/")
+  stack = []
+  for i = 0 to len(parts) - 1
+    part = parts[i]
+    if part == "" or part == "." then continue end if
+    if part == ".." then
+      if len(stack) > 0 and stack[len(stack) - 1] != ".." then
+        stack = t.arr_drop_last(stack)
+      else
+        if absolute == false then stack = stack + [".."] end if
+      end if
+    else
+      stack = stack + [part]
+    end if
+  end for
+  tail = s.join(stack, "/")
+  if absolute then
+    if tail == "" then return "/" end if
+    return "/" + tail
+  end if
+  if tail == "" then return "." end if
+  return tail
 end function
 
 function _relative_path(base, value)
@@ -80,7 +124,11 @@ function _ensure_dir(path)
   if parent != path and parent != "." then
     if _ensure_dir(parent) == false then return false end if
   end if
+#if TARGET_OS == "linux"
+  if _project_mkdir(path, 493) == 0 then return true end if
+#else
   if CreateDirectoryW(path, 0) then return true end if
+#endif
   return fs.isDir(path)
 end function
 
@@ -283,10 +331,18 @@ function _collect_ml_files(path, excluded, result_paths)
 end function
 
 function _append_unique_path(paths, path)
+#if TARGET_OS == "linux"
+  key = path
+#else
   key = s.toLowerAscii(path)
+#endif
   if len(paths) > 0 then
     for i = 0 to len(paths) - 1
+#if TARGET_OS == "linux"
+      if paths[i] == key then return paths end if
+#else
       if s.toLowerAscii(paths[i]) == key then return paths end if
+#endif
     end for
   end if
   return paths + [path]
@@ -351,7 +407,11 @@ function fingerprint(pb, input_path, include_dirs)
       data = fs.readAllBytes(unique_files[fi])
       if typeof(data) == "error" then return data end if
       h = _hash_byte(h, 0)
+#if TARGET_OS == "linux"
+      h = _hash_text(h, unique_files[fi])
+#else
       h = _hash_text(h, s.toLowerAscii(unique_files[fi]))
+#endif
       h = _hash_byte(h, 0)
       h = _hash_bytes(h, data)
     end for
@@ -359,10 +419,9 @@ function fingerprint(pb, input_path, include_dirs)
 
   // Last-write time + size make compiler rebuilds invalidate the cache without
   // hashing a 50+ MiB self-hosted executable on every invocation.
-  exe_buf = bytes(8192, 0)
-  exe_len = GetModuleFileNameW(0, exe_buf, 4096)
-  if typeof(exe_len) == "int" and exe_len > 0 then
-    exe_path = decode16Z(exe_buf)
+  exe_path = process.executablePath()
+  if typeof(exe_path) == "string" and exe_path != "" then
+#if TARGET_OS == "windows"
     attr = bytes(36, 0)
     if typeof(exe_path) == "string" and GetFileAttributesExW(exe_path, 0, attr) then
       h = _hash_text(h, s.toLowerAscii(exe_path))
@@ -371,6 +430,16 @@ function fingerprint(pb, input_path, include_dirs)
       h = _hash_bytes(h, slice(attr, 0, 12))
       h = _hash_bytes(h, slice(attr, 20, 16))
     end if
+#else
+    // Linux x86-64 struct stat stores size at 48 and mtime at 88. Avoid atime,
+    // which may change merely because the compiler image was launched.
+    attr = bytes(144, 0)
+    if _project_stat(exe_path, attr) == 0 then
+      h = _hash_text(h, exe_path)
+      h = _hash_bytes(h, slice(attr, 48, 8))
+      h = _hash_bytes(h, slice(attr, 88, 16))
+    end if
+#endif
   end if
   return _hex32(h.a) + _hex32(h.b)
 end function

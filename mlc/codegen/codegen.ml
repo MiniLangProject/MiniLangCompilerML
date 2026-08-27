@@ -349,7 +349,7 @@ function _clone_state_for_object(base, seed_runtime)
   st._module_init_status_labels = _copy_fastmap(base._module_init_status_labels)
   st.native_threads_possible = base.native_threads_possible
 
-  st.asm = a.newAsmBuilder()
+  st.asm = a.newCodegenAsmBuilder()
   if seed_runtime then
     st.data = _copy_data_builder(base.data)
     st.bss = _copy_bss_builder(base.bss)
@@ -375,7 +375,7 @@ end function
 function start_object_fragment(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
-  cg.state.asm = a.newAsmBuilder()
+  cg.state.asm = a.newCodegenAsmBuilder()
   cg.state._inline_param_stack = stmt.cg_emit_stmt
   return cg
 end function

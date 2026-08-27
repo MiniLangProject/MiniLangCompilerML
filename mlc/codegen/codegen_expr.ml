@@ -1326,7 +1326,7 @@ function _emit_expr_is_type(state, expr)
     parts_ty = s.split(ty_q, ".")
     if typeof(parts_ty) == "array" and len(parts_ty) >= 2 then
       vname_ty = _coerce_name(parts_ty[len(parts_ty) - 1])
-      base_parts_ty = slice(parts_ty, 0, len(parts_ty) - 1)
+      base_parts_ty = t.arr_drop_last(parts_ty)
       if typeof(base_parts_ty) != "array" then base_parts_ty = [] end if
       base_ty = s.join(base_parts_ty, ".")
       vars_ty = _state_enum_variants_get(state, base_ty)
@@ -4605,7 +4605,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
         ps_t = s.split(arg_name, ".")
         if typeof(ps_t) == "array" and len(ps_t) >= 2 then
           v_t = _coerce_name(ps_t[len(ps_t) - 1])
-          bp_t = slice(ps_t, 0, len(ps_t) - 1)
+          bp_t = t.arr_drop_last(ps_t)
           if typeof(bp_t) != "array" then bp_t = [] end if
           b_t = _apply_import_alias(state, s.join(bp_t, "."))
           vars_t = _state_enum_variants_get(state, b_t)
@@ -4660,7 +4660,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
         ps_n = s.split(argn, ".")
         if typeof(ps_n) == "array" and len(ps_n) >= 2 then
           vn_n = _coerce_name(ps_n[len(ps_n) - 1])
-          bp_n = slice(ps_n, 0, len(ps_n) - 1)
+          bp_n = t.arr_drop_last(ps_n)
           if typeof(bp_n) != "array" then bp_n = [] end if
           b_n = _apply_import_alias(state, s.join(bp_n, "."))
           vars_n = _state_enum_variants_get(state, b_n)

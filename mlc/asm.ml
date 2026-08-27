@@ -36,6 +36,8 @@ struct AsmBuilder
   tracked_helpers,
   label_pos_map,
   peephole_last_jump,
+  record_calls,
+  tracked_helper_map,
 end struct
 
 // Encoded general-purpose-register number, width and REX requirement.
@@ -84,7 +86,17 @@ end function
 // Create an empty assembler with production-sized page and index capacities.
 function newAsmBuilder()
   cs = 65536
-  return AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], t.fastmap_new(256), [])
+  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], t.fastmap_new(256), [], true, t.fastmap_new(256))
+  return asm
+end function
+
+// Code generation discovers runtime helpers separately and never consumes the
+// complete call history. Avoid retaining one string for every emitted call in
+// large monolithic builds while preserving call recording for assembler users.
+function newCodegenAsmBuilder()
+  asm = newAsmBuilder()
+  asm.record_calls = false
+  return asm
 end function
 
 // Materialize unresolved and active patch chunks in deterministic order.
@@ -185,6 +197,12 @@ function clear_calls(asm)
   return asm
 end function
 
+function clear_tracked_helpers(asm)
+  asm.tracked_helpers = []
+  asm.tracked_helper_map = t.fastmap_new(256)
+  return asm
+end function
+
 function get_tracked_helpers(asm)
   return asm.tracked_helpers
 end function
@@ -215,8 +233,20 @@ function _track_helper_label(asm, label)
   if _starts_with_text(label, "fn_ret_") then return asm end if
   if _starts_with_text(label, "fn_defer_") then return asm end if
   if typeof(asm.tracked_helpers) != "array" then asm.tracked_helpers = [] end if
-  if _array_contains_text(asm.tracked_helpers, label) == false then
+  if typeof(asm.tracked_helper_map) != "struct" then
+    asm.tracked_helper_map = t.fastmap_new(256)
+    if len(asm.tracked_helpers) > 0 then
+      for i = 0 to len(asm.tracked_helpers) - 1
+        existing = asm.tracked_helpers[i]
+        if typeof(existing) == "string" then
+          asm.tracked_helper_map = t.fastmap_set(asm.tracked_helper_map, existing, 1)
+        end if
+      end for
+    end if
+  end if
+  if t.fastmap_has(asm.tracked_helper_map, label) == false then
     asm.tracked_helpers = asm.tracked_helpers + [label]
+    asm.tracked_helper_map = t.fastmap_set(asm.tracked_helper_map, label, 1)
   end if
   return asm
 end function
@@ -355,7 +385,7 @@ function _drop_last_patch(asm)
   tn = t.arr_chunk_tail_len(asm.patches_tail)
   if tn <= 0 then return asm end if
   if typeof(asm.patches_tail) == "array" then
-    asm.patches_tail = slice(asm.patches_tail, 0, tn - 1)
+    asm.patches_tail = t.arr_drop_last(asm.patches_tail)
     return asm
   end if
   if typeof(asm.patches_tail) == "struct" then
@@ -1014,7 +1044,7 @@ function call(asm, label)
   asm = _emit32(asm, 0)
   asm = _patch_push(asm, AsmPatch(p, label, "rel32"))
   if typeof(label) == "string" then
-    asm = _call_push(asm, label)
+    if asm.record_calls then asm = _call_push(asm, label) end if
     asm = _track_helper_label(asm, label)
   end if
   return asm

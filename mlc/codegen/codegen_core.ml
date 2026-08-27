@@ -401,7 +401,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   false,
   false,
   base_imports,
-  a.newAsmBuilder(),
+  a.newCodegenAsmBuilder(),
   d.newDataBuilder(),
   d.newBssBuilder(),
   d.newRDataBuilder(),
@@ -1377,7 +1377,7 @@ function reset_helper_tracking(state)
   state.used_helpers = []
   state.emitted_helpers = []
   state.asm = a.clear_calls(state.asm)
-  state.asm.tracked_helpers = []
+  state.asm = a.clear_tracked_helpers(state.asm)
   return state
 end function
 

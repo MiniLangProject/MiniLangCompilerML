@@ -81,6 +81,42 @@ function checkChunkedIndexedRead()
   return failures
 end function
 
+function checkCallAndHelperTracking()
+  failures = 0
+
+  // General assembler clients retain the historical complete call list.
+  builder = a.newAsmBuilder()
+  builder = a.call(builder, "fn_alloc")
+  builder = a.call(builder, "fn_alloc")
+  builder = a.call(builder, "fn_user_example")
+  if len(a.get_calls(builder)) != 3 then
+    print "FAIL: general assembler call tracking"
+    failures = failures + 1
+  end if
+  if len(a.get_tracked_helpers(builder)) != 1 or a.get_tracked_helpers(builder)[0] != "fn_alloc" then
+    print "FAIL: indexed helper de-duplication"
+    failures = failures + 1
+  end if
+
+  // Production codegen needs the unique helper set, but never reads the much
+  // larger per-call history.
+  builder = a.newCodegenAsmBuilder()
+  builder = a.call(builder, "fn_alloc")
+  builder = a.call(builder, "fn_alloc")
+  if len(a.get_calls(builder)) != 0 or len(a.get_tracked_helpers(builder)) != 1 then
+    print "FAIL: codegen assembler tracking policy"
+    failures = failures + 1
+  end if
+  builder = a.clear_tracked_helpers(builder)
+  builder = a.call(builder, "fn_alloc")
+  if len(a.get_tracked_helpers(builder)) != 1 then
+    print "FAIL: helper index reset"
+    failures = failures + 1
+  end if
+
+  return failures
+end function
+
 function main(args)
   p = "tests\\asm_opcodes_golden.json"
   if fs.exists(p) == false then
@@ -229,6 +265,7 @@ function main(args)
   failures = failures + checkRDataLabelScale()
   failures = failures + checkDataLabelScale()
   failures = failures + checkChunkedIndexedRead()
+  failures = failures + checkCallAndHelperTracking()
 
   if failures != 0 then return 6 end if
 

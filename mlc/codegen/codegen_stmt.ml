@@ -562,6 +562,52 @@ struct DeferCollectResult
   count,
 end struct
 
+function _synchronized_block_has_crossing_exit(stmts, break_depth, loop_depth)
+  if typeof(stmts) != "array" or len(stmts) == 0 then return false end if
+  for sci = 0 to len(stmts) - 1
+    child = stmts[sci]
+    if typeof(child) != "struct" then continue end if
+    ck = _coerce_name(try(child.node_kind))
+    if ck == "FunctionDef" then continue end if
+    if ck == "Break" then
+      count = try(child.count)
+      if typeof(count) != "int" or count < 1 then count = 1 end if
+      if count > break_depth then return true end if
+      continue
+    end if
+    if ck == "Continue" then
+      if loop_depth <= 0 then return true end if
+      continue
+    end if
+    if ck == "While" or ck == "DoWhile" or ck == "For" or _is_foreach_stmt(child) then
+      if _synchronized_block_has_crossing_exit(try(child.body), break_depth + 1, loop_depth + 1) then return true end if
+      continue
+    end if
+    if ck == "Switch" then
+      cases0 = try(child.cases)
+      if typeof(cases0) == "array" and len(cases0) > 0 then
+        for sci2 = 0 to len(cases0) - 1
+          if _synchronized_block_has_crossing_exit(try(cases0[sci2].body), break_depth + 1, loop_depth) then return true end if
+        end for
+      end if
+      if _synchronized_block_has_crossing_exit(try(child.default_body), break_depth + 1, loop_depth) then return true end if
+      continue
+    end if
+    body_sets = [try(child.body), try(child.then_body), try(child.else_body), try(child.default_body)]
+    for sbsi = 0 to len(body_sets) - 1
+      if _synchronized_block_has_crossing_exit(body_sets[sbsi], break_depth, loop_depth) then return true end if
+    end for
+    elifs0 = try(child.elifs)
+    if typeof(elifs0) == "array" and len(elifs0) > 0 then
+      for sei = 0 to len(elifs0) - 1
+        ep = elifs0[sei]
+        if typeof(ep) == "array" and len(ep) >= 2 and _synchronized_block_has_crossing_exit(ep[1], break_depth, loop_depth) then return true end if
+      end for
+    end if
+  end for
+  return false
+end function
+
 function _collect_defer_walk(state, stmts, in_loop, builder, count)
   if typeof(stmts) != "array" or len(stmts) <= 0 then
     return DeferCollectResult(state, builder, count)
@@ -584,6 +630,22 @@ function _collect_defer_walk(state, stmts, in_loop, builder, count)
       st.site_id = count
       builder = t.arr_chunk_push(builder, st)
       count = count + 1
+      continue
+    end if
+    if k == "SynchronizedBlock" then
+      if _synchronized_block_has_crossing_exit(try(st.body), 0, 0) then
+        state.diagnostics = state.diagnostics + ["break/continue cannot leave synchronized(lock); move the control transfer outside the block" + _diag_stmt_loc(st)]
+      end if
+      member = ml.Member("Member", st.lock, "release", try(st._pos), try(st._filename))
+      call = ml.Call("Call", member, [], try(st._pos), try(st._filename))
+      cleanup = ml.Defer("Defer", call, count, [], "", try(st._pos), try(st._filename))
+      st.cleanup = cleanup
+      builder = t.arr_chunk_push(builder, cleanup)
+      count = count + 1
+      rr = _collect_defer_walk(state, try(st.body), in_loop, builder, count)
+      state = rr.state
+      builder = rr.builder
+      count = rr.count
       continue
     end if
     if k == "If" then
@@ -1211,6 +1273,51 @@ function cg_emit_stmt(state, stmt)
       state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "r15")
     end if
     state = scope.emit_store_var_scoped(state, local_name, stmt)
+    return state
+  end if
+
+  if k == "SynchronizedBlock" then
+    cleanup = try(stmt.cleanup)
+    offs = try(cleanup.offsets)
+    if typeof(cleanup) != "struct" or typeof(offs) != "array" or len(offs) < 2 then
+      state.diagnostics = state.diagnostics + ["Internal compiler error: synchronized block has no cleanup frame" + _diag_stmt_loc(stmt)]
+      return state
+    end if
+
+    state = _emit_defer_registration(state, cleanup)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.mov_rsp_disp32_rax(state.asm, offs[0])
+
+    captured = ml.DeferredCapture("DeferredCapture", offs[1], try(stmt._pos), try(stmt._filename))
+    acquire_member = ml.Member("Member", captured, "acquire", try(stmt._pos), try(stmt._filename))
+    acquire_call = ml.Call("Call", acquire_member, [], try(stmt._pos), try(stmt._filename))
+    state = exprmod.cg_emit_expr(state, acquire_call)
+    lid_acquire = state.label_id
+    state.label_id = state.label_id + 1
+    acquired = "sync_block_acquired_" + lid_acquire
+    state.asm = a.cmp_rax_imm8(state.asm, t.enc_bool(true))
+    state.asm = a.jcc(state.asm, "e", acquired)
+    state = exprmod._emit_make_error_const(state, c.ERR_METHOD_NOT_FOUND, "synchronized(lock) could not acquire its lock")
+    state = exprmod._emit_auto_errprop(state)
+    state.asm = a.mark(state.asm, acquired)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
+    state.asm = a.mov_rsp_disp32_rax(state.asm, offs[0])
+
+    state = scope.cg_scope_enter(state)
+    state = _emit_stmt_list(state, try(stmt.body))
+    state = scope.cg_scope_leave(state, true)
+
+    state = exprmod.cg_emit_expr(state, _defer_replay_call(cleanup))
+    lid_release = state.label_id
+    state.label_id = state.label_id + 1
+    released = "sync_block_released_" + lid_release
+    state.asm = a.cmp_rax_imm8(state.asm, t.enc_bool(true))
+    state.asm = a.jcc(state.asm, "e", released)
+    state = exprmod._emit_make_error_const(state, c.ERR_METHOD_NOT_FOUND, "synchronized(lock) could not release its lock")
+    state = exprmod._emit_auto_errprop(state)
+    state.asm = a.mark(state.asm, released)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.mov_rsp_disp32_rax(state.asm, offs[0])
     return state
   end if
 
@@ -4926,6 +5033,14 @@ function _analysis_scan_stmt(state, st)
     return state
   end if
 
+  if k == "SynchronizedBlock" then
+    state = _analysis_scan_expr(state, try(st.lock), false)
+    state = scope.cg_scope_enter(state)
+    state = _analysis_scan_block(state, try(st.body))
+    state = scope.cg_scope_leave(state, false)
+    return state
+  end if
+
   if k == "If" then
     state = _analysis_scan_expr(state, try(st.cond), false)
     state = scope.cg_scope_enter(state)
@@ -5327,7 +5442,7 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
       continue
     end if
 
-    if k == "While" or k == "DoWhile" or k == "For" or _is_foreach_stmt(st) then
+    if k == "While" or k == "DoWhile" or k == "For" or k == "SynchronizedBlock" or _is_foreach_stmt(st) then
       sub4 = _closure_collect_locals_walk(try(st.body), locals_set, globals_decl, nested)
       locals_set = sub4[0]
       globals_decl = sub4[1]
@@ -5412,6 +5527,12 @@ function _closure_collect_uses(stmts)
       used = _closure_expr_reads(try(st.target), used)
       used = _closure_expr_reads(try(st.index), used)
       used = _closure_expr_reads(try(st.expr), used)
+      continue
+    end if
+
+    if k == "SynchronizedBlock" then
+      used = _closure_expr_reads(try(st.lock), used)
+      used = _name_set_union(used, _closure_collect_uses(try(st.body)))
       continue
     end if
 
@@ -5541,7 +5662,7 @@ function _closure_collect_writes(fn_node)
       continue
     end if
 
-    if k == "While" or k == "DoWhile" or k == "For" or _is_foreach_stmt(st) then
+    if k == "While" or k == "DoWhile" or k == "For" or k == "SynchronizedBlock" or _is_foreach_stmt(st) then
       written = _name_set_union(written, _closure_collect_writes(try(st.body)))
       continue
     end if
@@ -5626,6 +5747,15 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
       rr4 = _closure_expr_reads(try(st.index), rr4)
       rr4 = _closure_expr_reads(try(st.expr), rr4)
       read_before = _note_reads(read_before, written_yet, rr4)
+      continue
+    end if
+
+    if k == "SynchronizedBlock" then
+      rr_sync = _closure_expr_reads(try(st.lock), _name_set_new(16))
+      read_before = _note_reads(read_before, written_yet, rr_sync)
+      sub_sync = _closure_collect_rbfw_walk(try(st.body), read_before, written_yet)
+      read_before = sub_sync[0]
+      written_yet = sub_sync[1]
       continue
     end if
 
@@ -6341,6 +6471,17 @@ function _stmt_uses_this(st)
   end if
   if k == "While" or k == "DoWhile" then
     if _expr_uses_this(try(st.cond)) then return true end if
+    body = try(st.body)
+    if typeof(body) == "array" and len(body) > 0 then
+      for i = 0 to len(body) - 1
+        if i < 0 or i >= len(body) then break end if
+        if _stmt_uses_this(body[i]) then return true end if
+      end for
+    end if
+    return false
+  end if
+  if k == "SynchronizedBlock" then
+    if _expr_uses_this(try(st.lock)) then return true end if
     body = try(st.body)
     if typeof(body) == "array" and len(body) > 0 then
       for i = 0 to len(body) - 1
@@ -7165,6 +7306,19 @@ function _check_stmt_semantics(state, st, fn_arities)
   if k == "While" or k == "DoWhile" then
     if typeof(st.cond) == "struct" then
       state = _check_expr_semantics(state, st.cond, fn_arities)
+    end if
+    if typeof(st.body) == "array" and len(st.body) > 0 then
+      for i = 0 to len(st.body) - 1
+        if i < 0 or i >= len(st.body) then break end if
+        state = _check_stmt_semantics(state, st.body[i], fn_arities)
+      end for
+    end if
+    return state
+  end if
+
+  if k == "SynchronizedBlock" then
+    if typeof(st.lock) == "struct" then
+      state = _check_expr_semantics(state, st.lock, fn_arities)
     end if
     if typeof(st.body) == "array" and len(st.body) > 0 then
       for i = 0 to len(st.body) - 1
@@ -9618,6 +9772,11 @@ function max_calls_stmts(state, stmts)
     end if
     if nk == "Return" then
       m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      continue
+    end if
+    if nk == "SynchronizedBlock" then
+      m = _max_calls_int(m, max_calls_expr(state, try(st.lock)))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
       continue
     end if
     if nk == "Defer" then

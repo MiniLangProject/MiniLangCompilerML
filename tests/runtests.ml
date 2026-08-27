@@ -473,6 +473,9 @@ function main(args)
   if _test(compiler_path, repo_root, "gc_back_to_back_safepoint", "tests\\gc_back_to_back_safepoint.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "threading_stdlib", "tests\\threading_stdlib.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_pool", "tests\\thread_pool.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "synchronized_lock", "tests\\synchronized_lock.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "task_channel", "tests\\task_channel.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "synchronized_lock_invalid_exit", "tests\\synchronized_lock_invalid_exit.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "type_checks", "tests\\type_checks.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_invalid_entry", "tests\\thread_invalid_entry.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_invalid_synchronized_local", "tests\\thread_invalid_synchronized_local.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

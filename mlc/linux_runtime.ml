@@ -239,7 +239,7 @@ function _emit_extern_thunks(state)
     while frame % 16 != 8 frame = frame + 1 end while
 
     asm = a.mark(asm, thunk_label)
-    fragment = a.newAsmBuilder()
+    fragment = a.newCodegenAsmBuilder()
     call_patch_offset = -1
     fragment = a.push_reg(fragment, "rdi")
     fragment = a.push_reg(fragment, "rsi")

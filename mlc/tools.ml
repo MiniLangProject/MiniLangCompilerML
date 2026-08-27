@@ -1,6 +1,18 @@
 // Dependency-light integer, path, hashing and chunked-builder utilities.
 package mlc.tools
+
 import mlc.constants as c
+
+// Return every array element except the last one. The builtin slice() operates
+// on bytes, so compiler data structures must use an explicit array copy.
+function arr_drop_last(values)
+  if typeof(values) != "array" or len(values) <= 1 then return [] end if
+  output = array(len(values) - 1, void)
+  for i = 0 to len(output) - 1
+    output[i] = values[i]
+  end for
+  return output
+end function
 
 // Append-only array builder that avoids copying a growing prefix.
 struct ArrayChunkBuilder

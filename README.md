@@ -1,7 +1,9 @@
-﻿# MiniLang - Self-Hosted Compiler
+﻿# MiniLang - Self-Hosted Compiler for Windows and Linux x64
 
 Current stable release: **1.1.0**. See the [changelog](CHANGELOG.md) and
 [release notes](RELEASE_NOTES_1.1.0.md).
+
+Supported native targets: **Windows x64 (PE32+)** and **Linux x64 (ELF64)**.
 
 MiniLang (`.ml`) is a small, dynamically typed language that compiles with the
 self-hosted compiler produced by `build.ps1` to native Windows x64 (PE32+) or
@@ -125,9 +127,9 @@ end function
 Notes:
 - Flags can appear before or after the positional arguments.
 - `windows-x64` is the default and emits PE32+; `linux-x64` emits ELF64.
-- The distributed/self-built compiler is currently a Windows PE host program.
-  It cross-compiles Linux output on Windows; run that output through WSL after
-  `chmod +x output`, or copy it to an x64 Linux system.
+- `build.ps1` creates the native Windows compiler. On Linux, `build.sh` creates
+  and verifies a native ELF compiler; either host can cross-compile both target
+  formats.
 
 Common options:
 
@@ -175,9 +177,9 @@ Common options:
 
 **Self-host build options**
 - `--object-pipeline` use the memory-bounded `.mlo` object/link path
-- For `linux-x64`, `--object-pipeline` currently routes to the equivalent
-  monolithic ELF path because the serialized `.mlo` linker remains PE-specific;
-  this preserves target bytes but does not provide the bounded-memory speedup
+- The canonical linker supports both Windows PE and Linux ELF. Section and
+  relocation streaming keep large links bounded, while monolithic and `.mlo`
+  target files remain byte-identical.
 - `--profile-compiler` print wall-clock compiler/linker phase timings without
   changing target bytes
 
@@ -236,7 +238,7 @@ All paths are relative to the manifest. The supported project fields are:
 | `include` / `import_paths` | array of import roots |
 | `target` | `windows-x64` (default) or `linux-x64` |
 | `subsystem` | Windows only: `console` or `windows` (aliases accepted by the CLI) |
-| `object_pipeline` | request the self-hosted `.mlo` pipeline (Windows target) |
+| `object_pipeline` | request the self-hosted `.mlo` pipeline (Windows or Linux) |
 | `incremental` | enable the exact-hit artifact cache (default `true`) |
 | `cache_dir` | cache directory (default `.minilang-cache`) |
 | `compiler_args` | array of additional compiler arguments |
@@ -263,9 +265,9 @@ manifest, effective compiler arguments, compiler executable identity and every
 linked executable. Any relevant change performs a full build; this is artifact
 caching, not per-module incremental compilation. Listing, label-dump and
 self-frontcheck builds bypass the cache. Set `object_pipeline = true` for the
-memory-bounded Windows `.mlo` path; Linux currently uses the equivalent
-monolithic ELF path. The same manifest works with the Python compiler, which
-accepts the field but emits the equivalent monolithic image.
+memory-bounded Windows or Linux `.mlo` path. The same manifest works with the
+Python compiler, which accepts the field but emits the equivalent monolithic
+image.
 
 ### Conditional compilation
 
@@ -376,6 +378,19 @@ the MiniLang-only `.mlo` pipeline:
 .\build.ps1
 ```
 
+On an x64 Linux host, the matching native bootstrap is:
+
+```bash
+./build.sh
+# or select an explicit bootstrap/output
+./build.sh --compiler ../MiniLangCompilerPy/mlc_win64.py --output build/mlc_linux_x64
+```
+
+`build.sh` emits the compiler through the Linux `.mlo` linker, checks its
+version, verifies byte-identical direct, `.mlo` and project-manifest ELF smoke
+images (including parent-path normalization) and only then replaces the
+requested output.
+
 Useful variants:
 
 ```powershell
@@ -423,7 +438,9 @@ Notes:
   final PE is byte-identical to both monolithic compiler outputs.
 - Pass `--profile-compiler` to the self-hosted compiler to print wall-clock
   timings for module loading, declaration planning, object emission and each
-  linker phase. The flag is diagnostic only and does not change target bytes.
+  linker phase. Large monolithic builds also report the text-label and deferred
+  patch counts and whether direct section lookup was selected. The flag is
+  diagnostic only and does not change target bytes.
 - Append-heavy compiler tables use capacity-backed internal vectors and are
   frozen to ordinary arrays at established codegen boundaries. The object
   writer isolates short-lived semantic batches while append-only data builders
@@ -461,7 +478,7 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **101 passed, 0 failed**.
+- Latest complete run for this revision: **104 passed, 0 failed**.
 
 ### Compiler parity and self-hosting
 
@@ -504,6 +521,19 @@ dependency-driven type-flow worklist plus indexed package-aware integer flow.
 The parity report therefore
 distinguishes the bootstrap image, the measured self-hosted fixed point and
 byte-identical target output explicitly.
+
+The subsequent large-label throughput pass also converges at Stage 2. Its
+Stage 2 and Stage 3 images are byte-identical 59,923,456-byte compilers with
+SHA-256
+`FB6D921349BBE248A88726910CE72396651B2372179ADC36D7913FC7240ECF3D`;
+the stages completed in 357.656 and 258.750 seconds through the canonical
+object pipeline. On clean MiniQuake commit
+`b5fe23f17bd5e861f22afd72b2e83aa4b73b9bd5`, the optimized self-hosted
+monolith completed in 874.519 seconds and `.mlo` in 351.937 seconds, compared
+with the preceding 1,687.367- and 537.440-second measurements. Python,
+self-hosted monolithic and `.mlo` builds all emitted the same 57,197,056-byte
+PE with SHA-256
+`8E5D38689481FC7D0FC6CACD6FFD015EEBA3C2B875A9B19E0CC790A142970E63`.
 
 
 ---
@@ -1266,19 +1296,33 @@ owned by the thread object; it does not invalidate objects published elsewhere.
 Use a synchronized function when a whole critical section must be serialized:
 
 ```ml
+import std.threading as threading
+
 function synchronized updateSharedState()
   global jobsDone
   jobsDone = jobsDone + 1
 end function
+
+guard = threading.Lock.new()
+synchronized(guard)
+  // Only code using this guard is serialized.
+  updateOneSharedObject()
+end synchronized
 ```
 
-All synchronized variables and synchronized functions currently share one
-recursive process-wide monitor. Managed object identity is shared across
-threads; no copy is made when a reference is published. Concurrent writes to
-the same object, array slot or unsynchronized global are data races. Use a
-synchronized function, a synchronized binding or the primitives/collections in
-the next section to define the required critical section. Console and other
-process-wide I/O should also be serialized when multiple workers can use it.
+Synchronized variables and synchronized functions share the recursive
+process-wide monitor for backward compatibility. `synchronized(lock)` instead
+uses the supplied `std.threading.Lock`, evaluates that expression exactly once
+and releases it on fall-through, `return` and propagated `error` exits. A failed
+acquire propagates error `1101`; `break` and `continue` cannot leave this block.
+Independent locks allow unrelated critical sections to proceed concurrently.
+
+Managed object identity is shared across threads; no copy is made when a
+reference is published. Concurrent writes to the same object, array slot or
+unsynchronized global are data races. Use the appropriate synchronized form or
+the primitives/collections in the next section to define the required critical
+section. Console and other process-wide I/O should also be serialized when
+multiple workers can use it.
 
 For closed programs that never reference `Thread`, the compiler selects a
 single-thread fast path. Generated hot code then omits cancellation and GC
@@ -1409,6 +1453,57 @@ Pool workers receive stable logical ids such as `thread-pool-0`. Callbacks may
 allocate, trigger GC and return arbitrary managed values. A `Failed` job stores
 the callback's `error`; retrieve it with `try(job.GetResult())`. Pool disposal
 and job disposal are lifecycle operations and must not race their active users.
+
+### 9.4 Tasks, cancellation and bounded channels
+
+`std.concurrent.task` layers `Future` values over an existing thread pool.
+`run(pool, callback, data)` schedules a conventional callback;
+`runCancellable` calls `callback(data, token)`. Futures provide `Wait`,
+`WaitFor`, `IsDone`, `Cancel`, `Dispose` plus lowercase `status()` and
+`result()`. `whenAll` preserves input order, while `whenAny` and `whenAnyFor`
+return the first completed index.
+
+`std.concurrent.cancellation` provides `CancellationTokenSource` and its
+read-only `CancellationToken`. Cancellation is idempotent and cooperative:
+`IsCancellationRequested`, `Wait`/`WaitFor` and `Check` let running code observe
+the request; `Check` returns error `1650`. Cancelling a queued future removes
+the job directly, whereas running work must inspect its token.
+
+`std.concurrent.channel.Channel.new(capacity)` creates a bounded,
+multi-producer/multi-consumer FIFO with backpressure. `Send`/`Receive` wait,
+`SendFor`/`ReceiveFor` use millisecond timeouts and `TrySend`/`TryReceive` do not
+block. A receive returns `ChannelReceive(received, value)`, so a valid `void`
+message remains distinguishable from a closed and drained channel. `close()`
+seals the writer side; queued values remain readable. Call `Dispose` only after
+blocked users have returned and the channel has drained.
+
+```ml
+import std.concurrent.channel as channels
+import std.concurrent.task as tasks
+import std.concurrent.thread_pool as threadPool
+
+function work(value, token)
+  if token.IsCancellationRequested() then return token.Check() end if
+  return value * 2
+end function
+
+pool = threadPool.ThreadPool.withQueueCapacity(4, 128)
+future = tasks.runCancellable(pool, work, 21)
+future.Wait()
+print future.result() // 42
+future.Dispose()
+
+channel = channels.Channel.new(64)
+channel.Send("ready")
+item = channel.Receive()
+if item.received then print item.value end if
+channel.close()
+channel.Dispose()
+
+pool.Shutdown()
+pool.AwaitTermination()
+pool.Dispose()
+```
 
 ### Function values (function pointers)
 
@@ -1768,7 +1863,7 @@ Linux images that use only libc-backed modules need no dependency beyond the
 normal x64 glibc runtime; importing `std.crypto` or `std.tls` additionally
 requires the OpenSSL 3 runtime package.
 
-The current library contains 43 source modules, byte-for-byte identical in both
+The current library contains 46 source modules, byte-for-byte identical in both
 compiler repositories:
 
 - **Core:** `std.core`, `std.assert`, `std.array`, `std.sort`, `std.math`,
@@ -1780,7 +1875,9 @@ compiler repositories:
 - **Collections:** `std.ds.list`, `std.ds.stack`, `std.ds.queue`,
   `std.ds.hashmap`, `std.ds.set`
 - **Concurrency:** `std.threading`, `std.concurrent.thread_pool`,
-  `std.ds.concurrent_list`, `std.ds.concurrent_hashmap`
+  `std.concurrent.task`, `std.concurrent.cancellation`,
+  `std.concurrent.channel`, `std.ds.concurrent_list`,
+  `std.ds.concurrent_hashmap`
 - **Native primitives:** `std.cpu`, `std.checksum.crc32c`,
   `std.checksum.crc32`, `std.crypto`, `std.crypto.aes_gcm`,
   `std.crypto._cng`, `std.crypto._openssl`, `std.tls._schannel` and
@@ -2560,9 +2657,12 @@ What works:
 - first-class functions: user functions and many builtins are values; direct **and** indirect calls are supported
 - real native threads on Win32 and Linux with cooperative cancellation, data/result handoff,
   native and logical ids, status/join APIs, private stacks, a process-wide
-  thread-safe GC heap, synchronized globals/functions and managed thread pools;
+  thread-safe GC heap, synchronized globals/functions, fine-grained
+  `synchronized(lock)` blocks and managed thread pools;
   Linux workers use pthread creation/join so libc TLS, malloc, synchronization
   and native providers remain valid on every worker
+- futures/tasks with cooperative cancellation, ordered/all-or-first completion
+  helpers and bounded multi-producer/multi-consumer channels
 - nested functions + closures (captured vars are boxed and stored in an environment frame)
 - `main(args)` entrypoint (argv[1..] as `array<string>`, `return int` -> process exit code)
 - `global` declarations inside functions (required for accessing globals from a function; resolves to package/namespace-qualified globals; missing globals are auto-created as `void`)

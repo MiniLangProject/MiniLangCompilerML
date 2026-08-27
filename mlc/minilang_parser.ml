@@ -3,7 +3,11 @@ package mlc.minilang_parser
 import std.string as s
 import mlc.tools as t
 
+#if TARGET_OS == "windows"
 extern function _parse_strtod(text as cstr, endptr as ptr) from "msvcrt.dll" symbol "strtod" returns double
+#else
+extern function _parse_strtod(text as cstr, endptr as ptr) from "libc.so.6" symbol "strtod" returns double
+#endif
 
 // Parser failure with absolute source offset and originating filename.
 struct ParseError
@@ -192,6 +196,15 @@ struct SynchronizedDecl
   node_kind,
   name,
   expr,
+  _pos,
+  _filename,
+end struct
+
+struct SynchronizedBlock
+  node_kind,
+  lock,
+  body,
+  cleanup,
   _pos,
   _filename,
 end struct
@@ -1931,6 +1944,18 @@ end function
 function _parse_stmt_synchronized(start_pos, t)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
+  if _match_kind("LPAREN") then
+    lock_expr = _parse_expr(0)
+    if _has_error() then return end if
+    _expect_kind("RPAREN")
+    if _has_error() then return end if
+    _expect_block_nl()
+    body = _parse_block_until_end("synchronized", start_pos)
+    if _has_error() then return end if
+    _expect_end_of("synchronized")
+    if _has_error() then return end if
+    return SynchronizedBlock("SynchronizedBlock", lock_expr, body, 0, start_pos, _filename)
+  end if
   n = _expect_kind("IDENT")
   if _has_error() then return end if
   _expect_value("OP", "=")

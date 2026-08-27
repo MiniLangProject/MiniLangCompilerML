@@ -3,6 +3,8 @@ package mlc.compiler
 import std.fs as fs
 import std.string as s
 import std.string_builder as sb
+import std.process as process
+import std.time as mtime
 import mlc.frontend as frontend
 import mlc.minilang_parser as parser
 import mlc.codegen.codegen as codegen
@@ -16,12 +18,16 @@ import mlc.linux_runtime as linuxrt
 
 const COMPILER_VERSION = "1.1.0"
 const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.1.0"
+const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 
+#if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
-extern function GetModuleFileNameW(module as ptr, buffer as buffer, bufferLen as u32) from "kernel32.dll" symbol "GetModuleFileNameW" returns u32
-extern function GetTickCount64() from "kernel32.dll" symbol "GetTickCount64" returns u64
-extern function _wsystem(cmd as wstr) from "msvcrt.dll" returns int
+extern function _host_system(cmd as wstr) from "msvcrt.dll" symbol "_wsystem" returns int
+#else
+extern function _host_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
+extern function _host_system(cmd as cstr) from "libc.so.6" symbol "system" returns i32
+#endif
 
 // Frontend diagnostics and keep-going results.
 struct FrontDiag
@@ -245,7 +251,7 @@ function _compiler_profile_reset()
   global _compiler_profile_phase_started
   global _compiler_profile_phase_name
   if _compiler_profile_enabled == false then return void end if
-  tick = GetTickCount64()
+  tick = mtime.ticks()
   _compiler_profile_started = tick
   _compiler_profile_phase_started = tick
   _compiler_profile_phase_name = ""
@@ -256,7 +262,7 @@ function _compiler_profile_phase(msg)
   global _compiler_profile_phase_started
   global _compiler_profile_phase_name
   if _compiler_profile_enabled == false then return void end if
-  tick = GetTickCount64()
+  tick = mtime.ticks()
   if _compiler_profile_phase_name != "" then
     print "[profile] phase=" + _compiler_profile_phase_name + " elapsed_ms=" + (tick - _compiler_profile_phase_started)
   end if
@@ -270,7 +276,7 @@ function _compiler_profile_finish()
   global _compiler_profile_phase_started
   global _compiler_profile_phase_name
   if _compiler_profile_enabled == false then return void end if
-  tick = GetTickCount64()
+  tick = mtime.ticks()
   if _compiler_profile_phase_name != "" then
     print "[profile] phase=" + _compiler_profile_phase_name + " elapsed_ms=" + (tick - _compiler_profile_phase_started)
   end if
@@ -347,6 +353,34 @@ end function
 
 function _path_canon(p)
   if typeof(p) != "string" then return "" end if
+#if TARGET_OS == "linux"
+  if p == "" then return "." end if
+  absolute = _startsWith(p, "/")
+  parts = s.split(p, "/")
+  stack = []
+  if typeof(parts) == "array" and len(parts) > 0 then
+    for i = 0 to len(parts) - 1
+      part = parts[i]
+      if part == "" or part == "." then continue end if
+      if part == ".." then
+        if len(stack) > 0 and stack[len(stack) - 1] != ".." then
+          stack = t.arr_drop_last(stack)
+        else
+          if absolute == false then stack = stack + [".."] end if
+        end if
+      else
+        stack = stack + [part]
+      end if
+    end for
+  end if
+  tail = s.join(stack, "/")
+  if absolute then
+    if tail == "" then return "/" end if
+    return "/" + tail
+  end if
+  if tail == "" then return "." end if
+  return tail
+#else
   q = s.replaceAll(p, "/", "\\")
   if q == "" then return "." end if
 
@@ -381,12 +415,7 @@ function _path_canon(p)
       if part == ".." then
         if typeof(stack) != "array" then stack =[] end if
         if len(stack) > 0 and stack[len(stack) - 1] != ".." then
-          ns = slice(stack, 0, len(stack) - 1)
-          if typeof(ns) == "array" then
-            stack = ns
-          else
-            stack =[]
-          end if
+          stack = t.arr_drop_last(stack)
         else
           if prefix == "" then
             stack = stack +[".."]
@@ -407,14 +436,25 @@ function _path_canon(p)
   end if
   if tail == "" then return "." end if
   return tail
+#endif
 end function
 
 function _path_norm(p)
+#if TARGET_OS == "linux"
+  return _path_canon(p)
+#else
   return s.toLowerAscii(_path_canon(p))
+#endif
 end function
 
 function _path_abspath(p)
   if typeof(p) != "string" or p == "" then return "" end if
+#if TARGET_OS == "linux"
+  if _is_abs_path(p) then return _path_canon(p) end if
+  cwd = process.currentDirectory()
+  if typeof(cwd) != "string" or cwd == "" then return _path_canon(p) end if
+  return _path_canon(_path_join(cwd, p))
+#else
   buf = bytes(8192, 0)
   n = GetFullPathNameW(p, 4096, buf, 0)
   if typeof(n) != "int" or n <= 0 then
@@ -423,20 +463,24 @@ function _path_abspath(p)
   abs_p = decode16Z(buf)
   if typeof(abs_p) != "string" or abs_p == "" then return p end if
   return abs_p
+#endif
 end function
 
 function _self_exe_path()
-  buf = bytes(8192, 0)
-  n = GetModuleFileNameW(0, buf, 4096)
-  if typeof(n) != "int" or n <= 0 then return "" end if
-  p = decode16Z(buf)
+  p = process.executablePath()
   if typeof(p) != "string" then return "" end if
   return p
 end function
 
 function _cmd_quote_arg(x)
   if typeof(x) != "string" then return "\"\"" end if
+#if TARGET_OS == "linux"
+  // POSIX shells do not interpret characters inside single quotes. Encode an
+  // embedded quote as the standard close/escaped-quote/reopen sequence.
+  return "'" + s.replaceAll(x, "'", "'\\''") + "'"
+#else
   return "\"" + x + "\""
+#endif
 end function
 
 function _path_norm_cached(p)
@@ -495,7 +539,11 @@ function inline _path_join(a, b)
   if last == "\\" or last == "/" then
     return a + b
   end if
+#if TARGET_OS == "linux"
+  return a + "/" + b
+#else
   return a + "\\" + b
+#endif
 end function
 
 function inline _basename(path)
@@ -559,7 +607,11 @@ function _ensure_dir_recursive(path)
     if _ensure_dir_recursive(parent) == false then return false end if
   end if
 
+#if TARGET_OS == "linux"
+  ok = _host_mkdir(path, 493) == 0
+#else
   ok = CreateDirectoryW(path, 0)
+#endif
   if ok == true then return true end if
   return fs.isDir(path)
 end function
@@ -2267,6 +2319,127 @@ function _mlo_patches_after(patches, prefix_off)
       if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
       out_b = t.arr_chunk_push(out_b, MloPatch(off0 - prefix_off, trg, kind))
     end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+function _bss_label_offset_map(st)
+  count = 0
+  if typeof(st) == "struct" and typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" then
+    count = len(st.bss.labels)
+  end if
+  result_map = t.fastmap_new((count * 2) + 16)
+  if count > 0 then
+    for i = 0 to count - 1
+      lb = st.bss.labels[i]
+      if typeof(lb) == "struct" and typeof(lb.name) == "string" and typeof(lb.offset) == "int" then
+        result_map = t.fastmap_set(result_map, lb.name, lb.offset)
+      end if
+    end for
+  end if
+  return result_map
+end function
+
+// Resolve directly against the indexes already maintained by each section
+// builder. This avoids rebuilding a second million-entry combined map during
+// monolithic linking while retaining the original last-section-wins order.
+function _monolithic_label_rva(st, iat_label_map, bss_label_map, text_rva, rdata_rva, data_rva, bss_rva, name)
+  hit = t.fastmap_get(iat_label_map, name, -1)
+  if typeof(hit) == "int" and hit >= 0 then return hit end if
+
+  bss_off = t.fastmap_get(bss_label_map, name, -1)
+  if typeof(bss_off) == "int" and bss_off >= 0 then return bss_rva + bss_off end if
+
+  if typeof(st) == "struct" and typeof(st.data) == "struct" then
+    data_rec = d.data_label_record(st.data, name)
+    if typeof(data_rec) == "struct" and typeof(data_rec.offset) == "int" then return data_rva + data_rec.offset end if
+  end if
+  if typeof(st) == "struct" and typeof(st.rdata) == "struct" then
+    rdata_rec = d.rdata_label_record(st.rdata, name)
+    if typeof(rdata_rec) == "struct" and typeof(rdata_rec.offset) == "int" then return rdata_rva + rdata_rec.offset end if
+  end if
+  if typeof(st) == "struct" and typeof(st.asm) == "struct" and typeof(st.asm.label_pos_map) == "struct" then
+    text_off = t.fastmap_get(st.asm.label_pos_map, name, -1)
+    if typeof(text_off) == "int" and text_off >= 0 then return text_rva + text_off end if
+  end if
+  return -1
+end function
+
+// Encode ELF imports in the existing platform-neutral string-list field. PE
+// readers ignore the tagged entries; the ELF linker reconstructs the exact
+// library/symbol/data-slot triplets without changing the stable MLO1 layout.
+function _mlo_linux_import_records(dynamic_imports)
+  records = []
+  if typeof(dynamic_imports) != "array" or len(dynamic_imports) <= 0 then return records end if
+  for i = 0 to len(dynamic_imports) - 1
+    item = dynamic_imports[i]
+    if typeof(item) != "struct" then continue end if
+    library = _coerce_name(try(item.library))
+    symbol_name = _coerce_name(try(item.symbol_name))
+    slot = try(item.slot_offset)
+    if library == "" or symbol_name == "" or typeof(slot) != "int" or slot < 0 then continue end if
+    funcs = _mlo_import_get_funcs(records, library)
+    // Preserve the monolithic import order even though the stable MLO import
+    // container groups records by library. ELF string/symbol table order is
+    // observable in the final bytes and therefore part of compiler parity.
+    tagged = "@elf\t" + i + "\t" + symbol_name + "\t" + slot
+    if _array_contains(funcs, tagged) == false then funcs = funcs + [tagged] end if
+    records = _mlo_import_set_funcs(records, library, funcs)
+  end for
+  return records
+end function
+
+function _mlo_linux_dynamic_imports(imports)
+  ordered_b = t.arr_chunk_new(16)
+  if typeof(imports) != "array" or len(imports) <= 0 then return [] end if
+  sequence = 0
+  for i = 0 to len(imports) - 1
+    item = imports[i]
+    if typeof(item) != "array" or len(item) < 2 then continue end if
+    library = _coerce_name(item[0])
+    funcs = item[1]
+    if library == "" or typeof(funcs) != "array" or len(funcs) == 0 then continue end if
+    for fi = 0 to len(funcs) - 1
+      tagged = _coerce_name(funcs[fi])
+      if _startsWith(tagged, "@elf\t") == false then continue end if
+      parts = s.split(tagged, "\t")
+      if typeof(parts) != "array" or (len(parts) != 3 and len(parts) != 4) then continue end if
+      ordinal = sequence
+      symbol_name = ""
+      slot_text = ""
+      if len(parts) == 4 then
+        ordinal = toNumber(parts[1])
+        symbol_name = parts[2]
+        slot_text = parts[3]
+      else
+        // Read legacy records produced before the explicit-order field.
+        symbol_name = parts[1]
+        slot_text = parts[2]
+      end if
+      slot = toNumber(slot_text)
+      if typeof(ordinal) != "int" then ordinal = sequence end if
+      if typeof(slot) != "int" or slot < 0 or symbol_name == "" then continue end if
+      ordered_b = t.arr_chunk_push(ordered_b, [ordinal, sequence, linuxrt.DynamicImport(library, symbol_name, slot)])
+      sequence = sequence + 1
+    end for
+  end for
+  ordered = t.arr_chunk_finish(ordered_b)
+  // Stable insertion sort is tiny here (normally tens of native imports) and
+  // avoids pulling an ordering dependency into the compiler bootstrap graph.
+  if len(ordered) > 1 then
+    for i = 1 to len(ordered) - 1
+      current = ordered[i]
+      j = i - 1
+      while j >= 0 and (ordered[j][0] > current[0] or (ordered[j][0] == current[0] and ordered[j][1] > current[1]))
+        ordered[j + 1] = ordered[j]
+        j = j - 1
+      end while
+      ordered[j + 1] = current
+    end for
+  end if
+  out_b = t.arr_chunk_new(16)
+  if len(ordered) > 0 then
+    for i = 0 to len(ordered) - 1 out_b = t.arr_chunk_push(out_b, ordered[i][2]) end for
   end if
   return t.arr_chunk_finish(out_b)
 end function
@@ -4492,6 +4665,142 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   return LoadProgramResult(diags, entry_source, merged, aliases, source_pairs, visited, parsed_modules)
 end function
 
+// Link canonical MLO fragments into the same fixed-address ELF image as the
+// monolithic backend. Section offsets, rather than PE RVAs, form the common
+// label space; this makes rel32/rip32 and abs64 patching deterministic.
+function _link_build_label_maps(patch_file_recs, text_rva, rdata_rva, data_rva, bss_rva, include_private_dump)
+  label_map = t.fastmap_new(262144)
+  obj_index_map = []
+  obj_index_lists = []
+  labels_b = t.arr_chunk_new(512)
+  dump_b = t.arr_chunk_new(512)
+
+  if typeof(patch_file_recs) == "array" and len(patch_file_recs) > 0 then
+    // Object indices are dense and encoded in objm_N__ labels. Pre-sizing the
+    // shard arrays avoids repeated concatenation while each file is streamed.
+    obj_index_map = array(len(patch_file_recs) + 1, 0)
+    obj_index_lists = array(len(patch_file_recs) + 1, 0)
+
+    for ri = 0 to len(patch_file_recs) - 1
+      rec = patch_file_recs[ri]
+      if typeof(rec) != "array" or len(rec) < 5 then continue end if
+      obj_path = _coerce_name(rec[0])
+      obj = _read_mlo_file_for_layout(obj_path)
+      if typeof(obj) == "error" then
+        print "CompileError: failed to read MiniLang object labels (" + obj_path + ")"
+        return [2]
+      end if
+
+      section_sets = [
+        [obj.asm_labels, text_rva + rec[1]],
+        [obj.rdata_labels, rdata_rva + rec[2]],
+        [obj.data_labels, data_rva + rec[3]],
+        [obj.bss_labels, bss_rva + rec[4]]
+      ]
+      for si = 0 to len(section_sets) - 1
+        section_labels = section_sets[si][0]
+        section_base = section_sets[si][1]
+        if typeof(section_labels) != "array" or len(section_labels) == 0 then continue end if
+        for li = 0 to len(section_labels) - 1
+          lb = section_labels[li]
+          if typeof(lb) != "struct" then continue end if
+          nm = _label_key(try(lb.name))
+          lb_off = try(lb.offset)
+          if nm == "" or typeof(lb_off) != "int" or lb_off < 0 then continue end if
+          final_v = section_base + lb_off
+          if s.startsWith(nm, "objm_") then
+            obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
+            if include_private_dump then dump_b = t.arr_chunk_push(dump_b, StrIntPair(nm, final_v)) end if
+          else
+            label_map = t.fastmap_set(label_map, nm, final_v)
+            labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
+            if include_private_dump then dump_b = t.arr_chunk_push(dump_b, StrIntPair(nm, final_v)) end if
+          end if
+        end for
+      end for
+
+      // Only the maps retain label names and offsets. The decoded file-local
+      // wrappers can be reclaimed before the next large object is opened.
+      obj = 0
+      section_sets = 0
+      section_labels = 0
+      if ((ri + 1) % 32) == 0 then gc_collect() end if
+    end for
+  end if
+
+  return [0, label_map, obj_index_map, obj_index_lists, t.arr_chunk_finish(labels_b), t.arr_chunk_finish(dump_b)]
+end function
+
+function _link_mlo_linux_sections(obj_paths, output_exe, text_buf, rdata_buf, data_buf, bss_size, patch_file_recs, imports)
+  dynamic_imports = _mlo_linux_dynamic_imports(imports)
+  layout = elf.plan(len(text_buf), len(rdata_buf), len(data_buf), elf.dynamic_size(dynamic_imports))
+  want_labels_dump = typeof(_dump_labels_path) == "string" and _dump_labels_path != ""
+  maps = _link_build_label_maps(
+    patch_file_recs, layout.text_off, layout.rdata_off, layout.data_off,
+    layout.bss_off, want_labels_dump
+  )
+  if typeof(maps) != "array" or len(maps) < 6 or maps[0] != 0 then return 2 end if
+  label_map = maps[1]
+  obj_index_map = maps[2]
+  obj_index_lists = maps[3]
+  labels = maps[4]
+  label_dump = maps[5]
+
+  if want_labels_dump then
+    dump_builder = sb.StringBuilder.withCapacity(1048576)
+    dump_builder.appendLine("[section] .text raw=" + len(text_buf))
+    dump_builder.appendLine("[section] .rdata raw=" + len(rdata_buf))
+    dump_builder.appendLine("[section] .data raw=" + len(data_buf))
+    if typeof(label_dump) == "array" and len(label_dump) > 0 then
+      for li = 0 to len(label_dump) - 1
+        item = label_dump[li]
+        dump_builder.appendLine("[label] " + item.key + " " + item.value)
+      end for
+    end if
+    wrdump = fs.writeAllText(_dump_labels_path, dump_builder.toString())
+    if typeof(wrdump) == "error" then
+      print "CompileError: writeAllText failed for ELF label dump: " + _dump_labels_path
+      return 2
+    end if
+  end if
+
+  _compiler_profile_phase("link: applying ELF patches")
+  patch_index = 0
+  for oi = 0 to len(patch_file_recs) - 1
+    rec = patch_file_recs[oi]
+    if typeof(rec) != "array" or len(rec) < 5 then continue end if
+    src_patch = _coerce_name(rec[0])
+    apr = _apply_mlo_patches_from_file(
+      src_patch, rec[1], rec[2], rec[3], rec[4], label_map,
+      obj_index_map, obj_index_lists, labels, patch_file_recs,
+      layout.text_off, layout.rdata_off, layout.data_off, layout.bss_off,
+      layout.base, text_buf, rdata_buf, data_buf, patch_index
+    )
+    if typeof(apr) != "array" or len(apr) < 3 or apr[0] != 0 then return 2 end if
+    label_map = apr[1]
+    patch_index = apr[2]
+    if ((oi + 1) % 128) == 0 then gc_collect() end if
+  end for
+
+  entry_file_off = t.fastmap_get(label_map, "_start", -1)
+  if typeof(entry_file_off) != "int" or entry_file_off < layout.text_off then
+    print "CompileError: missing Linux _start label in linked objects"
+    return 2
+  end if
+  image = elf.build(text_buf, rdata_buf, data_buf, bss_size, entry_file_off - layout.text_off, dynamic_imports)
+  if typeof(image) == "error" then
+    print "CompileError: failed to build linked ELF image: " + image.message
+    return 2
+  end if
+  wr = fs.writeAllBytes(output_exe, image)
+  if typeof(wr) == "error" then
+    print "CompileError: writeAllBytes failed for linked ELF image"
+    return 2
+  end if
+  print "OK: wrote " + output_exe + " (native x64 ELF, MiniLang self-hosted compiler " + COMPILER_VERSION + ", MLO pipeline)"
+  return 0
+end function
+
 function _link_mlo_files(obj_paths, output_exe, subsystem)
   global _dump_labels_path
   text_parts_b = t.arr_chunk_new(64)
@@ -4499,10 +4808,6 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   data_parts_b = t.arr_chunk_new(64)
   patch_file_recs_b = t.arr_chunk_new(64)
   obj_label_recs_b = t.arr_chunk_new(64)
-  text_labels_b = t.arr_chunk_new(4096)
-  rdata_labels_b = t.arr_chunk_new(4096)
-  data_labels_b = t.arr_chunk_new(4096)
-  bss_labels_b = t.arr_chunk_new(4096)
   imports = []
   entry_label = ""
   text_off = 0
@@ -4550,52 +4855,13 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     rdata_parts_b = t.arr_chunk_push(rdata_parts_b, obj.rdata)
     data_parts_b = t.arr_chunk_push(data_parts_b, obj.data)
 
-    if typeof(obj.asm_labels) == "array" and len(obj.asm_labels) > 0 then
-      for li = 0 to len(obj.asm_labels) - 1
-        lb = obj.asm_labels[li]
-        if typeof(lb) != "struct" then continue end if
-        lb_name = _coerce_name(try(lb.name))
-        lb_off = try(lb.offset)
-        if lb_name == "" or typeof(lb_off) != "int" then continue end if
-        text_labels_b = t.arr_chunk_push(text_labels_b, MloLabel(lb_name, text_obj_off + lb_off))
-      end for
-    end if
-    if typeof(obj.rdata_labels) == "array" and len(obj.rdata_labels) > 0 then
-      for li = 0 to len(obj.rdata_labels) - 1
-        lb = obj.rdata_labels[li]
-        if typeof(lb) != "struct" then continue end if
-        lb_name = _coerce_name(try(lb.name))
-        lb_off = try(lb.offset)
-        if lb_name == "" or typeof(lb_off) != "int" then continue end if
-        rdata_labels_b = t.arr_chunk_push(rdata_labels_b, MloLabel(lb_name, rdata_obj_off + lb_off))
-      end for
-    end if
-    if typeof(obj.data_labels) == "array" and len(obj.data_labels) > 0 then
-      for li = 0 to len(obj.data_labels) - 1
-        lb = obj.data_labels[li]
-        if typeof(lb) != "struct" then continue end if
-        lb_name = _coerce_name(try(lb.name))
-        lb_off = try(lb.offset)
-        if lb_name == "" or typeof(lb_off) != "int" then continue end if
-        data_labels_b = t.arr_chunk_push(data_labels_b, MloLabel(lb_name, data_obj_off + lb_off))
-      end for
-    end if
-    if typeof(obj.bss_labels) == "array" and len(obj.bss_labels) > 0 then
-      for li = 0 to len(obj.bss_labels) - 1
-        lb = obj.bss_labels[li]
-        if typeof(lb) != "struct" then continue end if
-        lb_name = _coerce_name(try(lb.name))
-        lb_off = try(lb.offset)
-        if lb_name == "" or typeof(lb_off) != "int" then continue end if
-        bss_labels_b = t.arr_chunk_push(bss_labels_b, MloLabel(lb_name, bss_obj_off + lb_off))
-      end for
-    end if
-
     patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
-    // Keep the already-decoded labels with the layout record.  Patch fallback
-    // resolution must not reopen and decode the same MLO file for every cache
-    // miss.
-    obj_label_recs_b = t.arr_chunk_push(obj_label_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off, obj.asm_labels, obj.rdata_labels, obj.data_labels, obj.bss_labels])
+    // Keep only the file and section offsets. Label maps are built in a second,
+    // streaming pass after section layout, and `_link_rec_labels_lookup`
+    // reopens one object only on an actual defensive fallback miss. Retaining
+    // every decoded label array here would make the following section-buffer
+    // allocation trigger an exceptionally expensive large-heap collection.
+    obj_label_recs_b = t.arr_chunk_push(obj_label_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
 
     imports = _mlo_merge_imports(imports, obj.imports)
     text_off = text_obj_off + len(obj.text)
@@ -4626,6 +4892,13 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   obj = 0
   ro = 0
   gc_collect()
+
+  if _compile_target == "linux-x64" then
+    return _link_mlo_linux_sections(
+      obj_paths, output_exe, text_buf, rdata_buf, data_buf, bss_off,
+      patch_file_recs, imports
+    )
+  end if
 
   p = pe.newPEBuilder()
   p.subsystem = subsystem
@@ -4665,94 +4938,16 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   data_rva = p.sections[2].virt_addr
   bss_rva = p.sections[3].virt_addr
 
-  text_labels = t.arr_chunk_finish(text_labels_b)
-  rdata_labels = t.arr_chunk_finish(rdata_labels_b)
-  data_labels = t.arr_chunk_finish(data_labels_b)
-  bss_labels = t.arr_chunk_finish(bss_labels_b)
-
-  // Public labels are a much smaller set than the namespaced private labels.
-  // Keep private symbols sharded per object so no multi-million-slot map is
-  // initialized or scanned by the runtime.
-  label_map = t.fastmap_new(262144)
-  obj_index_map = []
-  obj_index_lists = []
-  if typeof(obj_label_recs) == "array" and len(obj_label_recs) > 0 then
-    for oi = 0 to len(obj_label_recs)
-      obj_index_map = obj_index_map + [0]
-      obj_index_lists = obj_index_lists + [0]
-    end for
-  end if
   want_labels_dump = typeof(_dump_labels_path) == "string" and _dump_labels_path != ""
-  labels_b = t.arr_chunk_new(512)
-
-  if len(text_labels) > 0 then
-    for li = 0 to len(text_labels) - 1
-      lb = text_labels[li]
-      if typeof(lb) != "struct" then continue end if
-      lb_off = try(lb.offset)
-      if typeof(lb_off) != "int" then continue end if
-      final_v = text_rva + lb_off
-      nm = _label_key(try(lb.name))
-      if nm == "" then continue end if
-      if s.startsWith(nm, "objm_") then
-        obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
-      else
-        label_map = t.fastmap_set(label_map, nm, final_v)
-        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
-      end if
-    end for
-  end if
-  if len(rdata_labels) > 0 then
-    for li = 0 to len(rdata_labels) - 1
-      lb = rdata_labels[li]
-      if typeof(lb) != "struct" then continue end if
-      lb_off = try(lb.offset)
-      if typeof(lb_off) != "int" then continue end if
-      final_v = rdata_rva + lb_off
-      nm = _label_key(try(lb.name))
-      if nm == "" then continue end if
-      if s.startsWith(nm, "objm_") then
-        obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
-      else
-        label_map = t.fastmap_set(label_map, nm, final_v)
-        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
-      end if
-    end for
-  end if
-  if len(data_labels) > 0 then
-    for li = 0 to len(data_labels) - 1
-      lb = data_labels[li]
-      if typeof(lb) != "struct" then continue end if
-      lb_off = try(lb.offset)
-      if typeof(lb_off) != "int" then continue end if
-      final_v = data_rva + lb_off
-      nm = _label_key(try(lb.name))
-      if nm == "" then continue end if
-      if s.startsWith(nm, "objm_") then
-        obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
-      else
-        label_map = t.fastmap_set(label_map, nm, final_v)
-        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
-      end if
-    end for
-  end if
-  if len(bss_labels) > 0 then
-    for li = 0 to len(bss_labels) - 1
-      lb = bss_labels[li]
-      if typeof(lb) != "struct" then continue end if
-      lb_off = try(lb.offset)
-      if typeof(lb_off) != "int" then continue end if
-      final_v = bss_rva + lb_off
-      nm = _label_key(try(lb.name))
-      if nm == "" then continue end if
-      if s.startsWith(nm, "objm_") then
-        obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
-      else
-        label_map = t.fastmap_set(label_map, nm, final_v)
-        labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
-      end if
-    end for
-  end if
+  maps = _link_build_label_maps(
+    patch_file_recs, text_rva, rdata_rva, data_rva, bss_rva, false
+  )
+  if typeof(maps) != "array" or len(maps) < 6 or maps[0] != 0 then return 2 end if
+  label_map = maps[1]
+  obj_index_map = maps[2]
+  obj_index_lists = maps[3]
+  labels = maps[4]
+  labels_b = t.arr_chunk_push_all(t.arr_chunk_new(512), labels)
   if typeof(idr.iat_symbols) == "array" and len(idr.iat_symbols) > 0 then
     for i = 0 to len(idr.iat_symbols) - 1
       it = idr.iat_symbols[i]
@@ -4773,16 +4968,8 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   _progress_link("labels resolved")
 
   // Address maps and the compact public fallback list now contain everything
-  // patching needs.  The combined MloLabel wrappers duplicate the label records
-  // retained in obj_label_recs, so drop them before streaming 3M+ patches.
-  text_labels = 0
-  rdata_labels = 0
-  data_labels = 0
-  bss_labels = 0
-  text_labels_b = 0
-  rdata_labels_b = 0
-  data_labels_b = 0
-  bss_labels_b = 0
+  // patching needs. Drop transient builders before streaming relocations.
+  maps = 0
   labels_b = 0
   gc_collect()
 
@@ -4897,11 +5084,16 @@ function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem
   self_exe = _self_exe_path()
   if self_exe == "" then return -1 end if
 
+#if TARGET_OS == "linux"
+  cmd = _cmd_quote_arg(self_exe)
+#else
   cmd = "call " + _cmd_quote_arg(self_exe)
+#endif
   cmd = cmd + " " + _cmd_quote_arg(input_ml)
   cmd = cmd + " " + _cmd_quote_arg(output_exe)
   cmd = cmd + " --link-obj-dir " + _cmd_quote_arg(obj_dir)
   cmd = cmd + " --subsystem " + _subsystem_cli_name(subsystem)
+  cmd = cmd + " --target " + _cmd_quote_arg(_compile_target)
 
   compiler_gc_limit = _fresh_link_gc_limit_from_config(runtime_config)
   if typeof(compiler_gc_limit) == "int" and compiler_gc_limit > 0 then
@@ -4916,7 +5108,7 @@ function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem
   _progress_link("object dir=" + obj_dir)
   _progress_link("output=" + output_exe)
   _progress_link("fresh linker gc-limit=" + compiler_gc_limit)
-  rc = _wsystem(cmd)
+  rc = _host_system(cmd)
   if typeof(rc) != "int" then
     print "CompileError: failed to run link subprocess"
     return 2
@@ -4971,57 +5163,66 @@ end function
 // Compile and link one complete program in memory.
 function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_buf, output_exe, dynamic_imports)
   layout = elf.plan(len(text_buf), len(rdata_buf), len(data_buf), elf.dynamic_size(dynamic_imports))
-  // A non-trivial program can expose tens of thousands of code/data labels.
-  // Build the flattened table in chunks so Linux linking stays linear instead
-  // of repeatedly copying an ever-growing array.
-  label_chunks = []
-  label_tail = []
-  if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
+  use_combined_label_map = typeof(asm_labels) == "array" and len(asm_labels) > 0
+  rdlabels = d.rdata_get_labels(st.rdata)
+  dtlabels = d.data_get_labels(st.data)
+  bss_label_count = 0
+  if typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" then bss_label_count = len(st.bss.labels) end if
+  label_map = t.fastmap_new(16)
+  direct_relocation_map = t.fastmap_new(16)
+  if use_combined_label_map == false then
+    direct_relocation_map = t.fastmap_new(((len(rdlabels) + len(dtlabels) + bss_label_count) * 2) + 64)
+  end if
+  if use_combined_label_map then
+    label_count_hint = len(asm_labels) + len(rdlabels) + len(dtlabels) + bss_label_count
+    label_map = t.fastmap_new((label_count_hint * 2) + 64)
     for i = 0 to len(asm_labels) - 1
       lb = asm_labels[i]
       if typeof(lb) == "struct" and typeof(lb.name) == "string" and typeof(lb.pos) == "int" then
-        appended = t.arr_chunked_push(label_chunks, label_tail, StrIntPair(lb.name, layout.text_off + lb.pos), 1024)
-        label_chunks = appended[0]
-        label_tail = appended[1]
+        label_map = t.fastmap_set(label_map, lb.name, layout.text_off + lb.pos)
       end if
     end for
   end if
-  rdlabels = d.rdata_get_labels(st.rdata)
-  if len(rdlabels) > 0 then
-    for i = 0 to len(rdlabels) - 1
-      lb = rdlabels[i]
-      appended = t.arr_chunked_push(label_chunks, label_tail, StrIntPair(lb.name, layout.rdata_off + lb.offset), 1024)
-      label_chunks = appended[0]
-      label_tail = appended[1]
-    end for
-  end if
-  dtlabels = d.data_get_labels(st.data)
-  if len(dtlabels) > 0 then
-    for i = 0 to len(dtlabels) - 1
-      lb = dtlabels[i]
-      appended = t.arr_chunked_push(label_chunks, label_tail, StrIntPair(lb.name, layout.data_off + lb.offset), 1024)
-      label_chunks = appended[0]
-      label_tail = appended[1]
-    end for
-  end if
-  if typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" and len(st.bss.labels) > 0 then
-    for i = 0 to len(st.bss.labels) - 1
-      lb = st.bss.labels[i]
-      appended = t.arr_chunked_push(label_chunks, label_tail, StrIntPair(lb.name, layout.bss_off + lb.offset), 1024)
-      label_chunks = appended[0]
-      label_tail = appended[1]
-    end for
-  end if
-  labels = t.arr_chunked_finish(label_chunks, label_tail)
-  label_map = t.fastmap_new((len(labels) * 2) + 64)
-  for i = 0 to len(labels) - 1
-    label_map = t.fastmap_set(label_map, labels[i].key, labels[i].value)
+  for i = 0 to len(rdlabels) - 1
+    lb2 = rdlabels[i]
+    if use_combined_label_map then
+      label_map = t.fastmap_set(label_map, lb2.name, layout.rdata_off + lb2.offset)
+    else
+      direct_relocation_map = t.fastmap_set(direct_relocation_map, lb2.name, layout.rdata_off + lb2.offset)
+    end if
   end for
+  for i = 0 to len(dtlabels) - 1
+    lb3 = dtlabels[i]
+    if use_combined_label_map then
+      label_map = t.fastmap_set(label_map, lb3.name, layout.data_off + lb3.offset)
+    else
+      direct_relocation_map = t.fastmap_set(direct_relocation_map, lb3.name, layout.data_off + lb3.offset)
+    end if
+  end for
+  if typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" then
+    for i = 0 to len(st.bss.labels) - 1
+      lb4 = st.bss.labels[i]
+      if use_combined_label_map then
+        label_map = t.fastmap_set(label_map, lb4.name, layout.bss_off + lb4.offset)
+      else
+        direct_relocation_map = t.fastmap_set(direct_relocation_map, lb4.name, layout.bss_off + lb4.offset)
+      end if
+    end for
+  end if
 
   if typeof(patches) == "array" and len(patches) > 0 then
     for i = 0 to len(patches) - 1
       pt = patches[i]
-      trg = t.fastmap_get(label_map, pt.target, -1)
+      trg = -1
+      if use_combined_label_map then
+        trg = t.fastmap_get(label_map, pt.target, -1)
+      else
+        trg = t.fastmap_get(direct_relocation_map, pt.target, -1)
+        if typeof(trg) != "int" or trg < 0 then
+          text_target_off = t.fastmap_get(st.asm.label_pos_map, pt.target, -1)
+          if typeof(text_target_off) == "int" and text_target_off >= 0 then trg = layout.text_off + text_target_off end if
+        end if
+      end if
       if typeof(trg) != "int" or trg < 0 then
         print "CompileError: unknown Linux patch target: " + pt.target
         return 2
@@ -5042,7 +5243,16 @@ function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_b
     if len(dpatches) > 0 then
       for j = 0 to len(dpatches) - 1
         pt = dpatches[j]
-        trg = t.fastmap_get(label_map, pt.target, -1)
+        trg = -1
+        if use_combined_label_map then
+          trg = t.fastmap_get(label_map, pt.target, -1)
+        else
+          trg = t.fastmap_get(direct_relocation_map, pt.target, -1)
+          if typeof(trg) != "int" or trg < 0 then
+            text_target_off = t.fastmap_get(st.asm.label_pos_map, pt.target, -1)
+            if typeof(text_target_off) == "int" and text_target_off >= 0 then trg = layout.text_off + text_target_off end if
+          end if
+        end if
         if typeof(trg) != "int" or trg < 0 then
           print "CompileError: unknown Linux data patch target: " + pt.target
           return 2
@@ -5060,7 +5270,14 @@ function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_b
 
   bss_size = 0
   if typeof(st.bss) == "struct" and typeof(st.bss.size) == "int" then bss_size = st.bss.size end if
-  entry = t.fastmap_get(label_map, "_start", layout.text_off) - layout.text_off
+  entry_rva = -1
+  if use_combined_label_map then
+    entry_rva = t.fastmap_get(label_map, "_start", -1)
+  else
+    entry_text_off = t.fastmap_get(st.asm.label_pos_map, "_start", -1)
+    if typeof(entry_text_off) == "int" and entry_text_off >= 0 then entry_rva = layout.text_off + entry_text_off end if
+  end if
+  entry = entry_rva - layout.text_off
   image = elf.build(text_buf, rdata_buf, data_buf, bss_size, entry, dynamic_imports)
   if typeof(image) == "error" then
     print "CompileError: failed to build ELF image: " + image.message
@@ -5171,10 +5388,21 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     return 2
   end if
   asm_labels = []
+  asm_label_count = 0
+  use_direct_section_lookup = false
   patches = []
   if typeof(st.asm) == "struct" then
-    asm_labels = a.get_labels(st.asm)
+    if typeof(st.asm.label_pos_map) == "struct" then asm_label_count = t.fastmap_size(st.asm.label_pos_map) end if
+    // Small programs are fastest with one combined relocation map. Above this
+    // point, materializing that map costs more than probing the section maps.
+    use_direct_section_lookup = asm_label_count > DIRECT_SECTION_LABEL_THRESHOLD
+    if use_direct_section_lookup == false or (typeof(_dump_labels_path) == "string" and _dump_labels_path != "") or _mem_probe_enabled then
+      asm_labels = a.get_labels(st.asm)
+    end if
     patches = a.get_patches(st.asm)
+    if _compiler_profile_enabled then
+      print "[profile] text_labels=" + asm_label_count + " deferred_patches=" + len(patches) + " direct_section_lookup=" + use_direct_section_lookup
+    end if
     st.asm.labels = []
     st.asm.labels_chunks = []
     st.asm.labels_tail = []
@@ -5295,42 +5523,78 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   p.entry_rva = text_rva
 
   _compiler_profile_phase("resolving labels and patches")
+  rdata_label_list = []
+  if typeof(st.rdata) == "struct" then rdata_label_list = d.rdata_get_labels(st.rdata) end if
+  data_label_list = []
+  if typeof(st.data) == "struct" then data_label_list = d.data_get_labels(st.data) end if
+  bss_label_count = 0
+  if typeof(st.bss) == "struct" and typeof(st.bss.labels) == "array" then bss_label_count = len(st.bss.labels) end if
+  iat_label_count = 0
+  if typeof(idr.iat_symbols) == "array" then iat_label_count = len(idr.iat_symbols) * 2 end if
+  label_count_hint = asm_label_count + len(rdata_label_list) + len(data_label_list) + bss_label_count + iat_label_count
+  collect_label_list = typeof(_dump_labels_path) == "string" and _dump_labels_path != ""
+  build_combined_label_map = use_direct_section_lookup == false or collect_label_list
+  label_map = t.fastmap_new(16)
+  if build_combined_label_map then label_map = t.fastmap_new((label_count_hint * 2) + 64) end if
+  direct_relocation_map = t.fastmap_new(16)
+  if use_direct_section_lookup then
+    non_text_label_count = len(rdata_label_list) + len(data_label_list) + bss_label_count + iat_label_count
+    direct_relocation_map = t.fastmap_new((non_text_label_count * 2) + 64)
+  end if
   labels_chunks = []
   labels_tail = []
-  if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
+  if (build_combined_label_map or _mem_probe_enabled) and typeof(asm_labels) == "array" and len(asm_labels) > 0 then
     for i = 0 to len(asm_labels) - 1
       lb = asm_labels[i]
       if typeof(lb) == "struct" and typeof(lb.name) == "string" and typeof(lb.pos) == "int" then
         if _mem_probe_enabled then
           print "[dbg][label] " + lb.name + " " + lb.pos
         end if
-        app_lb = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb.name, text_rva + lb.pos), 1024)
-        labels_chunks = app_lb[0]
-        labels_tail = app_lb[1]
+        label_value = text_rva + lb.pos
+        if build_combined_label_map then
+          label_map = t.fastmap_set(label_map, lb.name, label_value)
+        end if
+        if collect_label_list then
+          app_lb = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb.name, label_value), 1024)
+          labels_chunks = app_lb[0]
+          labels_tail = app_lb[1]
+        end if
       end if
     end for
   end if
-  rdata_label_list = []
-  if typeof(st.rdata) == "struct" then rdata_label_list = d.rdata_get_labels(st.rdata) end if
   if typeof(rdata_label_list) == "array" and len(rdata_label_list) > 0 then
     for i = 0 to len(rdata_label_list) - 1
       lb2 = rdata_label_list[i]
       if typeof(lb2) == "struct" and typeof(lb2.name) == "string" and typeof(lb2.offset) == "int" then
-        app_lb2 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb2.name, rdata_rva + lb2.offset), 1024)
-        labels_chunks = app_lb2[0]
-        labels_tail = app_lb2[1]
+        label_value2 = rdata_rva + lb2.offset
+        if build_combined_label_map then
+          label_map = t.fastmap_set(label_map, lb2.name, label_value2)
+        else
+          direct_relocation_map = t.fastmap_set(direct_relocation_map, lb2.name, label_value2)
+        end if
+        if collect_label_list then
+          app_lb2 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb2.name, label_value2), 1024)
+          labels_chunks = app_lb2[0]
+          labels_tail = app_lb2[1]
+        end if
       end if
     end for
   end if
-  data_label_list = []
-  if typeof(st.data) == "struct" then data_label_list = d.data_get_labels(st.data) end if
   if typeof(data_label_list) == "array" and len(data_label_list) > 0 then
     for i = 0 to len(data_label_list) - 1
       lb3 = data_label_list[i]
       if typeof(lb3) == "struct" and typeof(lb3.name) == "string" and typeof(lb3.offset) == "int" then
-        app_lb3 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb3.name, data_rva + lb3.offset), 1024)
-        labels_chunks = app_lb3[0]
-        labels_tail = app_lb3[1]
+        label_value3 = data_rva + lb3.offset
+        if build_combined_label_map then
+          label_map = t.fastmap_set(label_map, lb3.name, label_value3)
+        else
+          direct_relocation_map = t.fastmap_set(direct_relocation_map, lb3.name, label_value3)
+        end if
+        if collect_label_list then
+          app_lb3 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb3.name, label_value3), 1024)
+          labels_chunks = app_lb3[0]
+          labels_tail = app_lb3[1]
+        end if
       end if
     end for
   end if
@@ -5338,9 +5602,17 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     for i = 0 to len(st.bss.labels) - 1
       lb4 = st.bss.labels[i]
       if typeof(lb4) == "struct" and typeof(lb4.name) == "string" and typeof(lb4.offset) == "int" then
-        app_lb4 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb4.name, bss_rva + lb4.offset), 1024)
-        labels_chunks = app_lb4[0]
-        labels_tail = app_lb4[1]
+        label_value4 = bss_rva + lb4.offset
+        if build_combined_label_map then
+          label_map = t.fastmap_set(label_map, lb4.name, label_value4)
+        else
+          direct_relocation_map = t.fastmap_set(direct_relocation_map, lb4.name, label_value4)
+        end if
+        if collect_label_list then
+          app_lb4 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(lb4.name, label_value4), 1024)
+          labels_chunks = app_lb4[0]
+          labels_tail = app_lb4[1]
+        end if
       end if
     end for
   end if
@@ -5349,29 +5621,47 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
       it = idr.iat_symbols[i]
       if typeof(it) != "struct" then continue end if
       if typeof(it.func) != "string" or typeof(it.rva) != "int" then continue end if
-      if _label_get_chunked(labels_chunks, labels_tail, "iat_" + it.func, -1) < 0 then
-        app_lb5 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + it.func, it.rva), 1024)
-        labels_chunks = app_lb5[0]
-        labels_tail = app_lb5[1]
+      iat_name = "iat_" + it.func
+      section_iat_hit = -1
+      if build_combined_label_map then
+        section_iat_hit = t.fastmap_get(label_map, iat_name, -1)
+      else
+        section_iat_hit = t.fastmap_get(direct_relocation_map, iat_name, -1)
+        if typeof(section_iat_hit) != "int" or section_iat_hit < 0 then
+          text_iat_off = t.fastmap_get(st.asm.label_pos_map, iat_name, -1)
+          if typeof(text_iat_off) == "int" and text_iat_off >= 0 then section_iat_hit = text_rva + text_iat_off end if
+        end if
+      end if
+      if section_iat_hit < 0 then
+        if build_combined_label_map then
+          label_map = t.fastmap_set(label_map, iat_name, it.rva)
+        else
+          direct_relocation_map = t.fastmap_set(direct_relocation_map, iat_name, it.rva)
+        end if
+        if collect_label_list then
+          app_lb5 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(iat_name, it.rva), 1024)
+          labels_chunks = app_lb5[0]
+          labels_tail = app_lb5[1]
+        end if
       end if
       if typeof(it.dll) == "string" then
-        app_lb6 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair("iat_" + _dll_base(it.dll) + "_" + it.func, it.rva), 1024)
-        labels_chunks = app_lb6[0]
-        labels_tail = app_lb6[1]
+        iat_dll_name = "iat_" + _dll_base(it.dll) + "_" + it.func
+        if build_combined_label_map then
+          label_map = t.fastmap_set(label_map, iat_dll_name, it.rva)
+        else
+          direct_relocation_map = t.fastmap_set(direct_relocation_map, iat_dll_name, it.rva)
+        end if
+        if collect_label_list then
+          app_lb6 = t.arr_chunked_push(labels_chunks, labels_tail, StrIntPair(iat_dll_name, it.rva), 1024)
+          labels_chunks = app_lb6[0]
+          labels_tail = app_lb6[1]
+        end if
       end if
     end for
   end if
   imports = []
-  labels = t.arr_chunked_finish(labels_chunks, labels_tail)
-  label_map = t.fastmap_new((len(labels) * 2) + 64)
-  if typeof(labels) == "array" and len(labels) > 0 then
-    for li = 0 to len(labels) - 1
-      lbi = labels[li]
-      if typeof(lbi) == "struct" and typeof(lbi.key) == "string" and typeof(lbi.value) == "int" then
-        label_map = t.fastmap_set(label_map, lbi.key, lbi.value)
-      end if
-    end for
-  end if
+  labels = []
+  if collect_label_list then labels = t.arr_chunked_finish(labels_chunks, labels_tail) end if
 
   if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
     dump_builder = sb.StringBuilder.withCapacity(1048576)
@@ -5408,11 +5698,15 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
       if typeof(pt) != "struct" then continue end if
       if typeof(pt.target) != "string" or typeof(pt.pos) != "int" then continue end if
 
-      trg = t.fastmap_get(label_map, pt.target, -1)
-      if typeof(trg) != "int" then trg = -1 end if
-      if trg < 0 then
-        // Safety fallback: tolerate non-fastmap label containers during transition.
-        trg = _label_get(labels, pt.target, -1)
+      trg = -1
+      if build_combined_label_map then
+        trg = t.fastmap_get(label_map, pt.target, -1)
+      else
+        trg = t.fastmap_get(direct_relocation_map, pt.target, -1)
+        if typeof(trg) != "int" or trg < 0 then
+          text_target_off = t.fastmap_get(st.asm.label_pos_map, pt.target, -1)
+          if typeof(text_target_off) == "int" and text_target_off >= 0 then trg = text_rva + text_target_off end if
+        end if
       end if
       if trg < 0 then
         print "CompileError: unknown patch target: " + pt.target
@@ -5459,10 +5753,15 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
       if typeof(pt2) != "struct" then continue end if
       if typeof(pt2.target) != "string" or typeof(pt2.offset) != "int" then continue end if
 
-      trg2 = t.fastmap_get(label_map, pt2.target, -1)
-      if typeof(trg2) != "int" then trg2 = -1 end if
-      if trg2 < 0 then
-        trg2 = _label_get(labels, pt2.target, -1)
+      trg2 = -1
+      if build_combined_label_map then
+        trg2 = t.fastmap_get(label_map, pt2.target, -1)
+      else
+        trg2 = t.fastmap_get(direct_relocation_map, pt2.target, -1)
+        if typeof(trg2) != "int" or trg2 < 0 then
+          text_target_off2 = t.fastmap_get(st.asm.label_pos_map, pt2.target, -1)
+          if typeof(text_target_off2) == "int" and text_target_off2 >= 0 then trg2 = text_rva + text_target_off2 end if
+        end if
       end if
       if trg2 < 0 then
         print "CompileError: unknown data patch target: " + pt2.target
@@ -5504,6 +5803,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   patches = []
   labels = []
   label_map = t.fastmap_new(16)
+  direct_relocation_map = t.fastmap_new(16)
   if typeof(st.rdata) == "struct" then
     st.rdata = d.rdata_clear_labels(st.rdata)
     st.rdata = d.rdata_clear_patches(st.rdata)
@@ -5690,6 +5990,9 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   cg.state.is_windows_subsystem = (subsystem == 2)
   _heap_probe("compile:before_call_profile_metadata")
   cg = codegen.enable_call_profile_metadata(cg)
+  // Linux startup reserves data as well as emitting _start. Do this before
+  // object planning so section allocation order matches monolithic codegen.
+  if _compile_target == "linux-x64" then cg.state = linuxrt.emit_startup(cg.state) end if
   _compile_codegen_keepalive = [load, cg]
   _heap_probe("compile:call_profile_metadata_done")
 
@@ -5759,7 +6062,9 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   end if
 
   helper_union = _merge_string_arrays(helper_union, st.used_helpers)
-  entry_obj = _mlo_from_state("entry", input_abs, "__ml_entry", st)
+  object_entry_label = "__ml_entry"
+  if _compile_target == "linux-x64" then object_entry_label = "_start" end if
+  entry_obj = _mlo_from_state("entry", input_abs, object_entry_label, st)
   helper_union = _collect_internal_helper_targets(helper_union, entry_obj.asm_patches)
   helper_union = _collect_internal_helper_targets(helper_union, entry_obj.rdata_patches)
   helper_union = _collect_internal_helper_targets(helper_union, entry_obj.data_patches)
@@ -5870,8 +6175,16 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   tail_cg = codegen.emit_extern_stubs(tail_cg)
   _progress_phase("emitting canonical runtime helpers")
   tail_cg = codegen.emit_used_helpers(tail_cg)
+  linux_dynamic_imports = []
+  if _compile_target == "linux-x64" then
+    tail_cg.state = linuxrt.emit_runtime(tail_cg.state)
+    prepared_linux_imports = linuxrt.prepare_dynamic_imports(tail_cg.state)
+    tail_cg.state = prepared_linux_imports.state
+    linux_dynamic_imports = prepared_linux_imports.imports
+  end if
   _progress_phase("serializing canonical support tail")
   tail_obj = _mlo_from_state_delta("support", input_abs, "", tail_cg.state, tail_checkpoint)
+  if _compile_target == "linux-x64" then tail_obj.imports = _mlo_linux_import_records(linux_dynamic_imports) end if
   tail_path = _tmp_obj_path(tmp_dir, "" + module_object_seq, input_abs, "support")
   wr_tail = _write_mlo_file(tail_path, tail_obj)
   if typeof(wr_tail) == "error" then
@@ -5926,12 +6239,6 @@ end function
 
 // Dispatch to the selected monolithic or object-pipeline implementation.
 function compile_to_exe_opts(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
-  // Linux currently shares the canonical monolithic linker for both CLI
-  // modes, guaranteeing byte-identical target output while the .mlo container
-  // remains PE-oriented.
-  if _compile_target == "linux-x64" then
-    return compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
-  end if
   if _object_pipeline_enabled then
     return compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   end if
