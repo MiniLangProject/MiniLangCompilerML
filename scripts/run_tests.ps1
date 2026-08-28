@@ -404,6 +404,19 @@ try {
     $results += Invoke-NativeStep ("compile parity object: " + $parityCase.Name) $Compiler $objectArgs
     if ($results[-1].ExitCode -ne 0) { continue }
     $results += Compare-BinaryArtifacts ("object byte identity: " + $parityCase.Name) $monoExe $objectExe
+
+    # Exercise the standalone streaming linker against retained canonical
+    # objects, independently of the coordinator that emitted them.
+    if ($parityCase.Name -eq "codegen optimizations") {
+      $objectStem = [System.IO.Path]::GetFileNameWithoutExtension($objectExe)
+      $objectDir = Join-Path (Join-Path (Split-Path -Parent $objectExe) "tmp") $objectStem
+      $relinkedExe = Join-Path $script:ResolvedArtifactsDir ($stem + "_relinked.exe")
+      $relinkArgs = @($parityCase.Source, $relinkedExe, "--link-obj-dir", $objectDir) + $parityCompilerArgs
+      $results += Invoke-NativeStep "relink retained object directory" $Compiler $relinkArgs
+      if ($results[-1].ExitCode -eq 0) {
+        $results += Compare-BinaryArtifacts "standalone object relink byte identity" $objectExe $relinkedExe
+      }
+    }
   }
 
   $inputSrc = Join-Path $Root "tests\input_length_regression.ml"

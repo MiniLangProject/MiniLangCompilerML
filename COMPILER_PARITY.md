@@ -1,6 +1,6 @@
 # Compiler parity and self-hosting
 
-Verified on 27 August 2026 against the matching 1.1.0 revisions of:
+Verified through 28 August 2026 against the matching 1.1.0 revisions of:
 
 - `MiniLangCompilerPy`, the Python bootstrap/reference compiler; and
 - `MiniLangCompilerML`, the compiler implemented in MiniLang.
@@ -535,6 +535,33 @@ remain byte-identical to the corresponding current Python compiler outputs.
 The counters differ because the Python runner counts host-side tests
 individually while the MiniLang harness groups several checks into compiled
 programs.
+
+## Large-object linker fast path
+
+The 28 August 2026 linker acceptance reused one retained canonical 497-object
+MiniQuake directory for every A/B run, excluding object generation from the
+measurement. The preceding self-hosted compiler linked it in 58.891 seconds:
+44.407 seconds built label indexes and 12.281 seconds applied relocations. The
+optimized linker completed repeat runs in 18.922 and 21.579 seconds. Label
+indexing took 8.469-9.047 seconds and relocation application took
+8.219-9.407 seconds, a total reduction of 63.4-67.9%.
+
+Every run emitted the same 57,197,056-byte PE with SHA-256
+`8E5D38689481FC7D0FC6CACD6FFD015EEBA3C2B875A9B19E0CC790A142970E63`.
+A second retained 656-object layout with 1,203,475 private and 185,700 public
+labels also linked successfully and remained byte-identical to its baseline
+57,456,128-byte image with SHA-256
+`F6619A60E7A25DC6497AEFB6173E2F9640CF942362D460FF3CA318BB9656E0C9`.
+The MiniLang harness reports 106 passed and 0 failed; host-side gates also
+cover Windows/Linux object parity and standalone retained-directory relinking.
+
+The optimized source was then bootstrapped once with Python and compiled twice
+through its own object pipeline. Self-hosted Stage 2 and Stage 3 completed in
+231.251 and 227.517 seconds and are byte-identical 59,981,824-byte compiler
+images with SHA-256
+`86447CBFB07AF960EA970E3770927F5F6D0C780E61730303B194883F634E21DB`.
+The Python-bootstrap Stage 1 has the same size but a distinct compiler-image
+hash; target-output parity and the Stage 2/3 fixed point both hold.
 
 ## Reproducing target-output parity
 

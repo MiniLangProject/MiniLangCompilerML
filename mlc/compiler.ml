@@ -22,6 +22,7 @@ const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 const AUTO_OBJECT_PIPELINE_SCORE = 262144
 const OBJECT_FUNCTION_BATCH_SIZE = 8
 const OBJECT_COMPILER_BATCH_SIZE = 4
+const LINK_LABEL_GC_OBJECT_STRIDE = 128
 
 #if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
@@ -3648,6 +3649,32 @@ function _mlo_skip_patches(rd)
   return rd
 end function
 
+// Count public and private labels while an object is already decoded during
+// the section pass. The later linker pass can then allocate only the maps and
+// capacities that the object actually needs.
+function _mlo_label_counts(obj)
+  public_total = 0
+  private_total = 0
+  section_sets = [try(obj.asm_labels), try(obj.rdata_labels), try(obj.data_labels), try(obj.bss_labels)]
+  for si = 0 to len(section_sets) - 1
+    section_labels = section_sets[si]
+    if typeof(section_labels) != "array" or len(section_labels) <= 0 then continue end if
+    for li = 0 to len(section_labels) - 1
+      lb = section_labels[li]
+      if typeof(lb) != "struct" then continue end if
+      nm = try(lb.name)
+      if typeof(nm) == "string" and nm != "" then
+        if s.startsWith(nm, "objm_") then
+          private_total = private_total + 1
+        else
+          public_total = public_total + 1
+        end if
+      end if
+    end for
+  end for
+  return [public_total, private_total]
+end function
+
 function _read_mlo_file_for_layout(path)
   raw = fs.readAllBytes(path)
   if typeof(raw) == "error" then return raw end if
@@ -3848,8 +3875,13 @@ function _link_resolve_patch_target_cached(label_map, target_cache, obj_index_ma
   return [label_map, target_cache, trg]
 end function
 
-function _link_direct_patch_target(label_map, obj_index_map, target)
+function _link_direct_patch_target(label_map, obj_index_map, source_obj_map, source_obj_prefix, target)
   if s.startsWith(target, "objm_") then
+    // Most private relocations stay inside their source fragment. Bypass the
+    // repeated decimal objm_N__ parser for that overwhelmingly common case.
+    if source_obj_prefix != "" and s.startsWith(target, source_obj_prefix) then
+      return t.fastmap_get(source_obj_map, target, -1)
+    end if
     return _link_obj_label_map_get(obj_index_map, target, -1)
   end if
   return t.fastmap_get(label_map, target, -1)
@@ -3905,6 +3937,16 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   // This cache contains only uncommon legacy targets that miss the direct
   // global/object indexes. Keeping it compact avoids oversized empty tables.
   target_cache = t.fastmap_new(1024)
+  source_obj_map = t.fastmap_new(16)
+  source_obj_prefix = ""
+  source_obj_index = _mlo_sort_rank(_basename(src_patch))
+  if source_obj_index >= 0 and source_obj_index < 2147483647 and source_obj_index < len(obj_index_map) then
+    source_obj_candidate = obj_index_map[source_obj_index]
+    if typeof(source_obj_candidate) == "struct" then
+      source_obj_map = source_obj_candidate
+      source_obj_prefix = "objm_" + source_obj_index + "__"
+    end if
+  end if
 
   rskip1 = _mlo_skip_labels(rd)
   if typeof(rskip1) == "error" then return [2, label_map, patch_index] end if
@@ -3939,7 +3981,7 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
         // Nearly all streamed patches reference an exact, already-namespaced
         // label.  Resolve that without allocating the multi-value fallback
         // result or populating a redundant per-file cache.
-        trg = _link_direct_patch_target(label_map, obj_index_map, pt_target)
+        trg = _link_direct_patch_target(label_map, obj_index_map, source_obj_map, source_obj_prefix, pt_target)
         if typeof(trg) != "int" or trg < 0 then
           rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
           label_map = rr[0]
@@ -3998,7 +4040,7 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       if pt_target == last_target then
         trg = last_value
       else
-        trg = _link_direct_patch_target(label_map, obj_index_map, pt_target)
+        trg = _link_direct_patch_target(label_map, obj_index_map, source_obj_map, source_obj_prefix, pt_target)
         if typeof(trg) != "int" or trg < 0 then
           rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
           label_map = rr[0]
@@ -4055,7 +4097,7 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
       if pt_target == last_target then
         trg = last_value
       else
-        trg = _link_direct_patch_target(label_map, obj_index_map, pt_target)
+        trg = _link_direct_patch_target(label_map, obj_index_map, source_obj_map, source_obj_prefix, pt_target)
         if typeof(trg) != "int" or trg < 0 then
           rr = _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, pt_target)
           label_map = rr[0]
@@ -4545,11 +4587,30 @@ end function
 // monolithic backend. Section offsets, rather than PE RVAs, form the common
 // label space; this makes rel32/rip32 and abs64 patching deterministic.
 function _link_build_label_maps(patch_file_recs, text_rva, rdata_rva, data_rva, bss_rva, include_private_dump)
-  label_map = t.fastmap_new(262144)
+  public_label_hint = 0
+  if typeof(patch_file_recs) == "array" and len(patch_file_recs) > 0 then
+    for ri = 0 to len(patch_file_recs) - 1
+      rec = patch_file_recs[ri]
+      if typeof(rec) == "array" and len(rec) >= 6 and typeof(rec[5]) == "int" and rec[5] > 0 then
+        public_label_hint = public_label_hint + rec[5]
+      end if
+    end for
+  end if
+  global_map_capacity = 262144
+  if public_label_hint > 0 then
+    // FastMap grows at 70% occupancy. A 1.5x hint reaches the final power of
+    // two capacity without the memory excess of a blanket 2x allocation.
+    global_map_capacity = public_label_hint + (public_label_hint >> 1) + 64
+  end if
+  label_map = t.fastmap_new(global_map_capacity)
   obj_index_map = []
   obj_index_lists = []
   labels_b = t.arr_chunk_new(512)
   dump_b = t.arr_chunk_new(512)
+  private_label_count = 0
+  public_label_count = 0
+  private_shard_count = 0
+  label_gc_count = 0
 
   if typeof(patch_file_recs) == "array" and len(patch_file_recs) > 0 then
     // Object indices are dense and encoded in objm_N__ labels. Pre-sizing the
@@ -4573,6 +4634,19 @@ function _link_build_label_maps(patch_file_recs, text_rva, rdata_rva, data_rva, 
         [obj.data_labels, data_rva + rec[3]],
         [obj.bss_labels, bss_rva + rec[4]]
       ]
+      // Canonical object filenames start with the same dense numeric index as
+      // their objm_N__ private labels. Allocate that shard once at its final
+      // capacity instead of parsing N and repeatedly rehashing for every label.
+      object_index = _mlo_sort_rank(_basename(obj_path))
+      private_prefix = ""
+      object_private_hint = 0
+      if len(rec) >= 7 and typeof(rec[6]) == "int" and rec[6] > 0 then object_private_hint = rec[6] end if
+      if object_private_hint > 0 and object_index >= 0 and object_index < 2147483647 and object_index < len(obj_index_map) then
+        private_prefix = "objm_" + object_index + "__"
+        object_label_capacity = object_private_hint + (object_private_hint >> 1) + 16
+        obj_index_map[object_index] = t.fastmap_new(object_label_capacity)
+        private_shard_count = private_shard_count + 1
+      end if
       for si = 0 to len(section_sets) - 1
         section_labels = section_sets[si][0]
         section_base = section_sets[si][1]
@@ -4585,11 +4659,21 @@ function _link_build_label_maps(patch_file_recs, text_rva, rdata_rva, data_rva, 
           if nm == "" or typeof(lb_off) != "int" or lb_off < 0 then continue end if
           final_v = section_base + lb_off
           if s.startsWith(nm, "objm_") then
-            obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
+            if private_prefix != "" and s.startsWith(nm, private_prefix) then
+              private_map = obj_index_map[object_index]
+              private_map = t.fastmap_set(private_map, nm, final_v)
+              obj_index_map[object_index] = private_map
+            else
+              // Retain compatibility with hand-authored or legacy MLO files
+              // whose filename and private-label namespace do not correspond.
+              obj_index_map = _link_obj_label_map_set(obj_index_map, nm, final_v)
+            end if
+            private_label_count = private_label_count + 1
             if include_private_dump then dump_b = t.arr_chunk_push(dump_b, StrIntPair(nm, final_v)) end if
           else
             label_map = t.fastmap_set(label_map, nm, final_v)
             labels_b = t.arr_chunk_push(labels_b, StrIntPair(nm, final_v))
+            public_label_count = public_label_count + 1
             if include_private_dump then dump_b = t.arr_chunk_push(dump_b, StrIntPair(nm, final_v)) end if
           end if
         end for
@@ -4600,8 +4684,15 @@ function _link_build_label_maps(patch_file_recs, text_rva, rdata_rva, data_rva, 
       obj = 0
       section_sets = 0
       section_labels = 0
-      if ((ri + 1) % 32) == 0 then gc_collect() end if
+      if ((ri + 1) % LINK_LABEL_GC_OBJECT_STRIDE) == 0 then
+        gc_collect()
+        label_gc_count = label_gc_count + 1
+      end if
     end for
+  end if
+
+  if _compiler_profile_enabled then
+    print "[profile] link_labels_private=" + private_label_count + " public=" + public_label_count + " hint=" + public_label_hint + " shards=" + private_shard_count + " gc=" + label_gc_count
   end if
 
   return [0, label_map, obj_index_map, obj_index_lists, t.arr_chunk_finish(labels_b), t.arr_chunk_finish(dump_b)]
@@ -4731,7 +4822,8 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     rdata_parts_b = t.arr_chunk_push(rdata_parts_b, obj.rdata)
     data_parts_b = t.arr_chunk_push(data_parts_b, obj.data)
 
-    patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
+    object_label_counts = _mlo_label_counts(obj)
+    patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off, object_label_counts[0], object_label_counts[1]])
     // Keep only the file and section offsets. Label maps are built in a second,
     // streaming pass after section layout, and `_link_rec_labels_lookup`
     // reopens one object only on an actual defensive fallback miss. Retaining

@@ -467,9 +467,15 @@ Notes:
   compiler uses a 3 GiB internal periodic-GC limit for large canonical builds;
   target `--gc-limit` values still configure only the generated executable.
 - The streaming linker skips unneeded object payloads without copying them and
-  keeps only a compact fallback cache for uncommon relocation targets. Object
-  emission retains the canonical v1 representation because dictionary-based
-  compression cost more CPU overall than it saved during the later link.
+  keeps only a compact fallback cache for uncommon relocation targets. Global
+  label maps are allocated once from counts collected during the section pass;
+  canonical `objm_N__` maps are sharded and pre-sized from their dense object
+  index. Local relocations address the current shard directly, while legacy
+  names retain the general parser fallback. Label-index GC runs at bounded
+  128-object intervals, and `--profile-compiler` reports public/private label,
+  shard and collection counts. Object emission retains the canonical v1
+  representation because dictionary-based compression cost more CPU overall
+  than it saved during the later link.
 - By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 
@@ -551,6 +557,18 @@ with the preceding 1,687.367- and 537.440-second measurements. Python,
 self-hosted monolithic and `.mlo` builds all emitted the same 57,197,056-byte
 PE with SHA-256
 `8E5D38689481FC7D0FC6CACD6FFD015EEBA3C2B875A9B19E0CC790A142970E63`.
+
+The subsequent linker-index pass reused the same retained 497-object
+MiniQuake directory for controlled A/B measurements. Link time fell from
+58.891 seconds to 18.922-21.579 seconds (63.4-67.9%); label indexing fell from
+44.407 seconds to 8.469-9.047 seconds. All runs retained the 57,197,056-byte
+size and SHA-256 above. A separate 656-object private-label layout also remains
+byte-identical to its baseline. See [COMPILER_PARITY.md](COMPILER_PARITY.md)
+for the complete measurements and hashes.
+
+The same source converges at the next self-host stage: Stage 2 and Stage 3 are
+byte-identical 59,981,824-byte compiler images with SHA-256
+`86447CBFB07AF960EA970E3770927F5F6D0C780E61730303B194883F634E21DB`.
 
 
 ---

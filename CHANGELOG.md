@@ -4,6 +4,12 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Reduced large `.mlo` link time by pre-sizing global and per-object label maps,
+  resolving same-object private relocations through their current shard and
+  spacing full label-index collections at bounded 128-object intervals. The
+  MLO1 format, section order and emitted target bytes remain unchanged.
+- Added a standalone retained-object relink gate that verifies byte identity
+  independently of the object-emission coordinator.
 - Added fine-grained `synchronized(lock)` blocks with exactly-once lock
   evaluation and guaranteed release on normal, return and propagated-error
   exits, while retaining synchronized variables/functions unchanged.
