@@ -501,20 +501,22 @@ Notes:
   128-object intervals, and `--profile-compiler` reports public/private label,
   shard and collection counts.
 - Current object emission writes MLO v2 while retaining the length-prefixed
-  `MLO1` family magic. Each relocation carries a target tag: named external or
-  cross-section targets keep their UTF-8 symbol, while targets already defined
-  in the same text fragment use a direct U32 text offset. Consequently, local
-  control-flow labels do not enter the normal object symbol table or the global
-  linker map. The reader accepts both v1 and v2, so retained v1 project caches
-  and object directories remain linkable; new writes always use v2. A
-  `--dump-labels` diagnostic build deliberately retains internal labels.
-- On an exact 296-object compiler A/B from the same source, MLO v2 reduced the
-  retained set from 213.30 to 151.20 MiB (29.11%). Two alternating relinks with
-  the same final compiler averaged 22.370 seconds for v1 and 5.808 seconds for
-  v2, a 74.04% reduction (3.85x throughput). A separately sampled linker peak
-  working set fell from 1,471.0 to 835.5 MiB (43.20%). Both object sets emitted
-  the same 60,421,120-byte executable with SHA-256
-  `933BB2B5EB1C1285860CC22DF4ADB99DB7FB62897760080BB446A95FF6143032`.
+  `MLO1` family magic. Same-fragment `rel32` and `rip32` fields are resolved
+  directly in the materialized text bytes and are not serialized as patches;
+  only cross-fragment and cross-section targets retain their UTF-8 symbols.
+  Consequently, local control-flow labels and relocations do not enter normal
+  object/linker tables. The reader still accepts v1 and the earlier v2 numeric
+  target encoding, so existing project caches and object directories remain
+  linkable. A `--dump-labels` diagnostic build deliberately retains internal
+  labels.
+- The first v1-to-v2 pass reduced an exact 296-object compiler set from 213.30
+  to 151.20 MiB. Direct folding then reduced an exact current-source v2 set
+  from 158,603,878 bytes (151.26 MiB) to 107,016,076 bytes (102.06 MiB), another
+  32.53%. Three alternating relinks averaged 5.753 seconds for numeric v2 and
+  2.617 seconds for folded v2 (54.52% less, 2.20x throughput); average sampled
+  peak working set fell from 875.5 to 481.4 MiB (45.01%). Both sets emitted the
+  same 60,443,136-byte executable with SHA-256
+  `101C11E9E17D19A58A01C8EABF5E6B4CB7971DC28FB3A66472C12BF8642D6A25`.
 - By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 

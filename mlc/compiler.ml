@@ -2246,10 +2246,12 @@ function _mlo_labels_from_asm_labels(arr)
   return t.arr_chunk_finish(out_b)
 end function
 
-// Encode targets already defined in this text fragment as numeric offsets.
-// MLO v2 lets the linker resolve these overwhelmingly common relocations
-// without serializing, hashing or retaining their private label names.
-function _mlo_patches_from_asm(arr, label_pos_map)
+// Resolve targets already defined in this text fragment directly in the
+// materialized bytes. Only cross-fragment relocations need to survive in an
+// MLO object, which avoids serializing and later retaining millions of local
+// branch records during large self-hosted builds. The reader still accepts
+// numeric MLO v2 targets written by older compilers.
+function _mlo_patches_from_asm(arr, label_pos_map, text_buf)
   out_b = t.arr_chunk_new(64)
   if typeof(arr) == "array" and len(arr) > 0 then
     for i = 0 to len(arr) - 1
@@ -2271,7 +2273,19 @@ function _mlo_patches_from_asm(arr, label_pos_map)
         local_target = t.fastmap_get(label_pos_map, trg, -1)
       end if
       if typeof(local_target) == "int" and local_target >= 0 then
-        out_b = t.arr_chunk_push(out_b, MloPatch(pos, local_target, kind))
+        // Both supported text relocation kinds use an x64 signed rel32 whose
+        // origin is the byte immediately following the four-byte field.
+        if (kind == "rel32" or kind == "rip32") and typeof(text_buf) == "bytes" and pos >= 0 and pos + 3 < len(text_buf) then
+          disp = local_target - (pos + 4)
+          text_buf[pos] = disp & 0xFF
+          text_buf[pos + 1] = (disp >> 8) & 0xFF
+          text_buf[pos + 2] = (disp >> 16) & 0xFF
+          text_buf[pos + 3] = (disp >> 24) & 0xFF
+        else
+          // Preserve malformed or future relocation kinds for link-time
+          // validation rather than silently discarding them.
+          out_b = t.arr_chunk_push(out_b, MloPatch(pos, local_target, kind))
+        end if
       else
         out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
       end if
@@ -2387,7 +2401,7 @@ function _mlo_from_state(kind, module_file, entry_label, st)
     data_buf,
     bss_size,
     _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_patches),
-    _mlo_patches_from_asm(asm_patches, asm_label_pos_map),
+    _mlo_patches_from_asm(asm_patches, asm_label_pos_map, text_buf),
     rdata_labels,
     rdata_patches,
     data_labels,
@@ -2797,7 +2811,7 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
   obj = MloObject(
     kind, module_file, entry_label,
     text_buf, rdata_buf, data_buf, bss_size,
-    _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_patches), _mlo_patches_from_asm(asm_patches, asm_label_pos_map),
+    _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_patches), _mlo_patches_from_asm(asm_patches, asm_label_pos_map, text_buf),
     rdata_labels, rdata_patches, data_labels, data_patches,
     t.arr_chunk_finish(bss_labels_b), _mlo_imports_from_state(st.imports)
   )

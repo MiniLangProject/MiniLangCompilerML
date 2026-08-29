@@ -4,6 +4,14 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Folded same-fragment x64 `rel32`/`rip32` relocations directly into each
+  materialized text fragment before MLO v2 serialization. New objects retain
+  only named cross-fragment/cross-section patches, while readers still accept
+  v1 and the earlier numeric-target v2 encoding. On the same current 296-object
+  compiler source this reduced retained objects from 158,603,878 to 107,016,076
+  bytes (32.53%). Three alternating relinks averaged 5.753 versus 2.617 seconds
+  (54.52% less), and average sampled peak working set fell from 875.5 to 481.4
+  MiB (45.01%). Both object sets emitted the same 60,443,136-byte executable.
 - Added the backward-readable MLO v2 relocation encoding. Same-fragment text
   targets are stored as direct U32 offsets and their local labels are omitted
   from normal object symbol tables; named cross-object and cross-section

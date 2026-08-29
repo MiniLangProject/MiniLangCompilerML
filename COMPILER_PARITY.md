@@ -759,6 +759,41 @@ the optimization suite
 and Linux target smoke
 (`731030F6885FFA88149A2D908E505C9D571EDFFC54B1979ECEE800DE581F4489`).
 
+## Direct local MLO relocation folding
+
+The subsequent writer pass resolves same-fragment x64 `rel32` and `rip32`
+fields directly in the once-materialized text buffer. These local relocations
+are no longer serialized at all; only named cross-fragment and cross-section
+patches reach the linker. The wire version remains MLO v2, and readers retain
+support for both MLO v1 and numeric-target objects written by the earlier v2
+compiler.
+
+The acceptance comparison used the exact same current compiler source and 296
+canonical objects. The preceding compiler wrote numeric-target v2 objects and
+the new fixed-point compiler wrote folded v2 objects. Both linked to the same
+60,443,136-byte executable with SHA-256:
+
+`101C11E9E17D19A58A01C8EABF5E6B4CB7971DC28FB3A66472C12BF8642D6A25`
+
+| Metric | Numeric MLO v2 | Folded MLO v2 | Change |
+| --- | ---: | ---: | ---: |
+| Retained object bytes | 158,603,878 | 107,016,076 | -32.53% |
+| Retained object size | 151.26 MiB | 102.06 MiB | -32.53% |
+| Mean of three alternating relinks | 5.753 s | 2.617 s | -54.52% |
+| Mean sampled peak working set | 875.5 MiB | 481.4 MiB | -45.01% |
+
+The numeric runs measured 6.32, 5.51 and 5.43 seconds; folded runs measured
+2.71, 2.54 and 2.60 seconds in alternating order. The new linker also relinked
+retained v1 and earlier numeric-v2 compiler directories to their original
+byte-identical executable, directly exercising both compatibility paths.
+
+Folded Stages 2 and 3 are byte-identical at the size and hash above. The
+complete MiniLang harness again reported 107 passed and 0 failed, all Windows
+and WSL/Linux gates passed, and a targeted MLO structural test verifies that
+new text patch tables contain no numeric same-fragment targets. Direct
+Python/self-host checks remain byte-identical for the Windows language suite,
+Windows optimizer suite and Linux target smoke at the hashes recorded above.
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:

@@ -305,6 +305,69 @@ function _test_project_manifest(compiler_path, repo_root)
   return true
 end function
 
+function _mlo_u32_at(buf, offset)
+  if typeof(buf) != "bytes" or typeof(offset) != "int" or offset < 0 or offset + 3 >= len(buf) then return -1 end if
+  return buf[offset] + (buf[offset + 1] << 8) + (buf[offset + 2] << 16) + (buf[offset + 3] << 24)
+end function
+
+function _mlo_skip_blob(buf, offset)
+  size = _mlo_u32_at(buf, offset)
+  if size < 0 or offset + 4 + size > len(buf) then return -1 end if
+  return offset + 4 + size
+end function
+
+// Return named and numeric target counts from the first (text) patch table.
+// Newly emitted objects must contain only cross-fragment named targets because
+// same-fragment rel32/rip32 fields are folded into their materialized bytes.
+function _mlo_text_patch_target_counts(buf)
+  pos = _mlo_skip_blob(buf, 0)
+  if pos < 0 or _mlo_u32_at(buf, pos) != 2 then return [-1, -1] end if
+  pos = pos + 4
+  // kind, module file, entry label, text, rdata and data
+  for i = 0 to 5
+    pos = _mlo_skip_blob(buf, pos)
+    if pos < 0 then return [-1, -1] end if
+  end for
+  // bss size, followed by the text-label table
+  if pos + 4 > len(buf) then return [-1, -1] end if
+  pos = pos + 4
+  label_count = _mlo_u32_at(buf, pos)
+  if label_count < 0 then return [-1, -1] end if
+  pos = pos + 4
+  if label_count > 0 then
+    for i = 0 to label_count - 1
+      pos = _mlo_skip_blob(buf, pos)
+      if pos < 0 or pos + 4 > len(buf) then return [-1, -1] end if
+      pos = pos + 4
+    end for
+  end if
+
+  patch_count = _mlo_u32_at(buf, pos)
+  if patch_count < 0 then return [-1, -1] end if
+  pos = pos + 4
+  named_count = 0
+  numeric_count = 0
+  if patch_count > 0 then
+    for i = 0 to patch_count - 1
+      if pos + 8 > len(buf) then return [-1, -1] end if
+      pos = pos + 4
+      target_tag = _mlo_u32_at(buf, pos)
+      pos = pos + 4
+      if target_tag == 0 then
+        named_count = named_count + 1
+        pos = _mlo_skip_blob(buf, pos)
+      else
+        if target_tag != 1 or pos + 4 > len(buf) then return [-1, -1] end if
+        numeric_count = numeric_count + 1
+        pos = pos + 4
+      end if
+      pos = _mlo_skip_blob(buf, pos)
+      if pos < 0 then return [-1, -1] end if
+    end for
+  end if
+  return [named_count, numeric_count]
+end function
+
 function _test_pipeline_determinism(compiler_path, repo_root)
   name = "object_pipeline_determinism"
   src_abs = _path_join(repo_root, "tests\\codegen_optimizations.ml")
@@ -332,11 +395,16 @@ function _test_pipeline_determinism(compiler_path, repo_root)
   end if
   // The first length-prefixed field is the four-byte "MLO1" magic, so the
   // little-endian format version starts at byte offset eight. Version two
-  // distinguishes named targets from compact same-fragment text offsets.
+  // retains tagged target compatibility with existing object caches.
   object_abs = _path_join(repo_root, "build\\tmp\\_rt_pipeline_repeat\\000_codegen_optimizations.mlo")
   object_bytes = fs.readAllBytes(object_abs)
   if typeof(object_bytes) != "bytes" or len(object_bytes) < 12 or object_bytes[8] != 2 or object_bytes[9] != 0 or object_bytes[10] != 0 or object_bytes[11] != 0 then
     print "[FAIL] " + name + " (object pipeline did not emit the canonical MLO version)"
+    return false
+  end if
+  patch_target_counts = _mlo_text_patch_target_counts(object_bytes)
+  if typeof(patch_target_counts) != "array" or len(patch_target_counts) < 2 or patch_target_counts[0] < 0 or patch_target_counts[1] != 0 then
+    print "[FAIL] " + name + " (same-fragment text relocations were serialized instead of folded)"
     return false
   end if
   auto_src = _path_join(repo_root, "build\\_rt_pipeline_auto.ml")
