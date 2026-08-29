@@ -6323,6 +6323,11 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   fn_codegen_ms = 0
   fn_serialize_ms = 0
   fn_start = 0
+  // Materialize the prepared semantic state once, then reuse it for every
+  // serial text fragment. Re-cloning the global scope/maps for each batch
+  // creates large short-lived graphs and advances the non-moving compiler
+  // heap even though only the assembler buffer is fragment-local.
+  mod_cg = 0
   while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
     // Small text fragments keep assembler growth linear. Compiler functions
     // are larger still and therefore retain the narrower historical batch.
@@ -6345,7 +6350,22 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
       fn_batch_started = fn_step_started
     end if
     section_checkpoint = _mlo_state_checkpoint(cg.state)
-    mod_cg = codegen.clone_for_object(cg, false)
+    if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
+      mod_cg = codegen.clone_for_object(cg, false)
+    else
+      mod_cg = codegen.start_object_fragment(mod_cg)
+      // These fields are local to one serialized fragment. Stream-wide label,
+      // inline and call accounting deliberately remain on the reused state.
+      mod_cg.state.used_helpers = []
+      mod_cg.state.emitted_helpers = []
+      mod_cg.state.diagnostics = []
+      mod_cg.state.break_stack = []
+      mod_cg.state._cold_block_stack = []
+      mod_cg.state._inline_call_stack = []
+      // Historical clones restarted lexical binding ids from the canonical
+      // prepared state for every batch; preserve that deterministic behavior.
+      mod_cg.state.binding_id = cg.state.binding_id
+    end if
     if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
       print "CompileError: failed to clone function codegen state"
       return 2
@@ -6409,7 +6429,6 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     module_object_seq = module_object_seq + 1
     fn_start = fn_start + fn_chunk_size
     fn_batch_count = fn_batch_count + 1
-    mod_cg = 0
     section_checkpoint = 0
     fin = 0
     if (module_object_seq % 64) == 0 then gc_collect() end if
@@ -6417,6 +6436,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   if _compiler_profile_enabled then
     print "[profile] object_function_batches=" + fn_batch_count + " setup_ms=" + fn_setup_ms + " codegen_ms=" + fn_codegen_ms + " serialize_ms=" + fn_serialize_ms
   end if
+  mod_cg = 0
 
   // The function stream is complete. Release its AST/index roots before
   // emitting the support tail; otherwise a large self-build reaches the

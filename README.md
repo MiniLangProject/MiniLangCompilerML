@@ -619,6 +619,21 @@ The same source converges at the next self-host stage: Stage 2 and Stage 3 are
 byte-identical 59,981,824-byte compiler images with SHA-256
 `86447CBFB07AF960EA970E3770927F5F6D0C780E61730303B194883F634E21DB`.
 
+The current serial object stream reuses one materialized semantic fragment
+state across all function batches and resets only its assembler and
+batch-local fields. It retains the historical per-batch binding-id origin, so
+this is a compiler-memory/throughput optimization rather than a target-code
+change. On the exact same self-host source, two old and two new object runs had
+medians of 171.633 and 135.993 seconds (20.77% less); sampled private peak
+memory fell from 3,240.3 to 3,191.5 MiB, and the instrumented heap high-water
+fell by about 48 MiB. Stages 1, 2 and 3 are byte-identical 60,527,104-byte
+images with SHA-256
+`E22718A62809CEED3919E723467A43E756237DA6B184B24246FC114D38B83810`.
+Every one of their 297 MLO files is also byte-identical. On clean MiniQuake
+commit `59ac8cfc6c447c82b207100741512359f95e595c`, the two-run object-emission
+median fell from 239.610 to 215.477 seconds (10.07%) while all 497 MLO files
+and the final 57,197,056-byte PE remained unchanged.
+
 
 ---
 

@@ -91,10 +91,31 @@ if ([Regex]::IsMatch($statementSource, "\b_scan_stmt_children\s*\(")) {
   $failures += "mlc\codegen\codegen_stmt.ml: obsolete copying child-array scan was reintroduced"
 }
 
+# The serial object stream must retain one materialized semantic fragment state
+# instead of rebuilding its global scope and lookup maps for every function
+# batch. Binding ids still restart at the canonical value so target bytes stay
+# identical to the historical clone-per-batch pipeline.
+$compilerSourcePath = Join-Path $root "mlc\compiler.ml"
+$compilerSource = Get-Content -LiteralPath $compilerSourcePath -Raw
+$objectCompile = [Regex]::Match(
+  $compilerSource,
+  "(?ms)^function\s+compile_to_exe_opts_object\s*\([^\r\n]*\).*?^end function\s*$"
+)
+if (-not $objectCompile.Success) {
+  $failures += "mlc\compiler.ml: object-pipeline compiler function was not found"
+} else {
+  if (-not [Regex]::IsMatch($objectCompile.Value, "codegen\.start_object_fragment\s*\(\s*mod_cg\s*\)")) {
+    $failures += "mlc\compiler.ml: serial function batches no longer reuse one fragment state"
+  }
+  if (-not [Regex]::IsMatch($objectCompile.Value, "mod_cg\.state\.binding_id\s*=\s*cg\.state\.binding_id")) {
+    $failures += "mlc\compiler.ml: reused fragments no longer restore deterministic binding ids"
+  }
+}
+
 if ($failures.Count -gt 0) {
   foreach ($failure in $failures) { Write-Error $failure }
   exit 1
 }
 
-Write-Host "[PASS] compiler hot paths retain capacity-backed worklists and indexed facts"
+Write-Host "[PASS] compiler hot paths retain reusable fragments, capacity-backed worklists and indexed facts"
 exit 0

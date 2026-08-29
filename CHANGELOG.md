@@ -4,6 +4,16 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Reused one fully materialized semantic codegen state across the serial
+  function-object stream, resetting only the assembler and batch-local fields.
+  This removes 294 repeated global scope/map clones without adding GC work;
+  binding ids still restart at the canonical value for byte stability. On the
+  exact same self-host source, the median of two object emissions fell from
+  171.633 to 135.993 seconds (20.77%) and sampled private peak memory fell by
+  48.8 MiB. MiniQuake object emission fell from a 239.610-second median to
+  215.477 seconds (10.07%) with a slightly lower sampled working-set peak.
+  Stages 1-3, all 297 compiler MLOs, all 497 MiniQuake MLOs and the final target
+  executables remain byte-identical.
 - Streamed local-relocation folding over the assembler's fixed-size patch
   groups instead of first flattening every patch record into a second managed
   array. On the current 297-object self-build, two fixed-point runs averaged

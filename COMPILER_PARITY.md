@@ -834,6 +834,45 @@ same bytes as the preceding linker. Direct Python, self-hosted monolithic and
 self-hosted MLO comparisons were byte-identical for the Windows optimizer,
 Linux static and Linux FFI fixtures.
 
+## Reused serial function-fragment state
+
+The following object-emission pass keeps one fully materialized semantic
+codegen state alive throughout the serial function stream. Each new object
+resets its assembler, helper/diagnostic lists and other batch-local stacks,
+while cumulative labels, inline budgets, call accounting and append-only
+sections remain in place. Lexical binding ids are explicitly restored from the
+canonical prepared state at every batch boundary, matching the former
+clone-per-batch behavior exactly. No extra collection or heap scan was added.
+
+The controlled self-host comparison used the exact same final source and
+forced object-emission path. Baseline runs took 190.734 and 152.531 seconds;
+reused-state runs took 123.531 and 148.454 seconds. Their medians are 171.633
+and 135.993 seconds respectively, a 20.77% reduction. Median batch setup fell
+from 13.110 seconds to 0.070 seconds. A directly sampled private-memory peak
+fell from 3,240.3 to 3,191.5 MiB, and the instrumented pre-link heap high-water
+fell from the preceding 3,111.8 MiB baseline to 3,063.7 MiB (about 48.1 MiB).
+
+Stages 1, 2 and 3 are byte-identical 60,527,104-byte executables with SHA-256:
+
+`E22718A62809CEED3919E723467A43E756237DA6B184B24246FC114D38B83810`
+
+All 297 Stage 1/2/3 MLO files are individually byte-identical. The complete
+self-hosted harness passed 107/107 plus every Windows and WSL/Linux host gate.
+The Python suite passed every compiler/codegen check; its one immediate UDP
+bind failure after the host suite passed on the isolated two-test network
+standard-library rerun.
+
+The MiniQuake A/B used clean commit
+`59ac8cfc6c447c82b207100741512359f95e595c`, identical include roots, release
+heap arguments and a forced object pipeline. Baseline object runs took 242.016
+and 237.203 seconds; reused-state runs took 215.422 and 215.531 seconds. The
+median therefore fell from 239.610 to 215.477 seconds (10.07%), while median
+batch setup fell from 8.268 to 0.071 seconds. The directly comparable sampled
+working-set peak changed from 3,157.6 to 3,154.5 MiB. All 497 MLO files are
+byte-identical and link to the same 57,197,056-byte PE with SHA-256:
+
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:
