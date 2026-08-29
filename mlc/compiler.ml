@@ -2354,8 +2354,9 @@ function _mlo_from_state(kind, module_file, entry_label, st)
   if typeof(st.asm) == "struct" then
     asm_label_pos_map = st.asm.label_pos_map
     asm_labels = a.get_labels(st.asm)
-    asm_patches = a.get_patches(st.asm)
-    st.asm = a.materialize(st.asm)
+    folded_asm = a.materialize_and_fold_local_patches(st.asm)
+    st.asm = folded_asm[0]
+    asm_patches = folded_asm[1]
     if typeof(st.asm.buf) == "bytes" then
       text_buf = _slice_used_bytes(st.asm.buf, st.asm.size)
     end if
@@ -2761,8 +2762,9 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
   if typeof(st.asm) == "struct" then
     asm_label_pos_map = st.asm.label_pos_map
     asm_labels = a.get_labels(st.asm)
-    asm_patches = a.get_patches(st.asm)
-    st.asm = a.materialize(st.asm)
+    folded_asm = a.materialize_and_fold_local_patches(st.asm)
+    st.asm = folded_asm[0]
+    asm_patches = folded_asm[1]
     if typeof(st.asm.buf) == "bytes" then text_buf = _slice_used_bytes(st.asm.buf, st.asm.size) end if
   end if
 

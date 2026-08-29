@@ -794,6 +794,46 @@ new text patch tables contain no numeric same-fragment targets. Direct
 Python/self-host checks remain byte-identical for the Windows language suite,
 Windows optimizer suite and Linux target smoke at the hashes recorded above.
 
+## Group-streamed MLO patch folding
+
+The next writer pass removes the remaining full patch-array materialization.
+After text is materialized once, the assembler exposes a shallow ordered view
+of its fixed-size patch groups. Object emission walks each group directly,
+writes locally resolved `rel32`/`rip32` displacements into the text bytes and
+retains only unresolved cross-fragment/cross-section records. It therefore
+avoids a per-patch indexed chunk lookup as well as the second managed array of
+all local patch structs. The MLO v2 wire format is unchanged.
+
+The preceding fixed-point compiler built the updated source with the flattened
+writer in 163.599 seconds, including 21.296 seconds of object serialization and
+a 3,316.6 MiB sampled peak. Two consecutive updated fixed-point emissions took
+164.742 and 169.253 seconds; their serialization phases took 17.366 and 17.082
+seconds, averaging 17.224 seconds (19.12% less), while both peaks were 3,286.5
+MiB. Codegen/setup variation dominates the total elapsed time, so only the
+isolated writer reduction is attributed to this change.
+
+Stages 2 and 3 contain 297 individually byte-identical objects totaling
+107,138,078 bytes (102.17 MiB). Both link to the same 60,513,792-byte compiler:
+
+`6D73F77D48BDD66D38A85C55312D42C1A166563F3938CAEB5901D2A8C49F4391`
+
+The MiniQuake comparison used the same clean sources, include roots, release
+heap arguments and forced object pipeline. A direct old/new emission measured
+243.201 versus 240.737 seconds and 3,165.2 versus 3,157.6 MiB. Two alternating
+complete-build samples showed high per-phase variance; their serialization
+means were effectively neutral (14.582 versus 14.739 seconds), so no
+MiniQuake writer-speed claim is made. The overall build did not regress. Both
+writers emitted the same 497 MLO files totaling 101,771,769 bytes and the same
+57,197,056-byte PE:
+
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`
+
+The full harness passed 107/107 plus every Windows and WSL/Linux host gate. The
+new compiler relinked retained MLO v1 and numeric-target v2 directories to the
+same bytes as the preceding linker. Direct Python, self-hosted monolithic and
+self-hosted MLO comparisons were byte-identical for the Windows optimizer,
+Linux static and Linux FFI fixtures.
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:

@@ -78,6 +78,29 @@ function checkChunkedIndexedRead()
       failures = failures + 1
     end if
   end for
+  // The streaming view must preserve the paged chunks and the partial tail in
+  // logical order without flattening all 17,001 values into another array.
+  groups = tools.arr_chunked_groups(builder.chunks, builder.tail)
+  expected = 0
+  if len(groups) != 67 or len(groups[0]) != 256 or len(groups[66]) != 105 then
+    print "FAIL: chunked streaming group shape"
+    failures = failures + 1
+  else
+    for each group in groups
+      for each value in group
+        if value != expected then
+          print "FAIL: chunked streaming read at " + expected
+          failures = failures + 1
+          break
+        end if
+        expected = expected + 1
+      end for
+    end for
+    if expected != 17001 then
+      print "FAIL: chunked streaming count"
+      failures = failures + 1
+    end if
+  end if
   return failures
 end function
 

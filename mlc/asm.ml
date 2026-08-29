@@ -117,6 +117,62 @@ function get_patches(asm)
   return t.arr_chunk_finish(patch_out)
 end function
 
+// Fold same-fragment x64 PC-relative patches after materialization while
+// walking the assembler's paged patch storage directly. Returning only the
+// unresolved records prevents object emission from first flattening millions
+// of local patches into a second managed array.
+function _fold_materialized_patch_set(asm, patch_chunks, patch_tail, out_b)
+  patch_groups = t.arr_chunked_groups(patch_chunks, patch_tail)
+  if len(patch_groups) <= 0 then return [asm, out_b] end if
+  for group_i = 0 to len(patch_groups) - 1
+    patch_group = patch_groups[group_i]
+    if typeof(patch_group) == "array" and len(patch_group) > 0 then
+      for patch_i = 0 to len(patch_group) - 1
+        p = patch_group[patch_i]
+        folded = false
+        if typeof(p) == "struct" then
+          patch_pos = try(p.pos)
+          patch_target = try(p.target)
+          patch_kind = try(p.kind)
+          if typeof(patch_pos) == "int" and typeof(patch_target) == "string" and (patch_kind == "rel32" or patch_kind == "rip32") then
+            target_pos = -1
+            if typeof(asm.label_pos_map) == "struct" then
+              target_pos = t.fastmap_get(asm.label_pos_map, patch_target, -1)
+              if typeof(target_pos) != "int" then target_pos = -1 end if
+            end if
+            if target_pos >= 0 and patch_pos >= 0 and patch_pos + 3 < asm.size and typeof(asm.buf) == "bytes" then
+              disp = target_pos - (patch_pos + 4)
+              asm.buf[patch_pos] = disp & 0xFF
+              asm.buf[patch_pos + 1] = (disp >> 8) & 0xFF
+              asm.buf[patch_pos + 2] = (disp >> 16) & 0xFF
+              asm.buf[patch_pos + 3] = (disp >> 24) & 0xFF
+              folded = true
+            end if
+          end if
+        end if
+        if folded == false then out_b = t.arr_chunk_push(out_b, p) end if
+      end for
+    end if
+  end for
+  return [asm, out_b]
+end function
+
+function materialize_and_fold_local_patches(asm)
+  asm = _materialize_buffer(asm)
+  out_b = t.arr_chunk_new(64)
+  r = _fold_materialized_patch_set(asm, asm.deferred_patches_chunks, asm.deferred_patches_tail, out_b)
+  asm = r[0]
+  r = _fold_materialized_patch_set(asm, asm.patches_chunks, asm.patches_tail, r[1])
+  asm = r[0]
+  // The caller owns the returned unresolved array; release the consumed
+  // chunk roots before it serializes the object.
+  asm.deferred_patches_chunks = []
+  asm.deferred_patches_tail = []
+  asm.patches_chunks = []
+  asm.patches_tail = []
+  return [asm, t.arr_chunk_finish(r[1])]
+end function
+
 // Apply every currently resolvable rel32 patch and retain forward references.
 function _resolve_patch_set(asm, patch_chunks, patch_tail, kept_chunks, kept_tail)
   patch_count = t.arr_chunked_count(patch_chunks, patch_tail, 256)

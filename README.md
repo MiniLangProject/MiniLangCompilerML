@@ -509,6 +509,14 @@ Notes:
   target encoding, so existing project caches and object directories remain
   linkable. A `--dump-labels` diagnostic build deliberately retains internal
   labels.
+- The folding pass traverses the assembler's fixed-size patch groups directly.
+  It materializes only the small outer group index and the unresolved
+  cross-fragment records; it no longer creates a second flat array containing
+  every local patch. On the current self-build this reduced mean object
+  serialization from 21.296 to 17.224 seconds (19.12%) and sampled emitter peak
+  working set from 3,316.6 to 3,286.5 MiB. The resulting 297-object Stage 2 and
+  Stage 3 sets are individually byte-identical and link to the same
+  60,513,792-byte compiler image.
 - The first v1-to-v2 pass reduced an exact 296-object compiler set from 213.30
   to 151.20 MiB. Direct folding then reduced an exact current-source v2 set
   from 158,603,878 bytes (151.26 MiB) to 107,016,076 bytes (102.06 MiB), another
@@ -542,7 +550,7 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **106 passed, 0 failed**.
+- Latest complete run for this revision: **107 passed, 0 failed**.
 
 ### Compiler parity and self-hosting
 

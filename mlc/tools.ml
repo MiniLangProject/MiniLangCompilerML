@@ -905,6 +905,18 @@ function arr_chunked_finish(chunks, tail)
   return arr_merge_chunks_balanced(all)
 end function
 
+// Return the storage groups of a chunked sequence without flattening their
+// elements. Hot consumers can traverse the small outer array and each fixed
+// chunk directly, avoiding an indexed lookup and shape validation per value.
+function arr_chunked_groups(chunks, tail)
+  all = _chunks_materialize(chunks)
+  tail_arr = _arr_tail_to_array(tail)
+  if typeof(tail_arr) == "array" and len(tail_arr) > 0 then
+    all = all + [tail_arr]
+  end if
+  return all
+end function
+
 function arr_chunked_count(chunks, tail, cap)
   ccap = cap
   if typeof(ccap) != "int" or ccap <= 0 then ccap = 64 end if

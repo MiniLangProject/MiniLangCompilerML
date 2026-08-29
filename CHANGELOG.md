@@ -4,6 +4,15 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Streamed local-relocation folding over the assembler's fixed-size patch
+  groups instead of first flattening every patch record into a second managed
+  array. On the current 297-object self-build, two fixed-point runs averaged
+  17.224 seconds in object serialization versus 21.296 seconds for the
+  preceding flattened writer (19.12% less); sampled emitter peak working set
+  fell from 3,316.6 to 3,286.5 MiB. Stages 2 and 3, including every individual
+  MLO file, are byte-identical. A controlled MiniQuake check remained
+  byte-identical and showed no build regression; its direct object-emission run
+  improved from 243.201 to 240.737 seconds with effectively unchanged memory.
 - Folded same-fragment x64 `rel32`/`rip32` relocations directly into each
   materialized text fragment before MLO v2 serialization. New objects retain
   only named cross-fragment/cross-section patches, while readers still accept
