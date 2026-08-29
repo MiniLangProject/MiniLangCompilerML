@@ -617,6 +617,45 @@ retained-directory relinking, GC, threads, SIMD, standard-library and project
 cache coverage. The project test explicitly removes both executable copies and
 successfully restores the result through an `object cache hit` relink.
 
+## Allocation-free analysis and direct paged writers
+
+The 29 August 2026 follow-up removed the remaining temporary child-array path
+from nested-statement analysis. Parser fields are flattened once into a
+capacity-backed vector, and the read-order scan consumes either that vector or
+an ordinary array without repeated concatenation or one recursive call per
+field. The static hot-path gate now rejects the obsolete allocating helper.
+
+The paged writer now supports direct little-endian U16, U32 and U64 values.
+MLO serialization uses its U32 path and copies UTF-8 string payloads straight
+from native text storage across page boundaries instead of first materializing
+a bytes value. Boundary tests cover all widths and a multibyte string crossing
+the 64 KiB page edge. `--profile-compiler-batches` adds diagnostic-only setup, codegen,
+serialization and total times per function batch, including its module/type
+prefix.
+
+Two consecutive self-hosted builds of the final source completed in 202.187
+and 188.948 seconds and produced byte-identical 60,238,848-byte compiler images
+with SHA-256
+`C68FF1E7487A2F47513DA2508D839A46F9352D46A34FB7F456CBE97ACF4E75BB`.
+The first run used the preceding compiler generation; the second used the new
+compiler, a 6.55% reduction on the same final source. A Python bootstrap took
+74.759 seconds, and its native Stage 2 converged to the identical fixed-point
+image in 185.547 seconds.
+
+The same-source MiniQuake A/B used identical include roots and release heap
+arguments. The Python compiler completed in 71.915 seconds and the final
+self-hosted compiler in 360.959 seconds. The latter is 7.18% faster than the
+previous documented 388.859-second self-host baseline. Both emitted the same
+57,197,056-byte PE with SHA-256
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`;
+both `--version` startup smokes passed. Complete byte identity also proves that
+runtime performance of the two generated MiniQuake executables is identical.
+
+The final acceptance run finished in 81.720 seconds. The MiniLang harness
+reported 107 passed and 0 failed, and all Windows and WSL Linux host gates
+passed, including monolithic/object byte identity, retained-object relinking,
+GC, threads, SIMD and standard-library coverage.
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:

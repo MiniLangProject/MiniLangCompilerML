@@ -24,15 +24,34 @@ function _test_fastmap_clear()
   return true
 end function
 
-function _test_byte_pages_u32()
-  name = "byte_pages_u32"
+function _test_byte_pages_direct_writers()
+  name = "byte_pages_direct_writers"
   pages = t.byte_pages_new()
-  pages = t.byte_pages_append_u32(pages, 0x78563412)
-  pages = t.byte_pages_append(pages, bytes(65529, 0xAA))
+  pages = t.byte_pages_append_u16(pages, 0x1234)
+  pages = t.byte_pages_append(pages, bytes(65533, 0xAA))
+  pages = t.byte_pages_append_u16(pages, 0xABCD)
+  pages = t.byte_pages_append(pages, bytes(65532, 0xAA))
   pages = t.byte_pages_append_u32(pages, 0x89ABCDEF)
+  pages = t.byte_pages_append(pages, bytes(65531, 0xAA))
+  pages = t.byte_pages_append_u64(pages, 0x0123456789ABCDEF)
+  pages = t.byte_pages_append(pages, bytes(65530, 0xAA))
+  text = "AäZ"
+  text_bytes = bytes(text)
+  pages = t.byte_pages_append_string(pages, text)
   flat = t.byte_pages_to_bytes(pages)
-  if len(flat) != 65537 or flat[0] != 0x12 or flat[1] != 0x34 or flat[2] != 0x56 or flat[3] != 0x78 or flat[65532] != 0xAA or flat[65533] != 0xEF or flat[65534] != 0xCD or flat[65535] != 0xAB or flat[65536] != 0x89 then
-    print "[FAIL] " + name + " (little-endian page-boundary write failed)"
+  ok = len(flat) == 262142 + len(text_bytes)
+  ok = ok and flat[0] == 0x34 and flat[1] == 0x12
+  ok = ok and flat[65535] == 0xCD and flat[65536] == 0xAB
+  ok = ok and flat[131069] == 0xEF and flat[131070] == 0xCD and flat[131071] == 0xAB and flat[131072] == 0x89
+  ok = ok and flat[196604] == 0xEF and flat[196605] == 0xCD and flat[196606] == 0xAB and flat[196607] == 0x89
+  ok = ok and flat[196608] == 0x67 and flat[196609] == 0x45 and flat[196610] == 0x23 and flat[196611] == 0x01
+  if ok and len(text_bytes) > 0 then
+    for i = 0 to len(text_bytes) - 1
+      if flat[262142 + i] != text_bytes[i] then ok = false; break end if
+    end for
+  end if
+  if ok == false then
+    print "[FAIL] " + name + " (little-endian or UTF-8 page-boundary write failed)"
     return false
   end if
   print "[PASS] " + name
@@ -552,7 +571,7 @@ function main(args)
   fail = 0
 
   if _test_fastmap_clear() then pass = pass + 1 else fail = fail + 1 end if
-  if _test_byte_pages_u32() then pass = pass + 1 else fail = fail + 1 end if
+  if _test_byte_pages_direct_writers() then pass = pass + 1 else fail = fail + 1 end if
 
   // Suite-style runtime tests
   if _test(compiler_path, repo_root, "array_vector", "tests\\array_vector.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

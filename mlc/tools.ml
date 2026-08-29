@@ -3,6 +3,15 @@ package mlc.tools
 
 import mlc.constants as c
 
+// Copy immutable string payloads directly into paged byte buffers. MiniLang's
+// collector is non-moving, so both managed objects remain stable for the
+// duration of this synchronous native copy.
+#if TARGET_OS == "windows"
+extern function _copy_native_bytes(destination as ptr, source as ptr, count as u64) from "kernel32.dll" symbol "RtlMoveMemory" returns ptr
+#else
+extern function _copy_native_bytes(destination as ptr, source as ptr, count as u64) from "libc.so.6" symbol "memmove" returns ptr
+#endif
+
 // Return every array element except the last one. The builtin slice() operates
 // on bytes, so compiler data structures must use an explicit array copy.
 function arr_drop_last(values)
@@ -1092,6 +1101,59 @@ function byte_pages_append(bp, src)
   return b
 end function
 
+// Append a string's UTF-8 payload without first allocating an equally large
+// temporary bytes value. String length is stored in bytes by the runtime, and
+// the payload immediately follows the common eight-byte object header.
+function byte_pages_append_string(bp, text)
+  b = bp
+  if typeof(b) != "struct" then b = byte_pages_new() end if
+  if typeof(text) != "string" or len(text) <= 0 then return b end if
+
+  old = byte_pages_len(b)
+  need = old + len(text)
+  b = _bp_ensure(b, need)
+  source = nativeRawValue(text) + 8
+  s = 0
+  d = old
+  while s < len(text)
+    ci = d >> 16
+    off = d & 0xFFFF
+    pg = _bp_chunk_get(b, ci)
+    take = 65536 - off
+    left = len(text) - s
+    if left < take then take = left end if
+    _copy_native_bytes(nativeBytesPtr(pg) + off, source + s, take)
+    b = _bp_chunk_set(b, ci, pg)
+    d = d + take
+    s = s + take
+  end while
+  b.size = need
+  return b
+end function
+
+// Append one little-endian 16-bit value without a temporary bytes object.
+function byte_pages_append_u16(bp, value)
+  b = bp
+  if typeof(b) != "struct" then b = byte_pages_new() end if
+  old = byte_pages_len(b)
+  need = old + 2
+  b = _bp_ensure(b, need)
+
+  ci = old >> 16
+  off = old & 0xFFFF
+  if off <= 65534 then
+    pg = _bp_chunk_get(b, ci)
+    pg[off] = value & 0xFF
+    pg[off + 1] = (value >> 8) & 0xFF
+    b = _bp_chunk_set(b, ci, pg)
+  else
+    b = byte_pages_set_byte(b, old, value)
+    b = byte_pages_set_byte(b, old + 1, value >> 8)
+  end if
+  b.size = need
+  return b
+end function
+
 // Append one little-endian 32-bit value without allocating a temporary
 // four-byte object. Object serialization writes several integers per label
 // and relocation, so avoiding that allocation materially reduces allocator
@@ -1119,6 +1181,37 @@ function byte_pages_append_u32(bp, value)
     b = byte_pages_set_byte(b, old + 1, value >> 8)
     b = byte_pages_set_byte(b, old + 2, value >> 16)
     b = byte_pages_set_byte(b, old + 3, value >> 24)
+  end if
+  b.size = need
+  return b
+end function
+
+// Append one little-endian 64-bit value. MiniLang integers carry 61 payload
+// bits; the writer deliberately preserves their sign-extended bit pattern.
+function byte_pages_append_u64(bp, value)
+  b = bp
+  if typeof(b) != "struct" then b = byte_pages_new() end if
+  old = byte_pages_len(b)
+  need = old + 8
+  b = _bp_ensure(b, need)
+
+  ci = old >> 16
+  off = old & 0xFFFF
+  if off <= 65528 then
+    pg = _bp_chunk_get(b, ci)
+    pg[off] = value & 0xFF
+    pg[off + 1] = (value >> 8) & 0xFF
+    pg[off + 2] = (value >> 16) & 0xFF
+    pg[off + 3] = (value >> 24) & 0xFF
+    pg[off + 4] = (value >> 32) & 0xFF
+    pg[off + 5] = (value >> 40) & 0xFF
+    pg[off + 6] = (value >> 48) & 0xFF
+    pg[off + 7] = (value >> 56) & 0xFF
+    b = _bp_chunk_set(b, ci, pg)
+  else
+    for i = 0 to 7
+      b = byte_pages_set_byte(b, old + i, value >> (i * 8))
+    end for
   end if
   b.size = need
   return b

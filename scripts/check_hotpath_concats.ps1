@@ -55,6 +55,16 @@ foreach ($check in $worklistChecks) {
   }
 }
 
+# The former helper flattened every statement-valued field through repeated
+# array concatenation before callers copied the result into their worklists.
+# Keep that allocator-heavy API retired; the replacement appends directly to
+# an ArrayVector and the read-order scan visits fields in place.
+$statementSourcePath = Join-Path $root "mlc\codegen\codegen_stmt.ml"
+$statementSource = Get-Content -LiteralPath $statementSourcePath -Raw
+if ([Regex]::IsMatch($statementSource, "\b_scan_stmt_children\s*\(")) {
+  $failures += "mlc\codegen\codegen_stmt.ml: obsolete copying child-array scan was reintroduced"
+}
+
 if ($failures.Count -gt 0) {
   foreach ($failure in $failures) { Write-Error $failure }
   exit 1

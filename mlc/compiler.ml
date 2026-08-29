@@ -197,6 +197,7 @@ _asm_show_code = true
 _asm_dump_data = false
 _asm_dump_pe = false
 _compiler_profile_enabled = false
+_compiler_profile_batches_enabled = false
 _compile_target = "windows-x64"
 _compiler_profile_started = 0
 _compiler_profile_phase_started = 0
@@ -229,6 +230,7 @@ function _usage()
   print "Debug:"
   print "  --mem-probe"
   print "  --profile-compiler    print wall-clock time for compiler phases"
+  print "  --profile-compiler-batches  also print function-batch/module timings"
   print "Listings:"
   print "  --asm [--asm-out <path>] [--asm-cols addr,opcodes,code]"
   print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
@@ -289,6 +291,14 @@ function _compiler_profile_finish()
   print "[profile] total_ms=" + (tick - _compiler_profile_started)
   _compiler_profile_phase_name = ""
   return void
+end function
+
+// Extract the package/type prefix shown on detailed object-batch profiles.
+function _compiler_profile_owner(function_name)
+  name = _coerce_name(function_name)
+  split_at = s.lastIndexOf(name, ".")
+  if split_at <= 0 then return "<root>" end if
+  return s.substr(name, 0, split_at)
 end function
 
 function _progress_phase(msg)
@@ -2893,9 +2903,9 @@ function _mlo_bp_bytes(bp, b)
 end function
 
 function _mlo_bp_string(bp, text)
-  raw = bytes("")
-  if typeof(text) == "string" then raw = bytes(text) end if
-  return _mlo_bp_bytes(bp, raw)
+  if typeof(text) != "string" then text = "" end if
+  bp = _mlo_bp_u32(bp, len(text))
+  return t.byte_pages_append_string(bp, text)
 end function
 
 function _mlo_bp_write_labels(bp, labels)
@@ -5049,6 +5059,7 @@ end function
 function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem, runtime_config)
   global _dump_labels_path
   global _compiler_profile_enabled
+  global _compiler_profile_batches_enabled
   self_exe = _self_exe_path()
   if self_exe == "" then return -1 end if
 
@@ -5070,7 +5081,11 @@ function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem
   if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
     cmd = cmd + " --dump-labels " + _cmd_quote_arg(_dump_labels_path)
   end if
-  if _compiler_profile_enabled then cmd = cmd + " --profile-compiler" end if
+  if _compiler_profile_batches_enabled then
+    cmd = cmd + " --profile-compiler-batches"
+  else if _compiler_profile_enabled then
+    cmd = cmd + " --profile-compiler"
+  end if
 
   _progress_phase("linking in fresh compiler process")
   _progress_link("object dir=" + obj_dir)
@@ -6094,7 +6109,15 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
       fn_chunk_size = OBJECT_COMPILER_BATCH_SIZE
     end if
     fn_step_started = 0
-    if _compiler_profile_enabled then fn_step_started = mtime.ticks() end if
+    fn_step_finished = 0
+    fn_batch_started = 0
+    fn_batch_setup_ms = 0
+    fn_batch_codegen_ms = 0
+    fn_batch_serialize_ms = 0
+    if _compiler_profile_enabled then
+      fn_step_started = mtime.ticks()
+      fn_batch_started = fn_step_started
+    end if
     section_checkpoint = _mlo_state_checkpoint(cg.state)
     mod_cg = codegen.clone_for_object(cg, false)
     if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
@@ -6111,20 +6134,23 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     mod_cg.state.heap_config = _cfg_set(mod_cg.state.heap_config, "cg_object_text_base", text_stream_offset)
     if _compiler_profile_enabled then
       fn_step_finished = mtime.ticks()
-      fn_setup_ms = fn_setup_ms + (fn_step_finished - fn_step_started)
+      fn_batch_setup_ms = fn_step_finished - fn_step_started
+      fn_setup_ms = fn_setup_ms + fn_batch_setup_ms
       fn_step_started = fn_step_finished
     end if
     mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, fn_chunk_size)
     fragment_text_size = a.pos(mod_cg.state.asm)
     if _compiler_profile_enabled then
       fn_step_finished = mtime.ticks()
-      fn_codegen_ms = fn_codegen_ms + (fn_step_finished - fn_step_started)
+      fn_batch_codegen_ms = fn_step_finished - fn_step_started
+      fn_codegen_ms = fn_codegen_ms + fn_batch_codegen_ms
       fn_step_started = fn_step_finished
     end if
     fin = _finish_module_mlo(tmp_dir, "" + module_object_seq, first_name, "", mod_cg, section_checkpoint, helper_union, module_obj_paths_b)
     if _compiler_profile_enabled then
       fn_step_finished = mtime.ticks()
-      fn_serialize_ms = fn_serialize_ms + (fn_step_finished - fn_step_started)
+      fn_batch_serialize_ms = fn_step_finished - fn_step_started
+      fn_serialize_ms = fn_serialize_ms + fn_batch_serialize_ms
     end if
     if fin[0] != 0 then
       print "CompileError: " + fin[1]
@@ -6147,6 +6173,13 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     cg.state.data = mod_cg.state.data
     cg.state.bss = mod_cg.state.bss
     text_stream_offset = text_stream_offset + fragment_text_size
+    if _compiler_profile_batches_enabled then
+      fn_batch_function_count = fn_chunk_size
+      if fn_start + fn_batch_function_count > len(fn_entries) then fn_batch_function_count = len(fn_entries) - fn_start end if
+      fn_batch_total_ms = fn_step_finished - fn_batch_started
+      fn_owner = _compiler_profile_owner(first_name)
+      print "[profile] object_function_batch=" + fn_batch_count + " module=" + fn_owner + " first=" + first_name + " functions=" + fn_batch_function_count + " text_bytes=" + fragment_text_size + " setup_ms=" + fn_batch_setup_ms + " codegen_ms=" + fn_batch_codegen_ms + " serialize_ms=" + fn_batch_serialize_ms + " total_ms=" + fn_batch_total_ms
+    end if
     module_object_seq = module_object_seq + 1
     fn_start = fn_start + fn_chunk_size
     fn_batch_count = fn_batch_count + 1
@@ -6303,6 +6336,7 @@ function run_cli(args)
   global _asm_dump_data
   global _asm_dump_pe
   global _compiler_profile_enabled
+  global _compiler_profile_batches_enabled
   global _compile_target
   if len(args) == 1 and (args[0] == "-version" or args[0] == "--version") then
     print COMPILER_VERSION_TEXT
@@ -6321,7 +6355,8 @@ function run_cli(args)
   project_cache_enabled = false
   project_object_cache_dir = ""
   _mem_probe_enabled = _has_flag(args, "--mem-probe")
-  _compiler_profile_enabled = _has_flag(args, "--profile-compiler")
+  _compiler_profile_batches_enabled = _has_flag(args, "--profile-compiler-batches")
+  _compiler_profile_enabled = _has_flag(args, "--profile-compiler") or _compiler_profile_batches_enabled
   _compiler_profile_reset()
   _dump_labels_path = _get_flag_value(args, "--dump-labels")
   _object_pipeline_enabled = false

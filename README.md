@@ -185,6 +185,9 @@ Common options:
   target files remain byte-identical.
 - `--profile-compiler` print wall-clock compiler/linker phase timings without
   changing target bytes
+- `--profile-compiler-batches` include setup, codegen, serialization and total
+  time for every function-object batch, tagged with its module/type prefix;
+  this implies `--profile-compiler`
 
 `.\build\mlc_win64.exe -version` and `--version` both print
 `MiniLang Compiler 1.1.0`. `.\build\mlc_win64.exe --help` prints a short usage
@@ -465,10 +468,12 @@ Notes:
   the compiler backend's largest function groups. Per-function qualification
   maps use generation-stamped clearing, so resetting a large open-addressing
   table is O(1) while lookup order and emitted bytes remain deterministic.
-  Little-endian object fields are appended directly to paged byte storage
-  instead of allocating a temporary four-byte object for every integer.
-  `--profile-compiler` also separates batch setup, code generation and object
-  serialization time to make future object-pipeline work measurable.
+  The paged writer appends little-endian 16-, 32- and 64-bit fields and UTF-8
+  strings without allocating temporary byte objects; MLO serialization uses
+  the direct U32 and string paths for its actual wire fields.
+  `--profile-compiler` reports aggregate batch setup, code generation and
+  object serialization time. `--profile-compiler-batches` adds one diagnostic
+  line per batch with its module/type prefix and does not change target bytes.
 - Object emission remains deliberately serial. A background-writer prototype
   was measured on a complete self-build, exceeded six minutes and about 3.6 GiB
   working set, and was removed. Competing managed heaps and GC coordination cost

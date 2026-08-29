@@ -2815,10 +2815,7 @@ function _infer_known_int_names(state, fn_node)
     if _is_foreach_stmt(st) then
       excluded = _arr_add_unique(excluded, _foreach_var_name(st))
     end if
-    kids = _scan_stmt_children(st)
-    if typeof(kids) == "array" and len(kids) > 0 then
-      for each child_stmt in kids stack = t.arr_vec_push(stack, child_stmt) end for
-    end if
+    stack = _scan_stmt_children_into(stack, st)
   end while
 
   if len(loop_names) > 0 then
@@ -3102,8 +3099,15 @@ function _typeflow_scan_read_expr(ex, tracked, initialized, read_before)
 end function
 
 function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, direct)
-  if typeof(stmts) != "array" or len(stmts) <= 0 then return [initialized, read_before] end if
-  for each st in stmts
+  stmt_count = 0
+  stmt_vector = t.arr_vec_is(stmts)
+  if typeof(stmts) == "array" then stmt_count = len(stmts) else if stmt_vector then stmt_count = t.arr_vec_count(stmts) end if
+  if stmt_count <= 0 then return [initialized, read_before] end if
+  stmt_pos = 0
+  while stmt_pos < stmt_count
+    st = void
+    if stmt_vector then st = t.arr_vec_get(stmts, stmt_pos, void) else st = stmts[stmt_pos] end if
+    stmt_pos = stmt_pos + 1
     if typeof(st) != "struct" then continue end if
     k = _coerce_name(try(st.node_kind))
     if k == "FunctionDef" or k == "GlobalDecl" then continue end if
@@ -3139,12 +3143,15 @@ function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, dir
         end if
       end for
     end if
-    kids = _scan_stmt_children(st)
-    if typeof(kids) == "array" and len(kids) > 0 then
-      nested = _typeflow_scan_read_order(kids, tracked, initialized + [], read_before, false)
+    // Flatten nested statements once into a capacity-backed vector. This
+    // preserves the historical field order without repeated array copies or
+    // one recursive call per individual parser field.
+    child_stmts = _scan_stmt_children_into(void, st)
+    if t.arr_vec_count(child_stmts) > 0 then
+      nested = _typeflow_scan_read_order(child_stmts, tracked, initialized + [], read_before, false)
       read_before = nested[1]
     end if
-  end for
+  end while
   return [initialized, read_before]
 end function
 
@@ -3245,10 +3252,7 @@ function _infer_known_value_types(state, fn_node)
     end if
     if k == "For" then loop_names = _arr_add_unique(loop_names, _coerce_name(try(st.var))) end if
     if _is_foreach_stmt(st) then excluded = _arr_add_unique(excluded, _foreach_var_name(st)) end if
-    kids = _scan_stmt_children(st)
-    if typeof(kids) == "array" and len(kids) > 0 then
-      for each child_stmt in kids stack = t.arr_vec_push(stack, child_stmt) end for
-    end if
+    stack = _scan_stmt_children_into(stack, st)
   end while
 
   if len(loop_names) > 0 then
@@ -3515,10 +3519,7 @@ function _fast_index_scan_loop(loop_node, index_name)
     child = try(st.end_expr); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
     child = try(st.iterable); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
     child = try(st.obj); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-    kids = _scan_stmt_children(st)
-    if typeof(kids) == "array" and len(kids) > 0 then
-      for each child_stmt in kids stack = t.arr_vec_push(stack, child_stmt) end for
-    end if
+    stack = _scan_stmt_children_into(stack, st)
   end while
   return [targets, mutated]
 end function
@@ -4018,25 +4019,38 @@ function _resolve_global_target_scan(state, raw, qpref, fpref)
   return raw2
 end function
 
-function _scan_stmt_children(st)
-  kids = []
-  if typeof(st) != "struct" then return kids end if
+// Append nested statements directly to an existing capacity-backed worklist.
+// Keeping the parser field order here preserves analysis determinism without
+// materializing and repeatedly concatenating a temporary child array.
+function _scan_stmt_children_into(worklist, st)
+  stack = worklist
+  if typeof(st) != "struct" then return stack end if
 
   body0 = try(st.body)
-  if typeof(body0) == "array" and len(body0) > 0 then kids = kids + body0 end if
+  if typeof(body0) == "array" and len(body0) > 0 then
+    for each child_stmt in body0 stack = t.arr_vec_push(stack, child_stmt) end for
+  end if
   then0 = try(st.then_body)
-  if typeof(then0) == "array" and len(then0) > 0 then kids = kids + then0 end if
+  if typeof(then0) == "array" and len(then0) > 0 then
+    for each child_stmt in then0 stack = t.arr_vec_push(stack, child_stmt) end for
+  end if
   else0 = try(st.else_body)
-  if typeof(else0) == "array" and len(else0) > 0 then kids = kids + else0 end if
+  if typeof(else0) == "array" and len(else0) > 0 then
+    for each child_stmt in else0 stack = t.arr_vec_push(stack, child_stmt) end for
+  end if
   def0 = try(st.default_body)
-  if typeof(def0) == "array" and len(def0) > 0 then kids = kids + def0 end if
+  if typeof(def0) == "array" and len(def0) > 0 then
+    for each child_stmt in def0 stack = t.arr_vec_push(stack, child_stmt) end for
+  end if
 
   cases0 = try(st.cases)
   if typeof(cases0) == "array" and len(cases0) > 0 then
     for ci = 0 to len(cases0) - 1
       cs = cases0[ci]
       cs_body = try(cs.body)
-      if typeof(cs) == "struct" and typeof(cs_body) == "array" and len(cs_body) > 0 then kids = kids + cs_body end if
+      if typeof(cs) == "struct" and typeof(cs_body) == "array" and len(cs_body) > 0 then
+        for each child_stmt in cs_body stack = t.arr_vec_push(stack, child_stmt) end for
+      end if
     end for
   end if
 
@@ -4044,10 +4058,12 @@ function _scan_stmt_children(st)
   if typeof(elifs0) == "array" and len(elifs0) > 0 then
     for ei = 0 to len(elifs0) - 1
       eb = elifs0[ei]
-      if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" and len(eb[1]) > 0 then kids = kids + eb[1] end if
+      if typeof(eb) == "array" and len(eb) >= 2 and typeof(eb[1]) == "array" and len(eb[1]) > 0 then
+        for each child_stmt in eb[1] stack = t.arr_vec_push(stack, child_stmt) end for
+      end if
     end for
   end if
-  return kids
+  return stack
 end function
 
 function _scan_stmt_for_global_decls_lifo(state, st, qpref, fpref)

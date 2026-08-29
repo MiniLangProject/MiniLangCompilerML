@@ -5,9 +5,13 @@ All notable changes to the MiniLang compiler are documented here.
 ## 1.1.0 - 2026-08-24
 
 - Reduced self-hosted analysis and `.mlo` allocation traffic: nested-statement
-  scans now use capacity-backed worklists, while little-endian object integers
-  are written directly into paged byte storage without temporary byte objects.
-  Target bytes and the MLO1 format remain unchanged.
+  scans now append directly into capacity-backed worklists, while the paged
+  writer supports direct little-endian 16-, 32- and 64-bit fields and UTF-8
+  strings without temporary byte objects. MLO serialization uses the direct
+  U32 and string paths. Target bytes and the MLO1 format remain unchanged.
+- Added `--profile-compiler-batches`, which extends compiler phase profiling
+  with deterministic per-function-batch setup, codegen, serialization and
+  total timings tagged by module/type prefix.
 - Added a deterministic per-fingerprint `.mlo` project cache beneath the exact
   final-artifact cache. If the cached executable is absent, the compiler can
   relink the validated sorted object set without repeating frontend/codegen
