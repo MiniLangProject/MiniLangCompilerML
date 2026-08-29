@@ -4,6 +4,11 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Combined integer-flow collection, value-type collection and loop-hot-local
+  discovery into one deterministic function-statement traversal. On the final
+  fixed-point compiler this reduced a cold MiniQuake build from 352.740 to
+  286.077 seconds (18.90%) without changing one target byte; the self-build
+  improved from 188.948 to 149.766 seconds (20.74%).
 - Reduced self-hosted analysis and `.mlo` allocation traffic: nested-statement
   scans now append directly into capacity-backed worklists, while the paged
   writer supports direct little-endian 16-, 32- and 64-bit fields and UTF-8

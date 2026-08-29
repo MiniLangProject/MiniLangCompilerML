@@ -468,6 +468,10 @@ Notes:
   the compiler backend's largest function groups. Per-function qualification
   maps use generation-stamped clearing, so resetting a large open-addressing
   table is O(1) while lookup order and emitted bytes remain deterministic.
+  Integer-flow collection, value-type collection and loop-hot-local discovery
+  share one deterministic statement traversal per function instead of walking
+  large function bodies three times. The inferred facts and emitted target
+  bytes remain unchanged.
   The paged writer appends little-endian 16-, 32- and 64-bit fields and UTF-8
   strings without allocating temporary byte objects; MLO serialization uses
   the direct U32 and string paths for its actual wire fields.

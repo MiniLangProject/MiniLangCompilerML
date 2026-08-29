@@ -2753,40 +2753,80 @@ function _intflow_expr_is_int(state, ex, known)
   return false
 end function
 
-function _infer_known_int_names(state, fn_node)
-  if typeof(fn_node) != "struct" then return [] end if
-  assignments = []
+// Collect the statement facts shared by integer inference, value-type flow and
+// local-register promotion in one deterministic traversal. These analyses used
+// to repeat the same function-sized walk independently.
+function _collect_function_flow_inputs(fn_node)
+  int_assignments = []
+  value_assignments = []
+  direct_initializers = []
   loop_bounds = []
   loop_names = []
-  normal_names = []
-  excluded = []
+  int_normal_names = []
+  value_normal_names = []
+  int_excluded = []
+  value_excluded = []
+  hot_names = t.fastmap_new(64)
+  if typeof(fn_node) != "struct" then return [int_assignments, value_assignments, direct_initializers, loop_bounds, loop_names, int_normal_names, value_normal_names, int_excluded, value_excluded, hot_names] end if
 
   params = try(fn_node.params)
   if typeof(params) == "array" and len(params) > 0 then
-    for i = 0 to len(params) - 1 excluded = _arr_add_unique(excluded, _coerce_name(params[i])) end for
+    for i = 0 to len(params) - 1
+      param_name = _coerce_name(params[i])
+      int_excluded = _arr_add_unique(int_excluded, param_name)
+      value_excluded = _arr_add_unique(value_excluded, param_name)
+    end for
   end if
   boxed = try(fn_node._ml_boxed)
   if typeof(boxed) == "array" and len(boxed) > 0 then
-    for i = 0 to len(boxed) - 1 excluded = _arr_add_unique(excluded, _coerce_name(boxed[i])) end for
+    for i = 0 to len(boxed) - 1
+      boxed_name = _coerce_name(boxed[i])
+      int_excluded = _arr_add_unique(int_excluded, boxed_name)
+      value_excluded = _arr_add_unique(value_excluded, boxed_name)
+    end for
   end if
   captures = try(fn_node._ml_captures)
   if typeof(captures) == "array" and len(captures) > 0 then
-    for i = 0 to len(captures) - 1 excluded = _arr_add_unique(excluded, _coerce_name(captures[i])) end for
+    for i = 0 to len(captures) - 1
+      capture_name = _coerce_name(captures[i])
+      int_excluded = _arr_add_unique(int_excluded, capture_name)
+      value_excluded = _arr_add_unique(value_excluded, capture_name)
+    end for
   end if
   globals = try(fn_node._ml_globals_declared)
   if typeof(globals) == "array" and len(globals) > 0 then
-    for i = 0 to len(globals) - 1 excluded = _arr_add_unique(excluded, _coerce_name(globals[i])) end for
+    for i = 0 to len(globals) - 1
+      global_name = _coerce_name(globals[i])
+      int_excluded = _arr_add_unique(int_excluded, global_name)
+      value_excluded = _arr_add_unique(value_excluded, global_name)
+    end for
   end if
 
   body = try(fn_node.body)
   if typeof(body) != "array" then body = [] end if
-  // Large functions can expose thousands of nested statements. Keep this
-  // forward worklist capacity-backed instead of copying its complete prefix
-  // every time children are discovered.
+  if len(body) > 0 then
+    for i = 0 to len(body) - 1
+      direct_stmt = body[i]
+      if typeof(direct_stmt) != "struct" then continue end if
+      direct_kind = _coerce_name(try(direct_stmt.node_kind))
+      if direct_kind == "Assign" or direct_kind == "ConstDecl" then
+        direct_name = _coerce_name(try(direct_stmt.name))
+        if direct_name != "" and s.contains(direct_name, ".") == false then
+          direct_initializers = direct_initializers + [[direct_name, try(direct_stmt.expr)]]
+        end if
+      end if
+    end for
+  end if
+
+  // A parallel depth vector preserves the promotion pass's exact loop-nesting
+  // semantics while the shared statement worklist remains allocation-backed.
   stack = t.arr_vec_from_array(body, 256)
+  depths = t.arr_vec_new(len(body) + 256)
+  if len(body) > 0 then for i = 0 to len(body) - 1 depths = t.arr_vec_push(depths, 0) end for end if
   stack_pos = 0
   while stack_pos < t.arr_vec_count(stack)
     st = t.arr_vec_get(stack, stack_pos, void)
+    loop_depth = t.arr_vec_get(depths, stack_pos, 0)
     stack_pos = stack_pos + 1
     if typeof(st) != "struct" then continue end if
     k = _coerce_name(try(st.node_kind))
@@ -2794,15 +2834,46 @@ function _infer_known_int_names(state, fn_node)
     if k == "GlobalDecl" then
       names_g = try(st.names)
       if typeof(names_g) == "array" and len(names_g) > 0 then
-        for gi = 0 to len(names_g) - 1 excluded = _arr_add_unique(excluded, _coerce_name(names_g[gi])) end for
+        for gi = 0 to len(names_g) - 1
+          declared_global = _coerce_name(names_g[gi])
+          int_excluded = _arr_add_unique(int_excluded, declared_global)
+          value_excluded = _arr_add_unique(value_excluded, declared_global)
+        end for
       end if
       continue
     end if
-    if k == "Assign" or k == "SynchronizedDecl" then
+
+    child_depth = loop_depth
+    if k == "While" or k == "DoWhile" or k == "For" or _is_foreach_stmt(st) then child_depth = child_depth + 1 end if
+    if child_depth > 0 and (k == "Assign" or k == "ConstDecl") then
+      hot_name = _coerce_name(try(st.name))
+      if hot_name != "" then hot_names = t.fastmap_set(hot_names, hot_name, 1) end if
+    end if
+    if child_depth > 0 and k == "For" then
+      hot_for_name = _coerce_name(try(st.var))
+      if hot_for_name != "" then hot_names = t.fastmap_set(hot_names, hot_for_name, 1) end if
+    end if
+
+    if k == "Assign" then
       nm = _coerce_name(try(st.name))
       if nm != "" and s.contains(nm, ".") == false then
-        assignments = _intflow_map_add(assignments, nm, try(st.expr))
-        normal_names = _arr_add_unique(normal_names, nm)
+        int_assignments = _intflow_map_add(int_assignments, nm, try(st.expr))
+        value_assignments = _intflow_map_add(value_assignments, nm, try(st.expr))
+        int_normal_names = _arr_add_unique(int_normal_names, nm)
+        value_normal_names = _arr_add_unique(value_normal_names, nm)
+      end if
+    else if k == "SynchronizedDecl" then
+      nm_sync = _coerce_name(try(st.name))
+      if nm_sync != "" and s.contains(nm_sync, ".") == false then
+        int_assignments = _intflow_map_add(int_assignments, nm_sync, try(st.expr))
+        int_normal_names = _arr_add_unique(int_normal_names, nm_sync)
+      end if
+      value_excluded = _arr_add_unique(value_excluded, nm_sync)
+    else if k == "ConstDecl" then
+      nm_const = _coerce_name(try(st.name))
+      if nm_const != "" and s.contains(nm_const, ".") == false then
+        value_assignments = _intflow_map_add(value_assignments, nm_const, try(st.expr))
+        value_normal_names = _arr_add_unique(value_normal_names, nm_const)
       end if
     end if
     if k == "For" then
@@ -2813,10 +2884,31 @@ function _infer_known_int_names(state, fn_node)
       end if
     end if
     if _is_foreach_stmt(st) then
-      excluded = _arr_add_unique(excluded, _foreach_var_name(st))
+      foreach_name = _foreach_var_name(st)
+      int_excluded = _arr_add_unique(int_excluded, foreach_name)
+      value_excluded = _arr_add_unique(value_excluded, foreach_name)
     end if
+    child_start = t.arr_vec_count(stack)
     stack = _scan_stmt_children_into(stack, st)
+    child_end = t.arr_vec_count(stack)
+    while child_start < child_end
+      depths = t.arr_vec_push(depths, child_depth)
+      child_start = child_start + 1
+    end while
   end while
+
+  return [int_assignments, value_assignments, direct_initializers, loop_bounds, loop_names, int_normal_names, value_normal_names, int_excluded, value_excluded, hot_names]
+end function
+
+function _infer_known_int_names(state, fn_node, flow_inputs)
+  if typeof(fn_node) != "struct" then return [] end if
+  inputs = flow_inputs
+  if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node) end if
+  assignments = inputs[0]
+  loop_bounds = inputs[3]
+  loop_names = inputs[4]
+  normal_names = inputs[5]
+  excluded = inputs[7]
 
   if len(loop_names) > 0 then
     for i = 0 to len(loop_names) - 1
@@ -3193,67 +3285,18 @@ function _typeflow_scan_expr_dependencies(dependents, owner, ex)
   return dependents
 end function
 
-function _infer_known_value_types(state, fn_node)
+function _infer_known_value_types(state, fn_node, flow_inputs)
   if typeof(fn_node) != "struct" then return [] end if
-  assignments = []
-  direct_initializers = []
-  loop_names = []
-  normal_names = []
-  excluded = []
-
-  params = try(fn_node.params)
-  if typeof(params) == "array" and len(params) > 0 then for i = 0 to len(params) - 1 excluded = _arr_add_unique(excluded, _coerce_name(params[i])) end for end if
-  boxed = try(fn_node._ml_boxed)
-  if typeof(boxed) == "array" and len(boxed) > 0 then for i = 0 to len(boxed) - 1 excluded = _arr_add_unique(excluded, _coerce_name(boxed[i])) end for end if
-  captures = try(fn_node._ml_captures)
-  if typeof(captures) == "array" and len(captures) > 0 then for i = 0 to len(captures) - 1 excluded = _arr_add_unique(excluded, _coerce_name(captures[i])) end for end if
-  globals = try(fn_node._ml_globals_declared)
-  if typeof(globals) == "array" and len(globals) > 0 then for i = 0 to len(globals) - 1 excluded = _arr_add_unique(excluded, _coerce_name(globals[i])) end for end if
+  inputs = flow_inputs
+  if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node) end if
+  assignments = inputs[1]
+  direct_initializers = inputs[2]
+  loop_names = inputs[4]
+  normal_names = inputs[6]
+  excluded = inputs[8]
 
   body = try(fn_node.body)
   if typeof(body) != "array" then body = [] end if
-  if len(body) > 0 then
-    for i = 0 to len(body) - 1
-      st0 = body[i]
-      if typeof(st0) != "struct" then continue end if
-      k0 = _coerce_name(try(st0.node_kind))
-      if k0 == "Assign" or k0 == "ConstDecl" then
-        nm0 = _coerce_name(try(st0.name))
-        if nm0 != "" and s.contains(nm0, ".") == false then direct_initializers = direct_initializers + [[nm0, try(st0.expr)]] end if
-      end if
-    end for
-  end if
-
-  // Grow the statement worklist in place; repeated array concatenation makes
-  // compiler-sized functions quadratic in both copying and allocation.
-  stack = t.arr_vec_from_array(body, 256)
-  pos = 0
-  while pos < t.arr_vec_count(stack)
-    st = t.arr_vec_get(stack, pos, void)
-    pos = pos + 1
-    if typeof(st) != "struct" then continue end if
-    k = _coerce_name(try(st.node_kind))
-    if k == "FunctionDef" then continue end if
-    if k == "GlobalDecl" then
-      names_g = try(st.names)
-      if typeof(names_g) == "array" and len(names_g) > 0 then for gi = 0 to len(names_g) - 1 excluded = _arr_add_unique(excluded, _coerce_name(names_g[gi])) end for end if
-      continue
-    end if
-    if k == "SynchronizedDecl" then
-      excluded = _arr_add_unique(excluded, _coerce_name(try(st.name)))
-    else
-      if k == "Assign" or k == "ConstDecl" then
-        nm = _coerce_name(try(st.name))
-        if nm != "" and s.contains(nm, ".") == false then
-          assignments = _intflow_map_add(assignments, nm, try(st.expr))
-          normal_names = _arr_add_unique(normal_names, nm)
-        end if
-      end if
-    end if
-    if k == "For" then loop_names = _arr_add_unique(loop_names, _coerce_name(try(st.var))) end if
-    if _is_foreach_stmt(st) then excluded = _arr_add_unique(excluded, _foreach_var_name(st)) end if
-    stack = _scan_stmt_children_into(stack, st)
-  end while
 
   if len(loop_names) > 0 then
     for i = 0 to len(loop_names) - 1
@@ -3422,9 +3465,12 @@ end function
 // Mirror at most two unique, proven immediate-only locals in Win64 nonvolatile
 // XMM registers. Pointer-like, boxed, captured and ambiguous bindings stay on
 // the canonical stack path so no GC root can disappear into a register.
-function _select_promoted_local_registers(state, fn_node, known_types)
-  hot_names = t.fastmap_new(64)
-  hot_names = _promotion_scan_stmts(hot_names, try(fn_node.body), 0)
+function _select_promoted_local_registers(state, fn_node, known_types, shared_hot_names)
+  hot_names = shared_hot_names
+  if typeof(hot_names) != "struct" then
+    hot_names = t.fastmap_new(64)
+    hot_names = _promotion_scan_stmts(hot_names, try(fn_node.body), 0)
+  end if
   bindings = state.function_locals
   binding_count = scope.frame_count(bindings)
   counts = t.fastmap_new(64)
@@ -8930,8 +8976,9 @@ function emit_user_function(state, fn_node)
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.isBlank" then
     print "[dbg][stage] " + code_name + " analysis_prepare_done"
   end if
-  known_value_types_for_fn = _infer_known_value_types(state, fn_node)
-  promoted_result = _select_promoted_local_registers(state, fn_node, known_value_types_for_fn)
+  flow_inputs_for_fn = _collect_function_flow_inputs(fn_node)
+  known_value_types_for_fn = _infer_known_value_types(state, fn_node, flow_inputs_for_fn)
+  promoted_result = _select_promoted_local_registers(state, fn_node, known_value_types_for_fn, flow_inputs_for_fn[9])
   state = promoted_result[0]
   promoted_local_regs = promoted_result[1]
   n_locals = 0
@@ -9087,7 +9134,7 @@ function emit_user_function(state, fn_node)
   else
     state.current_file_prefix = ""
   end if
-  state.known_int_names = _infer_known_int_names(state, fn_node)
+  state.known_int_names = _infer_known_int_names(state, fn_node, flow_inputs_for_fn)
   state.current_qname_prefix = intflow_saved_qpref
   state.current_file_prefix = intflow_saved_fpref
   state.known_value_types = known_value_types_for_fn

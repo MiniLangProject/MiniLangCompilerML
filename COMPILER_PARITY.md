@@ -656,6 +656,36 @@ reported 107 passed and 0 failed, and all Windows and WSL Linux host gates
 passed, including monolithic/object byte identity, retained-object relinking,
 GC, threads, SIMD and standard-library coverage.
 
+## Shared function-flow collection
+
+Profiling the fixed-point compiler on 29 August 2026 showed that MiniQuake's
+495 function-object batches still spent most of their time in code generation.
+Integer inference, value-type inference and local-register promotion each
+walked the same function statements to collect overlapping facts. The compiler
+now collects their immutable inputs in one deterministic traversal while the
+three consumers retain their existing inference and selection rules.
+
+The directly comparable cold profiled MiniQuake build improved from 352.740 to
+286.077 seconds, a reduction of 66.663 seconds (18.90%). Function-batch codegen
+fell from 261.878 to 211.235 seconds, serialization from 35.606 to 29.591
+seconds, and object-pipeline planning from 20.844 to 9.468 seconds. Both builds
+used the same source tree, include roots, release heap settings and diagnostic
+batch profiling.
+
+The final self-hosted Stage 3 compiled the same final compiler source in
+149.766 seconds, down from the preceding fixed-point compiler's 188.948 seconds
+(20.74%). Consecutive Stages 2 and 3 are byte-identical 60,258,304-byte images
+with SHA-256
+`6189DCD8D470E7970D3ECAE11580640024E757BE66346C63F45FEE682B04BBC1`.
+
+The optimized self-host and Python compiler emitted the same 57,197,056-byte
+MiniQuake PE with SHA-256
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`.
+Its `--version` startup smoke passed. The complete final-compiler acceptance run
+reported 107 passed and 0 failed in 64.142 seconds internally (64.731 seconds
+including the PowerShell harness), with every Windows and WSL/Linux host gate
+green.
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:
