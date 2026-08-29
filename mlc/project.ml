@@ -391,9 +391,11 @@ function fingerprint(pb, input_path, include_dirs)
     h = _hash_byte(h, 0)
     h = _hash_text(h, pb.expanded_args[ai])
   end for
-  manifest_bytes = fs.readAllBytes(pb.manifest)
-  if typeof(manifest_bytes) == "error" then return manifest_bytes end if
-  h = _hash_bytes(h, manifest_bytes)
+  if typeof(pb.manifest) == "string" and pb.manifest != "" then
+    manifest_bytes = fs.readAllBytes(pb.manifest)
+    if typeof(manifest_bytes) == "error" then return manifest_bytes end if
+    h = _hash_bytes(h, manifest_bytes)
+  end if
 
   roots = [_dirname(input_path)]
   if typeof(include_dirs) == "array" and len(include_dirs) > 0 then
@@ -467,6 +469,49 @@ function restore(pb, digest, output_path)
   return typeof(copied) != "error"
 end function
 
+function _object_cache_dir(pb, digest)
+  return _join(_join(pb.cache_dir, "objects"), digest)
+end function
+
+// Return a complete immutable MLO set for this exact project fingerprint.
+// Publication metadata is written last, so a crashed population is always a
+// miss and can never feed a partial directory to the linker.
+function restoreObjects(pb, digest)
+  if typeof(pb) != "struct" or pb.incremental == false then return "" end if
+  obj_dir = _object_cache_dir(pb, digest)
+  state_path = _join(obj_dir, "objects.state")
+  if fs.isFile(state_path) == false then return "" end if
+  state = fs.readAllText(state_path)
+  if typeof(state) != "string" then return "" end if
+  state_lines = s.split(state, "\n")
+  if len(state_lines) < 2 or s.trim(state_lines[0]) != digest then return "" end if
+  expected_names = []
+  for si = 1 to len(state_lines) - 1
+    expected_name = s.trim(state_lines[si])
+    if expected_name != "" then expected_names = expected_names + [expected_name] end if
+  end for
+  names = fs.listDir(obj_dir)
+  if typeof(names) != "array" then return "" end if
+  mlo_names = []
+  mlo_count = 0
+  support_count = 0
+  for i = 0 to len(names) - 1
+    name = names[i]
+    if typeof(name) != "string" or s.endsWith(s.toLowerAscii(name), ".mlo") == false then continue end if
+    if fs.isFile(_join(obj_dir, name)) == false then return "" end if
+    mlo_names = mlo_names + [name]
+    mlo_count = mlo_count + 1
+    if s.endsWith(s.toLowerAscii(name), "_support.mlo") then support_count = support_count + 1 end if
+  end for
+  mlo_names = sort.sortBy(mlo_names, _string_less)
+  if len(expected_names) != len(mlo_names) then return "" end if
+  for ni = 0 to len(mlo_names) - 1
+    if expected_names[ni] != mlo_names[ni] then return "" end if
+  end for
+  if mlo_count <= 0 or support_count != 1 then return "" end if
+  return obj_dir
+end function
+
 // Atomically update the cached artifact and its validation metadata.
 function _atomic_replace(source_path, destination_path)
 #if TARGET_OS == "windows"
@@ -494,6 +539,59 @@ function store(pb, digest, output_path)
   if typeof(moved_artifact) == "error" then return moved_artifact end if
   // Publish metadata last. A crash between the two moves can only produce a
   // cache miss because the old digest no longer validates the new artifact.
+  return _atomic_replace(state_tmp, state_path)
+end function
+
+// Populate the flat per-fingerprint object directory and publish its state
+// marker only after every object copy succeeds.
+function storeObjects(pb, digest, source_dir)
+  if typeof(pb) != "struct" or pb.incremental == false then return true end if
+  if fs.isDir(source_dir) == false then return error(1, "object source directory does not exist") end if
+  objects_root = _join(pb.cache_dir, "objects")
+  obj_dir = _object_cache_dir(pb, digest)
+  if _ensure_dir(pb.cache_dir) == false or _ensure_dir(objects_root) == false or _ensure_dir(obj_dir) == false then
+    return error(1, "failed to create project object cache directory")
+  end if
+
+  // Clear an earlier unpublished attempt for the same content key. Complete
+  // entries return before this function is called and are never rewritten.
+  old_names = fs.listDir(obj_dir)
+  if typeof(old_names) == "array" and len(old_names) > 0 then
+    for oi = 0 to len(old_names) - 1
+      old_path = _join(obj_dir, old_names[oi])
+      if fs.isDir(old_path) == false and fs.delete(old_path) == false then
+        return error(1, "failed to clear incomplete project object cache")
+      end if
+    end for
+  end if
+
+  names = fs.listDir(source_dir)
+  if typeof(names) != "array" then return error(1, "failed to enumerate object source directory") end if
+  names = sort.sortBy(names, _string_less)
+  copied_count = 0
+  support_count = 0
+  cached_names = []
+  for i = 0 to len(names) - 1
+    name = names[i]
+    if typeof(name) != "string" or s.endsWith(s.toLowerAscii(name), ".mlo") == false then continue end if
+    source_path = _join(source_dir, name)
+    if fs.isFile(source_path) == false then continue end if
+    copied = fs.copyFile(source_path, _join(obj_dir, name), true)
+    if typeof(copied) == "error" then return copied end if
+    cached_names = cached_names + [name]
+    copied_count = copied_count + 1
+    if s.endsWith(s.toLowerAscii(name), "_support.mlo") then support_count = support_count + 1 end if
+  end for
+  if copied_count <= 0 or support_count != 1 then return error(1, "object cache requires one complete support object") end if
+
+  state_path = _join(obj_dir, "objects.state")
+  state_tmp = state_path + ".tmp"
+  state_text = digest + "\n"
+  for ni = 0 to len(cached_names) - 1
+    state_text = state_text + cached_names[ni] + "\n"
+  end for
+  written = fs.writeAllText(state_tmp, state_text)
+  if typeof(written) == "error" then return written end if
   return _atomic_replace(state_tmp, state_path)
 end function
 

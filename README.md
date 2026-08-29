@@ -265,14 +265,20 @@ the Python implementation uses `tomllib` and therefore accepts full TOML.
 The incremental cache is deliberately conservative. Its fingerprint covers the
 manifest, effective compiler arguments, compiler executable identity and every
 `.ml` source below the entry/include roots. An exact hit restores the already
-linked executable. Any relevant change performs a full build; this is artifact
-caching, not per-module incremental compilation. Listing, label-dump and
+linked executable. When that final artifact is unavailable but a complete
+fingerprint-matched `.mlo` set remains, the self-hosted compiler relinks those
+objects without repeating parsing, analysis or code generation. The object
+manifest records the sorted expected file set and is published last, so a
+crashed or later-damaged population becomes a miss instead of feeding a partial
+directory to the linker.
+
+Any relevant input change still performs a full build; this is exact whole-build
+caching, not per-module dependency invalidation. Listing, label-dump and
 self-frontcheck builds bypass the cache. Omit `object_pipeline` to let the
 self-hosted compiler select by the recursively measured import graph, or set it
 explicitly to force either pipeline. The same manifest works with the Python
 compiler, which accepts both values but emits the equivalent monolithic image.
-Cache artifacts and validation metadata are published atomically, so an
-interrupted update becomes a miss instead of restoring a partial build.
+Final artifacts and validation metadata are also published atomically.
 
 ### Conditional compilation
 
@@ -453,13 +459,22 @@ Notes:
   writer isolates short-lived semantic batches while append-only data builders
   and constant pools stay shared; completed assembler fragments are discarded.
   The hot-path guard in `scripts/check_hotpath_concats.ps1` prevents the main
-  declaration/scope paths from regressing to growing-array concatenation.
+  declaration/scope paths and nested-statement analysis worklists from
+  regressing to growing-array concatenation.
 - Function-object emission uses bounded batches of eight functions, or four for
   the compiler backend's largest function groups. Per-function qualification
   maps use generation-stamped clearing, so resetting a large open-addressing
   table is O(1) while lookup order and emitted bytes remain deterministic.
+  Little-endian object fields are appended directly to paged byte storage
+  instead of allocating a temporary four-byte object for every integer.
   `--profile-compiler` also separates batch setup, code generation and object
   serialization time to make future object-pipeline work measurable.
+- Object emission remains deliberately serial. A background-writer prototype
+  was measured on a complete self-build, exceeded six minutes and about 3.6 GiB
+  working set, and was removed. Competing managed heaps and GC coordination cost
+  more than the attempted codegen/serialization overlap saved; process-level
+  parallelism should only return with isolated heaps and deterministic merge
+  boundaries.
 - Compiler-internal `.rdata` and `.data` labels use chunked, indexed builders;
   section relocation records are chunked as well. The parsed AST and active
   codegen graph remain explicit GC roots through canonical function emission,

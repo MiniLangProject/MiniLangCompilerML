@@ -24,6 +24,21 @@ function _test_fastmap_clear()
   return true
 end function
 
+function _test_byte_pages_u32()
+  name = "byte_pages_u32"
+  pages = t.byte_pages_new()
+  pages = t.byte_pages_append_u32(pages, 0x78563412)
+  pages = t.byte_pages_append(pages, bytes(65529, 0xAA))
+  pages = t.byte_pages_append_u32(pages, 0x89ABCDEF)
+  flat = t.byte_pages_to_bytes(pages)
+  if len(flat) != 65537 or flat[0] != 0x12 or flat[1] != 0x34 or flat[2] != 0x56 or flat[3] != 0x78 or flat[65532] != 0xAA or flat[65533] != 0xEF or flat[65534] != 0xCD or flat[65535] != 0xAB or flat[65536] != 0x89 then
+    print "[FAIL] " + name + " (little-endian page-boundary write failed)"
+    return false
+  end if
+  print "[PASS] " + name
+  return true
+end function
+
 function _q(x)
   if typeof(x) != "string" then return "\"\"" end if
   return "\"" + x + "\""
@@ -203,7 +218,7 @@ function _test_project_manifest(compiler_path, repo_root)
   manifest_abs = _path_join(repo_root, "build\\_rt_project_manifest.toml")
   source_abs = _path_join(repo_root, "build\\_rt_project_source.ml")
   output_abs = _path_join(repo_root, "build\\_rt_project_output.exe")
-  manifest_text = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = false\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 0\n"
+  manifest_text = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = true\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 0\n"
   if typeof(fs.writeAllText(manifest_abs, manifest_text)) == "error" then
     print "[FAIL] " + name + " (could not write manifest)"
     return false
@@ -245,8 +260,20 @@ function _test_project_manifest(compiler_path, repo_root)
     return false
   end if
 
+  // The deterministic MLO cache is an independent recovery layer. Removing
+  // both executable copies must relink the exact cached objects without
+  // parsing or regenerating code.
+  if fs.delete(output_abs) == false or fs.delete(_path_join(cache_abs, "build.exe")) == false then
+    print "[FAIL] " + name + " (could not prepare object-cache restore)"
+    return false
+  end if
+  if _wsystem(cmd) != 0 or fs.exists(output_abs) == false or _run_exe(output_abs, "") != 7 then
+    print "[FAIL] " + name + " (object-cache relink failed)"
+    return false
+  end if
+
   // A changed typed definition is part of the cache identity and selects code.
-  manifest_changed = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = false\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 1\n"
+  manifest_changed = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = true\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 1\n"
   if typeof(fs.writeAllText(manifest_abs, manifest_changed)) == "error" or _wsystem(cmd) != 0 then
     print "[FAIL] " + name + " (define-change rebuild failed)"
     return false
@@ -525,6 +552,7 @@ function main(args)
   fail = 0
 
   if _test_fastmap_clear() then pass = pass + 1 else fail = fail + 1 end if
+  if _test_byte_pages_u32() then pass = pass + 1 else fail = fail + 1 end if
 
   // Suite-style runtime tests
   if _test(compiler_path, repo_root, "array_vector", "tests\\array_vector.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

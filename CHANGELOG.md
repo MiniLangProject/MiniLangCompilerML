@@ -4,6 +4,17 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Reduced self-hosted analysis and `.mlo` allocation traffic: nested-statement
+  scans now use capacity-backed worklists, while little-endian object integers
+  are written directly into paged byte storage without temporary byte objects.
+  Target bytes and the MLO1 format remain unchanged.
+- Added a deterministic per-fingerprint `.mlo` project cache beneath the exact
+  final-artifact cache. If the cached executable is absent, the compiler can
+  relink the validated sorted object set without repeating frontend/codegen
+  work; publication remains atomic and partial populations are rejected.
+- Evaluated and removed a parallel object-writer prototype after it regressed a
+  compiler self-build beyond six minutes and roughly 3.6 GiB working set. The
+  retained implementation remains serial and deterministic.
 - Reduced large `.mlo` link time by pre-sizing global and per-object label maps,
   resolving same-object private relocations through their current shard and
   spacing full label-index collections at bounded 128-object intervals. The

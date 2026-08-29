@@ -1092,6 +1092,38 @@ function byte_pages_append(bp, src)
   return b
 end function
 
+// Append one little-endian 32-bit value without allocating a temporary
+// four-byte object. Object serialization writes several integers per label
+// and relocation, so avoiding that allocation materially reduces allocator
+// and GC traffic on large programs.
+function byte_pages_append_u32(bp, value)
+  b = bp
+  if typeof(b) != "struct" then b = byte_pages_new() end if
+  old = byte_pages_len(b)
+  need = old + 4
+  b = _bp_ensure(b, need)
+
+  ci = old >> 16
+  off = old & 0xFFFF
+  if off <= 65532 then
+    pg = _bp_chunk_get(b, ci)
+    pg[off] = value & 0xFF
+    pg[off + 1] = (value >> 8) & 0xFF
+    pg[off + 2] = (value >> 16) & 0xFF
+    pg[off + 3] = (value >> 24) & 0xFF
+    b = _bp_chunk_set(b, ci, pg)
+  else
+    // A value can straddle two 64-KiB pages. Reuse the general byte setter
+    // for this rare boundary case while still avoiding a bytes allocation.
+    b = byte_pages_set_byte(b, old, value)
+    b = byte_pages_set_byte(b, old + 1, value >> 8)
+    b = byte_pages_set_byte(b, old + 2, value >> 16)
+    b = byte_pages_set_byte(b, old + 3, value >> 24)
+  end if
+  b.size = need
+  return b
+end function
+
 function byte_pages_write_at(bp, offset, src)
   b = bp
   if typeof(b) != "struct" then b = byte_pages_new() end if

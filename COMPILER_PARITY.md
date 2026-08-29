@@ -563,6 +563,60 @@ images with SHA-256
 The Python-bootstrap Stage 1 has the same size but a distinct compiler-image
 hash; target-output parity and the Stage 2/3 fixed point both hold.
 
+## Object emission and cache follow-up
+
+The 29 August 2026 follow-up addressed four self-host bottlenecks without
+changing target semantics or the MLO1 format:
+
+- object integers are serialized directly into paged byte storage instead of
+  allocating one temporary four-byte object per field;
+- the remaining large nested-statement scans use capacity-backed worklists and
+  the hot-path guard rejects copying `stack = stack + children` regressions;
+- project builds retain a deterministic per-fingerprint MLO set beneath the
+  final-executable cache, validate its published sorted file manifest and can
+  relink it when the final artifact is missing;
+- a background MLO-writer prototype was evaluated and removed. A compiler
+  self-build exceeded six minutes and about 3.6 GiB working set because the
+  extra managed heap and GC coordination outweighed serialization overlap.
+
+The same-source MiniQuake A/B used clean commit
+`59ac8cfc6c447c82b207100741512359f95e595c`, the same include roots, heap
+settings and automatic object-pipeline selection in both runs:
+
+| Build | Wall/profile time | Change |
+| --- | ---: | ---: |
+| preceding self-hosted fixed-point compiler | 419.078 s | baseline |
+| final optimized fixed-point compiler | 388.859 s | -30.219 s (-7.21%) |
+| retained 497-object relink | 18.672 s | -95.20% vs full optimized build |
+
+The final full build spent 12.237 seconds in batch setup, 282.524 seconds in
+function code generation and 40.473 seconds in object serialization. The
+retained-object path was 20.83 times faster than the full optimized build and
+emitted the exact same image.
+
+The old self-host, final self-host, Python compiler and retained-object relink
+all produced one byte-identical 57,197,056-byte PE with SHA-256
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`.
+The final and Python images both passed the MiniQuake `--version` startup
+smoke. Because their complete executable bytes match, this compiler-only work
+cannot introduce a generated-code runtime-performance difference.
+
+Three full builds of the final compiler source took 204.969, 213.574 and
+190.267 seconds (median 204.969 seconds). The single preceding-source baseline
+was 194.437 seconds, so the nominal median is 5.42% higher; that comparison also
+includes the newly added cache implementation and falls inside the observed
+self-build spread, so it is not treated as a throughput win. Correctness is
+stronger: consecutive final Stages 4, 5 and 6 are byte-identical 60,135,936-byte
+compiler images with SHA-256
+`A7CC35492AC4E2A0F470EEB683AC5DC5DF6B7C192A14365B52252E6430322B70`.
+
+The complete final-compiler acceptance run finished in 70.698 seconds. The
+MiniLang harness reported 107 passed and 0 failed, while all Windows and WSL
+Linux host gates passed, including monolithic/object byte identity, standalone
+retained-directory relinking, GC, threads, SIMD, standard-library and project
+cache coverage. The project test explicitly removes both executable copies and
+successfully restores the result through an `object cache hit` relink.
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:

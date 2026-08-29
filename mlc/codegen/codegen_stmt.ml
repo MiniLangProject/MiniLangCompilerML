@@ -2778,12 +2778,15 @@ function _infer_known_int_names(state, fn_node)
     for i = 0 to len(globals) - 1 excluded = _arr_add_unique(excluded, _coerce_name(globals[i])) end for
   end if
 
-  stack = []
   body = try(fn_node.body)
-  if typeof(body) == "array" then stack = body + [] end if
+  if typeof(body) != "array" then body = [] end if
+  // Large functions can expose thousands of nested statements. Keep this
+  // forward worklist capacity-backed instead of copying its complete prefix
+  // every time children are discovered.
+  stack = t.arr_vec_from_array(body, 256)
   stack_pos = 0
-  while stack_pos < len(stack)
-    st = stack[stack_pos]
+  while stack_pos < t.arr_vec_count(stack)
+    st = t.arr_vec_get(stack, stack_pos, void)
     stack_pos = stack_pos + 1
     if typeof(st) != "struct" then continue end if
     k = _coerce_name(try(st.node_kind))
@@ -2813,7 +2816,9 @@ function _infer_known_int_names(state, fn_node)
       excluded = _arr_add_unique(excluded, _foreach_var_name(st))
     end if
     kids = _scan_stmt_children(st)
-    if typeof(kids) == "array" and len(kids) > 0 then stack = stack + kids end if
+    if typeof(kids) == "array" and len(kids) > 0 then
+      for each child_stmt in kids stack = t.arr_vec_push(stack, child_stmt) end for
+    end if
   end while
 
   if len(loop_names) > 0 then
@@ -3486,10 +3491,10 @@ function _fast_index_scan_loop(loop_node, index_name)
   mutated = []
   body = try(loop_node.body)
   if typeof(body) != "array" then body = [] end if
-  stack = body + []
+  stack = t.arr_vec_from_array(body, 64)
   pos = 0
-  while pos < len(stack)
-    st = stack[pos]
+  while pos < t.arr_vec_count(stack)
+    st = t.arr_vec_get(stack, pos, void)
     pos = pos + 1
     if typeof(st) != "struct" then continue end if
     k = _coerce_name(try(st.node_kind))
@@ -3511,7 +3516,9 @@ function _fast_index_scan_loop(loop_node, index_name)
     child = try(st.iterable); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
     child = try(st.obj); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
     kids = _scan_stmt_children(st)
-    if typeof(kids) == "array" and len(kids) > 0 then stack = stack + kids end if
+    if typeof(kids) == "array" and len(kids) > 0 then
+      for each child_stmt in kids stack = t.arr_vec_push(stack, child_stmt) end for
+    end if
   end while
   return [targets, mutated]
 end function

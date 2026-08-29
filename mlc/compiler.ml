@@ -2882,7 +2882,7 @@ function _mlo_bp_push(bp, b)
 end function
 
 function _mlo_bp_u32(bp, value)
-  return _mlo_bp_push(bp, t.u32(value))
+  return t.byte_pages_append_u32(bp, value)
 end function
 
 function _mlo_bp_bytes(bp, b)
@@ -6319,6 +6319,7 @@ function run_cli(args)
   project_build = expanded_project.project
   project_digest = ""
   project_cache_enabled = false
+  project_object_cache_dir = ""
   _mem_probe_enabled = _has_flag(args, "--mem-probe")
   _compiler_profile_enabled = _has_flag(args, "--profile-compiler")
   _compiler_profile_reset()
@@ -6474,13 +6475,27 @@ function run_cli(args)
 
   compile_rc = 0
   if _object_pipeline_enabled and _object_emit_only == false then
-    // The coordinator no longer needs import-scan source buffers while the
-    // emitter owns the large compiler heap. Collect before spawning so those
-    // two memory sets do not overlap for the duration of code generation.
-    gc_collect()
-    compile_rc = _emit_obj_dir_in_fresh_process(args)
-    if compile_rc == 0 then
-      compile_rc = link_obj_dir_to_exe(_tmp_obj_dir(out_path), out_path, subsystem)
+    if project_cache_enabled then project_object_cache_dir = project.restoreObjects(project_build, project_digest) end if
+    if project_object_cache_dir != "" then
+      print "OK: object cache hit; linking " + project_object_cache_dir
+      compile_rc = link_obj_dir_to_exe(project_object_cache_dir, out_path, subsystem)
+    else
+      // The coordinator no longer needs import-scan source buffers while the
+      // emitter owns the large compiler heap. Collect before spawning so those
+      // two memory sets do not overlap for the duration of code generation.
+      gc_collect()
+      compile_rc = _emit_obj_dir_in_fresh_process(args)
+      emitted_obj_dir = _tmp_obj_dir(out_path)
+      if compile_rc == 0 and project_cache_enabled then
+        object_cache_store = project.storeObjects(project_build, project_digest, emitted_obj_dir)
+        if typeof(object_cache_store) == "error" then
+          print "ProjectError: cannot update incremental object cache"
+          return 2
+        end if
+      end if
+      if compile_rc == 0 then
+        compile_rc = link_obj_dir_to_exe(emitted_obj_dir, out_path, subsystem)
+      end if
     end if
   else
     compile_rc = compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
