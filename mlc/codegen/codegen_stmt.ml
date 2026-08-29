@@ -2966,11 +2966,10 @@ function _infer_known_int_names(state, fn_node, flow_inputs)
     end for
   end while
 
-  kept_b = t.arr_chunk_new(len(candidates))
-  for each candidate_name in candidates
-    if t.fastmap_get(candidate_index, candidate_name, 0) != 0 then kept_b = t.arr_chunk_push(kept_b, candidate_name) end if
-  end for
-  return t.arr_chunk_finish(kept_b)
+  // Keep the indexed lattice as the emission-time representation. Converting
+  // it back to an array made every later Var query linear in the number of
+  // inferred locals and discarded the index we had already paid to build.
+  return candidate_index
 end function
 
 function inline _typeflow_base(type_name)
@@ -3408,13 +3407,9 @@ function _infer_known_value_types(state, fn_node, flow_inputs)
       end for
     end if
   end while
-  facts_b = t.arr_chunk_new(32)
-  for each fact_name in fact_names
-    fact_value = _typeflow_get(facts_index, fact_name)
-    if fact_value != "" then facts_b = t.arr_chunk_push(facts_b, [fact_name, fact_value]) end if
-  end for
-  facts = t.arr_chunk_finish(facts_b)
-  return facts
+  // Emission only needs exact-name lookup. Retain the converged table instead
+  // of materializing ordered pairs and linearly rescanning them for each use.
+  return facts_index
 end function
 
 // Collect only assignment targets inside loops. Scanning statements rather

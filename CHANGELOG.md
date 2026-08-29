@@ -4,6 +4,11 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Retained converged integer-flow and value-type lattices as function-local
+  hash indexes during emission instead of converting them back to arrays for
+  repeated linear lookup. This reduced the fixed-point self-build from 149.766
+  to 126.951 seconds and a cold MiniQuake build from 286.077 to 244.399 seconds
+  while preserving exact Python/self-host target bytes.
 - Combined integer-flow collection, value-type collection and loop-hot-local
   discovery into one deterministic function-statement traversal. On the final
   fixed-point compiler this reduced a cold MiniQuake build from 352.740 to

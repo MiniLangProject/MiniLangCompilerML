@@ -15,6 +15,12 @@ $checks = @(
 $worklistChecks = @(
   @{ File = "mlc\codegen\codegen_stmt.ml"; Functions = @("_infer_known_int_names", "_infer_known_value_types", "_fast_index_scan_loop") }
 )
+$indexedFactChecks = @(
+  @{ File = "mlc\codegen\codegen_stmt.ml"; Function = "_infer_known_int_names"; Pattern = "return\s+candidate_index\b"; Message = "integer facts were converted back from their hash index" },
+  @{ File = "mlc\codegen\codegen_stmt.ml"; Function = "_infer_known_value_types"; Pattern = "return\s+facts_index\b"; Message = "value-type facts were converted back from their hash index" },
+  @{ File = "mlc\codegen\codegen_expr.ml"; Function = "_intflow_name_has"; Pattern = "fastmap_get\s*\("; Message = "integer fact lookup lost its indexed path" },
+  @{ File = "mlc\codegen\codegen_expr.ml"; Function = "_opt_type_fact_get"; Pattern = "fastmap_get\s*\("; Message = "value-type lookup lost its indexed path" }
+)
 
 $failures = @()
 foreach ($check in $checks) {
@@ -55,6 +61,26 @@ foreach ($check in $worklistChecks) {
   }
 }
 
+# Analysis already converges in hash tables. Guard the emission boundary so a
+# future cleanup cannot silently rematerialize arrays and restore linear lookup
+# for every variable expression in large functions.
+foreach ($check in $indexedFactChecks) {
+  $path = Join-Path $root $check.File
+  $source = Get-Content -LiteralPath $path -Raw
+  $escaped = [Regex]::Escape($check.Function)
+  $match = [Regex]::Match(
+    $source,
+    "(?ms)^function(?:\s+inline)?\s+$escaped\s*\([^\r\n]*\).*?^end function\s*$"
+  )
+  if (-not $match.Success) {
+    $failures += "$($check.File): function '$($check.Function)' was not found"
+    continue
+  }
+  if (-not [Regex]::IsMatch($match.Value, $check.Pattern)) {
+    $failures += "$($check.File): $($check.Message)"
+  }
+}
+
 # The former helper flattened every statement-valued field through repeated
 # array concatenation before callers copied the result into their worklists.
 # Keep that allocator-heavy API retired; the replacement appends directly to
@@ -70,5 +96,5 @@ if ($failures.Count -gt 0) {
   exit 1
 }
 
-Write-Host "[PASS] compiler hot paths contain no growing-array concatenations"
+Write-Host "[PASS] compiler hot paths retain capacity-backed worklists and indexed facts"
 exit 0

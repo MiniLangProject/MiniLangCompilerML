@@ -686,6 +686,40 @@ reported 107 passed and 0 failed in 64.142 seconds internally (64.731 seconds
 including the PowerShell harness), with every Windows and WSL/Linux host gate
 green.
 
+## Indexed emission facts
+
+The next 29 August 2026 pass kept the already-converged integer-flow and
+value-type inference tables in their compact hash-index representation through
+function emission. The previous path materialized ordered arrays after analysis
+and then linearly searched them for every relevant variable expression. Legacy
+array lookup remains accepted for bootstrap compatibility, but current compiler
+stages use exact-name O(1) lookup and avoid the conversion allocation.
+
+Consecutive final Stages 2 and 3 completed in 126.449 and 126.951 seconds and
+produced byte-identical 60,251,648-byte compiler images with SHA-256
+`F3A0C48208DCE5446F815A5039ADA3609A20ED8A71EF44D84A6B93C676E42B5B`.
+Using the stable Stage 3 comparison, this is 15.23% faster than the preceding
+149.766-second fixed point and 32.81% faster than the 188.948-second compiler
+before shared flow collection.
+
+The directly comparable cold profiled MiniQuake build improved from 286.077 to
+244.399 seconds (14.57%). Function-batch codegen fell from 211.235 to 177.229
+seconds (16.10%); all 495 canonical function batches were emitted. Relative to
+the 352.740-second baseline before both flow optimizations, the cumulative
+MiniQuake reduction is 30.72%.
+
+The resulting MiniQuake executable is byte-identical to both the preceding
+self-host image and the Python compiler output: 57,197,056 bytes with SHA-256
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`.
+Its `--version` startup smoke passed. The full acceptance run reported 107
+passed and 0 failed in 63.517 seconds internally (64.084 seconds including the
+PowerShell wrapper), with all Windows and WSL/Linux host gates green.
+
+A direct parser-struct-id expression-dispatch prototype was also measured. Its
+extra type checks and inlined dispatch expansion increased the compiler build
+to 309.264 seconds, so it was removed completely; no unmeasured numeric-tag
+path remains in the final source.
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:

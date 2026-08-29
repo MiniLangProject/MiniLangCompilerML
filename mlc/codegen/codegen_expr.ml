@@ -1960,6 +1960,7 @@ function _emit_expr_unary(state, expr)
 end function
 
 function _intflow_name_has(arr, name)
+  if typeof(arr) == "struct" then return t.fastmap_get(arr, name, 0) != 0 end if
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
     if arr[i] == name then return true end if
@@ -2034,6 +2035,11 @@ function _opt_type_exact_length(type_name)
 end function
 
 function _opt_type_fact_get(items, name)
+  if typeof(items) == "struct" then
+    fact = t.fastmap_get(items, name, "")
+    if typeof(fact) == "string" then return fact end if
+    return ""
+  end if
   if typeof(items) != "array" or len(items) <= 0 then return "" end if
   for i = 0 to len(items) - 1
     rec = items[i]
