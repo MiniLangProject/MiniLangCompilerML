@@ -720,6 +720,45 @@ extra type checks and inlined dispatch expansion increased the compiler build
 to 309.264 seconds, so it was removed completely; no unmeasured numeric-tag
 path remains in the final source.
 
+## Local MLO relocations and label pruning
+
+The next serial object-pipeline pass introduced MLO version 2. A text patch
+whose target is already defined in its source fragment now stores the target's
+U32 text offset instead of its label string. Cross-object and cross-section
+targets remain named. Only externally reachable text labels are serialized in
+normal builds; `--dump-labels` keeps the complete diagnostic label surface.
+The `MLO1` family magic remains stable, and all object readers accept both
+versions 1 and 2 so retained v1 caches can still be linked.
+
+The comparison used exactly the same current compiler source and 296 canonical
+objects. The preceding fixed-point compiler emitted v1; the new fixed-point
+compiler emitted v2. Both sets linked to the same 60,421,120-byte executable:
+
+`933BB2B5EB1C1285860CC22DF4ADB99DB7FB62897760080BB446A95FF6143032`
+
+| Metric | MLO v1 | MLO v2 | Change |
+| --- | ---: | ---: | ---: |
+| Retained object bytes | 223,663,521 | 158,547,517 | -29.11% |
+| Retained object size | 213.30 MiB | 151.20 MiB | -29.11% |
+| Mean of two alternating relinks | 22.370 s | 5.808 s | -74.04% |
+| Sampled linker peak working set | 1,471.0 MiB | 835.5 MiB | -43.20% |
+
+The v1 relinks measured 22.598 and 22.142 seconds; v2 measured 5.805 and
+5.811 seconds with the same final compiler and alternating run order. The new
+linker also relinked the previous 1,231,724-label v1 compiler object directory
+to its original SHA-256 exactly, directly exercising backward compatibility.
+
+Consecutive v2 Stages 2 and 3 are byte-identical at the size and hash above.
+The complete acceptance run reported 107 passed and 0 failed; all Windows and
+WSL/Linux gates passed, including object/monolithic identity and retained v2
+relinking. Direct Python/self-host comparisons remained byte-identical for the
+Windows language suite
+(`8E1571FD5077ACF0F978B493A56A900F708BD50CDBB8F01D22BB4C77A8F50E08`),
+the optimization suite
+(`C75143B7183C03578E6C63BC58A8E0DB1336062F25DE913D6707BDB5A2307F0C`)
+and Linux target smoke
+(`731030F6885FFA88149A2D908E505C9D571EDFFC54B1979ECEE800DE581F4489`).
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:

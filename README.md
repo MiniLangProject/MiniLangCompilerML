@@ -499,9 +499,22 @@ Notes:
   index. Local relocations address the current shard directly, while legacy
   names retain the general parser fallback. Label-index GC runs at bounded
   128-object intervals, and `--profile-compiler` reports public/private label,
-  shard and collection counts. Object emission retains the canonical v1
-  representation because dictionary-based compression cost more CPU overall
-  than it saved during the later link.
+  shard and collection counts.
+- Current object emission writes MLO v2 while retaining the length-prefixed
+  `MLO1` family magic. Each relocation carries a target tag: named external or
+  cross-section targets keep their UTF-8 symbol, while targets already defined
+  in the same text fragment use a direct U32 text offset. Consequently, local
+  control-flow labels do not enter the normal object symbol table or the global
+  linker map. The reader accepts both v1 and v2, so retained v1 project caches
+  and object directories remain linkable; new writes always use v2. A
+  `--dump-labels` diagnostic build deliberately retains internal labels.
+- On an exact 296-object compiler A/B from the same source, MLO v2 reduced the
+  retained set from 213.30 to 151.20 MiB (29.11%). Two alternating relinks with
+  the same final compiler averaged 22.370 seconds for v1 and 5.808 seconds for
+  v2, a 74.04% reduction (3.85x throughput). A separately sampled linker peak
+  working set fell from 1,471.0 to 835.5 MiB (43.20%). Both object sets emitted
+  the same 60,421,120-byte executable with SHA-256
+  `933BB2B5EB1C1285860CC22DF4ADB99DB7FB62897760080BB446A95FF6143032`.
 - By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 

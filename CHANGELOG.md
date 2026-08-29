@@ -4,6 +4,16 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Added the backward-readable MLO v2 relocation encoding. Same-fragment text
+  targets are stored as direct U32 offsets and their local labels are omitted
+  from normal object symbol tables; named cross-object and cross-section
+  targets retain the existing resolution path. On the same current 296-object
+  compiler source, retained objects shrank from 213.30 to 151.20 MiB (29.11%).
+  Two alternating relinks with the same final compiler averaged 22.370 seconds
+  for v1 and 5.808 seconds for v2 (74.04% less, 3.85x throughput), while one
+  sampled linker peak fell from 1,471.0 to 835.5 MiB (43.20%). The v1 and v2
+  object sets linked to the same byte-identical compiler image, and readers
+  continue to accept existing v1 caches.
 - Retained converged integer-flow and value-type lattices as function-local
   hash indexes during emission instead of converting them back to arrays for
   repeated linear lookup. This reduced the fixed-point self-build from 149.766

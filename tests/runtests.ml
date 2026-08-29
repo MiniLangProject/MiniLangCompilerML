@@ -331,10 +331,11 @@ function _test_pipeline_determinism(compiler_path, repo_root)
     return false
   end if
   // The first length-prefixed field is the four-byte "MLO1" magic, so the
-  // little-endian format version starts at byte offset eight.
+  // little-endian format version starts at byte offset eight. Version two
+  // distinguishes named targets from compact same-fragment text offsets.
   object_abs = _path_join(repo_root, "build\\tmp\\_rt_pipeline_repeat\\000_codegen_optimizations.mlo")
   object_bytes = fs.readAllBytes(object_abs)
-  if typeof(object_bytes) != "bytes" or len(object_bytes) < 12 or object_bytes[8] != 1 or object_bytes[9] != 0 or object_bytes[10] != 0 or object_bytes[11] != 0 then
+  if typeof(object_bytes) != "bytes" or len(object_bytes) < 12 or object_bytes[8] != 2 or object_bytes[9] != 0 or object_bytes[10] != 0 or object_bytes[11] != 0 then
     print "[FAIL] " + name + " (object pipeline did not emit the canonical MLO version)"
     return false
   end if

@@ -2246,7 +2246,10 @@ function _mlo_labels_from_asm_labels(arr)
   return t.arr_chunk_finish(out_b)
 end function
 
-function _mlo_patches_from_asm(arr)
+// Encode targets already defined in this text fragment as numeric offsets.
+// MLO v2 lets the linker resolve these overwhelmingly common relocations
+// without serializing, hashing or retaining their private label names.
+function _mlo_patches_from_asm(arr, label_pos_map)
   out_b = t.arr_chunk_new(64)
   if typeof(arr) == "array" and len(arr) > 0 then
     for i = 0 to len(arr) - 1
@@ -2263,7 +2266,15 @@ function _mlo_patches_from_asm(arr)
       trg = _coerce_name(try(it.target))
       kind = _coerce_name(try(it.kind))
       if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
-      out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
+      local_target = -1
+      if typeof(label_pos_map) == "struct" then
+        local_target = t.fastmap_get(label_pos_map, trg, -1)
+      end if
+      if typeof(local_target) == "int" and local_target >= 0 then
+        out_b = t.arr_chunk_push(out_b, MloPatch(pos, local_target, kind))
+      else
+        out_b = t.arr_chunk_push(out_b, MloPatch(pos, trg, kind))
+      end if
     end for
   end if
   return t.arr_chunk_finish(out_b)
@@ -2324,8 +2335,10 @@ end function
 function _mlo_from_state(kind, module_file, entry_label, st)
   asm_labels = []
   asm_patches = []
+  asm_label_pos_map = 0
   text_buf = bytes(0)
   if typeof(st.asm) == "struct" then
+    asm_label_pos_map = st.asm.label_pos_map
     asm_labels = a.get_labels(st.asm)
     asm_patches = a.get_patches(st.asm)
     st.asm = a.materialize(st.asm)
@@ -2373,8 +2386,8 @@ function _mlo_from_state(kind, module_file, entry_label, st)
     rdata_buf,
     data_buf,
     bss_size,
-    _mlo_labels_from_asm_labels(asm_labels),
-    _mlo_patches_from_asm(asm_patches),
+    _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_patches),
+    _mlo_patches_from_asm(asm_patches, asm_label_pos_map),
     rdata_labels,
     rdata_patches,
     data_labels,
@@ -2409,6 +2422,60 @@ function _mlo_patches_after(patches, prefix_off)
       kind = _coerce_name(try(pt.kind))
       if trg == "" or trg == "unknown" or kind == "" or kind == "unknown" then continue end if
       out_b = t.arr_chunk_push(out_b, MloPatch(off0 - prefix_off, trg, kind))
+    end for
+  end if
+  return t.arr_chunk_finish(out_b)
+end function
+
+// Only labels that can be referenced from another canonical object need to
+// enter the MLO symbol table. Same-fragment rel32/rip32 targets are carried as
+// numeric MLO-v2 offsets, so their private control-flow names are no longer
+// needed. Keeping them made the linker hash more than a million dead names
+// during a compiler self-build.
+function _mlo_is_exported_text_label(name, entry_label, required_targets)
+  if typeof(name) != "string" or name == "" then return false end if
+  if name == entry_label or name == "__ml_entry" or name == "_start" then return true end if
+  if _startsWith(name, "modinit_") then return true end if
+  if _startsWith(name, "fn_") then
+    if _startsWith(name, "fn_ret_") or _startsWith(name, "fn_defer_") then return false end if
+    return true
+  end if
+  if typeof(required_targets) == "struct" and t.fastmap_has(required_targets, name) then return true end if
+  return false
+end function
+
+function _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_patches)
+  global _dump_labels_path
+  // A label dump is a debugging contract and intentionally retains internal
+  // control-flow names. They do not change the linked executable bytes.
+  if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
+    return _mlo_labels_from_asm_labels(asm_labels)
+  end if
+
+  required_targets = t.fastmap_new(64)
+  patch_sets = [rdata_patches, data_patches]
+  for psi = 0 to len(patch_sets) - 1
+    patches = patch_sets[psi]
+    if typeof(patches) != "array" or len(patches) <= 0 then continue end if
+    for pi = 0 to len(patches) - 1
+      pt = patches[pi]
+      if typeof(pt) != "struct" then continue end if
+      target = _coerce_name(try(pt.target))
+      if target != "" then required_targets = t.fastmap_set(required_targets, target, 1) end if
+    end for
+  end for
+
+  out_b = t.arr_chunk_new(64)
+  if typeof(asm_labels) == "array" and len(asm_labels) > 0 then
+    for i = 0 to len(asm_labels) - 1
+      it = asm_labels[i]
+      if typeof(it) != "struct" then continue end if
+      name = _coerce_name(try(it.name))
+      if _mlo_is_exported_text_label(name, entry_label, required_targets) == false then continue end if
+      pos = try(it.pos)
+      if typeof(pos) != "int" then pos = try(it.offset) end if
+      if typeof(pos) != "int" then pos = 0 end if
+      out_b = t.arr_chunk_push(out_b, MloLabel(name, pos))
     end for
   end if
   return t.arr_chunk_finish(out_b)
@@ -2458,7 +2525,7 @@ end function
 
 // Encode ELF imports in the existing platform-neutral string-list field. PE
 // readers ignore the tagged entries; the ELF linker reconstructs the exact
-// library/symbol/data-slot triplets without changing the stable MLO1 layout.
+// library/symbol/data-slot triplets without adding target-specific fields.
 function _mlo_linux_import_records(dynamic_imports)
   records = []
   if typeof(dynamic_imports) != "array" or len(dynamic_imports) <= 0 then return records end if
@@ -2588,10 +2655,17 @@ function _mlo_resolve_rdata_alias_patches(patches, rb)
   for i = 0 to len(patches) - 1
     pt = patches[i]
     if typeof(pt) != "struct" then continue end if
-    target = _coerce_name(try(pt.target))
+    raw_target = try(pt.target)
     kind = _coerce_name(try(pt.kind))
     offset = try(pt.offset)
     if typeof(offset) != "int" then offset = 0 end if
+    if typeof(raw_target) == "int" then
+      if raw_target >= 0 and kind != "" then
+        out_b = t.arr_chunk_push(out_b, MloPatch(offset, raw_target, kind))
+      end if
+      continue
+    end if
+    target = _coerce_name(raw_target)
     if target == "" or kind == "" then continue end if
     out_b = t.arr_chunk_push(out_b, MloPatch(offset, d.rdata_resolve_alias(rb, target), kind))
   end for
@@ -2668,8 +2742,10 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
 
   asm_labels = []
   asm_patches = []
+  asm_label_pos_map = 0
   text_buf = bytes(0)
   if typeof(st.asm) == "struct" then
+    asm_label_pos_map = st.asm.label_pos_map
     asm_labels = a.get_labels(st.asm)
     asm_patches = a.get_patches(st.asm)
     st.asm = a.materialize(st.asm)
@@ -2721,7 +2797,7 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
   obj = MloObject(
     kind, module_file, entry_label,
     text_buf, rdata_buf, data_buf, bss_size,
-    _mlo_labels_from_asm_labels(asm_labels), _mlo_patches_from_asm(asm_patches),
+    _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_patches), _mlo_patches_from_asm(asm_patches, asm_label_pos_map),
     rdata_labels, rdata_patches, data_labels, data_patches,
     t.arr_chunk_finish(bss_labels_b), _mlo_imports_from_state(st.imports)
   )
@@ -2819,13 +2895,18 @@ function _mlo_rename_patches(patches, label_map)
   for i = 0 to len(patches) - 1
     pt = patches[i]
     if typeof(pt) != "struct" then continue end if
-    trg = _coerce_name(try(pt.target))
-    if trg == "" then continue end if
-    new_trg = t.fastmap_get(label_map, trg, trg)
+    raw_target = try(pt.target)
     off = try(pt.offset)
     if typeof(off) != "int" then off = 0 end if
     kind = _coerce_name(try(pt.kind))
     if kind == "" then continue end if
+    if typeof(raw_target) == "int" then
+      if raw_target >= 0 then renamed_b = t.arr_chunk_push(renamed_b, MloPatch(off, raw_target, kind)) end if
+      continue
+    end if
+    trg = _coerce_name(raw_target)
+    if trg == "" then continue end if
+    new_trg = t.fastmap_get(label_map, trg, trg)
     renamed_b = t.arr_chunk_push(renamed_b, MloPatch(off, new_trg, kind))
   end for
   return t.arr_chunk_finish(renamed_b)
@@ -2936,6 +3017,7 @@ function _mlo_bp_write_patches(bp, patches)
       pt = patches[i]
       if typeof(pt) != "struct" then
         bp = _mlo_bp_u32(bp, 0)
+        bp = _mlo_bp_u32(bp, 0)
         bp = _mlo_bp_string(bp, "")
         bp = _mlo_bp_string(bp, "")
         continue
@@ -2943,7 +3025,14 @@ function _mlo_bp_write_patches(bp, patches)
       off = try(pt.offset)
       if typeof(off) != "int" then off = 0 end if
       bp = _mlo_bp_u32(bp, off)
-      bp = _mlo_bp_string(bp, _coerce_name(try(pt.target)))
+      target = try(pt.target)
+      if typeof(target) == "int" and target >= 0 then
+        bp = _mlo_bp_u32(bp, 1)
+        bp = _mlo_bp_u32(bp, target)
+      else
+        bp = _mlo_bp_u32(bp, 0)
+        bp = _mlo_bp_string(bp, _coerce_name(target))
+      end if
       bp = _mlo_bp_string(bp, _coerce_name(try(pt.kind)))
     end for
   end if
@@ -2986,6 +3075,7 @@ function _mlo_write_patches(ob, patches)
       pt = patches[i]
       if typeof(pt) != "struct" then
         ob = _objbuf_u32(ob, 0)
+        ob = _objbuf_u32(ob, 0)
         ob = _objbuf_string(ob, "")
         ob = _objbuf_string(ob, "")
         continue
@@ -2993,7 +3083,14 @@ function _mlo_write_patches(ob, patches)
       off = try(pt.offset)
       if typeof(off) != "int" then off = 0 end if
       ob = _objbuf_u32(ob, off)
-      ob = _objbuf_string(ob, _coerce_name(try(pt.target)))
+      target = try(pt.target)
+      if typeof(target) == "int" and target >= 0 then
+        ob = _objbuf_u32(ob, 1)
+        ob = _objbuf_u32(ob, target)
+      else
+        ob = _objbuf_u32(ob, 0)
+        ob = _objbuf_string(ob, _coerce_name(target))
+      end if
       ob = _objbuf_string(ob, _coerce_name(try(pt.kind)))
     end for
   end if
@@ -3030,7 +3127,7 @@ end function
 function _write_mlo_file(path, obj)
   bp = t.byte_pages_new()
   bp = _mlo_bp_string(bp, "MLO1")
-  bp = _mlo_bp_u32(bp, 1)
+  bp = _mlo_bp_u32(bp, 2)
   bp = _mlo_bp_string(bp, obj.kind)
   bp = _mlo_bp_string(bp, obj.module_file)
   bp = _mlo_bp_string(bp, obj.entry_label)
@@ -3071,7 +3168,7 @@ function _mlo_read_labels(rd)
   return [rd, t.arr_chunk_finish(out_b)]
 end function
 
-function _mlo_read_patches(rd)
+function _mlo_read_patches(rd, version)
   rc = _objreader_read_u32(rd)
   if typeof(rc) == "error" then return rc end if
   rd = rc[0]
@@ -3083,10 +3180,30 @@ function _mlo_read_patches(rd)
       if typeof(ro) == "error" then return ro end if
       rd = ro[0]
       off = ro[1]
-      rt = _objreader_read_string(rd)
-      if typeof(rt) == "error" then return rt end if
-      rd = rt[0]
-      trg = rt[1]
+      trg = ""
+      if version == 1 then
+        rt = _objreader_read_string(rd)
+        if typeof(rt) == "error" then return rt end if
+        rd = rt[0]
+        trg = rt[1]
+      else
+        rtag = _objreader_read_u32(rd)
+        if typeof(rtag) == "error" then return rtag end if
+        rd = rtag[0]
+        target_tag = rtag[1]
+        if target_tag == 0 then
+          rt = _objreader_read_string(rd)
+          if typeof(rt) == "error" then return rt end if
+          rd = rt[0]
+          trg = rt[1]
+        else
+          if target_tag != 1 then return error(1, "invalid MiniLang object patch target tag") end if
+          rt = _objreader_read_u32(rd)
+          if typeof(rt) == "error" then return rt end if
+          rd = rt[0]
+          trg = rt[1]
+        end if
+      end if
       rk = _objreader_read_string(rd)
       if typeof(rk) == "error" then return rk end if
       rd = rk[0]
@@ -3141,7 +3258,7 @@ function _read_mlo_file(path)
   if typeof(rver) == "error" then return rver end if
   rd = rver[0]
   version = rver[1]
-  if version != 1 then return error(1, "unsupported MiniLang object version") end if
+  if version != 1 and version != 2 then return error(1, "unsupported MiniLang object version") end if
 
   rk = _objreader_read_string(rd)
   if typeof(rk) == "error" then return rk end if
@@ -3183,7 +3300,7 @@ function _read_mlo_file(path)
   rd = r1[0]
   asm_labels = r1[1]
 
-  r2 = _mlo_read_patches(rd)
+  r2 = _mlo_read_patches(rd, version)
   if typeof(r2) == "error" then return r2 end if
   rd = r2[0]
   asm_patches = r2[1]
@@ -3193,7 +3310,7 @@ function _read_mlo_file(path)
   rd = r3[0]
   rdata_labels = r3[1]
 
-  r4 = _mlo_read_patches(rd)
+  r4 = _mlo_read_patches(rd, version)
   if typeof(r4) == "error" then return r4 end if
   rd = r4[0]
   rdata_patches = r4[1]
@@ -3203,7 +3320,7 @@ function _read_mlo_file(path)
   rd = r5[0]
   data_labels = r5[1]
 
-  r6 = _mlo_read_patches(rd)
+  r6 = _mlo_read_patches(rd, version)
   if typeof(r6) == "error" then return r6 end if
   rd = r6[0]
   data_patches = r6[1]
@@ -3231,7 +3348,7 @@ function _debug_validate_patch_names(label, patches)
     end if
     pt_target = try(pt.target)
     pt_kind = try(pt.kind)
-    if typeof(pt_target) != "string" or typeof(pt_kind) != "string" then
+    if (typeof(pt_target) != "string" and typeof(pt_target) != "int") or typeof(pt_kind) != "string" then
       print "[dbg][mlo] bad patch in " + label + " at " + i + " target_type=" + typeof(pt_target) + " target_name=" + _coerce_name(pt_target) + " kind_type=" + typeof(pt_kind) + " kind_name=" + _coerce_name(pt_kind)
       return
     end if
@@ -3638,7 +3755,7 @@ function _mlo_skip_labels(rd)
   return rd
 end function
 
-function _mlo_skip_patches(rd)
+function _mlo_skip_patches(rd, version)
   rc = _objreader_read_u32(rd)
   if typeof(rc) == "error" then return rc end if
   rd = rc[0]
@@ -3648,9 +3765,26 @@ function _mlo_skip_patches(rd)
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return ro end if
       rd = ro[0]
-      rt = _objreader_skip_bytes(rd)
-      if typeof(rt) == "error" then return rt end if
-      rd = rt
+      if version == 1 then
+        rt = _objreader_skip_bytes(rd)
+        if typeof(rt) == "error" then return rt end if
+        rd = rt
+      else
+        rtag = _objreader_read_u32(rd)
+        if typeof(rtag) == "error" then return rtag end if
+        rd = rtag[0]
+        target_tag = rtag[1]
+        if target_tag == 0 then
+          rt = _objreader_skip_bytes(rd)
+          if typeof(rt) == "error" then return rt end if
+          rd = rt
+        else
+          if target_tag != 1 then return error(1, "invalid MiniLang object patch target tag") end if
+          rt = _objreader_read_u32(rd)
+          if typeof(rt) == "error" then return rt end if
+          rd = rt[0]
+        end if
+      end if
       rk = _objreader_skip_bytes(rd)
       if typeof(rk) == "error" then return rk end if
       rd = rk
@@ -3699,7 +3833,7 @@ function _read_mlo_file_for_layout(path)
   if typeof(rver) == "error" then return rver end if
   rd = rver[0]
   version = rver[1]
-  if version != 1 then return error(1, "unsupported MiniLang object version") end if
+  if version != 1 and version != 2 then return error(1, "unsupported MiniLang object version") end if
 
   rkind = _objreader_read_string(rd)
   if typeof(rkind) == "error" then return rkind end if
@@ -3741,7 +3875,7 @@ function _read_mlo_file_for_layout(path)
   rd = r1[0]
   asm_labels = r1[1]
 
-  r2 = _mlo_skip_patches(rd)
+  r2 = _mlo_skip_patches(rd, version)
   if typeof(r2) == "error" then return r2 end if
   rd = r2
 
@@ -3750,7 +3884,7 @@ function _read_mlo_file_for_layout(path)
   rd = r3[0]
   rdata_labels = r3[1]
 
-  r4 = _mlo_skip_patches(rd)
+  r4 = _mlo_skip_patches(rd, version)
   if typeof(r4) == "error" then return r4 end if
   rd = r4
 
@@ -3759,7 +3893,7 @@ function _read_mlo_file_for_layout(path)
   rd = r5[0]
   data_labels = r5[1]
 
-  r6 = _mlo_skip_patches(rd)
+  r6 = _mlo_skip_patches(rd, version)
   if typeof(r6) == "error" then return r6 end if
   rd = r6
 
@@ -3918,7 +4052,7 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   if typeof(rver) == "error" then return [2, label_map, patch_index] end if
   rd = rver[0]
   version = rver[1]
-  if version != 1 then
+  if version != 1 and version != 2 then
     print "CompileError: unsupported MiniLang object version (" + src_patch + ")"
     return [2, label_map, patch_index]
   end if
@@ -3936,10 +4070,10 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   rbss = _objreader_read_u32(rd)
   if typeof(rbss) == "error" then return [2, label_map, patch_index] end if
   rd = rbss[0]
-  // Current MLO objects namespace every private label (objm_N__*) and all of
-  // those labels are already in the combined map.  Avoid decoding and hashing
-  // the full local label table a second time; legacy resolution paths below are
-  // still available on a genuine map miss.
+  // MLO v2 represents same-fragment text targets as direct offsets. Named
+  // labels are already in the combined map, so avoid decoding and hashing the
+  // label table a second time. Legacy v1 and namespaced resolution paths below
+  // remain available on a genuine map miss.
   local_label_map = t.fastmap_new(16)
   local_labels = []
   last_target = ""
@@ -3968,24 +4102,47 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   if text_patch_count > 0 then
     for i = 0 to text_patch_count - 1
       pt_target = ""
+      pt_local = -1
       pt_off = 0
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return [2, label_map, patch_index] end if
       rd = ro[0]
       pt_off = ro[1]
-      rt = _objreader_read_string(rd)
-      if typeof(rt) == "error" then return [2, label_map, patch_index] end if
-      rd = rt[0]
-      pt_target = rt[1]
+      if version == 1 then
+        rt = _objreader_read_string(rd)
+        if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+        rd = rt[0]
+        pt_target = rt[1]
+      else
+        rtag = _objreader_read_u32(rd)
+        if typeof(rtag) == "error" then return [2, label_map, patch_index] end if
+        rd = rtag[0]
+        target_tag = rtag[1]
+        if target_tag == 0 then
+          rt = _objreader_read_string(rd)
+          if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+          rd = rt[0]
+          pt_target = rt[1]
+        else
+          if target_tag != 1 then return [2, label_map, patch_index] end if
+          rt = _objreader_read_u32(rd)
+          if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+          rd = rt[0]
+          pt_local = rt[1]
+        end if
+      end if
       rk = _objreader_skip_bytes(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
       rd = rk
-      if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
+      if pt_local < 0 and (typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown") then
         continue
       end if
 
       trg = -1
-      if pt_target == last_target then
+      if pt_local >= 0 then
+        trg = text_rva + obj_text_off + pt_local
+      else
+        if pt_target == last_target then
         trg = last_value
       else
         // Nearly all streamed patches reference an exact, already-namespaced
@@ -4000,6 +4157,7 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
         end if
         last_target = pt_target
         last_value = trg
+        end if
       end if
       if typeof(trg) != "int" or trg < 0 then
         print "CompileError: unknown patch target: " + pt_target
@@ -4030,24 +4188,47 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   if rdata_patch_count > 0 then
     for i = 0 to rdata_patch_count - 1
       pt_target = ""
+      pt_local = -1
       pt_off = 0
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return [2, label_map, patch_index] end if
       rd = ro[0]
       pt_off = ro[1]
-      rt = _objreader_read_string(rd)
-      if typeof(rt) == "error" then return [2, label_map, patch_index] end if
-      rd = rt[0]
-      pt_target = rt[1]
+      if version == 1 then
+        rt = _objreader_read_string(rd)
+        if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+        rd = rt[0]
+        pt_target = rt[1]
+      else
+        rtag = _objreader_read_u32(rd)
+        if typeof(rtag) == "error" then return [2, label_map, patch_index] end if
+        rd = rtag[0]
+        target_tag = rtag[1]
+        if target_tag == 0 then
+          rt = _objreader_read_string(rd)
+          if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+          rd = rt[0]
+          pt_target = rt[1]
+        else
+          if target_tag != 1 then return [2, label_map, patch_index] end if
+          rt = _objreader_read_u32(rd)
+          if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+          rd = rt[0]
+          pt_local = rt[1]
+        end if
+      end if
       rk = _objreader_skip_bytes(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
       rd = rk
-      if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
+      if pt_local < 0 and (typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown") then
         continue
       end if
 
       trg = -1
-      if pt_target == last_target then
+      if pt_local >= 0 then
+        trg = text_rva + obj_text_off + pt_local
+      else
+        if pt_target == last_target then
         trg = last_value
       else
         trg = _link_direct_patch_target(label_map, obj_index_map, source_obj_map, source_obj_prefix, pt_target)
@@ -4059,6 +4240,7 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
         end if
         last_target = pt_target
         last_value = trg
+        end if
       end if
       if typeof(trg) != "int" or trg < 0 then
         print "CompileError: unknown data patch target: " + pt_target
@@ -4087,24 +4269,47 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   if data_patch_count > 0 then
     for i = 0 to data_patch_count - 1
       pt_target = ""
+      pt_local = -1
       pt_off = 0
       ro = _objreader_read_u32(rd)
       if typeof(ro) == "error" then return [2, label_map, patch_index] end if
       rd = ro[0]
       pt_off = ro[1]
-      rt = _objreader_read_string(rd)
-      if typeof(rt) == "error" then return [2, label_map, patch_index] end if
-      rd = rt[0]
-      pt_target = rt[1]
+      if version == 1 then
+        rt = _objreader_read_string(rd)
+        if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+        rd = rt[0]
+        pt_target = rt[1]
+      else
+        rtag = _objreader_read_u32(rd)
+        if typeof(rtag) == "error" then return [2, label_map, patch_index] end if
+        rd = rtag[0]
+        target_tag = rtag[1]
+        if target_tag == 0 then
+          rt = _objreader_read_string(rd)
+          if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+          rd = rt[0]
+          pt_target = rt[1]
+        else
+          if target_tag != 1 then return [2, label_map, patch_index] end if
+          rt = _objreader_read_u32(rd)
+          if typeof(rt) == "error" then return [2, label_map, patch_index] end if
+          rd = rt[0]
+          pt_local = rt[1]
+        end if
+      end if
       rk = _objreader_skip_bytes(rd)
       if typeof(rk) == "error" then return [2, label_map, patch_index] end if
       rd = rk
-      if typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown" then
+      if pt_local < 0 and (typeof(pt_target) != "string" or pt_target == "" or pt_target == "unknown") then
         continue
       end if
 
       trg = -1
-      if pt_target == last_target then
+      if pt_local >= 0 then
+        trg = text_rva + obj_text_off + pt_local
+      else
+        if pt_target == last_target then
         trg = last_value
       else
         trg = _link_direct_patch_target(label_map, obj_index_map, source_obj_map, source_obj_prefix, pt_target)
@@ -4116,6 +4321,7 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
         end if
         last_target = pt_target
         last_value = trg
+        end if
       end if
       if typeof(trg) != "int" or trg < 0 then
         print "CompileError: unknown data patch target: " + pt_target
@@ -4213,7 +4419,11 @@ function _collect_internal_helper_targets(dst, patches)
   for i = 0 to len(patches) - 1
     pt = patches[i]
     if typeof(pt) != "struct" then continue end if
-    trg = _coerce_name(try(pt.target))
+    raw_target = try(pt.target)
+    // Numeric targets are local MLO-v2 text relocations and cannot introduce
+    // a new runtime-helper dependency outside this fragment.
+    if typeof(raw_target) != "string" then continue end if
+    trg = raw_target
     if _is_internal_helper_label_local(trg) == false then continue end if
     if _array_contains(merged, trg) then continue end if
     merged = merged + [trg]
