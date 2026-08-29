@@ -20,6 +20,46 @@ import mlc.codegen.codegen_threads as th
 _phase_codegen_keepalive = 0
 _module_function_entry_index = 0
 
+// Reusable per-codegen workspaces for the serial function-analysis pipeline.
+// The two fact maps remain distinct because both are live during body emission;
+// dependency, queue, promotion and traversal storage is reset between functions.
+// This backend phase is deliberately serial. Keeping the cache in one ordinary
+// array avoids adding a compiler-only struct shape to generated GC metadata.
+
+function _new_function_analysis_scratch()
+  return [
+    t.arr_vec_new(256),
+    t.arr_vec_new(256),
+    t.fastmap_new(64),
+    t.fastmap_new(64),
+    t.fastmap_new(64),
+    t.fastmap_new(64),
+    t.fastmap_new(64),
+    t.arr_vec_new(64),
+    t.fastmap_new(64)
+  ]
+end function
+
+function _prepare_function_analysis_scratch(value)
+  scratch = value
+  if typeof(scratch) != "array" or len(scratch) < 9 or t.arr_vec_is(scratch[0]) == false or t.arr_vec_is(scratch[7]) == false then
+    scratch = _new_function_analysis_scratch()
+  end if
+  return scratch
+end function
+
+// Keep a map's high-water capacity and advance its epoch in O(1). A later
+// insertion may still grow it, in which case the owning scratch field is
+// updated before the analysis returns.
+function _reset_analysis_map(mapv, minimum_capacity)
+  need = minimum_capacity
+  if typeof(need) != "int" or need < 16 then need = 16 end if
+  if typeof(mapv) == "struct" and typeof(try(mapv.cap)) == "int" and mapv.cap >= need then
+    return t.fastmap_clear(mapv)
+  end if
+  return t.fastmap_new(need)
+end function
+
 function inline _join_qname(prefix, name)
   if typeof(prefix) != "string" or prefix == "" then return name end if
   if prefix[len(prefix) - 1] == "." then
@@ -2756,7 +2796,8 @@ end function
 // Collect the statement facts shared by integer inference, value-type flow and
 // local-register promotion in one deterministic traversal. These analyses used
 // to repeat the same function-sized walk independently.
-function _collect_function_flow_inputs(fn_node)
+function _collect_function_flow_inputs(fn_node, analysis_scratch)
+  scratch = _prepare_function_analysis_scratch(analysis_scratch)
   int_assignments = []
   value_assignments = []
   direct_initializers = []
@@ -2766,7 +2807,7 @@ function _collect_function_flow_inputs(fn_node)
   value_normal_names = []
   int_excluded = []
   value_excluded = []
-  hot_names = t.fastmap_new(64)
+  hot_names = _reset_analysis_map(scratch[2], 64)
   if typeof(fn_node) != "struct" then return [int_assignments, value_assignments, direct_initializers, loop_bounds, loop_names, int_normal_names, value_normal_names, int_excluded, value_excluded, hot_names] end if
 
   params = try(fn_node.params)
@@ -2820,9 +2861,14 @@ function _collect_function_flow_inputs(fn_node)
 
   // A parallel depth vector preserves the promotion pass's exact loop-nesting
   // semantics while the shared statement worklist remains allocation-backed.
-  stack = t.arr_vec_from_array(body, 256)
-  depths = t.arr_vec_new(len(body) + 256)
-  if len(body) > 0 then for i = 0 to len(body) - 1 depths = t.arr_vec_push(depths, 0) end for end if
+  stack = t.arr_vec_clear(scratch[0])
+  depths = t.arr_vec_clear(scratch[1])
+  if len(body) > 0 then
+    for i = 0 to len(body) - 1
+      stack = t.arr_vec_push(stack, body[i])
+      depths = t.arr_vec_push(depths, 0)
+    end for
+  end if
   stack_pos = 0
   while stack_pos < t.arr_vec_count(stack)
     st = t.arr_vec_get(stack, stack_pos, void)
@@ -2897,13 +2943,17 @@ function _collect_function_flow_inputs(fn_node)
     end while
   end while
 
+  scratch[0] = stack
+  scratch[1] = depths
+  scratch[2] = hot_names
   return [int_assignments, value_assignments, direct_initializers, loop_bounds, loop_names, int_normal_names, value_normal_names, int_excluded, value_excluded, hot_names]
 end function
 
-function _infer_known_int_names(state, fn_node, flow_inputs)
+function _infer_known_int_names(state, fn_node, flow_inputs, analysis_scratch)
   if typeof(fn_node) != "struct" then return [] end if
+  scratch = _prepare_function_analysis_scratch(analysis_scratch)
   inputs = flow_inputs
-  if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node) end if
+  if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node, scratch) end if
   assignments = inputs[0]
   loop_bounds = inputs[3]
   loop_names = inputs[4]
@@ -2935,7 +2985,7 @@ function _infer_known_int_names(state, fn_node, flow_inputs)
   // indexed so the few monotone validation passes avoid the quadratic array
   // searches that dominated compiler-sized parser functions. Building a full
   // reverse graph costs more here than revisiting the compact candidate set.
-  candidate_index = t.fastmap_new((len(candidates) * 2) + 64)
+  candidate_index = _reset_analysis_map(scratch[3], (len(candidates) * 2) + 64)
   for each candidate_name in candidates candidate_index = t.fastmap_set(candidate_index, candidate_name, 1) end for
 
   changed = true
@@ -2969,6 +3019,7 @@ function _infer_known_int_names(state, fn_node, flow_inputs)
   // Keep the indexed lattice as the emission-time representation. Converting
   // it back to an array made every later Var query linear in the number of
   // inferred locals and discarded the index we had already paid to build.
+  scratch[3] = candidate_index
   return candidate_index
 end function
 
@@ -3284,10 +3335,11 @@ function _typeflow_scan_expr_dependencies(dependents, owner, ex)
   return dependents
 end function
 
-function _infer_known_value_types(state, fn_node, flow_inputs)
+function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   if typeof(fn_node) != "struct" then return [] end if
+  scratch = _prepare_function_analysis_scratch(analysis_scratch)
   inputs = flow_inputs
-  if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node) end if
+  if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node, scratch) end if
   assignments = inputs[1]
   direct_initializers = inputs[2]
   loop_names = inputs[4]
@@ -3319,7 +3371,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs)
   // chained aliases. Keep the fixed-point facts in an indexed table so each
   // expression lookup stays O(1); materialize the canonical ordered pairs only
   // after convergence for the rest of code generation.
-  facts_index = t.fastmap_new((len(candidates) * 2) + 64)
+  facts_index = _reset_analysis_map(scratch[4], (len(candidates) * 2) + 64)
   fact_names = []
   if len(loop_names) > 0 then
     for i = 0 to len(loop_names) - 1
@@ -3342,7 +3394,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs)
     end for
   end if
 
-  dependents = t.fastmap_new((len(candidates) * 2) + 64)
+  dependents = _reset_analysis_map(scratch[5], (len(candidates) * 2) + 64)
   for each candidate_name in candidates
     candidate_values = _intflow_map_get(assignments, candidate_name)
     for each candidate_expr in candidate_values
@@ -3350,8 +3402,8 @@ function _infer_known_value_types(state, fn_node, flow_inputs)
     end for
   end for
 
-  pending = t.arr_vec_new(len(candidates) + 16)
-  queued = t.fastmap_new((len(candidates) * 2) + 64)
+  pending = t.arr_vec_clear(scratch[7])
+  queued = _reset_analysis_map(scratch[6], (len(candidates) * 2) + 64)
   for each candidate_name in candidates
     pending = t.arr_vec_push(pending, candidate_name)
     queued = t.fastmap_set(queued, candidate_name, 1)
@@ -3382,9 +3434,12 @@ function _infer_known_value_types(state, fn_node, flow_inputs)
 
   // Remove facts invalidated by unresolved assignments and propagate each
   // removal only to facts that actually read it.
-  validate_pending = t.arr_vec_from_array(fact_names, 16)
-  validate_queued = t.fastmap_new((len(fact_names) * 2) + 64)
-  for each fact_name in fact_names validate_queued = t.fastmap_set(validate_queued, fact_name, 1) end for
+  validate_pending = t.arr_vec_clear(pending)
+  validate_queued = _reset_analysis_map(queued, (len(fact_names) * 2) + 64)
+  for each fact_name in fact_names
+    validate_pending = t.arr_vec_push(validate_pending, fact_name)
+    validate_queued = t.fastmap_set(validate_queued, fact_name, 1)
+  end for
   validate_pos = 0
   while validate_pos < t.arr_vec_count(validate_pending)
     nm_v = t.arr_vec_get(validate_pending, validate_pos, "")
@@ -3409,6 +3464,10 @@ function _infer_known_value_types(state, fn_node, flow_inputs)
   end while
   // Emission only needs exact-name lookup. Retain the converged table instead
   // of materializing ordered pairs and linearly rescanning them for each use.
+  scratch[4] = facts_index
+  scratch[5] = dependents
+  scratch[6] = validate_queued
+  scratch[7] = validate_pending
   return facts_index
 end function
 
@@ -3460,15 +3519,16 @@ end function
 // Mirror at most two unique, proven immediate-only locals in Win64 nonvolatile
 // XMM registers. Pointer-like, boxed, captured and ambiguous bindings stay on
 // the canonical stack path so no GC root can disappear into a register.
-function _select_promoted_local_registers(state, fn_node, known_types, shared_hot_names)
+function _select_promoted_local_registers(state, fn_node, known_types, shared_hot_names, analysis_scratch)
+  scratch = _prepare_function_analysis_scratch(analysis_scratch)
   hot_names = shared_hot_names
   if typeof(hot_names) != "struct" then
-    hot_names = t.fastmap_new(64)
+    hot_names = _reset_analysis_map(scratch[2], 64)
     hot_names = _promotion_scan_stmts(hot_names, try(fn_node.body), 0)
   end if
   bindings = state.function_locals
   binding_count = scope.frame_count(bindings)
-  counts = t.fastmap_new(64)
+  counts = _reset_analysis_map(scratch[8], 64)
   if binding_count > 0 then
     for binding_index = 0 to binding_count - 1
       binding = scope.frame_get(bindings, binding_index)
@@ -3497,6 +3557,8 @@ function _select_promoted_local_registers(state, fn_node, known_types, shared_ho
       assigned = assigned + [reg]
     end for
   end if
+  scratch[2] = hot_names
+  scratch[8] = counts
   return [state, assigned]
 end function
 
@@ -7807,13 +7869,14 @@ end function
 function _emit_program_functions_all(state)
   global _phase_codegen_keepalive
   entries = _all_function_entries(state)
+  analysis_scratch = _new_function_analysis_scratch()
   // Native-body pruning is disabled for relocation safety, so emit the
   // canonical function list directly without copying/filtering it first.
   state = _mem_probe(state, "user_fn_emit_start")
   i = 0
   total = len(entries)
   while i < total
-    state = emit_module_function_entries(state, entries, i, 8)
+    state = emit_module_function_entries(state, entries, i, 8, analysis_scratch)
     i = i + 8
     // Large targets may contain millions of local branches. Resolve patches
     // whose .text labels are known in small batches so their records do not
@@ -7825,20 +7888,22 @@ function _emit_program_functions_all(state)
     // wider GC cadence: scanning a multi-gigabyte compiler heap every 128
     // functions dominates large builds such as MiniQuake.
     if (i % 512) == 0 then
-      _phase_codegen_keepalive = [state, entries]
+      _phase_codegen_keepalive = [state, entries, analysis_scratch]
       gc_collect()
       phase_roots = _phase_codegen_keepalive
       state = phase_roots[0]
       entries = phase_roots[1]
+      analysis_scratch = phase_roots[2]
       _phase_codegen_keepalive = 0
       state = _mem_probe(state, "mid_user_fn_phase_gc")
     end if
     if _heap_cfg_get_bool(state, "cg_collect_during_codegen", false) then
-      _phase_codegen_keepalive = [state, entries]
+      _phase_codegen_keepalive = [state, entries, analysis_scratch]
       gc_collect()
       phase_roots2 = _phase_codegen_keepalive
       state = phase_roots2[0]
       entries = phase_roots2[1]
+      analysis_scratch = phase_roots2[2]
       _phase_codegen_keepalive = 0
     end if
   end while
@@ -8900,8 +8965,9 @@ function module_function_entries(state, module_file)
   return t.arr_chunk_finish(entries_b)
 end function
 
-function emit_module_function_entries(state, entries, start_index, count)
+function emit_module_function_entries(state, entries, start_index, count, analysis_scratch)
   if typeof(entries) != "array" or len(entries) <= 0 then return state end if
+  scratch = _prepare_function_analysis_scratch(analysis_scratch)
   si = start_index
   if typeof(si) != "int" or si < 0 then si = 0 end if
   n = count
@@ -8922,7 +8988,7 @@ function emit_module_function_entries(state, entries, start_index, count)
       end if
       if typeof(fn_node) == "struct" then
         emit_node = _clone_function_node_for_emit(fn_node)
-        state = emit_user_function(state, emit_node)
+        state = emit_user_function(state, emit_node, scratch)
       end if
     end if
     i = i + 1
@@ -8932,10 +8998,10 @@ end function
 
 function emit_module_functions(state, module_file)
   entries = module_function_entries(state, module_file)
-  return emit_module_function_entries(state, entries, 0, len(entries))
+  return emit_module_function_entries(state, entries, 0, len(entries), _new_function_analysis_scratch())
 end function
 
-function emit_user_function(state, fn_node)
+function emit_user_function(state, fn_node, analysis_scratch)
   if typeof(fn_node) != "struct" then return state end if
   qn = _coerce_name(fn_node.name)
   code_name = _fn_codegen_name(state, fn_node)
@@ -8971,9 +9037,10 @@ function emit_user_function(state, fn_node)
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) and code_name == "std.string.isBlank" then
     print "[dbg][stage] " + code_name + " analysis_prepare_done"
   end if
-  flow_inputs_for_fn = _collect_function_flow_inputs(fn_node)
-  known_value_types_for_fn = _infer_known_value_types(state, fn_node, flow_inputs_for_fn)
-  promoted_result = _select_promoted_local_registers(state, fn_node, known_value_types_for_fn, flow_inputs_for_fn[9])
+  analysis_scratch = _prepare_function_analysis_scratch(analysis_scratch)
+  flow_inputs_for_fn = _collect_function_flow_inputs(fn_node, analysis_scratch)
+  known_value_types_for_fn = _infer_known_value_types(state, fn_node, flow_inputs_for_fn, analysis_scratch)
+  promoted_result = _select_promoted_local_registers(state, fn_node, known_value_types_for_fn, flow_inputs_for_fn[9], analysis_scratch)
   state = promoted_result[0]
   promoted_local_regs = promoted_result[1]
   n_locals = 0
@@ -9129,7 +9196,7 @@ function emit_user_function(state, fn_node)
   else
     state.current_file_prefix = ""
   end if
-  state.known_int_names = _infer_known_int_names(state, fn_node, flow_inputs_for_fn)
+  state.known_int_names = _infer_known_int_names(state, fn_node, flow_inputs_for_fn, analysis_scratch)
   state.current_qname_prefix = intflow_saved_qpref
   state.current_file_prefix = intflow_saved_fpref
   state.known_value_types = known_value_types_for_fn

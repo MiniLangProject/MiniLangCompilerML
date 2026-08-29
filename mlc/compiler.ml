@@ -6317,6 +6317,10 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   _progress_obj("wrote " + entry_path)
 
   fn_entries = codegen.all_function_entries(cg)
+  fn_analysis_scratch = codegen.new_function_analysis_scratch()
+  // Keep the reusable analysis buffers live across the explicit collections in
+  // the object loop without adding compiler-only fields to generated CgState.
+  _compile_codegen_keepalive = [load, cg, fn_analysis_scratch]
   _progress_phase("emitting canonical function objects")
   fn_batch_count = 0
   fn_setup_ms = 0
@@ -6384,7 +6388,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
       fn_setup_ms = fn_setup_ms + fn_batch_setup_ms
       fn_step_started = fn_step_finished
     end if
-    mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, fn_chunk_size)
+    mod_cg = codegen.emit_module_function_entries(mod_cg, fn_entries, fn_start, fn_chunk_size, fn_analysis_scratch)
     fragment_text_size = a.pos(mod_cg.state.asm)
     if _compiler_profile_enabled then
       fn_step_finished = mtime.ticks()
@@ -6444,6 +6448,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   // most of the tail phase rescanning it. This mirrors the monolithic cleanup
   // and cannot affect already serialized text or section order.
   fn_entries = []
+  fn_analysis_scratch = []
   load.source = ""
   load.program = []
   load.aliases = []

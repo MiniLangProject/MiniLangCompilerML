@@ -359,6 +359,35 @@ try {
     $results += Invoke-NativeStep "run heap growth before emergency GC" $heapGrowthExe @()
   }
 
+  # Keep heap trimming behavior aligned with the Python backend. This catches a
+  # missing post-GC decommit block even when ordinary programs remain correct.
+  $heapShrinkSource = Join-Path $Root "tests\heap_shrink.ml"
+  $heapShrinkExe = Join-Path $script:ResolvedArtifactsDir "heap_shrink.exe"
+  $heapShrinkArgs = @(
+    $heapShrinkSource, $heapShrinkExe, "-I", $Root,
+    "--heap-reserve", "128m", "--heap-commit", "64m",
+    "--heap-shrink", "--heap-shrink-min", "16m", "--gc-limit", "64m"
+  )
+  $results += Invoke-NativeStep "compile heap shrink" $Compiler $heapShrinkArgs
+  if ($results[-1].ExitCode -eq 0) {
+    $results += Invoke-NativeStep "run heap shrink" $heapShrinkExe @()
+  }
+
+  if ($null -ne (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
+    $heapShrinkLinux = Join-Path $script:ResolvedArtifactsDir "heap_shrink.elf"
+    $heapShrinkLinuxArgs = @(
+      $heapShrinkSource, $heapShrinkLinux, "-I", $Root, "--target", "linux-x64",
+      "--heap-reserve", "128m", "--heap-commit", "64m",
+      "--heap-shrink", "--heap-shrink-min", "16m", "--gc-limit", "64m"
+    )
+    $results += Invoke-NativeStep "compile Linux heap shrink" $Compiler $heapShrinkLinuxArgs
+    if ($results[-1].ExitCode -eq 0) {
+      $heapShrinkLinuxPath = @(& wsl.exe wslpath -a -u ($heapShrinkLinux.Replace('\', '/')) 2>&1)[0]
+      & wsl.exe chmod +x $heapShrinkLinuxPath
+      $results += Invoke-NativeStep "run Linux heap shrink" "wsl.exe" @("timeout", "120s", $heapShrinkLinuxPath)
+    }
+  }
+
   # The object pipeline is a serialization boundary for one canonical codegen
   # stream. Guard both optimization-heavy and cross-module programs so layout,
   # constant pooling and module initialization cannot drift from normal builds.

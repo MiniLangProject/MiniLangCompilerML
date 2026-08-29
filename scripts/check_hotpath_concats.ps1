@@ -110,6 +110,28 @@ if (-not $objectCompile.Success) {
   if (-not [Regex]::IsMatch($objectCompile.Value, "mod_cg\.state\.binding_id\s*=\s*cg\.state\.binding_id")) {
     $failures += "mlc\compiler.ml: reused fragments no longer restore deterministic binding ids"
   }
+  if (-not [Regex]::IsMatch($objectCompile.Value, "fn_analysis_scratch\s*=\s*codegen\.new_function_analysis_scratch\s*\(\s*\)")) {
+    $failures += "mlc\compiler.ml: object batches no longer share one function-analysis workspace"
+  }
+  if (-not [Regex]::IsMatch($objectCompile.Value, "emit_module_function_entries\s*\([^\r\n]*fn_analysis_scratch\s*\)")) {
+    $failures += "mlc\compiler.ml: reusable function-analysis workspace is not passed across object batches"
+  }
+}
+
+# Traversal and fact workspaces must retain their high-water allocations between
+# serial functions. This is intentionally compiler-local and must not become a
+# CgState field or a new module-global GC root, both of which alter target layout.
+if (-not [Regex]::IsMatch($statementSource, "stack\s*=\s*t\.arr_vec_clear\s*\(\s*scratch\[0\]\s*\)")) {
+  $failures += "mlc\codegen\codegen_stmt.ml: statement analysis no longer reuses its traversal vector"
+}
+if (-not [Regex]::IsMatch($statementSource, "candidate_index\s*=\s*_reset_analysis_map\s*\(\s*scratch\[3\]")) {
+  $failures += "mlc\codegen\codegen_stmt.ml: integer analysis no longer reuses its fact map"
+}
+if (-not [Regex]::IsMatch($statementSource, "facts_index\s*=\s*_reset_analysis_map\s*\(\s*scratch\[4\]")) {
+  $failures += "mlc\codegen\codegen_stmt.ml: value analysis no longer reuses its fact map"
+}
+if ([Regex]::IsMatch($statementSource, "(?m)^_function_analysis_scratch\s*=")) {
+  $failures += "mlc\codegen\codegen_stmt.ml: analysis workspace became a module-global GC root"
 }
 
 if ($failures.Count -gt 0) {

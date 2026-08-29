@@ -434,10 +434,16 @@ function all_function_entries(cg)
   return stmt.all_function_entries(cg.state)
 end function
 
-function emit_module_function_entries(cg, entries, start_index, count)
+// Allocate one reusable workspace for the serial per-function analyses. Object
+// emitters keep it outside cloned codegen state and pass it across fragments.
+function new_function_analysis_scratch()
+  return stmt._new_function_analysis_scratch()
+end function
+
+function emit_module_function_entries(cg, entries, start_index, count, analysis_scratch)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
-  st = stmt.emit_module_function_entries(cg.state, entries, start_index, count)
+  st = stmt.emit_module_function_entries(cg.state, entries, start_index, count, analysis_scratch)
   cg.state = st
   return cg
 end function

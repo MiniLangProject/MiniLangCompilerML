@@ -119,6 +119,12 @@ function _heap_cfg_get_int(state, key, defaultv)
   return defaultv
 end function
 
+function _heap_cfg_get_bool(state, key, defaultv)
+  v = _heap_cfg_get_any(state, key)
+  if typeof(v) == "bool" then return v end if
+  return defaultv
+end function
+
 function _heap_cfg_has_any(state)
   cfg = 0
   if typeof(state) == "struct" then cfg = state.heap_config end if
@@ -1082,6 +1088,11 @@ function emit_gc_collect_function(state)
     state.rdata = _ensure_rdata_str(state.rdata, "gc_ms_overflow", "ERROR: GC mark stack overflow\n")
   end if
   threaded_gc = state.native_threads_possible
+  shrink_enabled = _heap_cfg_get_bool(state, "shrink_enabled", false)
+  shrink_threshold = _heap_cfg_get_int(state, "shrink_threshold_bytes", 0)
+  // Match Python's `configured_value or 4 MiB` semantics. A missing entry is
+  // represented as integer zero by the compact self-hosted config reader.
+  if shrink_threshold <= 0 then shrink_threshold = 4 << 20 end if
   if threaded_gc then
     state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
     state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
@@ -1149,6 +1160,8 @@ function emit_gc_collect_function(state)
   L_COAL_DONE = "gc_coal_done_" + lid
   L_COAL2_LOOP = "gc_coal2_loop_" + lid
   L_COAL2_DONE = "gc_coal2_done_" + lid
+  L_TRIM_SKIP = "gc_trim_skip_" + lid
+  L_TRIM_DONE = "gc_trim_done_" + lid
 
   // r12 = &gc_mark_stack
   state.asm = a.lea_rax_rip(state.asm, "gc_mark_stack")
@@ -1630,6 +1643,43 @@ function emit_gc_collect_function(state)
 
   state.asm = a.mark(state.asm, L_REBUILD_DONE)
   state.asm = a.mark(state.asm, L_REBUILD2_AFTER)
+
+  if shrink_enabled then
+    // Trim committed pages above the live heap frontier after rebuilding the
+    // free list. The lower bound and threshold mirror the Python backend so
+    // both compilers retain identical runtime behavior and target bytes.
+    state.asm = a.mov_rax_rip_qword(state.asm, "heap_end")
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.mov_rax_rip_qword(state.asm, "heap_ptr")
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state.asm = a.add_r64_imm(state.asm, "r10", MEM_PAGE_SIZE - 1)
+    state.asm = a.and_r64_imm(state.asm, "r10", -MEM_PAGE_SIZE)
+
+    state.asm = a.mov_rax_rip_qword(state.asm, "heap_min_end")
+    state.asm = a.cmp_r64_r64(state.asm, "r10", "rax")
+    state.asm = a.jcc(state.asm, "ae", L_TRIM_DONE)
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state.asm = a.mark(state.asm, L_TRIM_DONE)
+
+    state.asm = a.cmp_r64_r64(state.asm, "r10", "r11")
+    state.asm = a.jcc(state.asm, "ae", L_TRIM_SKIP)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
+    state.asm = a.sub_r64_r64(state.asm, "rdx", "r10")
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", shrink_threshold)
+    state.asm = a.jcc(state.asm, "b", L_TRIM_SKIP)
+
+    // VirtualFree/madvise may clobber volatile registers; r13 preserves the
+    // new committed end until the platform adapter returns.
+    state.asm = a.mov_r64_r64(state.asm, "r13", "r10")
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
+    state.asm = a.mov_r8d_imm32(state.asm, 0x4000)
+    state.asm = a.mov_rax_rip_qword(state.asm, "iat_VirtualFree")
+    state.asm = a.call_rax(state.asm)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r13")
+    state.asm = a.mov_rip_qword_rax(state.asm, "heap_end")
+    state.asm = a.mark(state.asm, L_TRIM_SKIP)
+  end if
+
   state.asm = a.mov_rax_imm64(state.asm, 0)
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_bytes_since")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_young_bytes_since")

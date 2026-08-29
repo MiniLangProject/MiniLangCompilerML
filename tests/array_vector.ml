@@ -34,6 +34,12 @@ function main(args)
   copied_flat = t.arr_vec_finish(copied)
   if check(copied_flat == ["a", "b", "c", "d"], "array conversion") == false then ok = false end if
 
+  old_cap = copied.cap
+  copied = t.arr_vec_clear(copied)
+  if check(t.arr_vec_count(copied) == 0 and copied.cap == old_cap, "clear retains capacity") == false then ok = false end if
+  copied = t.arr_vec_push(copied, "reused")
+  if check(t.arr_vec_finish(copied) == ["reused"], "push after clear reuses active prefix") == false then ok = false end if
+
   if ok == false then return 1 end if
   print "array vector tests [OK]"
   return 0

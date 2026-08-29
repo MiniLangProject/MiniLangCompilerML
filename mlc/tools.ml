@@ -94,6 +94,17 @@ function arr_vec_count(vec)
   return n
 end function
 
+// Reset a compiler-internal vector without discarding its capacity. Stale
+// backing slots are intentionally left in place: compiler worklists normally
+// reference the still-live AST, and overwriting the active prefix on the next
+// pass is cheaper than clearing the complete high-water capacity.
+function arr_vec_clear(vec)
+  v = vec
+  if arr_vec_is(v) == false then return arr_vec_new(4) end if
+  v.size = 0
+  return v
+end function
+
 function arr_vec_get(vec, idx, defaultv)
   if arr_vec_is(vec) == false then return defaultv end if
   n = arr_vec_count(vec)

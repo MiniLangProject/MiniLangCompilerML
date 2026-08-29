@@ -4,6 +4,18 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Reused capacity-backed statement/depth/pending worklists and epoch-cleared
+  integer, type-flow, dependency, queue and promotion maps across the serial
+  per-function analysis pipeline. A controlled same-configuration self-build
+  median fell from 130.483 to 110.108 seconds (15.61%), while sampled process-
+  tree private peak fell from 5,363.0 to 5,330.8 MiB. A controlled MiniQuake
+  build fell from 283.945 to 224.695 seconds (20.87%) and retained the exact
+  57,197,056-byte target image.
+- Restored self-hosted `--heap-shrink` parity with the Python backend by
+  emitting the post-GC top-of-heap decommit block and applying the same 4 MiB
+  default threshold when no explicit value exists. Dedicated Windows and Linux
+  runtime tests verify both decommit and the configured minimum. Python-built
+  and self-hosted Stage 2/3 compiler images are now byte-identical.
 - Reused one fully materialized semantic codegen state across the serial
   function-object stream, resetting only the assembler and batch-local fields.
   This removes 294 repeated global scope/map clones without adding GC work;

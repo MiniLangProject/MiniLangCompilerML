@@ -634,6 +634,26 @@ commit `59ac8cfc6c447c82b207100741512359f95e595c`, the two-run object-emission
 median fell from 239.610 to 215.477 seconds (10.07%) while all 497 MLO files
 and the final 57,197,056-byte PE remained unchanged.
 
+The current function-analysis pass also retains one compiler-local scratch
+workspace across serial functions. Capacity-backed traversal/queue vectors and
+epoch-cleared fact/dependency/promotion maps are reset in O(1); no compiler-only
+field is added to generated `CgState`, so target layout is unchanged. In a
+controlled same-configuration self-build comparison the median fell from
+130.483 to 110.108 seconds (15.61%), while sampled process-tree private peak
+fell by 32.3 MiB (5,363.0 to 5,330.8 MiB). A controlled MiniQuake build fell
+from 283.945 to 224.695 seconds (20.87%) and emitted the same 57,197,056-byte
+PE with SHA-256
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`.
+
+Heap-shrink code generation is now synchronized as well. The self-hosted
+backend emits the same post-GC decommit block and 4 MiB default threshold as
+Python. Python bootstrap, self-hosted Stage 2 and Stage 3 are byte-identical
+60,660,224-byte compiler images with SHA-256
+`344CE78BB6C03307A594FB4843642669083432AD2FF744772CE6086BA4A7629E`.
+Dedicated Windows and Linux tests verify that committed memory decreases
+without crossing `--heap-shrink-min`; the complete ML harness remains 107/107
+and all Windows/WSL host gates pass.
+
 
 ---
 
