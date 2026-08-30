@@ -349,6 +349,11 @@ function _clone_state_for_object(base, seed_runtime)
   st._global_owner_file = _copy_fastmap(base._global_owner_file)
   st._module_init_status_labels = _copy_fastmap(base._module_init_status_labels)
   st.native_threads_possible = base.native_threads_possible
+  // Function fragments must retain the synchronized-global classification
+  // established by the whole-program scan. Dropping it here silently emitted
+  // unlocked reads/writes in --object-pipeline builds while monolithic builds
+  // correctly used the per-binding monitor.
+  st.synchronized_globals = _copy_array(base.synchronized_globals)
 
   st.asm = a.newCodegenAsmBuilder()
   if seed_runtime then

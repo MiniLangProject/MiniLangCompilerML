@@ -188,6 +188,9 @@ Common options:
 - `--profile-compiler-batches` include setup, codegen, serialization and total
   time for every function-object batch, tagged with its module/type prefix;
   this implies `--profile-compiler`
+- `--profile-compiler-ast` include per-kind AST counts, maximum depth, interned
+  symbol/file counts and compact-arena capacity/storage; this also implies
+  `--profile-compiler` and does not alter generated target bytes
 
 `.\build\mlc_win64.exe -version` and `--version` both print
 `MiniLang Compiler 1.1.0`. `.\build\mlc_win64.exe --help` prints a short usage
@@ -500,12 +503,25 @@ Notes:
   text pool, while fixed punctuation and newline tokens need no stored text.
   The arena is sized from observed MiniLang token density and grows
   geometrically for compact or generated sources.
-- Mutable AST nodes remain typed structs, but the canonical function stream no
-  longer allocates a wrapper array for every function. A typed function-root
-  arena stores kinds and names in columns and exposes stable integer node IDs
-  to the object emitter. Once a non-inline function has been serialized, its
-  body and analysis-only closure references are cleared; inline bodies remain
-  available for later call-site expansion.
+- Immutable literal/variable leaves and the high-frequency binary-expression
+  nodes use typed structure-of-arrays arenas with stable integer NodeIds.
+  Kinds, source offsets, source-file IDs, variable/operator symbol IDs and
+  binary child IDs are stored in compact columns; the remaining mutation-rich
+  statement/declaration nodes stay typed structs. One compilation-wide symbol
+  table deduplicates variable names and operators across all imported modules.
+  `--profile-compiler-ast` reports the resulting per-kind population and arena
+  footprint so further migrations can be selected from measured data. The
+  [2026-08-30 arena report](docs/COMPILER_AST_ARENA_BENCHMARK_2026-08-30.md)
+  records the self-build, MiniQuake and MiniSQL correctness/time/memory results
+  and the current limitation that backend state still dominates peak memory.
+- The canonical function stream no longer allocates a wrapper array for every
+  function. A typed function-root arena stores kinds and names in columns and
+  exposes stable integer node IDs to the object emitter. Once a non-inline
+  function has been serialized, its body and analysis-only closure references
+  are cleared; inline bodies remain available for later call-site expansion.
+  Parsed-module program arrays and normalized source buffers are detached as
+  soon as their nodes and line maps have entered the merged program, and the
+  frontend module cache/order containers are released before code generation.
 - Callable globals use a compact callable-only binding instead of the full
   mutable-variable record. Phase-local analysis maps opt into exact touched-
   slot tracking, so completed batches clear only live key/value references and
@@ -518,7 +534,14 @@ Notes:
   index. Local relocations address the current shard directly, while legacy
   names retain the general parser fallback. Label-index GC runs at bounded
   128-object intervals, and `--profile-compiler` reports public/private label,
-  shard and collection counts.
+  shard and collection counts. During streamed relocation patching, the live
+  section/label graph is held by an explicit compiler root; full collections
+  are deferred until after that ownership boundary so diagnostics such as
+  `--mem-probe` cannot accidentally change linker correctness. The object
+  emitter likewise roots its reusable fragment state, function-entry arena and
+  accumulated builders across stride collections. Object clones preserve the
+  synchronized-global set, keeping monitor emission byte-identical to the
+  monolithic and Python pipelines.
 - Current object emission writes MLO v2 while retaining the length-prefixed
   `MLO1` family magic. Same-fragment `rel32` and `rip32` fields are resolved
   directly in the materialized text bytes and are not serialized as patches;

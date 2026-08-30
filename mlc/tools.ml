@@ -72,6 +72,316 @@ end struct
 
 _arr_void_sentinel = ArrayChunkVoidSentinel(0xA11D)
 
+// Compact arena for immutable expression leaves. Negative integers are stable
+// NodeIds; ordinary non-negative MiniLang values therefore never collide with
+// compiler AST handles. The structure-of-arrays layout keeps source locations,
+// variable symbols and kinds out of individual managed structs.
+const AST_LEAF_NUM = 1
+const AST_LEAF_STR = 2
+const AST_LEAF_BOOL = 3
+const AST_LEAF_VOID = 4
+const AST_LEAF_VAR = 5
+const AST_BIN_HANDLE_BASE = 1073741824
+
+_ast_leaf_kinds = bytes(0)
+_ast_leaf_payloads = []
+_ast_leaf_positions = bytes(0)
+_ast_leaf_file_ids = bytes(0)
+_ast_leaf_symbol_ids = bytes(0)
+_ast_leaf_count = 0
+_ast_leaf_cap = 0
+_ast_filenames = 0
+_ast_filename_index = 0
+_ast_symbols = 0
+_ast_symbol_index = 0
+_ast_bin_lefts = []
+_ast_bin_rights = []
+_ast_bin_op_ids = bytes(0)
+_ast_bin_positions = bytes(0)
+_ast_bin_file_ids = bytes(0)
+_ast_bin_count = 0
+_ast_bin_cap = 0
+
+function _ast_u32_write(buf, index, value)
+  off = index << 2
+  buf[off] = value & 0xFF
+  buf[off + 1] = (value >> 8) & 0xFF
+  buf[off + 2] = (value >> 16) & 0xFF
+  buf[off + 3] = (value >> 24) & 0xFF
+end function
+
+function inline _ast_u32_read(buf, index)
+  off = index << 2
+  return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24)
+end function
+
+function ast_leaf_reset()
+  global _ast_leaf_kinds, _ast_leaf_payloads, _ast_leaf_positions
+  global _ast_leaf_file_ids, _ast_leaf_symbol_ids, _ast_leaf_count, _ast_leaf_cap
+  global _ast_filenames, _ast_filename_index, _ast_symbols, _ast_symbol_index
+  global _ast_bin_lefts, _ast_bin_rights, _ast_bin_op_ids
+  global _ast_bin_positions, _ast_bin_file_ids, _ast_bin_count, _ast_bin_cap
+  _ast_leaf_kinds = bytes(0)
+  _ast_leaf_payloads = []
+  _ast_leaf_positions = bytes(0)
+  _ast_leaf_file_ids = bytes(0)
+  _ast_leaf_symbol_ids = bytes(0)
+  _ast_leaf_count = 0
+  _ast_leaf_cap = 0
+  _ast_filenames = arr_vec_new(64)
+  _ast_filename_index = fastmap_new(128)
+  _ast_symbols = arr_vec_new(1024)
+  _ast_symbol_index = fastmap_new(2048)
+  _ast_bin_lefts = []
+  _ast_bin_rights = []
+  _ast_bin_op_ids = bytes(0)
+  _ast_bin_positions = bytes(0)
+  _ast_bin_file_ids = bytes(0)
+  _ast_bin_count = 0
+  _ast_bin_cap = 0
+end function
+
+function _ast_bin_ensure(need)
+  global _ast_bin_lefts, _ast_bin_rights, _ast_bin_op_ids
+  global _ast_bin_positions, _ast_bin_file_ids, _ast_bin_cap
+  if need <= _ast_bin_cap then return void end if
+  next_cap = _ast_bin_cap
+  if next_cap < 4096 then next_cap = 4096 end if
+  while next_cap < need
+    next_cap = next_cap << 1
+  end while
+  next_lefts = array(next_cap, 0)
+  next_rights = array(next_cap, 0)
+  next_ops = bytes(next_cap * 4, 0)
+  next_positions = bytes(next_cap * 4, 0)
+  next_files = bytes(next_cap * 4, 0)
+  if _ast_bin_cap > 0 and _ast_bin_count > 0 then
+    copyArray(next_lefts, 0, _ast_bin_lefts, 0, _ast_bin_count)
+    copyArray(next_rights, 0, _ast_bin_rights, 0, _ast_bin_count)
+    copyBytes(next_ops, 0, _ast_bin_op_ids, 0, _ast_bin_count * 4)
+    copyBytes(next_positions, 0, _ast_bin_positions, 0, _ast_bin_count * 4)
+    copyBytes(next_files, 0, _ast_bin_file_ids, 0, _ast_bin_count * 4)
+  end if
+  _ast_bin_lefts = next_lefts
+  _ast_bin_rights = next_rights
+  _ast_bin_op_ids = next_ops
+  _ast_bin_positions = next_positions
+  _ast_bin_file_ids = next_files
+  _ast_bin_cap = next_cap
+end function
+
+function _ast_leaf_ensure(need)
+  global _ast_leaf_kinds, _ast_leaf_payloads, _ast_leaf_positions
+  global _ast_leaf_file_ids, _ast_leaf_symbol_ids, _ast_leaf_cap
+  if need <= _ast_leaf_cap then return void end if
+  next_cap = _ast_leaf_cap
+  if next_cap < 65536 then next_cap = 65536 end if
+  while next_cap < need
+    next_cap = next_cap << 1
+  end while
+  next_kinds = bytes(next_cap, 0)
+  next_payloads = array(next_cap, 0)
+  next_positions = bytes(next_cap * 4, 0)
+  next_files = bytes(next_cap * 4, 0)
+  next_symbols = bytes(next_cap * 4, 0)
+  if _ast_leaf_cap > 0 and _ast_leaf_count > 0 then
+    copyBytes(next_kinds, 0, _ast_leaf_kinds, 0, _ast_leaf_count)
+    copyArray(next_payloads, 0, _ast_leaf_payloads, 0, _ast_leaf_count)
+    copyBytes(next_positions, 0, _ast_leaf_positions, 0, _ast_leaf_count * 4)
+    copyBytes(next_files, 0, _ast_leaf_file_ids, 0, _ast_leaf_count * 4)
+    copyBytes(next_symbols, 0, _ast_leaf_symbol_ids, 0, _ast_leaf_count * 4)
+  end if
+  _ast_leaf_kinds = next_kinds
+  _ast_leaf_payloads = next_payloads
+  _ast_leaf_positions = next_positions
+  _ast_leaf_file_ids = next_files
+  _ast_leaf_symbol_ids = next_symbols
+  _ast_leaf_cap = next_cap
+end function
+
+function _ast_intern(index_map, values, text)
+  existing = fastmap_get(index_map, text, 0)
+  if typeof(existing) == "int" and existing > 0 then return [index_map, values, existing] end if
+  id = arr_vec_count(values) + 1
+  values = arr_vec_push(values, text)
+  index_map = fastmap_set(index_map, text, id)
+  return [index_map, values, id]
+end function
+
+function _ast_leaf_kind_id(kind)
+  if kind == "Num" then return AST_LEAF_NUM end if
+  if kind == "Str" then return AST_LEAF_STR end if
+  if kind == "Bool" then return AST_LEAF_BOOL end if
+  if kind == "VoidLit" then return AST_LEAF_VOID end if
+  if kind == "Var" then return AST_LEAF_VAR end if
+  return 0
+end function
+
+function _ast_leaf_kind_name(kind_id)
+  if kind_id == AST_LEAF_NUM then return "Num" end if
+  if kind_id == AST_LEAF_STR then return "Str" end if
+  if kind_id == AST_LEAF_BOOL then return "Bool" end if
+  if kind_id == AST_LEAF_VOID then return "VoidLit" end if
+  if kind_id == AST_LEAF_VAR then return "Var" end if
+  return ""
+end function
+
+function ast_leaf_new(kind, value, pos, filename)
+  global _ast_leaf_count, _ast_leaf_payloads, _ast_filename_index, _ast_filenames
+  global _ast_symbol_index, _ast_symbols
+  global _ast_leaf_kinds, _ast_leaf_positions, _ast_leaf_file_ids, _ast_leaf_symbol_ids
+  kind_id = _ast_leaf_kind_id(kind)
+  if kind_id <= 0 then return 0 end if
+  if _ast_leaf_cap <= 0 then ast_leaf_reset() end if
+  slot = _ast_leaf_count
+  _ast_leaf_ensure(slot + 1)
+  file_text = filename
+  if typeof(file_text) != "string" then file_text = "" end if
+  fi = _ast_intern(_ast_filename_index, _ast_filenames, file_text)
+  _ast_filename_index = fi[0]
+  _ast_filenames = fi[1]
+  file_id = fi[2]
+  symbol_id = 0
+  payload = value
+  if kind_id == AST_LEAF_VAR then
+    symbol_text = value
+    if typeof(symbol_text) != "string" then symbol_text = "" + symbol_text end if
+    si = _ast_intern(_ast_symbol_index, _ast_symbols, symbol_text)
+    _ast_symbol_index = si[0]
+    _ast_symbols = si[1]
+    symbol_id = si[2]
+    payload = 0
+  end if
+  _ast_leaf_kinds[slot] = kind_id
+  _ast_leaf_payloads[slot] = payload
+  _ast_u32_write(_ast_leaf_positions, slot, pos)
+  _ast_u32_write(_ast_leaf_file_ids, slot, file_id)
+  _ast_u32_write(_ast_leaf_symbol_ids, slot, symbol_id)
+  _ast_leaf_count = slot + 1
+  return 0 - (slot + 1)
+end function
+
+// Binary expressions are the most frequent composite AST node. Store their
+// children and metadata in a typed structure-of-arrays arena while retaining
+// the same accessors for compiler-created legacy structs.
+function ast_bin_new(left, op, right, pos, filename)
+  global _ast_bin_lefts, _ast_bin_rights, _ast_bin_op_ids
+  global _ast_bin_positions, _ast_bin_file_ids, _ast_bin_count
+  global _ast_filename_index, _ast_filenames, _ast_symbol_index, _ast_symbols
+  if typeof(_ast_filename_index) != "struct" then ast_leaf_reset() end if
+  slot = _ast_bin_count
+  _ast_bin_ensure(slot + 1)
+  file_text = filename
+  if typeof(file_text) != "string" then file_text = "" end if
+  fi = _ast_intern(_ast_filename_index, _ast_filenames, file_text)
+  _ast_filename_index = fi[0]
+  _ast_filenames = fi[1]
+  op_text = op
+  if typeof(op_text) != "string" then op_text = "" + op_text end if
+  oi = _ast_intern(_ast_symbol_index, _ast_symbols, op_text)
+  _ast_symbol_index = oi[0]
+  _ast_symbols = oi[1]
+  _ast_bin_lefts[slot] = left
+  _ast_bin_rights[slot] = right
+  _ast_u32_write(_ast_bin_op_ids, slot, oi[2])
+  _ast_u32_write(_ast_bin_positions, slot, pos)
+  _ast_u32_write(_ast_bin_file_ids, slot, fi[2])
+  _ast_bin_count = slot + 1
+  return 0 - (AST_BIN_HANDLE_BASE + slot + 1)
+end function
+
+function inline ast_is_leaf(node)
+  if typeof(node) != "int" or node >= 0 then return false end if
+  slot = (0 - node) - 1
+  return slot >= 0 and slot < _ast_leaf_count
+end function
+
+function inline ast_is_bin(node)
+  if typeof(node) != "int" or node >= 0 then return false end if
+  slot = (0 - node) - AST_BIN_HANDLE_BASE - 1
+  return slot >= 0 and slot < _ast_bin_count
+end function
+
+function ast_is_node(node)
+  if ast_is_leaf(node) or ast_is_bin(node) then return true end if
+  return typeof(node) == "struct" and typeof(try(node.node_kind)) == "string"
+end function
+
+function ast_kind(node)
+  if ast_is_leaf(node) then
+    return _ast_leaf_kind_name(_ast_leaf_kinds[(0 - node) - 1])
+  end if
+  if ast_is_bin(node) then return "Bin" end if
+  if typeof(node) == "struct" and typeof(try(node.node_kind)) == "string" then return node.node_kind end if
+  return ""
+end function
+
+function ast_value(node)
+  if ast_is_leaf(node) then return _ast_leaf_payloads[(0 - node) - 1] end if
+  if typeof(node) == "struct" then return try(node.value) end if
+  return void
+end function
+
+function ast_name(node)
+  if ast_is_leaf(node) then
+    slot = (0 - node) - 1
+    if _ast_leaf_kinds[slot] != AST_LEAF_VAR then return "" end if
+    symbol_id = _ast_u32_read(_ast_leaf_symbol_ids, slot)
+    return arr_vec_get(_ast_symbols, symbol_id - 1, "")
+  end if
+  if typeof(node) == "struct" then return try(node.name) end if
+  return ""
+end function
+
+function ast_pos(node)
+  if ast_is_leaf(node) then return _ast_u32_read(_ast_leaf_positions, (0 - node) - 1) end if
+  if ast_is_bin(node) then return _ast_u32_read(_ast_bin_positions, (0 - node) - AST_BIN_HANDLE_BASE - 1) end if
+  if typeof(node) == "struct" and typeof(try(node._pos)) == "int" then return node._pos end if
+  return 0
+end function
+
+function ast_filename(node)
+  if ast_is_leaf(node) then
+    file_id = _ast_u32_read(_ast_leaf_file_ids, (0 - node) - 1)
+    return arr_vec_get(_ast_filenames, file_id - 1, "")
+  end if
+  if ast_is_bin(node) then
+    file_id = _ast_u32_read(_ast_bin_file_ids, (0 - node) - AST_BIN_HANDLE_BASE - 1)
+    return arr_vec_get(_ast_filenames, file_id - 1, "")
+  end if
+  if typeof(node) == "struct" and typeof(try(node._filename)) == "string" then return node._filename end if
+  return ""
+end function
+
+function ast_left(node)
+  if ast_is_bin(node) then return _ast_bin_lefts[(0 - node) - AST_BIN_HANDLE_BASE - 1] end if
+  if typeof(node) == "struct" and typeof(try(node.node_kind)) == "string" and node.node_kind == "Bin" then return node.left end if
+  return void
+end function
+
+function ast_right(node)
+  if ast_is_bin(node) then return _ast_bin_rights[(0 - node) - AST_BIN_HANDLE_BASE - 1] end if
+  if typeof(node) == "struct" and typeof(try(node.node_kind)) == "string" and (node.node_kind == "Bin" or node.node_kind == "Unary") then return node.right end if
+  return void
+end function
+
+function ast_op(node)
+  if ast_is_bin(node) then
+    op_id = _ast_u32_read(_ast_bin_op_ids, (0 - node) - AST_BIN_HANDLE_BASE - 1)
+    if op_id > 0 and op_id <= arr_vec_count(_ast_symbols) then return arr_vec_get(_ast_symbols, op_id - 1, "") end if
+    return ""
+  end if
+  if typeof(node) == "struct" and typeof(try(node.node_kind)) == "string" and (node.node_kind == "Bin" or node.node_kind == "Unary") then return node.op end if
+  return ""
+end function
+
+function ast_leaf_stats()
+  payload_bytes = _ast_leaf_cap * 8
+  packed_bytes = _ast_leaf_cap * 13
+  bin_bytes = _ast_bin_cap * 28
+  return [_ast_leaf_count, _ast_leaf_cap, arr_vec_count(_ast_symbols), arr_vec_count(_ast_filenames), payload_bytes + packed_bytes + bin_bytes, _ast_bin_count, _ast_bin_cap, bin_bytes]
+end function
+
 // ArrayVector operations keep append-heavy planning tables capacity-backed.
 function arr_vec_is(value)
   if typeof(value) != "struct" then return false end if

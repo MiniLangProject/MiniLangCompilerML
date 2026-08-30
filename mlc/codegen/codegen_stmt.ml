@@ -570,15 +570,16 @@ function _for_unroll_expr_child_ok(child, budget)
     end if
     return true
   end if
-  if typeof(child) != "struct" or _coerce_name(try(child.node_kind)) == "" then return true end if
+  if t.ast_is_node(child) == false or _coerce_name(t.ast_kind(child)) == "" then return true end if
   return _for_unroll_expr_ok(child, budget)
 end function
 
 function _for_unroll_expr_ok(expr, budget)
-  if typeof(expr) != "struct" or _coerce_name(try(expr.node_kind)) == "" then return true end if
+  if t.ast_is_node(expr) == false or _coerce_name(t.ast_kind(expr)) == "" then return true end if
   if _for_unroll_budget_take(budget) == false then return false end if
-  if _for_unroll_expr_child_ok(try(expr.left), budget) == false then return false end if
-  if _for_unroll_expr_child_ok(try(expr.right), budget) == false then return false end if
+  if t.ast_is_leaf(expr) then return true end if
+  if _for_unroll_expr_child_ok(t.ast_left(expr), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(t.ast_right(expr), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.expr), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.cond), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.value), budget) == false then return false end if
@@ -841,10 +842,10 @@ function _collect_defer_sites(state, fn_node)
 end function
 
 function _defer_static_callee(state, callee)
-  if typeof(callee) != "struct" then return false end if
-  k = _coerce_name(try(callee.node_kind))
+  if t.ast_is_node(callee) == false then return false end if
+  k = _coerce_name(t.ast_kind(callee))
   if k == "Var" then
-    nm = _coerce_name(try(callee.name))
+    nm = _coerce_name(t.ast_name(callee))
     if exprmod._qname_exists(state, nm) then return true end if
     return typeof(scope.cg_resolve_binding(state, nm)) != "struct"
   end if
@@ -864,7 +865,7 @@ function _emit_defer_registration(state, stmt)
     return state
   end if
   callee = try(call.callee)
-  ck = _coerce_name(try(callee.node_kind))
+  ck = _coerce_name(t.ast_kind(callee))
   if _defer_static_callee(state, callee) then
     stmt.capture_kind = "static"
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -1249,11 +1250,11 @@ function _emit_switch_stmt(state, stmt)
 end function
 
 function _dotted_name_expr(ex)
-  if typeof(ex) != "struct" then return "" end if
-  if ex.node_kind == "Var" then
-    return _coerce_name(ex.name)
+  if t.ast_is_node(ex) == false then return "" end if
+  if t.ast_kind(ex) == "Var" then
+    return _coerce_name(t.ast_name(ex))
   end if
-  if ex.node_kind == "Member" then
+  if t.ast_kind(ex) == "Member" then
     left = _dotted_name_expr(ex.target)
     if left == "" then return "" end if
     right = _coerce_name(ex.name)
@@ -1650,7 +1651,7 @@ function cg_emit_stmt(state, stmt)
   if k == "SetMember" then
     obj_expr = try(stmt.obj)
     target_expr_sm = try(stmt.target)
-    if typeof(obj_expr) != "struct" and typeof(target_expr_sm) == "struct" then
+    if t.ast_is_node(obj_expr) == false and t.ast_is_node(target_expr_sm) then
       obj_expr = target_expr_sm
     end if
     field = _coerce_name(try(stmt.field))
@@ -1888,11 +1889,11 @@ function cg_emit_stmt(state, stmt)
   end if
 
   if k == "Print" then
-    if typeof(stmt.expr) == "struct" and stmt.expr.node_kind == "Str" then
+    if t.ast_kind(stmt.expr) == "Str" then
       lid_str_p = state.label_id
       state.label_id = state.label_id + 1
       lbl_p = "str_" + lid_str_p
-      state.rdata = d.rdata_add_str_nl(state.rdata, lbl_p, stmt.expr.value, true)
+      state.rdata = d.rdata_add_str_nl(state.rdata, lbl_p, t.ast_value(stmt.expr), true)
       ln_p = d.rdata_label_length(state.rdata, lbl_p)
       return core.emit_writefile(state, lbl_p, ln_p)
     end if
@@ -2586,7 +2587,7 @@ function cg_emit_stmt(state, stmt)
       state.diagnostics = state.diagnostics +["return outside function"]
       return state
     end if
-    if typeof(stmt.expr) == "struct" then
+    if t.ast_is_node(stmt.expr) then
       state = exprmod.cg_emit_expr(state, stmt.expr)
     else
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -2616,9 +2617,9 @@ end function
 // ------------------------------------------------------------
 
 function inline _is_node(n, kind)
-  if typeof(n) != "struct" then return false end if
-  if typeof(kind) == "string" and kind != "" then return n.node_kind == kind end if
-  return typeof(n.node_kind) == "string"
+  if t.ast_is_node(n) == false then return false end if
+  if typeof(kind) == "string" and kind != "" then return t.ast_kind(n) == kind end if
+  return t.ast_kind(n) != ""
 end function
 
 function inline _is_stmt(st)
@@ -2626,8 +2627,7 @@ function inline _is_stmt(st)
 end function
 
 function inline _decl_st_file(st)
-  if typeof(st) == "struct" and typeof(st._filename) == "string" then return st._filename end if
-  return ""
+  return t.ast_filename(st)
 end function
 
 function inline _dotted_name(parts)
@@ -2637,9 +2637,9 @@ function inline _dotted_name(parts)
 end function
 
 function _member_qname(ex)
-  if typeof(ex) != "struct" then return "" end if
-  if ex.node_kind == "Var" and typeof(ex.name) == "string" then return ex.name end if
-  if ex.node_kind == "Member" and typeof(ex.name) == "string" then
+  if t.ast_is_node(ex) == false then return "" end if
+  if t.ast_kind(ex) == "Var" and typeof(t.ast_name(ex)) == "string" then return t.ast_name(ex) end if
+  if t.ast_kind(ex) == "Member" and typeof(ex.name) == "string" then
     b = _member_qname(ex.target)
     if b == "" then return "" end if
     return b + "." + ex.name
@@ -2664,40 +2664,42 @@ function _is_constexpr_binary(op)
 end function
 
 function _is_constexpr_expr(state, ex)
-  if typeof(ex) != "struct" then return false end if
-  k = ex.node_kind
+  if t.ast_is_node(ex) == false then return false end if
+  k = t.ast_kind(ex)
   if k == "Num" or k == "Str" or k == "Bool" then return true end if
   if k == "Var" then return true end if
   if k == "Member" then return _member_qname(ex) != "" end if
   if k == "Unary" then
-    if _is_constexpr_unary(ex.op) == false then return false end if
-    return _is_constexpr_expr(state, ex.right)
+    if _is_constexpr_unary(t.ast_op(ex)) == false then return false end if
+    return _is_constexpr_expr(state, t.ast_right(ex))
   end if
   if k == "Bin" then
-    if _is_constexpr_binary(ex.op) == false then return false end if
-    return _is_constexpr_expr(state, ex.left) and _is_constexpr_expr(state, ex.right)
+    if _is_constexpr_binary(t.ast_op(ex)) == false then return false end if
+    return _is_constexpr_expr(state, t.ast_left(ex)) and _is_constexpr_expr(state, t.ast_right(ex))
   end if
   return false
 end function
 
 function _collect_constexpr_refs(ex, vals)
   if typeof(vals) != "array" then vals =[] end if
-  if typeof(ex) != "struct" then return vals end if
+  if t.ast_is_node(ex) == false then return vals end if
 
-  if ex.node_kind == "Var" and typeof(ex.name) == "string" then
-    return _arr_add_unique(vals, ex.name)
+  if t.ast_kind(ex) == "Var" and typeof(t.ast_name(ex)) == "string" then
+    return _arr_add_unique(vals, t.ast_name(ex))
   end if
 
-  if ex.node_kind == "Member" then
+  if t.ast_kind(ex) == "Member" then
     qn = _member_qname(ex)
     if typeof(qn) == "string" and qn != "" then
       return _arr_add_unique(vals, qn)
     end if
   end if
 
-  if typeof(ex.left) == "struct" then vals = _collect_constexpr_refs(ex.left, vals) end if
-  if typeof(ex.right) == "struct" then vals = _collect_constexpr_refs(ex.right, vals) end if
-  if typeof(ex.target) == "struct" then vals = _collect_constexpr_refs(ex.target, vals) end if
+  if t.ast_is_leaf(ex) then return vals end if
+
+  if t.ast_is_node(t.ast_left(ex)) then vals = _collect_constexpr_refs(t.ast_left(ex), vals) end if
+  if t.ast_is_node(t.ast_right(ex)) then vals = _collect_constexpr_refs(t.ast_right(ex), vals) end if
+  if t.ast_is_node(try(ex.target)) then vals = _collect_constexpr_refs(ex.target, vals) end if
   if typeof(ex.args) == "array" and len(ex.args) > 0 then
     for k = 0 to len(ex.args) - 1
       vals = _collect_constexpr_refs(ex.args[k], vals)
@@ -2849,7 +2851,7 @@ function _intflow_map_get(items, name)
 end function
 
 function _intflow_const_int(state, ex)
-  if typeof(ex) != "struct" then return [false, 0] end if
+  if t.ast_is_node(ex) == false then return [false, 0] end if
   cv = exprmod.cg_expr_try_const_value(state, ex)
   if typeof(cv) == "struct" and cv.ok and typeof(cv.value) == "int" then
     return [true, cv.value]
@@ -2858,33 +2860,33 @@ function _intflow_const_int(state, ex)
 end function
 
 function _intflow_expr_is_int(state, ex, known)
-  if typeof(ex) != "struct" then return false end if
+  if t.ast_is_node(ex) == false then return false end if
   cv = _intflow_const_int(state, ex)
   if cv[0] then return true end if
 
-  k = _coerce_name(try(ex.node_kind))
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Var" then
-    known_name = _coerce_name(try(ex.name))
+    known_name = _coerce_name(t.ast_name(ex))
     if typeof(known) == "struct" then return t.fastmap_get(known, known_name, 0) != 0 end if
     return _arr_has(known, known_name)
   end if
   if k == "Unary" then
-    op_u = _coerce_name(try(ex.op))
+    op_u = _coerce_name(t.ast_op(ex))
     if op_u != "-" and op_u != "~" then return false end if
-    return _intflow_expr_is_int(state, try(ex.right), known)
+    return _intflow_expr_is_int(state, t.ast_right(ex), known)
   end if
   if k == "Bin" then
-    op_b = _coerce_name(try(ex.op))
+    op_b = _coerce_name(t.ast_op(ex))
     if op_b == "+" or op_b == "-" or op_b == "*" or op_b == "&" or op_b == "|" or op_b == "^" then
-      return _intflow_expr_is_int(state, try(ex.left), known) and _intflow_expr_is_int(state, try(ex.right), known)
+      return _intflow_expr_is_int(state, t.ast_left(ex), known) and _intflow_expr_is_int(state, t.ast_right(ex), known)
     end if
     if op_b == "%" then
-      rv_m = _intflow_const_int(state, try(ex.right))
-      return rv_m[0] and rv_m[1] != 0 and _intflow_expr_is_int(state, try(ex.left), known)
+      rv_m = _intflow_const_int(state, t.ast_right(ex))
+      return rv_m[0] and rv_m[1] != 0 and _intflow_expr_is_int(state, t.ast_left(ex), known)
     end if
     if op_b == "<<" or op_b == ">>" then
-      rv_s = _intflow_const_int(state, try(ex.right))
-      return rv_s[0] and rv_s[1] >= 0 and _intflow_expr_is_int(state, try(ex.left), known)
+      rv_s = _intflow_const_int(state, t.ast_right(ex))
+      return rv_s[0] and rv_s[1] >= 0 and _intflow_expr_is_int(state, t.ast_left(ex), known)
     end if
   end if
   return false
@@ -3196,11 +3198,11 @@ function _typeflow_struct_qname(state, callee)
 end function
 
 function _typeflow_expr_type(state, ex, known)
-  if typeof(ex) != "struct" then return "" end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return "" end if
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Num" then
-    if typeof(try(ex.value)) == "int" then return "int" end if
-    if typeof(try(ex.value)) == "float" then return "float" end if
+    if typeof(t.ast_value(ex)) == "int" then return "int" end if
+    if typeof(t.ast_value(ex)) == "float" then return "float" end if
     return ""
   end if
   if k == "Bool" then return "bool" end if
@@ -3210,11 +3212,11 @@ function _typeflow_expr_type(state, ex, known)
     if typeof(items) != "array" then items = [] end if
     return "array:" + len(items)
   end if
-  if k == "Var" then return _typeflow_get(known, _coerce_name(try(ex.name))) end if
+  if k == "Var" then return _typeflow_get(known, _coerce_name(t.ast_name(ex))) end if
   if k == "IsType" then return "bool" end if
   if k == "Unary" then
-    op_u = _coerce_name(try(ex.op))
-    rb = _typeflow_base(_typeflow_expr_type(state, try(ex.right), known))
+    op_u = _coerce_name(t.ast_op(ex))
+    rb = _typeflow_base(_typeflow_expr_type(state, t.ast_right(ex), known))
     if op_u == "not" and rb != "" then return "bool" end if
     if op_u == "~" and rb == "int" then return "int" end if
     if op_u == "-" and rb == "int" then return "int" end if
@@ -3222,15 +3224,15 @@ function _typeflow_expr_type(state, ex, known)
     return ""
   end if
   if k == "Bin" then
-    op_b = _coerce_name(try(ex.op))
-    lb = _typeflow_base(_typeflow_expr_type(state, try(ex.left), known))
-    rb2 = _typeflow_base(_typeflow_expr_type(state, try(ex.right), known))
+    op_b = _coerce_name(t.ast_op(ex))
+    lb = _typeflow_base(_typeflow_expr_type(state, t.ast_left(ex), known))
+    rb2 = _typeflow_base(_typeflow_expr_type(state, t.ast_right(ex), known))
     if op_b == "==" or op_b == "!=" then return "bool" end if
     numeric_l_cmp = lb == "int" or lb == "float" or lb == "number"
     numeric_r_cmp = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "<" or op_b == "<=" or op_b == ">" or op_b == ">=") and numeric_l_cmp and numeric_r_cmp then return "bool" end if
     if (op_b == "and" or op_b == "or") and lb != "" and rb2 != "" then return "bool" end if
-    right_b = try(ex.right)
+    right_b = t.ast_right(ex)
     right_cv = exprmod.cg_expr_try_const_value(state, right_b)
     right_nonzero = false
     right_nonnegative_int = false
@@ -3311,20 +3313,21 @@ function _typeflow_merge(inferred)
 end function
 
 function _typeflow_scan_read_expr(ex, tracked, initialized, read_before)
-  if typeof(ex) != "struct" then return read_before end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return read_before end if
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Var" then
-    nm = _coerce_name(try(ex.name))
+    nm = _coerce_name(t.ast_name(ex))
     if _arr_has(tracked, nm) and _arr_has(initialized, nm) == false then read_before = _arr_add_unique(read_before, nm) end if
     return read_before
   end if
-  child = try(ex.left); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
-  child = try(ex.right); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
-  child = try(ex.expr); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
-  child = try(ex.target); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
-  child = try(ex.index); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
-  child = try(ex.callee); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
-  child = try(ex.obj); if typeof(child) == "struct" then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  if t.ast_is_leaf(ex) then return read_before end if
+  child = t.ast_left(ex); if t.ast_is_node(child) then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = t.ast_right(ex); if t.ast_is_node(child) then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.expr); if t.ast_is_node(child) then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.target); if t.ast_is_node(child) then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.index); if t.ast_is_node(child) then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.callee); if t.ast_is_node(child) then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
+  child = try(ex.obj); if t.ast_is_node(child) then read_before = _typeflow_scan_read_expr(child, tracked, initialized, read_before) end if
   groups = [try(ex.args), try(ex.items), try(ex.values)]
   for each group in groups
     if typeof(group) != "array" or len(group) <= 0 then continue end if
@@ -3408,18 +3411,19 @@ end function
 // Build reverse variable dependencies once so fixed-point propagation only
 // revisits facts affected by a change instead of rescanning every candidate.
 function _typeflow_scan_expr_dependencies(dependents, owner, ex)
-  if typeof(ex) != "struct" then return dependents end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return dependents end if
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Var" then
-    return _typeflow_dependency_add(dependents, _coerce_name(try(ex.name)), owner)
+    return _typeflow_dependency_add(dependents, _coerce_name(t.ast_name(ex)), owner)
   end if
-  child = try(ex.left); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
-  child = try(ex.right); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
-  child = try(ex.expr); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
-  child = try(ex.target); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
-  child = try(ex.index); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
-  child = try(ex.callee); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
-  child = try(ex.obj); if typeof(child) == "struct" then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  if t.ast_is_leaf(ex) then return dependents end if
+  child = t.ast_left(ex); if t.ast_is_node(child) then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = t.ast_right(ex); if t.ast_is_node(child) then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.expr); if t.ast_is_node(child) then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.target); if t.ast_is_node(child) then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.index); if t.ast_is_node(child) then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.callee); if t.ast_is_node(child) then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
+  child = try(ex.obj); if t.ast_is_node(child) then dependents = _typeflow_scan_expr_dependencies(dependents, owner, child) end if
   groups = [try(ex.args), try(ex.items), try(ex.values)]
   for each group in groups
     if typeof(group) != "array" or len(group) <= 0 then continue end if
@@ -3667,22 +3671,23 @@ function _fast_target_add(items, name, expr)
 end function
 
 function _fast_index_scan_expr(ex, index_name, targets)
-  if typeof(ex) != "struct" then return targets end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return targets end if
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Index" then
     tgt = try(ex.target)
     idx = try(ex.index)
-    if typeof(tgt) == "struct" and _coerce_name(try(tgt.node_kind)) == "Var" and typeof(idx) == "struct" and _coerce_name(try(idx.node_kind)) == "Var" and _coerce_name(try(idx.name)) == index_name then
-      targets = _fast_target_add(targets, _coerce_name(try(tgt.name)), tgt)
+    if t.ast_kind(tgt) == "Var" and t.ast_kind(idx) == "Var" and _coerce_name(t.ast_name(idx)) == index_name then
+      targets = _fast_target_add(targets, _coerce_name(t.ast_name(tgt)), tgt)
     end if
   end if
-  child = try(ex.left); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-  child = try(ex.right); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-  child = try(ex.expr); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-  child = try(ex.target); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-  child = try(ex.index); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-  child = try(ex.callee); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-  child = try(ex.obj); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  if t.ast_is_leaf(ex) then return targets end if
+  child = t.ast_left(ex); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = t.ast_right(ex); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.expr); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.target); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.index); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.callee); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+  child = try(ex.obj); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
   args = try(ex.args)
   if typeof(args) == "array" and len(args) > 0 then for i = 0 to len(args) - 1 targets = _fast_index_scan_expr(args[i], index_name, targets) end for end if
   items = try(ex.items)
@@ -3707,18 +3712,18 @@ function _fast_index_scan_loop(loop_node, index_name)
     if k == "SetIndex" then
       tgt_si = try(st.target)
       idx_si = try(st.index)
-      if typeof(tgt_si) == "struct" and _coerce_name(try(tgt_si.node_kind)) == "Var" and typeof(idx_si) == "struct" and _coerce_name(try(idx_si.node_kind)) == "Var" and _coerce_name(try(idx_si.name)) == index_name then
-        targets = _fast_target_add(targets, _coerce_name(try(tgt_si.name)), tgt_si)
+      if t.ast_kind(tgt_si) == "Var" and t.ast_kind(idx_si) == "Var" and _coerce_name(t.ast_name(idx_si)) == index_name then
+        targets = _fast_target_add(targets, _coerce_name(t.ast_name(tgt_si)), tgt_si)
       end if
     end if
-    child = try(st.expr); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-    child = try(st.cond); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-    child = try(st.target); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-    child = try(st.index); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-    child = try(st.start); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-    child = try(st.end_expr); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-    child = try(st.iterable); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
-    child = try(st.obj); if typeof(child) == "struct" then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.expr); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.cond); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.target); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.index); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.start); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.end_expr); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.iterable); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    child = try(st.obj); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
     stack = _scan_stmt_children_into(stack, st)
   end while
   return [targets, mutated]
@@ -3728,16 +3733,16 @@ function _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, 
   end_ex = try(loop_node.end_expr)
   end_cv = _intflow_const_int(state, end_ex)
   if end_cv[0] then return start_value <= end_cv[1] and end_cv[1] < exact_len end if
-  if typeof(end_ex) != "struct" or _coerce_name(try(end_ex.node_kind)) != "Bin" or _coerce_name(try(end_ex.op)) != "-" then return false end if
-  right_cv = _intflow_const_int(state, try(end_ex.right))
+  if t.ast_kind(end_ex) != "Bin" or _coerce_name(t.ast_op(end_ex)) != "-" then return false end if
+  right_cv = _intflow_const_int(state, t.ast_right(end_ex))
   if right_cv[0] == false or right_cv[1] != 1 or start_value != 0 or exact_len <= 0 then return false end if
-  left = try(end_ex.left)
+  left = t.ast_left(end_ex)
   if typeof(left) != "struct" or _coerce_name(try(left.node_kind)) != "Call" then return false end if
   if _member_qname(try(left.callee)) != "len" then return false end if
   args = try(left.args)
   if typeof(args) != "array" or len(args) != 1 then return false end if
   arg = args[0]
-  return typeof(arg) == "struct" and _coerce_name(try(arg.node_kind)) == "Var" and _coerce_name(try(arg.name)) == target_name
+  return t.ast_kind(arg) == "Var" and _coerce_name(t.ast_name(arg)) == target_name
 end function
 
 function _for_index_hoist_plans(state, loop_node, index_binding)
@@ -3903,7 +3908,7 @@ function _inline_ref_resolve(state, ex, owner, inline_names)
     if pref != "" then cands = cands + [pref + raw] end if
     ofile = ""
     if typeof(owner) == "struct" then ofile = _st_file(owner) end if
-    if ofile == "" and typeof(ex) == "struct" then ofile = _st_file(ex) end if
+    if ofile == "" and t.ast_is_node(ex) then ofile = _st_file(ex) end if
     fpref = ""
     if ofile != "" then fpref = _strpair_get(state.file_prefix_map, ofile) end if
     if fpref != "" then cands = cands + [fpref + raw] end if
@@ -3924,8 +3929,8 @@ function _inline_ref_resolve(state, ex, owner, inline_names)
 end function
 
 function _inline_scan_expr_uses(state, ex, owner, inline_names, address_taken)
-  if typeof(ex) != "struct" then return address_taken end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return address_taken end if
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Var" or k == "Member" then
     hits = _inline_ref_resolve(state, ex, owner, inline_names)
     if len(hits) > 0 then
@@ -3948,24 +3953,25 @@ function _inline_scan_expr_uses(state, ex, owner, inline_names, address_taken)
     return address_taken
   end if
 
-  child = try(ex.left)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
-  child = try(ex.right)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  if t.ast_is_leaf(ex) then return address_taken end if
+  child = t.ast_left(ex)
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  child = t.ast_right(ex)
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
   child = try(ex.expr)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
   child = try(ex.target)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
   child = try(ex.index)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
   child = try(ex.start)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
   child = try(ex.end_expr)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
   child = try(ex.iterable)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
   child = try(ex.obj)
-  if typeof(child) == "struct" then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
+  if t.ast_is_node(child) then address_taken = _inline_scan_expr_uses(state, child, owner, inline_names, address_taken) end if
   items = try(ex.items)
   if typeof(items) == "array" and len(items) > 0 then
     for i = 0 to len(items) - 1 address_taken = _inline_scan_expr_uses(state, items[i], owner, inline_names, address_taken) end for
@@ -4958,18 +4964,18 @@ end function
 function _analysis_member_target(ex)
   if typeof(ex) != "struct" then return 0 end if
   t0 = try(ex.target)
-  if typeof(t0) == "struct" then return t0 end if
+  if t.ast_is_node(t0) then return t0 end if
   o0 = try(ex.obj)
-  if typeof(o0) == "struct" then return o0 end if
+  if t.ast_is_node(o0) then return o0 end if
   return 0
 end function
 
 function _analysis_call_callee(ex)
   if typeof(ex) != "struct" then return 0 end if
   c0 = try(ex.callee)
-  if typeof(c0) == "struct" then return c0 end if
+  if t.ast_is_node(c0) then return c0 end if
   f0 = try(ex.func)
-  if typeof(f0) == "struct" then return f0 end if
+  if t.ast_is_node(f0) then return f0 end if
   return 0
 end function
 
@@ -4983,7 +4989,7 @@ end function
 function _analysis_for_end_expr(st)
   if typeof(st) != "struct" then return 0 end if
   e1 = try(st.end_expr)
-  if typeof(e1) == "struct" then return e1 end if
+  if t.ast_is_node(e1) then return e1 end if
   return 0
 end function
 
@@ -5027,11 +5033,11 @@ function _analysis_is_type_query_name(name)
 end function
 
 function _analysis_scan_expr(state, ex, allow_func_ident)
-  if typeof(ex) != "struct" then return state end if
-  nk = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return state end if
+  nk = _coerce_name(t.ast_kind(ex))
 
   if nk == "Var" then
-    nm0 = _coerce_name(try(ex.name))
+    nm0 = _coerce_name(t.ast_name(ex))
     if nm0 == "" then return state end if
     nm1 = exprmod._apply_import_alias(state, nm0)
     if nm1 == "" then nm1 = nm0 end if
@@ -5058,11 +5064,10 @@ function _analysis_scan_expr(state, ex, allow_func_ident)
   if nk == "Call" then
     cal = _analysis_call_callee(ex)
     args = _analysis_call_args(ex)
-    cal_kind = ""
-    if typeof(cal) == "struct" then cal_kind = _coerce_name(try(cal.node_kind)) end if
+    cal_kind = _coerce_name(t.ast_kind(cal))
 
     if cal_kind == "Var" then
-      raw_name = _coerce_name(try(cal.name))
+      raw_name = _coerce_name(t.ast_name(cal))
       cal_name = exprmod._apply_import_alias(state, raw_name)
       if cal_name == "" then cal_name = raw_name end if
       cal_q = exprmod._qualify_identifier(state, cal_name)
@@ -5104,12 +5109,12 @@ function _analysis_scan_expr(state, ex, allow_func_ident)
   end if
 
   if nk == "Unary" then
-    return _analysis_scan_expr(state, try(ex.right), false)
+    return _analysis_scan_expr(state, t.ast_right(ex), false)
   end if
 
   if nk == "Bin" then
-    state = _analysis_scan_expr(state, try(ex.left), false)
-    state = _analysis_scan_expr(state, try(ex.right), false)
+    state = _analysis_scan_expr(state, t.ast_left(ex), false)
+    state = _analysis_scan_expr(state, t.ast_right(ex), false)
     return state
   end if
 
@@ -5238,7 +5243,7 @@ function _analysis_scan_stmt(state, st)
 
   if k == "SetMember" then
     obj_expr = try(st.obj)
-    if typeof(obj_expr) != "struct" then obj_expr = try(st.target) end if
+    if t.ast_is_node(obj_expr) == false then obj_expr = try(st.target) end if
     state = _analysis_scan_expr(state, obj_expr, false)
     state = _analysis_scan_expr(state, try(st.expr), false)
     return state
@@ -5521,22 +5526,22 @@ end function
 
 function _closure_expr_reads(ex, used)
   if typeof(used) != "array" and typeof(used) != "struct" then used = _name_set_new(64) end if
-  if typeof(ex) != "struct" then return used end if
+  if t.ast_is_node(ex) == false then return used end if
 
-  k = _coerce_name(try(ex.node_kind))
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Var" then
-    nm = _coerce_name(try(ex.name))
+    nm = _coerce_name(t.ast_name(ex))
     if nm != "" then return _name_set_add(used, nm) end if
     return used
   end if
 
   if k == "Unary" then
-    return _closure_expr_reads(try(ex.right), used)
+    return _closure_expr_reads(t.ast_right(ex), used)
   end if
 
   if k == "Bin" then
-    used = _closure_expr_reads(try(ex.left), used)
-    used = _closure_expr_reads(try(ex.right), used)
+    used = _closure_expr_reads(t.ast_left(ex), used)
+    used = _closure_expr_reads(t.ast_right(ex), used)
     return used
   end if
 
@@ -5740,7 +5745,7 @@ function _closure_collect_uses(stmts)
 
     if k == "SetMember" then
       tgt = try(st.obj)
-      if typeof(tgt) != "struct" then tgt = try(st.target) end if
+      if t.ast_is_node(tgt) == false then tgt = try(st.target) end if
       used = _closure_expr_reads(tgt, used)
       used = _closure_expr_reads(try(st.expr), used)
       continue
@@ -5957,7 +5962,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
     if k == "SetMember" then
       rr3 = _name_set_new(16)
       tgt = try(st.obj)
-      if typeof(tgt) != "struct" then tgt = try(st.target) end if
+      if t.ast_is_node(tgt) == false then tgt = try(st.target) end if
       rr3 = _closure_expr_reads(tgt, rr3)
       rr3 = _closure_expr_reads(try(st.expr), rr3)
       read_before = _note_reads(read_before, written_yet, rr3)
@@ -6571,8 +6576,8 @@ function _expr_uses_this(ex)
     end for
     return false
   end if
-  if typeof(ex) != "struct" then return false end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return false end if
+  k = _coerce_name(t.ast_kind(ex))
   if k == "" then
     if _expr_uses_this(try(ex.value)) then return true end if
     if _expr_uses_this(try(ex.values)) then return true end if
@@ -6580,17 +6585,17 @@ function _expr_uses_this(ex)
     return false
   end if
   if k == "Var" then
-    return _coerce_name(try(ex.name)) == "this"
+    return _coerce_name(t.ast_name(ex)) == "this"
   end if
   if k == "IsType" then return _expr_uses_this(try(ex.expr)) end if
-  if k == "Unary" then return _expr_uses_this(try(ex.right)) end if
+  if k == "Unary" then return _expr_uses_this(t.ast_right(ex)) end if
   if k == "Bin" then
-    if _expr_uses_this(try(ex.left)) then return true end if
-    return _expr_uses_this(try(ex.right))
+    if _expr_uses_this(t.ast_left(ex)) then return true end if
+    return _expr_uses_this(t.ast_right(ex))
   end if
   if k == "Call" then
     cal = try(ex.callee)
-    if typeof(cal) != "struct" then cal = try(ex.func) end if
+    if t.ast_is_node(cal) == false then cal = try(ex.func) end if
     if _expr_uses_this(cal) then return true end if
     args = try(ex.args)
     if typeof(args) == "array" and len(args) > 0 then
@@ -6603,7 +6608,7 @@ function _expr_uses_this(ex)
   end if
   if k == "Member" then
     mt = try(ex.target)
-    if typeof(mt) != "struct" then mt = try(ex.obj) end if
+    if t.ast_is_node(mt) == false then mt = try(ex.obj) end if
     return _expr_uses_this(mt)
   end if
   if k == "Index" then
@@ -6882,8 +6887,7 @@ function _next_enum_id(state)
 end function
 
 function inline _st_file(st)
-  if typeof(st) == "struct" and typeof(st._filename) == "string" then return st._filename end if
-  return ""
+  return t.ast_filename(st)
 end function
 
 function inline _has_dot_name(name)
@@ -7271,7 +7275,7 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
           if typeof(vx) == "void" then
             prev_int_member = vname
           else
-            if typeof(vx) != "struct" or vx.node_kind != "Str" then
+            if t.ast_kind(vx) != "Str" then
               prev_int_member = vname
             end if
           end if
@@ -7325,11 +7329,11 @@ function _fn_arity_map(state)
 end function
 
 function _member_chain_name(ex)
-  if typeof(ex) != "struct" then return "" end if
-  if ex.node_kind == "Var" then
-    return _coerce_name(ex.name)
+  if t.ast_is_node(ex) == false then return "" end if
+  if t.ast_kind(ex) == "Var" then
+    return _coerce_name(t.ast_name(ex))
   end if
-  if ex.node_kind == "Member" then
+  if t.ast_kind(ex) == "Member" then
     b = _member_chain_name(ex.target)
     n = _coerce_name(ex.name)
     if b == "" or n == "" then return "" end if
@@ -7339,13 +7343,13 @@ function _member_chain_name(ex)
 end function
 
 function _check_expr_semantics(state, ex, fn_arities)
-  if typeof(ex) != "struct" then return state end if
-  k = ex.node_kind
+  if t.ast_is_node(ex) == false then return state end if
+  k = t.ast_kind(ex)
 
   if k == "Call" then
     cal = ex.callee
-    if typeof(cal) == "struct" and cal.node_kind == "Var" then
-      nm = _coerce_name(cal.name)
+    if t.ast_kind(cal) == "Var" then
+      nm = _coerce_name(t.ast_name(cal))
       if nm != "" then
         exp = _named_int_get(fn_arities, nm, -1)
         if exp >= 0 then
@@ -7357,7 +7361,7 @@ function _check_expr_semantics(state, ex, fn_arities)
         end if
       end if
     end if
-    if typeof(cal) == "struct" and cal.node_kind == "Member" then
+    if t.ast_kind(cal) == "Member" then
       owner = _member_chain_name(cal.target)
       mn = _coerce_name(cal.name)
       if owner != "" and mn != "" then
@@ -7390,12 +7394,12 @@ function _check_expr_semantics(state, ex, fn_arities)
   end if
 
   if k == "Unary" then
-    return _check_expr_semantics(state, ex.right, fn_arities)
+    return _check_expr_semantics(state, t.ast_right(ex), fn_arities)
   end if
 
   if k == "Bin" then
-    state = _check_expr_semantics(state, ex.left, fn_arities)
-    return _check_expr_semantics(state, ex.right, fn_arities)
+    state = _check_expr_semantics(state, t.ast_left(ex), fn_arities)
+    return _check_expr_semantics(state, t.ast_right(ex), fn_arities)
   end if
 
   if k == "Index" then
@@ -7431,30 +7435,30 @@ function _check_stmt_semantics(state, st, fn_arities)
   k = st.node_kind
 
   if k == "Print" or k == "ExprStmt" or k == "Assign" or k == "SynchronizedDecl" or k == "ConstDecl" or k == "Return" or k == "Defer" then
-    if typeof(st.expr) == "struct" then
+    if t.ast_is_node(st.expr) then
       state = _check_expr_semantics(state, st.expr, fn_arities)
     end if
     return state
   end if
 
   if k == "SetMember" then
-    if typeof(st.obj) == "struct" then
+    if t.ast_is_node(st.obj) then
       state = _check_expr_semantics(state, st.obj, fn_arities)
     end if
-    if typeof(st.expr) == "struct" then
+    if t.ast_is_node(st.expr) then
       state = _check_expr_semantics(state, st.expr, fn_arities)
     end if
     return state
   end if
 
   if k == "SetIndex" then
-    if typeof(st.target) == "struct" then
+    if t.ast_is_node(st.target) then
       state = _check_expr_semantics(state, st.target, fn_arities)
     end if
-    if typeof(st.index) == "struct" then
+    if t.ast_is_node(st.index) then
       state = _check_expr_semantics(state, st.index, fn_arities)
     end if
-    if typeof(st.expr) == "struct" then
+    if t.ast_is_node(st.expr) then
       state = _check_expr_semantics(state, st.expr, fn_arities)
     end if
     return state
@@ -7491,7 +7495,7 @@ function _check_stmt_semantics(state, st, fn_arities)
   end if
 
   if k == "If" then
-    if typeof(st.cond) == "struct" then
+    if t.ast_is_node(st.cond) then
       state = _check_expr_semantics(state, st.cond, fn_arities)
     end if
     if typeof(st.then_body) == "array" and len(st.then_body) > 0 then
@@ -7527,7 +7531,7 @@ function _check_stmt_semantics(state, st, fn_arities)
   end if
 
   if k == "While" or k == "DoWhile" then
-    if typeof(st.cond) == "struct" then
+    if t.ast_is_node(st.cond) then
       state = _check_expr_semantics(state, st.cond, fn_arities)
     end if
     if typeof(st.body) == "array" and len(st.body) > 0 then
@@ -7540,7 +7544,7 @@ function _check_stmt_semantics(state, st, fn_arities)
   end if
 
   if k == "SynchronizedBlock" then
-    if typeof(st.lock) == "struct" then
+    if t.ast_is_node(st.lock) then
       state = _check_expr_semantics(state, st.lock, fn_arities)
     end if
     if typeof(st.body) == "array" and len(st.body) > 0 then
@@ -7553,10 +7557,10 @@ function _check_stmt_semantics(state, st, fn_arities)
   end if
 
   if k == "For" then
-    if typeof(st.start) == "struct" then
+    if t.ast_is_node(st.start) then
       state = _check_expr_semantics(state, st.start, fn_arities)
     end if
-    if typeof(st.end_expr) == "struct" then
+    if t.ast_is_node(st.end_expr) then
       state = _check_expr_semantics(state, st.end_expr, fn_arities)
     end if
     if typeof(st.body) == "array" and len(st.body) > 0 then
@@ -7569,7 +7573,7 @@ function _check_stmt_semantics(state, st, fn_arities)
   end if
 
   if k == "ForEach" then
-    if typeof(st.iterable) == "struct" then
+    if t.ast_is_node(st.iterable) then
       state = _check_expr_semantics(state, st.iterable, fn_arities)
     end if
     if typeof(st.body) == "array" and len(st.body) > 0 then
@@ -7582,7 +7586,7 @@ function _check_stmt_semantics(state, st, fn_arities)
   end if
 
   if k == "Switch" then
-    if typeof(st.expr) == "struct" then
+    if t.ast_is_node(st.expr) then
       state = _check_expr_semantics(state, st.expr, fn_arities)
     end if
     if typeof(st.cases) == "array" and len(st.cases) > 0 then
@@ -7591,10 +7595,10 @@ function _check_stmt_semantics(state, st, fn_arities)
       cs = st.cases[i]
       if typeof(cs) != "struct" then continue end if
       if cs.kind == "range" then
-        if typeof(cs.range_start) == "struct" then
+        if t.ast_is_node(cs.range_start) then
           state = _check_expr_semantics(state, cs.range_start, fn_arities)
         end if
-        if typeof(cs.range_end) == "struct" then
+        if t.ast_is_node(cs.range_end) then
           state = _check_expr_semantics(state, cs.range_end, fn_arities)
         end if
       end if
@@ -8358,16 +8362,16 @@ function _build_module_init_recs(state, program)
 end function
 
 function _expr_uses_native_threads(ex)
-  if typeof(ex) != "struct" then return false end if
-  nk = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return false end if
+  nk = _coerce_name(t.ast_kind(ex))
   if nk == "Var" or nk == "Member" then
-    nm = _coerce_name(try(ex.name))
+    nm = _coerce_name(t.ast_name(ex))
     if nm == "Thread" or s.endsWith(nm, ".Thread") then return true end if
   end if
   if nk == "Member" then return _expr_uses_native_threads(try(ex.target)) end if
-  if nk == "Unary" then return _expr_uses_native_threads(try(ex.right)) end if
+  if nk == "Unary" then return _expr_uses_native_threads(t.ast_right(ex)) end if
   if nk == "Bin" then
-    return _expr_uses_native_threads(try(ex.left)) or _expr_uses_native_threads(try(ex.right))
+    return _expr_uses_native_threads(t.ast_left(ex)) or _expr_uses_native_threads(t.ast_right(ex))
   end if
   if nk == "Index" then
     return _expr_uses_native_threads(try(ex.target)) or _expr_uses_native_threads(try(ex.index))
@@ -9802,21 +9806,21 @@ function analyze_write_var(state, name)
 end function
 
 function analyze_expr(state, ex)
-  if typeof(ex) != "struct" then return state end if
-  nk = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return state end if
+  nk = _coerce_name(t.ast_kind(ex))
   if nk == "Var" then
-    nm = _coerce_name(try(ex.name))
+    nm = _coerce_name(t.ast_name(ex))
     if nm != "" then state = analyze_read_var(state, nm) end if
   end if
   if nk == "Member" then
     state = analyze_expr(state, _analysis_member_target(ex))
   end if
   if nk == "Unary" then
-    state = analyze_expr(state, try(ex.right))
+    state = analyze_expr(state, t.ast_right(ex))
   end if
   if nk == "Bin" then
-    state = analyze_expr(state, try(ex.left))
-    state = analyze_expr(state, try(ex.right))
+    state = analyze_expr(state, t.ast_left(ex))
+    state = analyze_expr(state, t.ast_right(ex))
   end if
   if nk == "Call" then
     state = analyze_expr(state, _analysis_call_callee(ex))
@@ -9834,7 +9838,7 @@ function analyze_block(state, stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return state end if
   for i = 0 to len(stmts) - 1
     st = stmts[i]
-    if typeof(st) == "struct" and typeof(try(st.expr)) == "struct" then
+    if typeof(st) == "struct" and t.ast_is_node(try(st.expr)) then
       state = analyze_expr(state, try(st.expr))
     end if
     state = cg_emit_stmt(state, st)
@@ -9875,8 +9879,8 @@ function inline _max_calls_int(a, b)
 end function
 
 function max_calls_expr(state, ex)
-  if typeof(ex) != "struct" then return 0 end if
-  nk = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return 0 end if
+  nk = _coerce_name(t.ast_kind(ex))
   m = 0
   if nk == "Call" then
     args = _analysis_call_args(ex)
@@ -9888,7 +9892,7 @@ function max_calls_expr(state, ex)
     if typeof(ext_sig) == "struct" and typeof(try(ext_sig.params)) == "array" and len(ext_sig.params) > call_arity then
       call_arity = len(ext_sig.params)
     end if
-    if typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" then
+    if t.ast_kind(cal) == "Member" then
       mname = _coerce_name(try(cal.name))
       if _struct_methods_any_has(state, mname) then
         call_arity = call_arity + 1
@@ -9898,15 +9902,15 @@ function max_calls_expr(state, ex)
     m = _max_calls_int(m, max_calls_expr(state, cal))
     if len(args) > 0 then
       for each aa in args
-        if typeof(aa) == "struct" then
+        if t.ast_is_node(aa) then
           m = _max_calls_int(m, max_calls_expr(state, aa))
         end if
       end for
     end if
     return m
   end if
-  if nk == "Unary" then return max_calls_expr(state, try(ex.right)) end if
-  if nk == "Bin" then return _max_calls_int(max_calls_expr(state, try(ex.left)), max_calls_expr(state, try(ex.right))) end if
+  if nk == "Unary" then return max_calls_expr(state, t.ast_right(ex)) end if
+  if nk == "Bin" then return _max_calls_int(max_calls_expr(state, t.ast_left(ex)), max_calls_expr(state, t.ast_right(ex))) end if
   if nk == "ArrayLit" then
     items_mc = try(ex.items)
     if typeof(items_mc) == "array" and len(items_mc) > 0 then
@@ -9960,8 +9964,8 @@ function max_calls_stmts(state, stmts)
       obj_expr = 0
       obj_try = try(st.obj)
       tgt_try = try(st.target)
-      if typeof(obj_try) == "struct" then obj_expr = obj_try end if
-      if typeof(obj_expr) != "struct" and typeof(tgt_try) == "struct" then obj_expr = tgt_try end if
+      if t.ast_is_node(obj_try) then obj_expr = obj_try end if
+      if t.ast_is_node(obj_expr) == false and t.ast_is_node(tgt_try) then obj_expr = tgt_try end if
       m = _max_calls_int(m, max_calls_expr(state, obj_expr))
       m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
       continue

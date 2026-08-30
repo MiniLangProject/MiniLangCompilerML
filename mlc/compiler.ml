@@ -111,6 +111,13 @@ struct StrIntPair
   value,
 end struct
 
+// AST telemetry is opt-in so normal builds do not pay for a second tree walk.
+struct CompilerAstProfile
+  counts,
+  total,
+  max_depth,
+end struct
+
 // Normalized native ABI declarations used by validation and import planning.
 struct ExternSigParam
   name,
@@ -193,6 +200,7 @@ _front_visited_set = []
 _front_resolve_cache = []
 _pe_state_keepalive = 0
 _compile_codegen_keepalive = 0
+_link_patch_keepalive = 0
 _object_pipeline_enabled = false
 _object_emit_only = false
 _asm_listing_enabled = false
@@ -204,6 +212,7 @@ _asm_dump_data = false
 _asm_dump_pe = false
 _compiler_profile_enabled = false
 _compiler_profile_batches_enabled = false
+_compiler_profile_ast_enabled = false
 _compile_target = "windows-x64"
 _compiler_profile_started = 0
 _compiler_profile_phase_started = 0
@@ -237,6 +246,7 @@ function _usage()
   print "  --mem-probe"
   print "  --profile-compiler    print wall-clock time for compiler phases"
   print "  --profile-compiler-batches  also print function-batch/module timings"
+  print "  --profile-compiler-ast  also print AST arena and node-kind telemetry"
   print "Listings:"
   print "  --asm [--asm-out <path>] [--asm-cols addr,opcodes,code]"
   print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
@@ -296,6 +306,89 @@ function _compiler_profile_finish()
   end if
   print "[profile] total_ms=" + (tick - _compiler_profile_started)
   _compiler_profile_phase_name = ""
+  return void
+end function
+
+function _compiler_ast_profile_count(profile, kind)
+  counts = profile.counts
+  if typeof(counts) != "array" then counts = [] end if
+  if len(counts) > 0 then
+    for i = 0 to len(counts) - 1
+      if counts[i].key == kind then
+        item = counts[i]
+        item.value = item.value + 1
+        counts[i] = item
+        profile.counts = counts
+        profile.total = profile.total + 1
+        return profile
+      end if
+    end for
+  end if
+  profile.counts = counts + [StrIntPair(kind, 1)]
+  profile.total = profile.total + 1
+  return profile
+end function
+
+function _compiler_ast_profile_visit_value(profile, value, depth)
+  if t.ast_is_node(value) then return _compiler_ast_profile_visit_node(profile, value, depth) end if
+  if typeof(value) != "array" or len(value) <= 0 then return profile end if
+  for i = 0 to len(value) - 1
+    profile = _compiler_ast_profile_visit_value(profile, value[i], depth)
+  end for
+  return profile
+end function
+
+// Traverse the public AST schema only when explicitly requested. Compact leaf
+// NodeIds are terminal; composite structs are followed through every AST-bearing
+// field shared by expressions, statements, declarations and switch containers.
+function _compiler_ast_profile_visit_node(profile, node, depth)
+  if t.ast_is_node(node) == false then return profile end if
+  kind = t.ast_kind(node)
+  profile = _compiler_ast_profile_count(profile, kind)
+  if depth > profile.max_depth then profile.max_depth = depth end if
+  if t.ast_is_leaf(node) then return profile end if
+
+  profile = _compiler_ast_profile_visit_value(profile, try(node.items), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, t.ast_left(node), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, t.ast_right(node), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.expr), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.callee), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.args), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.target), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.index), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.obj), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.lock), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.cleanup), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.body), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.params), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.cond), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.then_body), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.elifs), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.else_body), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.start), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.end_expr), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.iterable), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.values), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.range_start), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.range_end), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.cases), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.default_body), depth + 1)
+  profile = _compiler_ast_profile_visit_value(profile, try(node.methods), depth + 1)
+  return profile
+end function
+
+function _compiler_ast_profile_report(program, module_count)
+  global _compiler_profile_ast_enabled
+  if _compiler_profile_ast_enabled == false then return void end if
+  profile = CompilerAstProfile([], 0, 0)
+  profile = _compiler_ast_profile_visit_value(profile, program, 1)
+  stats = t.ast_leaf_stats()
+  print "[profile-ast] modules=" + module_count + " nodes=" + profile.total + " compact_leaves=" + stats[0] + " compact_bins=" + stats[5] + " leaf_capacity=" + stats[1] + " bin_capacity=" + stats[6] + " arena_storage_bytes=" + stats[4] + " symbols=" + stats[2] + " files=" + stats[3] + " max_depth=" + profile.max_depth
+  if len(profile.counts) > 0 then
+    for i = 0 to len(profile.counts) - 1
+      print "[profile-ast] kind=" + profile.counts[i].key + " count=" + profile.counts[i].value
+    end for
+  end if
   return void
 end function
 
@@ -960,11 +1053,11 @@ function _is_constexpr_binary(op)
 end function
 
 function _expr_to_qualname(expr)
-  if typeof(expr) != "struct" then return "" end if
-  if expr.node_kind == "Var" and typeof(expr.name) == "string" then
-    return expr.name
+  if t.ast_is_node(expr) == false then return "" end if
+  if t.ast_kind(expr) == "Var" and typeof(t.ast_name(expr)) == "string" then
+    return t.ast_name(expr)
   end if
-  if expr.node_kind == "Member" and typeof(expr.name) == "string" then
+  if t.ast_kind(expr) == "Member" and typeof(expr.name) == "string" then
     base = _expr_to_qualname(expr.target)
     if base == "" then return "" end if
     return base + "." + expr.name
@@ -973,18 +1066,18 @@ function _expr_to_qualname(expr)
 end function
 
 function _is_constexpr_expr(expr)
-  if typeof(expr) != "struct" then return false end if
-  k = expr.node_kind
+  if t.ast_is_node(expr) == false then return false end if
+  k = t.ast_kind(expr)
   if k == "Num" or k == "Str" or k == "Bool" then return true end if
   if k == "Var" then return true end if
   if k == "Member" then return _expr_to_qualname(expr) != "" end if
   if k == "Unary" then
-    if _is_constexpr_unary(expr.op) == false then return false end if
-    return _is_constexpr_expr(expr.right)
+    if _is_constexpr_unary(t.ast_op(expr)) == false then return false end if
+    return _is_constexpr_expr(t.ast_right(expr))
   end if
   if k == "Bin" then
-    if _is_constexpr_binary(expr.op) == false then return false end if
-    return _is_constexpr_expr(expr.left) and _is_constexpr_expr(expr.right)
+    if _is_constexpr_binary(t.ast_op(expr)) == false then return false end if
+    return _is_constexpr_expr(t.ast_left(expr)) and _is_constexpr_expr(t.ast_right(expr))
   end if
   return false
 end function
@@ -4763,6 +4856,9 @@ end function
 function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   entry_abs = _path_abspath(entry)
   if entry_abs == "" then entry_abs = entry end if
+  // Each compilation owns one compact AST arena. Reset before parsing so a
+  // preceding frontcheck in the same process cannot retain obsolete NodeIds.
+  t.ast_leaf_reset()
   _heap_probe("load:start")
   check = _run_frontcheck(entry_abs, include_dirs, keep_going, max_errors)
   _heap_probe("load:frontcheck_done")
@@ -4780,6 +4876,7 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   if typeof(visited) != "array" or len(visited) <= 0 then
     visited = [entry_abs]
   end if
+  module_count = len(visited)
   probe_stride = 128
 
   for i = 0 to len(visited) - 1
@@ -4804,10 +4901,10 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
         merged_b = t.arr_chunk_push(merged_b, part[pi])
       end for
     end if
-    if _path_eq(path, entry_abs) == false then
-      parsed.source = ""
-      parsed_modules = _parsed_module_set(parsed_modules, path, "", parsed.program)
-    end if
+    // The merged program now owns every node. Drop each module's duplicate
+    // array and source buffer as soon as its line map has been materialized.
+    parsed.source = ""
+    parsed.program = []
     if probe_stride > 0 and (i % probe_stride) == 0 then _heap_probe("load:file_" + i) end if
   end for
 
@@ -4821,8 +4918,12 @@ function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   merged = t.arr_chunk_finish(merged_b)
   source_pairs = t.arr_chunk_finish(source_pairs_b)
   aliases = check.aliases
+  _compiler_ast_profile_report(merged, module_count)
   _heap_probe("load:done")
-  return LoadProgramResult(diags, entry_source, merged, aliases, source_pairs, visited, parsed_modules)
+  // Import order and parsed-module caches are frontend-only. Inline dependency
+  // closure is derived from the merged AST, so neither container is needed by
+  // code generation and both can become collectible at this ownership boundary.
+  return LoadProgramResult(diags, entry_source, merged, aliases, source_pairs, [], [])
 end function
 
 // Link canonical MLO fragments into the same fixed-address ELF image as the
@@ -5012,6 +5113,7 @@ end function
 
 function _link_mlo_files(obj_paths, output_exe, subsystem)
   global _dump_labels_path
+  global _link_patch_keepalive
   text_parts_b = t.arr_chunk_new(64)
   rdata_parts_b = t.arr_chunk_new(64)
   data_parts_b = t.arr_chunk_new(64)
@@ -5178,10 +5280,12 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   _progress_link("labels resolved")
 
   // Address maps and the compact public fallback list now contain everything
-  // patching needs. Drop transient builders before streaming relocations.
+  // patching needs. Drop transient builders before streaming relocations. Do
+  // not force a full collection here: label-map values still reference decoded
+  // object strings and an eager scan at this boundary can overlap their final
+  // liveness wave. The normal allocation limit collects them after patching.
   maps = 0
   labels_b = 0
-  gc_collect()
 
   entry_rva = t.fastmap_get(label_map, _label_key(entry_label), -1)
   if typeof(entry_rva) != "int" or entry_rva < 0 then
@@ -5214,6 +5318,10 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   end if
 
   buf = text_buf
+  // Streamed patching periodically collects a large heap. Keep every mutable
+  // section and lookup graph rooted independently of native stack-slot liveness;
+  // diagnostic heap probes must not be required to make these references live.
+  _link_patch_keepalive = [p, buf, rdata_buf, data_buf, label_map, obj_index_map, obj_index_lists, labels, obj_label_recs, patch_file_recs]
   if typeof(patch_file_recs) == "array" and len(patch_file_recs) > 0 then
     _compiler_profile_phase("link: applying patches")
     _progress_link("applying patches")
@@ -5236,14 +5344,14 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
       if apr[0] != 0 then return apr[0] end if
       label_map = apr[1]
       patch_index = apr[2]
-      // Streamed patching keeps only the current raw object alive.  Full GC is
-      // intentionally rare because the million-entry label map is live.
-      if ((ri + 1) % 128) == 0 then
-        gc_collect()
-      end if
+      // Streamed patching drops the current raw object on return. Avoid a full
+      // collection inside this loop: the large live label/section graph makes
+      // the scan expensive, and allocation-limit collection after the patch
+      // phase has a simpler root boundary.
       _heap_probe("link:patch_obj_" + (ri + 1))
     end for
   end if
+  _link_patch_keepalive = 0
   _heap_probe("link:patches_done")
   _progress_link("patches applied")
 
@@ -6434,7 +6542,15 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     // batch ownership boundary so later collections see only live compiler IR.
     cg = codegen.release_emitted_function_entries(cg, fn_entries, fn_start, fn_chunk_size)
     fn_analysis_scratch = codegen.release_function_analysis_scratch(fn_analysis_scratch)
-    _compile_codegen_keepalive = [load, cg, fn_analysis_scratch]
+    // The explicit stride collection runs at the bottom of this loop, where
+    // native stack-slot liveness has historically been conservative only for
+    // values referenced by the current straight-line block.  The next
+    // iteration still needs the reusable fragment state, function-entry arena
+    // and accumulated object-path/helper builders.  Root the complete loop
+    // frontier explicitly so a collection cannot turn one of those values
+    // into a stale pointer.  Compiler profiling used to hide this bug by
+    // extending several local live ranges through its diagnostic print.
+    _compile_codegen_keepalive = [load, cg, mod_cg, fn_entries, fn_analysis_scratch, helper_union, module_obj_paths_b]
     text_stream_offset = text_stream_offset + fragment_text_size
     if _compiler_profile_batches_enabled then
       fn_batch_function_count = fn_chunk_size
@@ -6601,6 +6717,7 @@ function run_cli(args)
   global _asm_dump_pe
   global _compiler_profile_enabled
   global _compiler_profile_batches_enabled
+  global _compiler_profile_ast_enabled
   global _compile_target
   if len(args) == 1 and (args[0] == "-version" or args[0] == "--version") then
     print COMPILER_VERSION_TEXT
@@ -6620,7 +6737,8 @@ function run_cli(args)
   project_object_cache_dir = ""
   _mem_probe_enabled = _has_flag(args, "--mem-probe")
   _compiler_profile_batches_enabled = _has_flag(args, "--profile-compiler-batches")
-  _compiler_profile_enabled = _has_flag(args, "--profile-compiler") or _compiler_profile_batches_enabled
+  _compiler_profile_ast_enabled = _has_flag(args, "--profile-compiler-ast")
+  _compiler_profile_enabled = _has_flag(args, "--profile-compiler") or _compiler_profile_batches_enabled or _compiler_profile_ast_enabled
   _compiler_profile_reset()
   _dump_labels_path = _get_flag_value(args, "--dump-labels")
   _object_pipeline_enabled = false

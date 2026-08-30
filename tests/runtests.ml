@@ -698,6 +698,7 @@ function main(args)
   // Suite-style runtime tests
   if _test(compiler_path, repo_root, "array_vector", "tests\\array_vector.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "compiler_token_arena", "tests\\compiler_token_arena.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "compiler_ast_leaf_arena", "tests\\compiler_ast_leaf_arena.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_suite", "tests\\language_suite.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "stdlib_unit_tests", "tests\\stdlib_unit_tests.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_periodic_test", "tests\\gc_periodic_test.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

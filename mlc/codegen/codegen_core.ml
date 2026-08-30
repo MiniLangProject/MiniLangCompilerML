@@ -674,11 +674,7 @@ function _add_extern_imports(state)
 end function
 
 function _pos(node)
-  if typeof(node) == "struct" then
-    p = try(node._pos)
-    if typeof(p) == "int" then return p end if
-  end if
-  return 0
+  return t.ast_pos(node)
 end function
 
 function _source_for_dbg_filename(state, filename)
@@ -734,11 +730,11 @@ function _line_from_pos(state, pos, filename)
 end function
 
 function _flatten_member_chain_as_qualname(expr)
-  if typeof(expr) != "struct" then return 0 end if
-  if expr.node_kind == "Var" and typeof(expr.name) == "string" then
-    return expr.name
+  if t.ast_is_node(expr) == false then return 0 end if
+  if t.ast_kind(expr) == "Var" and typeof(t.ast_name(expr)) == "string" then
+    return t.ast_name(expr)
   end if
-  if expr.node_kind == "Member" and typeof(expr.name) == "string" then
+  if t.ast_kind(expr) == "Member" and typeof(expr.name) == "string" then
     left = _flatten_member_chain_as_qualname(expr.target)
     if typeof(left) != "string" or left == "" then return 0 end if
     return left + "." + expr.name
@@ -1114,7 +1110,9 @@ end function
 
 function emit_dbg_line(state, node)
   ln = 0
-  if typeof(node) == "struct" then
+  if t.ast_is_node(node) and typeof(node) != "struct" then
+    ln = _line_from_pos(state, t.ast_pos(node), t.ast_filename(node))
+  else if typeof(node) == "struct" then
     maybe_ln = try(node._line)
     if typeof(maybe_ln) == "int" then
       ln = maybe_ln

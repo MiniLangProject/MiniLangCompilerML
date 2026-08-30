@@ -1367,68 +1367,68 @@ function _parse_expr_list(end_kind)
 end function
 
 function _parse_primary()
-  t = _peek()
+  tok = _peek()
 
-  if _tok_kind_id(t) == TK_LPAREN then
-    sp = _tok_pos(t)
+  if _tok_kind_id(tok) == TK_LPAREN then
+    sp = _tok_pos(tok)
     _advance()
     e = _parse_expr(0)
     if _has_error() then return end if
     _expect_kind(TK_RPAREN)
     if _has_error() then return end if
-    if typeof(e._pos) != "int" then e._pos = sp end if
+    if typeof(e) == "struct" and typeof(e._pos) != "int" then e._pos = sp end if
     return e
   end if
 
-  if _tok_kind_id(t) == TK_LBRACK then
-    sp = _tok_pos(t)
+  if _tok_kind_id(tok) == TK_LBRACK then
+    sp = _tok_pos(tok)
     _advance()
     items = _parse_expr_list(TK_RBRACK)
     if _has_error() then return end if
     return ArrayLit("ArrayLit", items, sp, _filename)
   end if
 
-  if _tok_kind_id(t) == TK_NUMBER then
-    sp = _tok_pos(t)
-    value = _tok_value(t)
+  if _tok_kind_id(tok) == TK_NUMBER then
+    sp = _tok_pos(tok)
+    value = _tok_value(tok)
     _advance()
     if _match_number_has_dot(value) then
-      return Num("Num", _parse_float_literal(value), sp, _filename)
+      return t.ast_leaf_new("Num", _parse_float_literal(value), sp, _filename)
     end if
-    return Num("Num", _parse_int_literal(value), sp, _filename)
+    return t.ast_leaf_new("Num", _parse_int_literal(value), sp, _filename)
   end if
 
-  if _tok_kind_id(t) == TK_STRING then
-    sp = _tok_pos(t)
-    value = _tok_value(t)
+  if _tok_kind_id(tok) == TK_STRING then
+    sp = _tok_pos(tok)
+    value = _tok_value(tok)
     _advance()
     raw = _substr(value, 1, len(value) - 2)
     val = _decode_string_raw(raw, sp)
     if _has_error() then return end if
-    return Str("Str", val, sp, _filename)
+    return t.ast_leaf_new("Str", val, sp, _filename)
   end if
 
-  if _tok_kind_id(t) == TK_KW and(_tok_value(t) == "true" or _tok_value(t) == "false") then
-    sp = _tok_pos(t)
-    value = _tok_value(t)
+  if _tok_kind_id(tok) == TK_KW and(_tok_value(tok) == "true" or _tok_value(tok) == "false") then
+    sp = _tok_pos(tok)
+    value = _tok_value(tok)
     _advance()
-    return Bool("Bool", value == "true", sp, _filename)
+    return t.ast_leaf_new("Bool", value == "true", sp, _filename)
   end if
 
-  if _tok_kind_id(t) == TK_KW and _tok_value(t) == "void" then
-    sp = _tok_pos(t)
+  if _tok_kind_id(tok) == TK_KW and _tok_value(tok) == "void" then
+    sp = _tok_pos(tok)
     _advance()
-    return VoidLit("VoidLit", sp, _filename)
+    return t.ast_leaf_new("VoidLit", 0, sp, _filename)
   end if
 
-  if _tok_kind_id(t) == TK_IDENT then
-    sp = _tok_pos(t)
-    value = _tok_value(t)
+  if _tok_kind_id(tok) == TK_IDENT then
+    sp = _tok_pos(tok)
+    value = _tok_value(tok)
     _advance()
-    return Var("Var", value, sp, _filename)
+    return t.ast_leaf_new("Var", value, sp, _filename)
   end if
 
-  _set_error("Unexpected expression: " + _tok_desc(t), _tok_pos(t))
+  _set_error("Unexpected expression: " + _tok_desc(tok), _tok_pos(tok))
 end function
 
 function _match_number_has_dot(text)
@@ -1453,7 +1453,7 @@ function _parse_postfix()
   while true
     tok = _peek()
     if _tok_kind_id(tok) == TK_LPAREN then
-      sp = expr._pos
+      sp = t.ast_pos(expr)
       if typeof(sp) != "int" then sp = _tok_pos(tok) end if
       _advance()
       args = _parse_expr_list(TK_RPAREN)
@@ -1462,7 +1462,7 @@ function _parse_postfix()
       continue
     end if
     if _tok_kind_id(tok) == TK_LBRACK then
-      sp = expr._pos
+      sp = t.ast_pos(expr)
       if typeof(sp) != "int" then sp = _tok_pos(tok) end if
       _advance()
       _skip_newlines()
@@ -1475,7 +1475,7 @@ function _parse_postfix()
       continue
     end if
     if _tok_kind_id(tok) == TK_DOT then
-      sp = expr._pos
+      sp = t.ast_pos(expr)
       if typeof(sp) != "int" then sp = _tok_pos(tok) end if
       _advance()
       nm = _expect_kind(TK_IDENT)
@@ -1570,14 +1570,14 @@ function _parse_expr(min_prec)
         ty_canon = _canonical_type_name(ty_l)
       end if
 
-      sp = left._pos
+      sp = t.ast_pos(left)
       if typeof(sp) != "int" then sp = is_start end if
 
       if _is_allowed_type_name(ty_canon) then
-        tvar = Var("Var", "typeof", is_start, _filename)
+        tvar = t.ast_leaf_new("Var", "typeof", is_start, _filename)
         tcall = Call("Call", tvar,[left], sp, _filename)
-        rhs = Str("Str", ty_canon, _tok_pos(ty_tok), _filename)
-        cmp = Bin("Bin", tcall, "==", rhs, sp, _filename)
+        rhs = t.ast_leaf_new("Str", ty_canon, _tok_pos(ty_tok), _filename)
+        cmp = t.ast_bin_new(tcall, "==", rhs, sp, _filename)
         if is_not then
           left = Unary("Unary", "not", cmp, sp, _filename)
         else
@@ -1591,9 +1591,9 @@ function _parse_expr(min_prec)
 
     right = _parse_expr(prec + 1)
     if _has_error() then return end if
-    sp = left._pos
+    sp = t.ast_pos(left)
     if typeof(sp) != "int" then sp = _tok_pos(tok) end if
-    left = Bin("Bin", left, op, right, sp, _filename)
+    left = t.ast_bin_new(left, op, right, sp, _filename)
   end while
   return left
 end function
@@ -2757,26 +2757,26 @@ function _parse_stmt_for(start_pos, t)
   return For("For", _tok_value(vn), st, en, body, start_pos, _filename)
 end function
 
-function _parse_stmt_ident(start_pos, t)
+function _parse_stmt_ident(start_pos, first_tok)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   expr = _parse_postfix()
   if _has_error() then return end if
   if _match_value(TK_OP, "=") then
     rhs = _parse_expr(0)
     if _has_error() then return end if
-    if expr.node_kind == "Var" then
-      return Assign("Assign", expr.name, rhs, start_pos, _filename)
+    if t.ast_kind(expr) == "Var" then
+      return Assign("Assign", t.ast_name(expr), rhs, start_pos, _filename)
     end if
-    if expr.node_kind == "Member" then
+    if t.ast_kind(expr) == "Member" then
       return SetMember("SetMember", expr.target, expr.name, rhs, start_pos, _filename)
     end if
-    if expr.node_kind == "Index" then
+    if t.ast_kind(expr) == "Index" then
       return SetIndex("SetIndex", expr.target, expr.index, rhs, start_pos, _filename)
     end if
     _set_error("Invalid assignment target (lvalue)", start_pos)
     return
   end if
-  if expr.node_kind == "Call" then
+  if t.ast_kind(expr) == "Call" then
     return ExprStmt("ExprStmt", expr, start_pos, _filename)
   end if
   _set_error("Only assignments or function calls are allowed as a statement", start_pos)
@@ -2917,7 +2917,7 @@ function set_compile_target(target)
 end function
 
 function _compile_node_pos(expr, base_pos)
-  p = try(expr._pos)
+  p = t.ast_pos(expr)
   if typeof(p) != "int" then p = 0 end if
   return base_pos + p
 end function
@@ -2939,102 +2939,103 @@ function _compile_string_compare(left, right)
 end function
 
 function _compile_eval_node(expr, env, filename, base_pos)
-  if typeof(expr) != "struct" then return ParseError("unsupported compile-time expression", base_pos, filename) end if
-  kind = try(expr.node_kind)
+  if t.ast_is_node(expr) == false then return ParseError("unsupported compile-time expression", base_pos, filename) end if
+  kind = t.ast_kind(expr)
   pos = _compile_node_pos(expr, base_pos)
-  if kind == "Bool" then return expr.value end if
+  if kind == "Bool" then return t.ast_value(expr) end if
   if kind == "Num" then
-    if typeof(expr.value) == "int" then return expr.value end if
+    if typeof(t.ast_value(expr)) == "int" then return t.ast_value(expr) end if
     return ParseError("compile-time values do not support floats", pos, filename)
   end if
-  if kind == "Str" then return expr.value end if
+  if kind == "Str" then return t.ast_value(expr) end if
   if kind == "Var" then
-    if _compile_env_has(env, expr.name) == false then
-      return ParseError("unknown compile-time value: " + expr.name, pos, filename)
+    expr_name = t.ast_name(expr)
+    if _compile_env_has(env, expr_name) == false then
+      return ParseError("unknown compile-time value: " + expr_name, pos, filename)
     end if
-    return _compile_env_get(env, expr.name)
+    return _compile_env_get(env, expr_name)
   end if
-  if kind == "Call" and typeof(expr.callee) == "struct" and try(expr.callee.node_kind) == "Var" and try(expr.callee.name) == "defined" then
-    if typeof(expr.args) != "array" or len(expr.args) != 1 or typeof(expr.args[0]) != "struct" then
+  if kind == "Call" and t.ast_kind(expr.callee) == "Var" and t.ast_name(expr.callee) == "defined" then
+    if typeof(expr.args) != "array" or len(expr.args) != 1 or t.ast_is_node(expr.args[0]) == false then
       return ParseError("defined(...) expects one name or string", pos, filename)
     end if
     arg = expr.args[0]
-    arg_kind = try(arg.node_kind)
-    if arg_kind == "Var" then return _compile_env_has(env, arg.name) end if
-    if arg_kind == "Str" then return _compile_env_has(env, arg.value) end if
+    arg_kind = t.ast_kind(arg)
+    if arg_kind == "Var" then return _compile_env_has(env, t.ast_name(arg)) end if
+    if arg_kind == "Str" then return _compile_env_has(env, t.ast_value(arg)) end if
     return ParseError("defined(...) expects one name or string", pos, filename)
   end if
   if kind == "Unary" then
-    value = _compile_eval_node(expr.right, env, filename, base_pos)
+    value = _compile_eval_node(t.ast_right(expr), env, filename, base_pos)
     if _compile_is_error(value) then return value end if
-    if expr.op == "not" and typeof(value) == "bool" then return value == false end if
-    if expr.op == "-" and typeof(value) == "int" then return 0 - value end if
-    if expr.op == "~" and typeof(value) == "int" then return ~value end if
-    return ParseError("invalid compile-time unary operation: " + expr.op, pos, filename)
+    if t.ast_op(expr) == "not" and typeof(value) == "bool" then return value == false end if
+    if t.ast_op(expr) == "-" and typeof(value) == "int" then return 0 - value end if
+    if t.ast_op(expr) == "~" and typeof(value) == "int" then return ~value end if
+    return ParseError("invalid compile-time unary operation: " + t.ast_op(expr), pos, filename)
   end if
   if kind == "Bin" then
-    left = _compile_eval_node(expr.left, env, filename, base_pos)
+    left = _compile_eval_node(t.ast_left(expr), env, filename, base_pos)
     if _compile_is_error(left) then return left end if
-    if expr.op == "and" then
+    if t.ast_op(expr) == "and" then
       if typeof(left) != "bool" then return ParseError("compile-time 'and' expects booleans", pos, filename) end if
       if left == false then return false end if
-      right_and = _compile_eval_node(expr.right, env, filename, base_pos)
+      right_and = _compile_eval_node(t.ast_right(expr), env, filename, base_pos)
       if _compile_is_error(right_and) then return right_and end if
       if typeof(right_and) != "bool" then return ParseError("compile-time 'and' expects booleans", pos, filename) end if
       return right_and
     end if
-    if expr.op == "or" then
+    if t.ast_op(expr) == "or" then
       if typeof(left) != "bool" then return ParseError("compile-time 'or' expects booleans", pos, filename) end if
       if left then return true end if
-      right_or = _compile_eval_node(expr.right, env, filename, base_pos)
+      right_or = _compile_eval_node(t.ast_right(expr), env, filename, base_pos)
       if _compile_is_error(right_or) then return right_or end if
       if typeof(right_or) != "bool" then return ParseError("compile-time 'or' expects booleans", pos, filename) end if
       return right_or
     end if
 
-    right = _compile_eval_node(expr.right, env, filename, base_pos)
+    right = _compile_eval_node(t.ast_right(expr), env, filename, base_pos)
     if _compile_is_error(right) then return right end if
-    if expr.op == "==" or expr.op == "!=" then
+    if t.ast_op(expr) == "==" or t.ast_op(expr) == "!=" then
       equal = typeof(left) == typeof(right) and left == right
-      if expr.op == "==" then return equal end if
+      if t.ast_op(expr) == "==" then return equal end if
       return equal == false
     end if
-    if expr.op == "<" or expr.op == "<=" or expr.op == ">" or expr.op == ">=" then
+    if t.ast_op(expr) == "<" or t.ast_op(expr) == "<=" or t.ast_op(expr) == ">" or t.ast_op(expr) == ">=" then
       if typeof(left) != typeof(right) or (typeof(left) != "int" and typeof(left) != "string") then
-        return ParseError("compile-time '" + expr.op + "' expects matching int or string operands", pos, filename)
+        return ParseError("compile-time '" + t.ast_op(expr) + "' expects matching int or string operands", pos, filename)
       end if
       if typeof(left) == "string" then
         ordering = _compile_string_compare(left, right)
-        if expr.op == "<" then return ordering < 0 end if
-        if expr.op == "<=" then return ordering <= 0 end if
-        if expr.op == ">" then return ordering > 0 end if
+        if t.ast_op(expr) == "<" then return ordering < 0 end if
+        if t.ast_op(expr) == "<=" then return ordering <= 0 end if
+        if t.ast_op(expr) == ">" then return ordering > 0 end if
         return ordering >= 0
       end if
-      if expr.op == "<" then return left < right end if
-      if expr.op == "<=" then return left <= right end if
-      if expr.op == ">" then return left > right end if
+      if t.ast_op(expr) == "<" then return left < right end if
+      if t.ast_op(expr) == "<=" then return left <= right end if
+      if t.ast_op(expr) == ">" then return left > right end if
       return left >= right
     end if
-    if expr.op == "+" and typeof(left) == "string" and typeof(right) == "string" then return left + right end if
+    if t.ast_op(expr) == "+" and typeof(left) == "string" and typeof(right) == "string" then return left + right end if
     if typeof(left) != "int" or typeof(right) != "int" then
-      return ParseError("compile-time '" + expr.op + "' expects integer operands", pos, filename)
+      return ParseError("compile-time '" + t.ast_op(expr) + "' expects integer operands", pos, filename)
     end if
-    if expr.op == "+" then return left + right end if
-    if expr.op == "-" then return left - right end if
-    if expr.op == "*" then return left * right end if
-    if expr.op == "%" then
+    if t.ast_op(expr) == "+" then return left + right end if
+    if t.ast_op(expr) == "-" then return left - right end if
+    if t.ast_op(expr) == "*" then return left * right end if
+    if t.ast_op(expr) == "%" then
       if right == 0 then return ParseError("compile-time modulo by zero", pos, filename) end if
       return left % right
     end if
-    if expr.op == "&" then return left & right end if
-    if expr.op == "|" then return left | right end if
-    if expr.op == "^" then return left ^ right end if
-    if expr.op == "<<" or expr.op == ">>" then
+    if t.ast_op(expr) == "&" then return left & right end if
+    if t.ast_op(expr) == "|" then return left | right end if
+    if t.ast_op(expr) == "^" then return left ^ right end if
+    if t.ast_op(expr) == "<<" or t.ast_op(expr) == ">>" then
       if right < 0 then return ParseError("negative compile-time shift count", pos, filename) end if
-      if expr.op == "<<" then return left << (right & 63) end if
+      if t.ast_op(expr) == "<<" then return left << (right & 63) end if
       return left >> (right & 63)
     end if
-    return ParseError("unsupported compile-time operation: " + expr.op, pos, filename)
+    return ParseError("unsupported compile-time operation: " + t.ast_op(expr), pos, filename)
   end if
   return ParseError("unsupported compile-time expression", pos, filename)
 end function

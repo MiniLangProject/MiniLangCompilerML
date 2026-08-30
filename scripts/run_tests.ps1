@@ -416,6 +416,12 @@ try {
       Source = Join-Path $Root "tests\conditional_compilation.ml"
       Includes = @($Root)
       Args = @("-DFEATURE=true", '-DLABEL="enabled"')
+    },
+    [pscustomobject]@{
+      Name = "synchronized globals"
+      Source = Join-Path $Root "tests\thread_features.ml"
+      Includes = @($Root)
+      Args = @()
     }
   )
   foreach ($parityCase in $objectParityCases) {

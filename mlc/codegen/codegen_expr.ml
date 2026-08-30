@@ -548,14 +548,14 @@ end function
 
 function _member_base_alias_shadowed(state, expr)
   cur = expr
-  while typeof(cur) == "struct" and _coerce_name(try(cur.node_kind)) == "Member"
+  while t.ast_kind(cur) == "Member"
     nxt = try(cur.target)
     obj = try(cur.obj)
     if typeof(nxt) != "struct" and typeof(obj) == "struct" then nxt = obj end if
     cur = nxt
   end while
-  if typeof(cur) != "struct" or _coerce_name(try(cur.node_kind)) != "Var" then return false end if
-  base = _coerce_name(try(cur.name))
+  if t.ast_kind(cur) != "Var" then return false end if
+  base = _coerce_name(t.ast_name(cur))
   if base == "" then return false end if
   if _alias_target_for_base(state, base) == "" then return false end if
 
@@ -691,12 +691,12 @@ function _qualify_identifier(state, name)
 end function
 
 function _expr_to_qualname(state, expr)
-  if typeof(expr) != "struct" then return "" end if
+  if t.ast_is_node(expr) == false then return "" end if
   qn0 = _qname_of(state, expr)
   if typeof(qn0) == "string" and qn0 != "" then return qn0 end if
-  k0 = _coerce_name(try(expr.node_kind))
-  if k0 == "Var" and typeof(try(expr.name)) == "string" then
-    nm = try(expr.name)
+  k0 = _coerce_name(t.ast_kind(expr))
+  if k0 == "Var" and typeof(t.ast_name(expr)) == "string" then
+    nm = t.ast_name(expr)
     if s.contains(nm, ".") then return _qualify_identifier(state, _apply_import_alias(state, nm)) end if
     b = scope.cg_resolve_binding(state, nm)
     if typeof(b) == "struct" then return nm end if
@@ -705,7 +705,7 @@ function _expr_to_qualname(state, expr)
   end if
   if k0 == "Member" then
     mt = try(expr.target)
-    if typeof(mt) != "struct" then mt = try(expr.obj) end if
+    if t.ast_is_node(mt) == false then mt = try(expr.obj) end if
     b = _expr_to_qualname(state, mt)
     if b == "" then return "" end if
     mn0 = _coerce_name(try(expr.name))
@@ -894,16 +894,16 @@ function _try_const_bin(op, lv, rv)
 end function
 
 function _cg_expr_try_const_value(state, expr, preserve_unary_float)
-  if typeof(expr) != "struct" then return ConstEvalResult(false, 0) end if
+  if t.ast_is_node(expr) == false then return ConstEvalResult(false, 0) end if
 
-  k = _coerce_name(try(expr.node_kind))
+  k = _coerce_name(t.ast_kind(expr))
 
   if k == "Num" or k == "Str" or k == "Bool" then
-    return ConstEvalResult(true, try(expr.value))
+    return ConstEvalResult(true, t.ast_value(expr))
   end if
 
   if k == "Var" then
-    raw_nm = _coerce_name(try(expr.name))
+    raw_nm = _coerce_name(t.ast_name(expr))
     if raw_nm == "" then return ConstEvalResult(false, 0) end if
     nm = _qualify_identifier(state, raw_nm)
     v = _resolve_const_value(state, nm)
@@ -921,9 +921,9 @@ function _cg_expr_try_const_value(state, expr, preserve_unary_float)
   end if
 
   if k == "Unary" then
-    rv = _cg_expr_try_const_value(state, try(expr.right), preserve_unary_float)
+    rv = _cg_expr_try_const_value(state, t.ast_right(expr), preserve_unary_float)
     if rv.ok == false then return ConstEvalResult(false, 0) end if
-    opu = _coerce_name(try(expr.op))
+    opu = _coerce_name(t.ast_op(expr))
     if opu == "not" then return ConstEvalResult(true, not _opt_truthy(rv.value)) end if
     if opu == "-" then
       if _is_number_no_bool(rv.value) == false then return ConstEvalResult(false, 0) end if
@@ -947,10 +947,10 @@ function _cg_expr_try_const_value(state, expr, preserve_unary_float)
   end if
 
   if k == "Bin" then
-    lv = _cg_expr_try_const_value(state, try(expr.left), preserve_unary_float)
+    lv = _cg_expr_try_const_value(state, t.ast_left(expr), preserve_unary_float)
     if lv.ok == false then return ConstEvalResult(false, 0) end if
 
-    opb = _coerce_name(try(expr.op))
+    opb = _coerce_name(t.ast_op(expr))
     if opb == "and" and _opt_truthy(lv.value) == false then
       return ConstEvalResult(true, false)
     end if
@@ -958,7 +958,7 @@ function _cg_expr_try_const_value(state, expr, preserve_unary_float)
       return ConstEvalResult(true, true)
     end if
 
-    rv = _cg_expr_try_const_value(state, try(expr.right), preserve_unary_float)
+    rv = _cg_expr_try_const_value(state, t.ast_right(expr), preserve_unary_float)
     if rv.ok == false then return ConstEvalResult(false, 0) end if
     return _try_const_bin(opb, lv.value, rv.value)
   end if
@@ -1007,7 +1007,7 @@ function _opt_try_known_type_label(state, expr, detailed)
     return "obj_type_array"
   end if
 
-  if typeof(expr) == "struct" and _coerce_name(try(expr.node_kind)) == "VoidLit" then
+  if t.ast_kind(expr) == "VoidLit" then
     return "obj_type_void"
   end if
   fact = _opt_expr_known_type(state, expr)
@@ -1034,10 +1034,10 @@ function _opt_try_known_type_label(state, expr, detailed)
 end function
 
 function _qname_parts_any(expr)
-  if typeof(expr) != "struct" then return 0 end if
-  k = _coerce_name(try(expr.node_kind))
+  if t.ast_is_node(expr) == false then return 0 end if
+  k = _coerce_name(t.ast_kind(expr))
   if k == "Var" then
-    nm = _coerce_name(try(expr.name))
+    nm = _coerce_name(t.ast_name(expr))
     if nm == "" then return 0 end if
     return s.split(nm, ".")
   end if
@@ -1181,13 +1181,13 @@ function _filter_expr_list_separator_artifacts(items)
 end function
 
 function cg_emit_expr(state, expr)
-  if typeof(expr) != "struct" then
+  if t.ast_is_node(expr) == false then
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
     return state
   end if
 
-  k = _coerce_name(try(expr.node_kind))
-  if k == "" then k = _coerce_name(try(expr.kind)) end if
+  k = _coerce_name(t.ast_kind(expr))
+  if k == "" and typeof(expr) == "struct" then k = _coerce_name(try(expr.kind)) end if
 
   if k == "COMMA" then
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -1261,7 +1261,7 @@ function cg_emit_expr(state, expr)
 end function
 
 function _emit_expr_num(state, expr)
-  val_num = try(expr.value)
+  val_num = t.ast_value(expr)
   if typeof(val_num) == "int" then
     state.asm = a.mov_rax_tagged_int(state.asm, val_num)
     return state
@@ -1282,13 +1282,13 @@ function _emit_expr_num(state, expr)
 end function
 
 function _emit_expr_bool(state, expr)
-  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(try(expr.value)))
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(t.ast_value(expr)))
   return state
 end function
 
 function _emit_expr_str(state, expr)
   lbl_str = "objstr_" + _next_lid(state)
-  state.rdata = d.rdata_add_obj_string(state.rdata, lbl_str, try(expr.value))
+  state.rdata = d.rdata_add_obj_string(state.rdata, lbl_str, t.ast_value(expr))
   state.asm = a.lea_rax_rip(state.asm, lbl_str)
   return state
 end function
@@ -1496,7 +1496,7 @@ end function
 
 function _emit_expr_var(state, expr)
   nm_raw = ""
-  nm_try = try(expr.name)
+  nm_try = t.ast_name(expr)
   if typeof(nm_try) == "string" then nm_raw = nm_try end if
   if nm_raw == "" then
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -1600,10 +1600,10 @@ function _emit_expr_member(state, expr)
 
   // Runtime member read on struct instance.
   tgt = tgt_m
-  if typeof(tgt) != "struct" then
+  if t.ast_is_node(tgt) == false then
     tgt = try(expr.target)
     obj_rt = try(expr.obj)
-    if typeof(tgt) != "struct" and typeof(obj_rt) == "struct" then tgt = obj_rt end if
+    if t.ast_is_node(tgt) == false and t.ast_is_node(obj_rt) then tgt = obj_rt end if
   end if
   known_struct = _opt_expr_known_type(state, tgt)
   if s.startsWith(known_struct, "struct:") then
@@ -1863,8 +1863,8 @@ function _emit_expr_index(state, expr)
 end function
 
 function _emit_expr_unary(state, expr)
-  state = cg_emit_expr(state, expr.right)
-  if expr.op == "-" then
+  state = cg_emit_expr(state, t.ast_right(expr))
+  if t.ast_op(expr) == "-" then
     lid_u = _next_lid(state)
     lid_uv = _next_lid(state)
     l_int_u = "uminus_int_" + lid_u
@@ -1901,7 +1901,7 @@ function _emit_expr_unary(state, expr)
     state.asm = a.mark(state.asm, l_done_u)
     return state
   end if
-  if expr.op == "not" then
+  if t.ast_op(expr) == "not" then
     lid_n = _next_lid(state)
     lid_nv = _next_lid(state)
     l_false = "not_false_" + lid_n
@@ -1924,7 +1924,7 @@ function _emit_expr_unary(state, expr)
     state.asm = a.mark(state.asm, l_end)
     return state
   end if
-  if expr.op == "~" then
+  if t.ast_op(expr) == "~" then
     lid_b = _next_lid(state)
     lid_v = _next_lid(state)
     l_ok_b = "bnot_ok_" + lid_b
@@ -1982,12 +1982,12 @@ function _opt_const_nonnegative_int(state, ex)
 end function
 
 function _opt_expr_known_int(state, ex)
-  if typeof(ex) != "struct" then return false end if
+  if t.ast_is_node(ex) == false then return false end if
   cv = cg_expr_try_const_value(state, ex)
   if typeof(cv) == "struct" and cv.ok and typeof(cv.value) == "int" then return true end if
-  k = _coerce_name(try(ex.node_kind))
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Var" then
-    nm = _coerce_name(try(ex.name))
+    nm = _coerce_name(t.ast_name(ex))
     if _intflow_name_has(state.known_int_names, nm) == false then return false end if
     b = scope.cg_resolve_binding(state, nm)
     if typeof(b) != "struct" then return false end if
@@ -1996,14 +1996,14 @@ function _opt_expr_known_int(state, ex)
     return true
   end if
   if k == "Unary" then
-    op_u = _coerce_name(try(ex.op))
+    op_u = _coerce_name(t.ast_op(ex))
     if op_u != "-" and op_u != "~" then return false end if
-    return _opt_expr_known_int(state, try(ex.right))
+    return _opt_expr_known_int(state, t.ast_right(ex))
   end if
   if k == "Bin" then
-    op_b = _coerce_name(try(ex.op))
-    left_b = try(ex.left)
-    right_b = try(ex.right)
+    op_b = _coerce_name(t.ast_op(ex))
+    left_b = t.ast_left(ex)
+    right_b = t.ast_right(ex)
     operands_int = _opt_expr_known_int(state, left_b) and _opt_expr_known_int(state, right_b)
     if op_b == "+" or op_b == "-" or op_b == "*" or op_b == "&" or op_b == "|" or op_b == "^" then return operands_int end if
     if op_b == "%" then return operands_int and _opt_const_nonzero_number(state, right_b) end if
@@ -2050,11 +2050,11 @@ function _opt_type_fact_get(items, name)
 end function
 
 function _opt_expr_known_type(state, ex)
-  if typeof(ex) != "struct" then return "" end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return "" end if
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Num" then
-    if typeof(try(ex.value)) == "int" then return "int" end if
-    if typeof(try(ex.value)) == "float" then return "float" end if
+    if typeof(t.ast_value(ex)) == "int" then return "int" end if
+    if typeof(t.ast_value(ex)) == "float" then return "float" end if
     return ""
   end if
   if k == "Bool" then return "bool" end if
@@ -2065,7 +2065,7 @@ function _opt_expr_known_type(state, ex)
     return "array:" + len(items)
   end if
   if k == "Var" then
-    nm = _coerce_name(try(ex.name))
+    nm = _coerce_name(t.ast_name(ex))
     fact = _opt_type_fact_get(state.known_value_types, nm)
     if fact == "" then return "" end if
     b = scope.cg_resolve_binding(state, nm)
@@ -2076,8 +2076,8 @@ function _opt_expr_known_type(state, ex)
   end if
   if k == "IsType" then return "bool" end if
   if k == "Unary" then
-    op_u = _coerce_name(try(ex.op))
-    rb = _opt_type_base(_opt_expr_known_type(state, try(ex.right)))
+    op_u = _coerce_name(t.ast_op(ex))
+    rb = _opt_type_base(_opt_expr_known_type(state, t.ast_right(ex)))
     if op_u == "not" and rb != "" then return "bool" end if
     if op_u == "~" and rb == "int" then return "int" end if
     if op_u == "-" and rb == "int" then return "int" end if
@@ -2085,15 +2085,15 @@ function _opt_expr_known_type(state, ex)
     return ""
   end if
   if k == "Bin" then
-    op_b = _coerce_name(try(ex.op))
-    lb = _opt_type_base(_opt_expr_known_type(state, try(ex.left)))
-    rb2 = _opt_type_base(_opt_expr_known_type(state, try(ex.right)))
+    op_b = _coerce_name(t.ast_op(ex))
+    lb = _opt_type_base(_opt_expr_known_type(state, t.ast_left(ex)))
+    rb2 = _opt_type_base(_opt_expr_known_type(state, t.ast_right(ex)))
     if op_b == "==" or op_b == "!=" then return "bool" end if
     numeric_l_cmp = lb == "int" or lb == "float" or lb == "number"
     numeric_r_cmp = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "<" or op_b == "<=" or op_b == ">" or op_b == ">=") and numeric_l_cmp and numeric_r_cmp then return "bool" end if
     if (op_b == "and" or op_b == "or") and lb != "" and rb2 != "" then return "bool" end if
-    right_b = try(ex.right)
+    right_b = t.ast_right(ex)
     if (op_b == "&" or op_b == "|" or op_b == "^") and lb == "int" and rb2 == "int" then return "int" end if
     if (op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" and _opt_const_nonnegative_int(state, right_b) then return "int" end if
     if (op_b == "+" or op_b == "-" or op_b == "*") and lb == "int" and rb2 == "int" then return "int" end if
@@ -2121,8 +2121,8 @@ function _opt_expr_known_type(state, ex)
 end function
 
 function _opt_type_query_can_elide_evaluation(ex)
-  if typeof(ex) != "struct" then return false end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return false end if
+  k = _coerce_name(t.ast_kind(ex))
   return k == "Num" or k == "Bool" or k == "Str" or k == "Var"
 end function
 
@@ -2130,18 +2130,18 @@ function _opt_known_index_plan(state, ex)
   if typeof(ex) != "struct" then return [] end if
   target = try(ex.target)
   index = try(ex.index)
-  if typeof(target) != "struct" or _coerce_name(try(target.node_kind)) != "Var" then return [] end if
+  if t.ast_kind(target) != "Var" then return [] end if
   fact = _opt_expr_known_type(state, target)
   kind = _opt_type_base(fact)
   if kind == "bytes?" then kind = "bytes_checked" end if
   if kind != "array" and kind != "bytes" and kind != "bytes_checked" and kind != "string" then return [] end if
   if _opt_type_base(_opt_expr_known_type(state, index)) != "int" then return [] end if
-  target_binding = scope.cg_resolve_binding(state, _coerce_name(try(target.name)))
+  target_binding = scope.cg_resolve_binding(state, _coerce_name(t.ast_name(target)))
   if typeof(target_binding) != "struct" then return [] end if
   base_slot = -1
   bounds_proven = false
-  if typeof(index) == "struct" and _coerce_name(try(index.node_kind)) == "Var" then
-    index_binding = scope.cg_resolve_binding(state, _coerce_name(try(index.name)))
+  if t.ast_kind(index) == "Var" then
+    index_binding = scope.cg_resolve_binding(state, _coerce_name(t.ast_name(index)))
     if typeof(index_binding) == "struct" and typeof(state.loop_index_fast_stack) == "array" and len(state.loop_index_fast_stack) > 0 then
       li = len(state.loop_index_fast_stack) - 1
       while li >= 0
@@ -2493,11 +2493,11 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
 end function
 
 function _emit_known_float_binop(state, expr)
-  op = _coerce_name(try(expr.op))
+  op = _coerce_name(t.ast_op(expr))
   supported = op == "+" or op == "-" or op == "*" or op == "/" or op == "%" or op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
   if supported == false then return [state, false] end if
-  lhs = _opt_type_base(_opt_expr_known_type(state, try(expr.left)))
-  rhs = _opt_type_base(_opt_expr_known_type(state, try(expr.right)))
+  lhs = _opt_type_base(_opt_expr_known_type(state, t.ast_left(expr)))
+  rhs = _opt_type_base(_opt_expr_known_type(state, t.ast_right(expr)))
   lhs_numeric = lhs == "int" or lhs == "float" or lhs == "number"
   rhs_numeric = rhs == "int" or rhs == "float" or rhs == "number"
   if lhs_numeric == false or rhs_numeric == false or (lhs != "float" and rhs != "float") then return [state, false] end if
@@ -2570,7 +2570,7 @@ function _emit_known_float_binop(state, expr)
 end function
 
 function _emit_expr_bin(state, expr)
-  if expr.op == "and" then
+  if t.ast_op(expr) == "and" then
     lid_and = _next_lid(state)
     lid_and_v = _next_lid(state)
     lid_and_rv = _next_lid(state)
@@ -2579,7 +2579,7 @@ function _emit_expr_bin(state, expr)
     l_and_nvoid = "and_nvoid_" + lid_and_v
     l_and_rnvoid = "and_rnvoid_" + lid_and_rv
     l_and_rfalse = "and_rfalse_" + lid_and
-    state = cg_emit_expr(state, expr.left)
+    state = cg_emit_expr(state, t.ast_left(expr))
     state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
     state.asm = a.and_r64_imm(state.asm, "rdx", 7)
     state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
@@ -2590,7 +2590,7 @@ function _emit_expr_bin(state, expr)
     state.asm = a.jmp(state.asm, l_and_end)
     state.asm = a.mark(state.asm, l_and_nvoid)
     state = core.emit_jmp_if_false_rax(state, l_and_false)
-    state = cg_emit_expr(state, expr.right)
+    state = cg_emit_expr(state, t.ast_right(expr))
     state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
     state.asm = a.and_r64_imm(state.asm, "rdx", 7)
     state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
@@ -2612,7 +2612,7 @@ function _emit_expr_bin(state, expr)
     return state
   end if
 
-  if expr.op == "or" then
+  if t.ast_op(expr) == "or" then
     lid_or = _next_lid(state)
     lid_or_v = _next_lid(state)
     lid_or_rv = _next_lid(state)
@@ -2621,7 +2621,7 @@ function _emit_expr_bin(state, expr)
     l_or_end = "or_end_" + lid_or
     l_or_nvoid = "or_nvoid_" + lid_or_v
     l_or_rnvoid = "or_rnvoid_" + lid_or_rv
-    state = cg_emit_expr(state, expr.left)
+    state = cg_emit_expr(state, t.ast_left(expr))
     state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
     state.asm = a.and_r64_imm(state.asm, "rdx", 7)
     state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
@@ -2635,7 +2635,7 @@ function _emit_expr_bin(state, expr)
     state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
     state.asm = a.jmp(state.asm, l_or_end)
     state.asm = a.mark(state.asm, l_or_eval)
-    state = cg_emit_expr(state, expr.right)
+    state = cg_emit_expr(state, t.ast_right(expr))
     state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
     state.asm = a.and_r64_imm(state.asm, "rdx", 7)
     state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_VOID)
@@ -2656,9 +2656,9 @@ function _emit_expr_bin(state, expr)
 
   left_tmp = core.alloc_expr_temps(state, 8)
   right_tmp = core.alloc_expr_temps(state, 8)
-  state = cg_emit_expr(state, expr.left)
+  state = cg_emit_expr(state, t.ast_left(expr))
   state.asm = a.mov_rsp_disp32_rax(state.asm, left_tmp)
-  state = cg_emit_expr(state, expr.right)
+  state = cg_emit_expr(state, t.ast_right(expr))
   state.asm = a.mov_rsp_disp32_rax(state.asm, right_tmp)
 
   state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", left_tmp)
@@ -2666,8 +2666,8 @@ function _emit_expr_bin(state, expr)
   state = core.free_expr_temps(state, 16)
   tmp_bin_ok = false
 
-  lhs_const = _opt_try_const_value(state, expr.left)
-  rhs_const = _opt_try_const_value(state, expr.right)
+  lhs_const = _opt_try_const_value(state, t.ast_left(expr))
+  rhs_const = _opt_try_const_value(state, t.ast_right(expr))
   lhs_const_type = typeof(lhs_const.value)
   rhs_const_type = typeof(rhs_const.value)
   lhs_const_int_ok = lhs_const.ok and (lhs_const_type == "int" or (lhs_const_type == "float" and (lhs_const.value % 1) == 0))
@@ -2677,9 +2677,9 @@ function _emit_expr_bin(state, expr)
   if lhs_const_int_ok then lhs_const_int = lhs_const.value end if
   if rhs_const_int_ok then rhs_const_int = rhs_const.value end if
 
-  op = expr.op
+  op = t.ast_op(expr)
   known_int_op = op == "+" or op == "-" or op == "*" or op == "%" or op == "&" or op == "|" or op == "^" or op == "<<" or op == ">>" or op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
-  if known_int_op and _opt_expr_known_int(state, expr.left) and _opt_expr_known_int(state, expr.right) then
+  if known_int_op and _opt_expr_known_int(state, t.ast_left(expr)) and _opt_expr_known_int(state, t.ast_right(expr)) then
     state = _emit_known_int_binop(state, op, lhs_const_int_ok, lhs_const_int, rhs_const_int_ok, rhs_const_int)
     return state
   end if
@@ -3831,7 +3831,7 @@ function _emit_expr_call(state, expr)
   state = core.emit_dbg_line(state, expr)
   state.call_total_count = state.call_total_count + 1
   cal = try(expr.callee)
-  if typeof(cal) != "struct" then cal = try(expr.func) end if
+  if t.ast_is_node(cal) == false then cal = try(expr.func) end if
   args = try(expr.args)
   if typeof(args) != "array" then args = [] end if
   call_args = _filter_expr_list_separator_artifacts(args)
@@ -3840,10 +3840,9 @@ function _emit_expr_call(state, expr)
   compiletime_callee_qn = ""
 
   pre_raw = ""
-  cal_kind = ""
-  if typeof(cal) == "struct" then cal_kind = _coerce_name(try(cal.node_kind)) end if
-  if typeof(cal) == "struct" and cal_kind == "Var" and typeof(try(cal.name)) == "string" then
-    pre_raw = try(cal.name)
+  cal_kind = _coerce_name(t.ast_kind(cal))
+  if cal_kind == "Var" and typeof(t.ast_name(cal)) == "string" then
+    pre_raw = t.ast_name(cal)
   end if
   if pre_raw == "try" and nargs == 1 then
     old_sup = 0
@@ -3856,15 +3855,15 @@ function _emit_expr_call(state, expr)
 
   callee = ""
   raw_name = ""
-  if typeof(cal) == "struct" then
+  if t.ast_is_node(cal) then
     compiletime_callee_qn = _qname_of(state, cal)
-    cal_kind = _coerce_name(try(cal.node_kind))
+    cal_kind = _coerce_name(t.ast_kind(cal))
     if cal_kind == "Member" then
       member_runtime = compiletime_callee_qn == ""
       callee = compiletime_callee_qn
     end if
     if cal_kind == "Var" then
-      cal_name_try = try(cal.name)
+      cal_name_try = t.ast_name(cal)
       if typeof(cal_name_try) == "string" then raw_name = cal_name_try end if
       if raw_name == "try" or raw_name == "error" or raw_name == "bytes" or raw_name == "byteBuffer" then
         callee = raw_name
@@ -3893,7 +3892,7 @@ function _emit_expr_call(state, expr)
 
   // Native Thread object methods. They intentionally share member-call syntax
   // with user structs, but dispatch through the reserved OBJ_THREAD header.
-  if typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" and member_runtime then
+  if t.ast_kind(cal) == "Member" and member_runtime then
     mname_th = _coerce_name(try(cal.name))
     if mname_th == "" then mname_th = _coerce_name(try(cal.field)) end if
     helper_th = ""
@@ -3928,7 +3927,7 @@ function _emit_expr_call(state, expr)
         return state
       end if
       tgt_th = try(cal.target)
-      if typeof(tgt_th) != "struct" then tgt_th = try(cal.obj) end if
+      if t.ast_is_node(tgt_th) == false then tgt_th = try(cal.obj) end if
       total_th = nargs + 1
       base_th = core.alloc_expr_temps(state, total_th * 8)
       state = cg_emit_expr(state, tgt_th)
@@ -3989,12 +3988,12 @@ function _emit_expr_call(state, expr)
 
   // OOP-style struct instance call: obj.method(args...)
   // Compile as dynamic dispatch on receiver.struct_id -> direct call of hoisted method body.
-  if typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" and member_runtime then
+  if t.ast_kind(cal) == "Member" and member_runtime then
     mname_dyn = _coerce_name(try(cal.name))
     if mname_dyn == "" then mname_dyn = _coerce_name(try(cal.field)) end if
     tgt_dyn = try(cal.target)
     obj_dyn = try(cal.obj)
-    if typeof(tgt_dyn) != "struct" then tgt_dyn = obj_dyn end if
+    if t.ast_is_node(tgt_dyn) == false then tgt_dyn = obj_dyn end if
 
     if mname_dyn != "" and typeof(state.struct_methods) == "array" and len(state.struct_methods) > 0 then
       total_dyn = nargs + 1
@@ -6563,12 +6562,11 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
   direct_user_name = ""
   generic_nonmember_candidate = false
   compiletime_member_callable = false
-  cal_kind_skip = ""
-  if typeof(cal) == "struct" then cal_kind_skip = _coerce_name(try(cal.node_kind)) end if
-  if typeof(cal) == "struct" and cal_kind_skip == "Member" and member_runtime == false then
+  cal_kind_skip = _coerce_name(t.ast_kind(cal))
+  if cal_kind_skip == "Member" and member_runtime == false then
     compiletime_member_callable = true
   end if
-  if typeof(cal) == "struct" and cal_kind_skip != "Member" then
+  if t.ast_is_node(cal) and cal_kind_skip != "Member" then
     skip_qn = callee
     if skip_qn == "" then skip_qn = raw_name end if
     if skip_qn != "" then
@@ -6664,7 +6662,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     if nargs >= 4 then state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", 0x38) end if
   end if
 
-  if raw_name == "" and typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" then
+  if raw_name == "" and t.ast_kind(cal) == "Member" then
     raw_name = _expr_to_qualname(state, cal)
   end if
 
@@ -6842,7 +6840,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
         return state
       end if
       if nargs < ext_total then
-        state = _emit_extern_call(state, cal, call_args, "", ext_name, try(cal._pos))
+        state = _emit_extern_call(state, cal, call_args, "", ext_name, t.ast_pos(cal))
         state = _emit_auto_errprop(state)
         return state
       end if
@@ -6858,7 +6856,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
   callee_desc = ""
   recv_desc = "receiver"
   meth_desc = "member"
-  if typeof(cal) == "struct" and _coerce_name(try(cal.node_kind)) == "Member" then
+  if t.ast_kind(cal) == "Member" then
     callee_is_member = true
     ppq = _qname_parts_any(cal)
     if typeof(ppq) == "array" and len(ppq) > 0 then
@@ -7386,8 +7384,8 @@ end function
 
 function _emit_expr_unsupported(state, expr, k)
   loc = ""
-  fn_dbg = _coerce_name(try(expr._filename))
-  pos_dbg = try(expr._pos)
+  fn_dbg = _coerce_name(t.ast_filename(expr))
+  pos_dbg = t.ast_pos(expr)
   if fn_dbg != "" and typeof(pos_dbg) == "int" then loc = " at " + fn_dbg + ":" + pos_dbg end if
   if fn_dbg != "" and loc == "" then loc = " at " + fn_dbg end if
   ctx_dbg = _coerce_name(try(state._debug_current_function))
@@ -7397,12 +7395,12 @@ function _emit_expr_unsupported(state, expr, k)
   if k == "" then
     type_dbg = typeName(expr)
     kind_dbg = _coerce_name(try(expr.kind))
-    name_dbg = _coerce_name(try(expr.name))
-    value_dbg = _coerce_name(try(expr.value))
-    value_ty_dbg = typeof(try(expr.value))
+    name_dbg = _coerce_name(t.ast_name(expr))
+    value_dbg = _coerce_name(t.ast_value(expr))
+    value_ty_dbg = typeof(t.ast_value(expr))
     extra = "<missing node_kind> type=" + type_dbg + " kind=" + kind_dbg + " name=" + name_dbg + " value_type=" + value_ty_dbg + " value=" + value_dbg
   else
-    value_dbg2 = _coerce_name(try(expr.value))
+    value_dbg2 = _coerce_name(t.ast_value(expr))
     kind_dbg2 = _coerce_name(try(expr.kind))
     extra = k
     if kind_dbg2 != "" or value_dbg2 != "" then
@@ -7436,11 +7434,11 @@ function _qname_parts(state, ex)
 end function
 
 function _qname_of(state, ex)
-  if typeof(ex) != "struct" then return "" end if
+  if t.ast_is_node(ex) == false then return "" end if
 
-  ex_kind = _coerce_name(try(ex.node_kind))
+  ex_kind = _coerce_name(t.ast_kind(ex))
   if ex_kind == "Var" then
-    return _qualify_identifier(state, _coerce_name(try(ex.name)))
+    return _qualify_identifier(state, _coerce_name(t.ast_name(ex)))
   end if
 
   if ex_kind != "Member" then return "" end if
@@ -7656,9 +7654,9 @@ function _is_instance_method_qname(state, qname)
 end function
 
 function _expr_has_this(ex)
-  if typeof(ex) != "struct" then return false end if
-  k = _coerce_name(try(ex.node_kind))
-  if k == "Var" and typeof(try(ex.name)) == "string" and try(ex.name) == "this" then
+  if t.ast_is_node(ex) == false then return false end if
+  k = _coerce_name(t.ast_kind(ex))
+  if k == "Var" and typeof(t.ast_name(ex)) == "string" and t.ast_name(ex) == "this" then
     return true
   end if
   if k == "IsType" then
@@ -7666,18 +7664,18 @@ function _expr_has_this(ex)
   end if
   if k == "Member" then
     mt = try(ex.target)
-    if typeof(mt) != "struct" then mt = try(ex.obj) end if
+    if t.ast_is_node(mt) == false then mt = try(ex.obj) end if
     if _expr_has_this(mt) then return true end if
   end if
   if k == "Unary" then
-    return _expr_has_this(try(ex.right))
+    return _expr_has_this(t.ast_right(ex))
   end if
   if k == "Bin" then
-    return _expr_has_this(try(ex.left)) or _expr_has_this(try(ex.right))
+    return _expr_has_this(t.ast_left(ex)) or _expr_has_this(t.ast_right(ex))
   end if
   if k == "Call" then
     cal = try(ex.callee)
-    if typeof(cal) != "struct" then cal = try(ex.func) end if
+    if t.ast_is_node(cal) == false then cal = try(ex.func) end if
     if _expr_has_this(cal) then return true end if
     args = try(ex.args)
     if typeof(args) == "array" and len(args) > 0 then
@@ -7885,14 +7883,14 @@ function _contains_nested_fn(node)
       if _contains_nested_fn(node.else_body[i]) then return true end if
     end for
   end if
-  if typeof(node.expr) == "struct" then
+  if t.ast_is_node(try(node.expr)) then
     if _contains_nested_fn(node.expr) then return true end if
   end if
-  if typeof(node.left) == "struct" then
-    if _contains_nested_fn(node.left) then return true end if
+  if t.ast_is_node(t.ast_left(node)) then
+    if _contains_nested_fn(t.ast_left(node)) then return true end if
   end if
-  if typeof(node.right) == "struct" then
-    if _contains_nested_fn(node.right) then return true end if
+  if t.ast_is_node(t.ast_right(node)) then
+    if _contains_nested_fn(t.ast_right(node)) then return true end if
   end if
   target = try(node.target)
   if typeof(target) == "struct" then
@@ -8457,7 +8455,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   if typeof(out_name) == "string" then qn = out_name end if
   if qn == "" and typeof(call_node) == "struct" then
     cal = try(call_node.callee)
-    if typeof(cal) != "struct" then cal = try(call_node.func) end if
+    if t.ast_is_node(cal) == false then cal = try(call_node.func) end if
     qn = _expr_to_qualname(state, cal)
   end if
   qn = _apply_import_alias(state, qn)
@@ -8752,8 +8750,8 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
 end function
 
 function _inline_collect_expr_stats(ex, stats)
-  if typeof(ex) != "struct" then return 0 end if
-  k = _coerce_name(try(ex.node_kind))
+  if t.ast_is_node(ex) == false then return 0 end if
+  k = _coerce_name(t.ast_kind(ex))
   if k == "Num" or k == "Str" or k == "Bool" or k == "VoidLit" or k == "Var" then return 1 end if
   if k == "ArrayLit" then
     cost = 4
@@ -8765,8 +8763,8 @@ function _inline_collect_expr_stats(ex, stats)
     end if
     return cost
   end if
-  if k == "Unary" then return 2 + _inline_collect_expr_stats(try(ex.right), stats) end if
-  if k == "Bin" then return 3 + _inline_collect_expr_stats(try(ex.left), stats) + _inline_collect_expr_stats(try(ex.right), stats) end if
+  if k == "Unary" then return 2 + _inline_collect_expr_stats(t.ast_right(ex), stats) end if
+  if k == "Bin" then return 3 + _inline_collect_expr_stats(t.ast_left(ex), stats) + _inline_collect_expr_stats(t.ast_right(ex), stats) end if
   if k == "IsType" then return 3 + _inline_collect_expr_stats(try(ex.expr), stats) end if
   if k == "Call" then
     stats.call_count = stats.call_count + 1
