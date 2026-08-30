@@ -1535,6 +1535,7 @@ function _helper_supported(lbl)
   if lbl == "fn_builtin_len" then return true end if
   if lbl == "fn_builtin_input" then return true end if
   if lbl == "fn_builtin_copyBytes" then return true end if
+  if lbl == "fn_builtin_copyArray" then return true end if
   if lbl == "fn_builtin_copyStringBytes" then return true end if
   if lbl == "fn_builtin_fillBytes" then return true end if
   if lbl == "fn_builtin_gc_collect" then return true end if
@@ -1652,6 +1653,7 @@ end function
 function _emit_helper_by_label_group5(state, lbl)
   if lbl == "fn_builtin_input" then return rt.emit_builtin_input_function(state) end if
   if lbl == "fn_builtin_copyBytes" then return rt.emit_builtin_copyBytes_function(state) end if
+  if lbl == "fn_builtin_copyArray" then return rt.emit_builtin_copyArray_function(state) end if
   if lbl == "fn_builtin_copyStringBytes" then return rt.emit_builtin_copyStringBytes_function(state) end if
   if lbl == "fn_builtin_fillBytes" then return rt.emit_builtin_fillBytes_function(state) end if
   if lbl == "fn_builtin_gc_collect" then return rt.emit_builtin_gc_collect_function(state) end if
@@ -1720,7 +1722,7 @@ function _helper_rank(lbl)
     "fn_add_string", "fn_add_array", "fn_add_bytes", "fn_value_to_string", "fn_box_float", "fn_toNumber",
     "fn_toFloat",
     "fn_typeof", "fn_typeName", "fn_int_to_dec", "fn_strlen", "fn_decode", "fn_decodeZ", "fn_decode16Z", "fn_hex", "fn_fromHex",
-    "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_copyStringBytes", "fn_builtin_fillBytes",
+    "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_copyArray", "fn_builtin_copyStringBytes", "fn_builtin_fillBytes",
     "fn_builtin_gc_collect", "fn_builtin_gc_set_limit", "fn_build_args", "fn_init_argvw", "fn_incref",
     "fn_decref", "fn_callStats", "fn_heap_count", "fn_heap_bytes_used", "fn_heap_bytes_committed",
     "fn_heap_bytes_reserved", "fn_heap_free_bytes", "fn_heap_free_blocks", "fn_unhandled_error_exit"

@@ -4,6 +4,11 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Added the shallow native `copyArray` primitive and use it to materialize
+  compiler chunk vectors with one exact allocation. Raising the lexer chunk
+  capacity from 256 to 4096 reduced the controlled self-build private peak by
+  about 65 MiB (3.58%) without a time regression; Python bootstrap and
+  self-hosted fixed-point images remain byte-identical.
 - Stored compiler-internal `FastMap` slot generations in compact byte buffers
   and raised the deterministic linear-probing occupancy limit from 70% to 80%.
   An adjacent full self-build comparison reduced private peak memory from

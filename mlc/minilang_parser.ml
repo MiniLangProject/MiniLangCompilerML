@@ -493,7 +493,9 @@ function _unknownChar(code, pos)
   return ParseError("Unknown character: '" + _substr(code, pos, 10) + "'", pos, "")
 end function
 
-const TOKEN_CHUNK_CAP = 256
+// Larger lexical blocks retain the native bulk-concatenation path while
+// sharply reducing how often a large module prefix is recopied at finish.
+const TOKEN_CHUNK_CAP = 4096
 _parser_chunk_void_sentinel = ParserChunkVoidSentinel(0x50A9)
 
 function _parser_chunk_wrap_value(value)
@@ -609,12 +611,28 @@ end function
 function _chunked_merge_balanced(chunks)
   if typeof(chunks) != "array" then return [] end if
   if len(chunks) <= 0 then return [] end if
-  outv = []
+  total = 0
   for i = 0 to len(chunks) - 1
     if typeof(chunks[i]) == "array" then
-      outv = outv + chunks[i]
+      total = total + len(chunks[i])
     else
-      outv = outv + [chunks[i]]
+      total = total + 1
+    end if
+  end for
+  if total <= 0 then return [] end if
+
+  // Allocate the final token/node vector once. Native cell copies avoid the
+  // transient full-size prefixes previously created by every concatenation.
+  outv = array(total, 0)
+  oi = 0
+  for i = 0 to len(chunks) - 1
+    part = chunks[i]
+    if typeof(part) == "array" then
+      copyArray(outv, oi, part, 0, len(part))
+      oi = oi + len(part)
+    else
+      outv[oi] = part
+      oi = oi + 1
     end if
   end for
   return outv

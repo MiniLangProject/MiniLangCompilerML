@@ -334,6 +334,7 @@ function inline _builtin_label(name)
   if nm == "stringEqualsIgnoreCaseAscii" then return "fn_string_eq_ignore_case_ascii" end if
   if nm == "stringJoin" then return "fn_string_join" end if
   if nm == "copyBytes" then return "fn_builtin_copyBytes" end if
+  if nm == "copyArray" then return "fn_builtin_copyArray" end if
   if nm == "copyStringBytes" then return "fn_builtin_copyStringBytes" end if
   if nm == "fillBytes" then return "fn_builtin_fillBytes" end if
   if nm == "callStats" then return "fn_callStats" end if

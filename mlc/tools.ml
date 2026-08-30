@@ -895,10 +895,8 @@ function arr_merge_chunks_balanced(chunks)
   for i = 0 to len(chunks) - 1
     part = chunks[i]
     if typeof(part) == "array" then
-      for pi = 0 to len(part) - 1
-        outv[oi] = part[pi]
-        oi = oi + 1
-      end for
+      copyArray(outv, oi, part, 0, len(part))
+      oi = oi + len(part)
     else
       outv[oi] = part
       oi = oi + 1
