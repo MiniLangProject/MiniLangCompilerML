@@ -492,6 +492,15 @@ Notes:
   then their analysis state is released before the support-helper tail. The
   compiler uses a 3 GiB internal periodic-GC limit for large canonical builds;
   target `--gc-limit` values still configure only the generated executable.
+- The self-hosted tokenizer stores tokens in a typed structure-of-arrays arena
+  instead of allocating one managed struct per token. Parser cursors are
+  integer IDs, kinds use a byte column, source positions use packed 32-bit
+  offsets, and token values use one tagged array column. The arena is sized
+  from observed MiniLang token density and grows geometrically for compact or
+  generated sources. AST nodes remain ordinary typed structs because analysis
+  and code generation mutate and retain them across module boundaries; moving
+  those nodes to integer handles requires an arena-aware compiler IR rather
+  than a parser-only representation change.
 - The streaming linker skips unneeded object payloads without copying them and
   keeps only a compact fallback cache for uncommon relocation targets. Global
   label maps are allocated once from counts collected during the section pass;

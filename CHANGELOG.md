@@ -4,6 +4,17 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Replaced the self-hosted frontend's per-token structs with a typed
+  structure-of-arrays arena. Parser cursors are integer token IDs; token kinds
+  occupy one byte, source offsets occupy four bytes and only the tagged value
+  column remains an ordinary array. The initial arena reserves three eighths
+  of the source length and grows geometrically for unusually dense input. On a
+  controlled full self-build, frontend heap use fell from 726,377,984 to
+  699,255,576 bytes (3.73%), frontend allocation blocks fell by 5.25%, and the
+  instrumented build fell from 116.985 to 111.922 seconds (4.33%). Normal
+  fixed-point builds completed in 95.227-96.381 seconds versus the preceding
+  approximately 102.3-second baseline. Python Stage 1 and self-hosted Stage 2
+  are byte-identical; the 107-case Windows suite also remains fully green.
 - Added the shallow native `copyArray` primitive and use it to materialize
   compiler chunk vectors with one exact allocation. Raising the lexer chunk
   capacity from 256 to 4096 reduced the controlled self-build private peak by
