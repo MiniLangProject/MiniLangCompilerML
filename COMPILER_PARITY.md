@@ -453,7 +453,8 @@ with SHA-256
 
 ## Tests
 
-Latest complete runs for this revision:
+Historical acceptance snapshot for the feature set described above (newer
+results are recorded in the dated sections below):
 
 ```text
 Python harness:    PASS 114, FAIL 0, SKIP 0
@@ -1056,3 +1057,40 @@ cd ..\MiniLangCompilerML
 The final expression must be `True`. Equality is guaranteed only when source
 contents, imported files, include-root order, compiler options and canonical
 source names are equivalent.
+
+## Host-boundary and review hardening (2026-08-30)
+
+The general self-hosted compiler review fixed four host-boundary correctness
+issues and two avoidable nonlinear frontend paths:
+
+- Windows object/link subprocesses bypass `cmd.exe` and use `CreateProcessW`
+  with Windows CRT quoting, preserving trailing backslashes, quotes and shell
+  metacharacters exactly.
+- Linux import and incremental-cache identities remain case-sensitive, so
+  `Foo.ml`/`foo.ml` and `Cache`/`cache` cannot alias.
+- A native Linux compiler applies executable mode to both monolithic and MLO
+  ELF outputs.
+- The project source collector uses indexed directory/file sets and a
+  capacity-backed vector, while string escape decoding uses `StringBuilder`.
+- The object emitter roots temporary/output paths and runtime configuration
+  across its stride GC. Without that root frontier a plain large self-build
+  failed immediately after object 127; diagnostic `--mem-probe` changed heap
+  shape and accidentally hid the stale reference.
+
+The fix was bootstrapped from Python and then rebuilt through the normal MLO
+pipeline without `--mem-probe`. The compiler output is already a fixed point:
+
+| Compiler image | Build path | Seconds | Bytes | SHA-256 |
+| --- | --- | ---: | ---: | --- |
+| Stage 1 | Python compiler | 64.037 | 62,086,144 | `A740265D2978D8262EA421D8719C836E5E7993A04AA0EC2ECE22563BD85A038E` |
+| Stage 2 | Stage 1, MLO, no mem probe | 95.412 | 62,086,144 | `A740265D2978D8262EA421D8719C836E5E7993A04AA0EC2ECE22563BD85A038E` |
+
+Python, self-hosted monolithic and self-hosted MLO target builds remain
+byte-identical. `codegen_optimizations.ml` produces a 467,456-byte Windows PE
+with SHA-256
+`622B9E6F33ACCD73D0F4EF7F34B91A072D287B5E50B52B31D808055D99DD2B3F`;
+`linux_target_smoke.ml` produces a 91,552-byte Linux ELF with SHA-256
+`73F7AD0753F8613A1A5E3162D5E0E2D07715A81BD1C1C970B93CA68176197459`.
+The complete self-hosted harness passes 111/111 plus all outer Windows/Linux,
+FFI, GC, object-relocation and byte-identity gates. Native Linux-only tests
+add executable-mode, case-sensitive-import and case-distinct-cache coverage.

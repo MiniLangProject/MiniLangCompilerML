@@ -5,6 +5,7 @@ import std.fs as fs
 import std.process as process
 import std.string as s
 import std.sort as sort
+import mlc.tools as t
 
 #if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" returns u32
@@ -37,6 +38,13 @@ end struct
 struct ProjectHash
   a,
   b,
+end struct
+
+// Capacity-backed, indexed state for one recursive source-tree traversal.
+struct ProjectFileCollector
+  files,
+  seen_files,
+  seen_dirs,
 end struct
 
 function _dirname(path)
@@ -321,23 +329,45 @@ function _hash_text(h, value)
   return _hash_bytes(h, bytes(value))
 end function
 
-function _collect_ml_files(path, excluded, result_paths)
-  if typeof(path) != "string" or path == "" then return result_paths end if
-  if s.toLowerAscii(path) == s.toLowerAscii(excluded) then return result_paths end if
-  if fs.isFile(path) then
-    if s.endsWith(s.toLowerAscii(path), ".ml") then result_paths = result_paths + [path] end if
-    return result_paths
+// Windows paths are case-insensitive; POSIX paths must retain exact spelling.
+function _path_key(path)
+#if TARGET_OS == "linux"
+  return path
+#else
+  return s.toLowerAscii(path)
+#endif
+end function
+
+// Collect every MiniLang source below a root once. Indexed directory/file sets
+// make overlapping include roots linear instead of repeatedly deduplicating
+// immutable arrays.
+function _collect_ml_files(path, excluded, collector)
+  if typeof(path) != "string" or path == "" then return collector end if
+  // fingerprint() canonicalizes every root before traversal. Children joined
+  // below therefore remain absolute; repeating GetFullPathNameW/realpath for
+  // every directory entry adds syscall overhead without changing the key.
+  absolute = path
+  path_key = _path_key(absolute)
+  if path_key == _path_key(excluded) then return collector end if
+  if fs.isFile(absolute) then
+    if s.endsWith(s.toLowerAscii(absolute), ".ml") and t.fastmap_has(collector.seen_files, path_key) == false then
+      collector.seen_files = t.fastmap_set(collector.seen_files, path_key, 1)
+      collector.files = t.arr_vec_push(collector.files, absolute)
+    end if
+    return collector
   end if
-  if fs.isDir(path) == false then return result_paths end if
-  names = fs.listDir(path)
-  if typeof(names) != "array" or len(names) <= 0 then return result_paths end if
+  if fs.isDir(absolute) == false then return collector end if
+  if t.fastmap_has(collector.seen_dirs, path_key) then return collector end if
+  collector.seen_dirs = t.fastmap_set(collector.seen_dirs, path_key, 1)
+  names = fs.listDir(absolute)
+  if typeof(names) != "array" or len(names) <= 0 then return collector end if
   for i = 0 to len(names) - 1
     name = names[i]
     low = s.toLowerAscii(name)
     if low == ".git" or low == "__pycache__" then continue end if
-    result_paths = _collect_ml_files(_join(path, name), excluded, result_paths)
+    collector = _collect_ml_files(_join(absolute, name), excluded, collector)
   end for
-  return result_paths
+  return collector
 end function
 
 function _append_unique_path(paths, path)
@@ -370,8 +400,13 @@ function _hex32(value)
 end function
 
 function _string_less(left, right)
+#if TARGET_OS == "linux"
+  left_bytes = bytes(left)
+  right_bytes = bytes(right)
+#else
   left_bytes = bytes(s.toLowerAscii(left))
   right_bytes = bytes(s.toLowerAscii(right))
+#endif
   count = len(left_bytes)
   if len(right_bytes) < count then count = len(right_bytes) end if
   if count > 0 then
@@ -383,7 +418,9 @@ function _string_less(left, right)
   return len(left_bytes) < len(right_bytes)
 end function
 
-// Hash the manifest, effective arguments and every reachable MiniLang source.
+// Hash the manifest, effective arguments and every MiniLang source below the
+// entry/include roots. The broad set is intentionally conservative: changing
+// a currently inactive conditional import must still invalidate the cache.
 function fingerprint(pb, input_path, include_dirs)
   h = ProjectHash(2166136261, 3266489917)
   h = _hash_text(h, "MiniLang-project-cache-v1")
@@ -403,16 +440,11 @@ function fingerprint(pb, input_path, include_dirs)
       roots = _append_unique_path(roots, include_dirs[ri])
     end for
   end if
-  files = []
+  collector = ProjectFileCollector(t.arr_vec_new(256), t.fastmap_new(512), t.fastmap_new(256))
   for ri = 0 to len(roots) - 1
-    files = _collect_ml_files(roots[ri], pb.cache_dir, files)
+    collector = _collect_ml_files(roots[ri], pb.cache_dir, collector)
   end for
-  unique_files = []
-  if len(files) > 0 then
-    for fi = 0 to len(files) - 1
-      unique_files = _append_unique_path(unique_files, _abspath(files[fi]))
-    end for
-  end if
+  unique_files = t.arr_vec_finish(collector.files)
   unique_files = sort.sortBy(unique_files, _string_less)
   if len(unique_files) > 0 then
     for fi = 0 to len(unique_files) - 1

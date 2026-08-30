@@ -24,6 +24,8 @@ struct StringOffset
   offset,
 end struct
 
+// Lay out page-aligned load segments and keep the dynamic table adjacent to
+// initialized data. Offsets are RVAs relative to the fixed image base.
 function plan(text_size, rdata_size, data_size, dynamic_size)
   text_off = 0x1000
   rdata_off = t.align_up(text_off + text_size, 0x1000)
@@ -41,6 +43,8 @@ function _array_has(values, wanted)
   return false
 end function
 
+// Resolve one already-interned dynamic string without allocating a map for the
+// normally small Linux import surface.
 function _string_offset(offsets, wanted)
   if len(offsets) <= 0 then return -1 end if
   for i = 0 to len(offsets) - 1
@@ -49,12 +53,16 @@ function _string_offset(offsets, wanted)
   return -1
 end function
 
+// Extend a serialized metadata blob to the alignment required by ELF64 words.
 function _pad_blob(blob, alignment)
   aligned = t.align_up(len(blob), alignment)
   if aligned > len(blob) then blob = blob + bytes(aligned - len(blob), 0) end if
   return blob
 end function
 
+// Serialize PT_INTERP contents, SysV symbol/hash tables, RELA relocations and
+// the DT_* vector as one deterministic data-segment blob. Import order remains
+// significant because it is part of Python/self-hosted binary parity.
 function _dynamic_blob(imports, image_base, data_off, blob_off)
   interp = bytes("/lib64/ld-linux-x86-64.so.2\0")
   blob = interp
@@ -145,16 +153,21 @@ function _dynamic_blob(imports, image_base, data_off, blob_off)
   return DynamicBlob(blob, 0, len(interp), table_off, entry_count * 16)
 end function
 
+// Measure the exact metadata payload with the same serializer used by build().
 function dynamic_size(imports)
   if typeof(imports) != "array" or len(imports) <= 0 then return 0 end if
   return len(_dynamic_blob(imports, 0, 0, 0).data)
 end function
 
+// Encode one ELF64 program header. File and virtual offsets intentionally use
+// the same fixed-address layout so no section-header table is required.
 function _ph(kind, flags, off, filesz, memsz, base, alignment)
   return t.u32(kind) + t.u32(flags) + t.u64(off) + t.u64(base + off) +
          t.u64(base + off) + t.u64(filesz) + t.u64(memsz) + t.u64(alignment)
 end function
 
+// Assemble a minimal deterministic ET_EXEC image with RX text, read-only data,
+// RW initialized/BSS storage and optional dynamic-loader metadata.
 function build(text, rdata, data, bss_size, entry_offset, imports)
   dyn_size = dynamic_size(imports)
   layout = plan(len(text), len(rdata), len(data), dyn_size)

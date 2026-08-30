@@ -130,6 +130,9 @@ Notes:
 - `build.ps1` creates the native Windows compiler. On Linux, `build.sh` creates
   and verifies a native ELF compiler; either host can cross-compile both target
   formats.
+- A native Linux compiler marks both monolithic and `.mlo` ELF outputs
+  executable. A Windows-to-Linux cross-build cannot carry POSIX mode bits, so
+  deployment from Windows still needs `chmod +x output` on the Linux host.
 
 Common options:
 
@@ -455,6 +458,12 @@ Notes:
   cross-module fixtures byte for byte. The current MiniQuake build completes
   all 495 function fragments, the support tail and the fresh-process link; its
   final PE is byte-identical to both monolithic compiler outputs.
+- Windows object-emission and fresh-link children are launched directly with
+  `CreateProcessW`, using exact CRT argument quoting. Paths ending in a
+  backslash and values containing shell metacharacters therefore cross the
+  process boundary unchanged. Large object streams explicitly root their
+  output paths and runtime configuration across stride collections; plain
+  self-builds no longer depend on diagnostic `--mem-probe` side effects.
 - Pass `--profile-compiler` to the self-hosted compiler to print wall-clock
   timings for module loading, declaration planning, object emission and each
   linker phase. Large monolithic builds also report the text-label and deferred
@@ -602,6 +611,15 @@ Running tests:
 .\scripts\run_tests.ps1 -Compiler .\build\mlc_win64.exe
 ```
 
+Native Linux host-only behavior has a separate regression gate:
+
+```bash
+./scripts/run_native_linux_regressions.sh ./build/mlc_linux_x64
+```
+
+It verifies executable mode bits, case-sensitive imports, distinct
+`Cache`/`cache` paths in incremental projects and monolithic/`.mlo` identity.
+
 Notes:
 - The test runner compiles a set of `.ml` programs to Windows `.exe` files and executes them.
 - On Windows, `.exe` runs natively; on non-Windows you need `wine` to execute the produced binaries.
@@ -610,7 +628,8 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **108 passed, 0 failed**.
+- Latest complete run for this revision: **111 passed, 0 failed**, plus all
+  outer Windows/Linux, object-pipeline, FFI, GC and byte-identity gates.
 
 ### Compiler parity and self-hosting
 

@@ -35,13 +35,17 @@ const MLO_WRITE_BATCH_BYTES = 1048576
 #if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
-extern function _host_system(cmd as wstr) from "msvcrt.dll" symbol "_wsystem" returns int
+extern function _host_CreateProcessW(applicationName as wstr, commandLine as wstr, processAttributes as ptr, threadAttributes as ptr, inheritHandles as bool, creationFlags as u32, environment as ptr, currentDirectory as ptr, startupInfo as bytes, processInformation as bytes) from "kernel32.dll" symbol "CreateProcessW" returns bool
+extern function _host_WaitForSingleObject(handle as ptr, milliseconds as u32) from "kernel32.dll" symbol "WaitForSingleObject" returns u32
+extern function _host_GetExitCodeProcess(handle as ptr, exitCode as bytes) from "kernel32.dll" symbol "GetExitCodeProcess" returns bool
+extern function _host_CloseHandle(handle as ptr) from "kernel32.dll" symbol "CloseHandle" returns bool
 extern function _mlo_CreateFileW(path as wstr, access as int, share as int, security as ptr, creation as int, flags as int, template as ptr) from "kernel32.dll" symbol "CreateFileW" returns ptr
 extern function _mlo_WriteFile(handle as ptr, input as bytes, count as int, written as bytes, overlapped as ptr) from "kernel32.dll" symbol "WriteFile" returns bool
 extern function _mlo_CloseHandle(handle as ptr) from "kernel32.dll" symbol "CloseHandle" returns bool
 #else
 extern function _host_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
 extern function _host_system(cmd as cstr) from "libc.so.6" symbol "system" returns i32
+extern function _host_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
 extern function _mlo_open(path as cstr, flags as int, mode as u32) from "libc.so.6" symbol "open" returns i32
 extern function _mlo_write(fd as int, input as bytes, count as u64) from "libc.so.6" symbol "write" returns i64
 extern function _mlo_close(fd as int) from "libc.so.6" symbol "close" returns i32
@@ -616,8 +620,88 @@ function _cmd_quote_arg(x)
   // embedded quote as the standard close/escaped-quote/reopen sequence.
   return "'" + s.replaceAll(x, "'", "'\\''") + "'"
 #else
-  return "\"" + x + "\""
+  // CreateProcessW consumes one Windows CRT command line rather than an argv
+  // array. Backslashes immediately before a quote are doubled, and trailing
+  // backslashes are doubled again so they cannot escape the closing quote.
+  bld = sb.StringBuilder.withCapacity(len(x) + 8)
+  bld.appendString("\"")
+  pending_slashes = 0
+  raw = bytes(x)
+  if len(raw) > 0 then
+    for i = 0 to len(raw) - 1
+      ch = raw[i]
+      if ch == 92 then
+        pending_slashes = pending_slashes + 1
+        continue
+      end if
+      copies = pending_slashes
+      if ch == 34 then copies = (pending_slashes * 2) + 1 end if
+      while copies > 0
+        bld.appendString("\\")
+        copies = copies - 1
+      end while
+      pending_slashes = 0
+      bld.appendSlice(x, i, 1)
+    end for
+  end if
+  pending_slashes = pending_slashes * 2
+  while pending_slashes > 0
+    bld.appendString("\\")
+    pending_slashes = pending_slashes - 1
+  end while
+  bld.appendString("\"")
+  return bld.toString()
 #endif
+end function
+
+function _u64le_host_at(buf, offset)
+  if typeof(buf) != "bytes" or typeof(offset) != "int" or offset < 0 or offset + 8 > len(buf) then return 0 end if
+  value = 0
+  for i = 0 to 7
+    value = value | (buf[offset + i] << (i * 8))
+  end for
+  return value
+end function
+
+// Launch a child compiler without a command shell on Windows. Besides avoiding
+// cmd.exe expansion, this preserves every argument exactly across the object-
+// emission and fresh-link process boundaries.
+function _run_child_process(executable, args)
+  if typeof(executable) != "string" or executable == "" then return -1 end if
+  cmd = _cmd_quote_arg(executable)
+  if typeof(args) == "array" and len(args) > 0 then
+    for i = 0 to len(args) - 1
+      cmd = cmd + " " + _cmd_quote_arg(args[i])
+    end for
+  end if
+#if TARGET_OS == "linux"
+  return _host_system(cmd)
+#else
+  startup = bytes(104, 0)
+  startup[0] = 104
+  process_info = bytes(24, 0)
+  if _host_CreateProcessW(executable, cmd, 0, 0, false, 0, 0, 0, startup, process_info) == false then return -1 end if
+  process_handle = _u64le_host_at(process_info, 0)
+  thread_handle = _u64le_host_at(process_info, 8)
+  if thread_handle != 0 then _host_CloseHandle(thread_handle) end if
+  if process_handle == 0 then return -1 end if
+  waited = _host_WaitForSingleObject(process_handle, 0xFFFFFFFF)
+  exit_code = bytes(4, 0)
+  got_exit = _host_GetExitCodeProcess(process_handle, exit_code)
+  _host_CloseHandle(process_handle)
+  if waited != 0 or got_exit == false then return -1 end if
+  return _u32le_at(exit_code, 0)
+#endif
+end function
+
+// Native Linux filesystems require execute permission in addition to valid ELF
+// contents. Windows cross-builds cannot represent this bit and intentionally
+// leave deployment-time chmod behavior unchanged.
+function _make_linux_output_executable(path)
+#if TARGET_OS == "linux"
+  if _host_chmod(path, 493) != 0 then return error(1, "chmod failed for Linux executable") end if
+#endif
+  return true
 end function
 
 function _path_norm_cached(p)
@@ -1322,7 +1406,11 @@ end function
 function _resolve_import_cache_key(requested, base_dir)
   req = requested
   if typeof(req) != "string" then req = "" + req end if
+#if TARGET_OS == "linux"
+  return _path_norm_cached(base_dir) + "|" + req
+#else
   return _path_norm_cached(base_dir) + "|" + s.toLowerAscii(req)
+#endif
 end function
 
 function _resolve_import_cached(requested, base_dir, include_dirs)
@@ -5389,6 +5477,11 @@ function _link_mlo_linux_sections(obj_paths, output_exe, text_buf, rdata_buf, da
     print "CompileError: writeAllBytes failed for linked ELF image"
     return 2
   end if
+  executable_result = _make_linux_output_executable(output_exe)
+  if typeof(executable_result) == "error" then
+    print "CompileError: " + executable_result.message
+    return 2
+  end if
   print "OK: wrote " + output_exe + " (native x64 ELF, MiniLang self-hosted compiler " + COMPILER_VERSION + ", MLO pipeline)"
   return 0
 end function
@@ -5683,35 +5776,31 @@ function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem
   self_exe = _self_exe_path()
   if self_exe == "" then return -1 end if
 
-#if TARGET_OS == "linux"
-  cmd = _cmd_quote_arg(self_exe)
-#else
-  cmd = "call " + _cmd_quote_arg(self_exe)
-#endif
-  cmd = cmd + " " + _cmd_quote_arg(input_ml)
-  cmd = cmd + " " + _cmd_quote_arg(output_exe)
-  cmd = cmd + " --link-obj-dir " + _cmd_quote_arg(obj_dir)
-  cmd = cmd + " --subsystem " + _subsystem_cli_name(subsystem)
-  cmd = cmd + " --target " + _cmd_quote_arg(_compile_target)
+  child_args = [
+    input_ml, output_exe,
+    "--link-obj-dir", obj_dir,
+    "--subsystem", _subsystem_cli_name(subsystem),
+    "--target", _compile_target
+  ]
 
   compiler_gc_limit = _fresh_link_gc_limit_from_config(runtime_config)
   if typeof(compiler_gc_limit) == "int" and compiler_gc_limit > 0 then
-    cmd = cmd + " --gc-limit " + compiler_gc_limit
+    child_args = child_args + ["--gc-limit", "" + compiler_gc_limit]
   end if
   if typeof(_dump_labels_path) == "string" and _dump_labels_path != "" then
-    cmd = cmd + " --dump-labels " + _cmd_quote_arg(_dump_labels_path)
+    child_args = child_args + ["--dump-labels", _dump_labels_path]
   end if
   if _compiler_profile_batches_enabled then
-    cmd = cmd + " --profile-compiler-batches"
+    child_args = child_args + ["--profile-compiler-batches"]
   else if _compiler_profile_enabled then
-    cmd = cmd + " --profile-compiler"
+    child_args = child_args + ["--profile-compiler"]
   end if
 
   _progress_phase("linking in fresh compiler process")
   _progress_link("object dir=" + obj_dir)
   _progress_link("output=" + output_exe)
   _progress_link("fresh linker gc-limit=" + compiler_gc_limit)
-  rc = _host_system(cmd)
+  rc = _run_child_process(self_exe, child_args)
   if typeof(rc) != "int" then
     print "CompileError: failed to run link subprocess"
     return 2
@@ -5891,6 +5980,11 @@ function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_b
     print "CompileError: writeAllBytes failed"
     return 2
   end if
+  executable_result = _make_linux_output_executable(output_exe)
+  if typeof(executable_result) == "error" then
+    print "CompileError: " + executable_result.message
+    return 2
+  end if
   print "OK: wrote " + output_exe + " (native x64 ELF, MiniLang self-hosted compiler " + COMPILER_VERSION + ")"
   return 0
 end function
@@ -5901,19 +5995,10 @@ end function
 function _emit_obj_dir_in_fresh_process(args)
   self_exe = _self_exe_path()
   if self_exe == "" then return 2 end if
-#if TARGET_OS == "linux"
-  cmd = _cmd_quote_arg(self_exe)
-#else
-  cmd = "call " + _cmd_quote_arg(self_exe)
-#endif
-  if typeof(args) == "array" and len(args) > 0 then
-    for ai = 0 to len(args) - 1
-      cmd = cmd + " " + _cmd_quote_arg(args[ai])
-    end for
-  end if
-  cmd = cmd + " --object-pipeline --object-emit-only"
+  child_args = ["--object-pipeline", "--object-emit-only"]
+  if typeof(args) == "array" then child_args = args + child_args end if
   _progress_phase("emitting objects in fresh compiler process")
-  rc = _host_system(cmd)
+  rc = _run_child_process(self_exe, child_args)
   if typeof(rc) != "int" or rc != 0 then
     print "CompileError: object-emission subprocess failed"
     return 2
@@ -6834,7 +6919,11 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     // frontier explicitly so a collection cannot turn one of those values
     // into a stale pointer.  Compiler profiling used to hide this bug by
     // extending several local live ranges through its diagnostic print.
-    _compile_codegen_keepalive = [load, cg, mod_cg, fn_entries, fn_analysis_scratch, helper_union, module_obj_paths_b]
+    // The output paths and runtime configuration also cross this collection
+    // boundary. They are not referenced again until serialization or linking,
+    // so relying on native stack-slot liveness made the first stride GC turn
+    // tmp_dir into a stale pointer in large, non-instrumented self-builds.
+    _compile_codegen_keepalive = [load, cg, mod_cg, fn_entries, fn_analysis_scratch, helper_union, module_obj_paths_b, tmp_dir, input_abs, entry_path, runtime_config]
     text_stream_offset = text_stream_offset + fragment_text_size
     if _compiler_profile_batches_enabled then
       fn_batch_function_count = fn_chunk_size

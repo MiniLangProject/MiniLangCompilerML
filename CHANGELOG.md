@@ -4,6 +4,21 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Hardened host-specific compiler behavior found by the general self-hosted
+  code review. Windows child compilers now use `CreateProcessW` with complete
+  CRT quoting instead of `cmd.exe`; Linux import/cache keys and project sorting
+  preserve filename case; native Linux output receives executable mode; and
+  overlapping project roots use indexed, capacity-backed traversal. The
+  string-literal decoder now grows linearly through `StringBuilder`. A missing
+  object-emission GC frontier was also fixed: uninstrumented compiler
+  self-builds no longer crash after object 127 while `--mem-probe` happens to
+  mask the stale path. New Windows and native-Linux regressions cover trailing
+  separators, executable mode, case-distinct imports and cache directories.
+  Python bootstrap and self-hosted output are byte-identical 62,086,144-byte
+  images with SHA-256
+  `A740265D2978D8262EA421D8719C836E5E7993A04AA0EC2ECE22563BD85A038E`;
+  Windows and Linux target parity is unchanged and the expanded harness passes
+  111/111.
 - Reduced the live self-hosted compiler graph in five coordinated steps. Token
   payloads are packed 32-bit text/symbol IDs with module-local interning;
   canonical function emission uses integer IDs into a typed function-root

@@ -358,6 +358,32 @@ function _test_project_manifest(compiler_path, repo_root)
   return true
 end function
 
+function _test_object_pipeline_trailing_include(compiler_path, repo_root)
+  name = "object_pipeline_trailing_include"
+  slash = decode(bytes([92]))
+  quote = decode(bytes([34]))
+  include_path = repo_root
+  if len(include_path) <= 0 or (include_path[len(include_path) - 1] != "\\" and include_path[len(include_path) - 1] != "/") then
+    include_path = include_path + slash
+  end if
+  // The extra slash before the closing quote is the Windows CRT encoding that
+  // passes one literal trailing slash to the parent compiler.
+  include_cli = quote + include_path + slash + quote
+  source_abs = _path_join(repo_root, "tests\\array_vector.ml")
+  output_abs = _path_join(repo_root, "build\\_rt_trailing_include.exe")
+  cmd = "call " + _q(compiler_path) + " " + _q(source_abs) + " " + _q(output_abs) + " -I " + include_cli + " --object-pipeline"
+  if _wsystem(cmd) != 0 then
+    print "[FAIL] " + name + " (object-emission subprocess lost trailing include slash)"
+    return false
+  end if
+  if _run_exe(output_abs, "") != 0 then
+    print "[FAIL] " + name + " (compiled program failed)"
+    return false
+  end if
+  print "[PASS] " + name
+  return true
+end function
+
 function _mlo_u32_at(buf, offset)
   if typeof(buf) != "bytes" or typeof(offset) != "int" or offset < 0 or offset + 3 >= len(buf) then return -1 end if
   return buf[offset] + (buf[offset + 1] << 8) + (buf[offset + 2] << 16) + (buf[offset + 3] << 24)
@@ -716,6 +742,7 @@ function main(args)
   if _test(compiler_path, repo_root, "extern_out_runtime", "tests\\extern_out_runtime.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "defer_features", "tests\\defer_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test_project_manifest(compiler_path, repo_root) then pass = pass + 1 else fail = fail + 1 end if
+  if _test_object_pipeline_trailing_include(compiler_path, repo_root) then pass = pass + 1 else fail = fail + 1 end if
   if _test_pipeline_determinism(compiler_path, repo_root) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "conditional_default", "tests\\conditional_compilation.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   conditional_enabled_flags = extra_flags

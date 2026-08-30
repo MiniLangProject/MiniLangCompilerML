@@ -1,4 +1,5 @@
 import mlc.minilang_parser as parser
+import std.string as s
 
 function fail(message)
   print "[FAIL] compiler token arena: " + message
@@ -20,6 +21,17 @@ function main(args)
   if newline != 0 then return fail("fixed token value elision") end if
   if parser._token_u32_read(tokens.positions, 2) != 8 then return fail("packed source position") end if
 
-  print "[OK] packed token columns and module-local symbol ids"
+  slash = decode(bytes([92]))
+  raw_escapes = "A" + slash + "n" + slash + "x42" + slash + "u00e9" + slash + "U0001F642" + slash + "q"
+  decoded_escapes = parser._decode_string_raw(raw_escapes, 0)
+  if decoded_escapes != "A\nB\u00e9\U0001F642q" then return fail("linear escape decoding semantics") end if
+
+  // A large literal-shaped input guards against restoring per-character
+  // immutable concatenation in the parser's escape decoder.
+  long_raw = s.repeat("x", 131072)
+  long_decoded = parser._decode_string_raw(long_raw, 0)
+  if long_decoded != long_raw then return fail("linear long-string decoding") end if
+
+  print "[OK] packed token columns, symbol ids and linear string decoding"
   return 0
 end function

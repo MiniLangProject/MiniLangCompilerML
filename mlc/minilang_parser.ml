@@ -1,6 +1,7 @@
 // Tokenizer, AST records and recursive-descent parser for MiniLang syntax.
 package mlc.minilang_parser
 import std.string as s
+import std.string_builder as sb
 import mlc.tools as t
 
 #if TARGET_OS == "windows"
@@ -1229,12 +1230,14 @@ function _charFromCode(v)
 end function
 
 function _decode_string_raw(raw, pos)
-  decoded = ""
+  // Preserve UTF-8 bytes while decoding escapes into one geometrically grown
+  // buffer. Repeated immutable concatenation made long literals quadratic.
+  decoded = sb.StringBuilder.withCapacity(len(raw))
   i = 0
   while i < len(raw)
     ch = raw[i]
     if ch != "\\" then
-      decoded = decoded + ch
+      decoded.appendString(ch)
       i = i + 1
       continue
     end if
@@ -1243,18 +1246,18 @@ function _decode_string_raw(raw, pos)
       return
     end if
     esc = raw[i + 1]
-    if esc == "n" then decoded = decoded + "\n" ; i = i + 2 ; continue end if
-    if esc == "r" then decoded = decoded + "\r" ; i = i + 2 ; continue end if
-    if esc == "t" then decoded = decoded + "\t" ; i = i + 2 ; continue end if
-    if esc == "0" then decoded = decoded + "\0" ; i = i + 2 ; continue end if
-    if esc == "\\" then decoded = decoded + "\\" ; i = i + 2 ; continue end if
-    if esc == "\"" then decoded = decoded + "\"" ; i = i + 2 ; continue end if
+    if esc == "n" then decoded.appendString("\n") ; i = i + 2 ; continue end if
+    if esc == "r" then decoded.appendString("\r") ; i = i + 2 ; continue end if
+    if esc == "t" then decoded.appendString("\t") ; i = i + 2 ; continue end if
+    if esc == "0" then decoded.appendString("\0") ; i = i + 2 ; continue end if
+    if esc == "\\" then decoded.appendString("\\") ; i = i + 2 ; continue end if
+    if esc == "\"" then decoded.appendString("\"") ; i = i + 2 ; continue end if
     if esc == "x" then
       if i + 3 >= len(raw) then _set_error("Invalid \\x escape", pos + i) ; return end if
       h1 = _hex_value(raw[i + 2])
       h2 = _hex_value(raw[i + 3])
       if h1 < 0 or h2 < 0 then _set_error("Invalid \\x escape", pos + i) ; return end if
-      decoded = decoded + _charFromCode(h1 * 16 + h2)
+      decoded.appendString(_charFromCode(h1 * 16 + h2))
       i = i + 4
       continue
     end if
@@ -1268,7 +1271,7 @@ function _decode_string_raw(raw, pos)
       end for
       uch = _charFromCode(cp)
       if uch == "" then _set_error("Invalid \\u escape", pos + i) ; return end if
-      decoded = decoded + uch
+      decoded.appendString(uch)
       i = i + 6
       continue
     end if
@@ -1282,14 +1285,16 @@ function _decode_string_raw(raw, pos)
       end for
       uch = _charFromCode(cp)
       if uch == "" then _set_error("Invalid \\U escape", pos + i) ; return end if
-      decoded = decoded + uch
+      decoded.appendString(uch)
       i = i + 10
       continue
     end if
-    decoded = decoded + esc
+    // Keep the historical permissive fallback used by paths and regexes:
+    // an unknown escape drops the backslash and retains the following value.
+    decoded.appendString(esc)
     i = i + 2
   end while
-  return decoded
+  return decoded.toString()
 end function
 
 function _decode_string_token(tok)

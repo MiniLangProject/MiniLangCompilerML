@@ -131,6 +131,16 @@ if (-not $objectCompile.Success) {
   if (-not [Regex]::IsMatch($objectCompile.Value, "module_object_seq\s*%\s*fn_gc_stride")) {
     $failures += "mlc\compiler.ml: object emission no longer uses the selected GC stride"
   }
+  # Every managed value read after the stride collection must be present in
+  # the explicit root frontier. Missing paths were previously hidden by
+  # --mem-probe and crashed a plain self-build immediately after object 127.
+  foreach ($rootName in @("tmp_dir", "input_abs", "entry_path", "runtime_config")) {
+    if (-not [Regex]::IsMatch(
+        $objectCompile.Value,
+        "_compile_codegen_keepalive\s*=\s*\[[^\]]*\b$rootName\b[^\]]*\]")) {
+      $failures += "mlc\compiler.ml: object-emission GC frontier does not root '$rootName'"
+    }
+  }
 }
 
 # Native compiler bootstraps keep the large reserve but start with a smaller
@@ -161,10 +171,52 @@ if ([Regex]::IsMatch($statementSource, "(?m)^_function_analysis_scratch\s*=")) {
   $failures += "mlc\codegen\codegen_stmt.ml: analysis workspace became a module-global GC root"
 }
 
+# Long source literals and project trees must stay linear. These two paths run
+# before or around every large build and previously copied their complete
+# growing prefixes for each appended character/file.
+$parserSource = Get-Content -LiteralPath (Join-Path $root "mlc\minilang_parser.ml") -Raw
+$decodeString = [Regex]::Match(
+  $parserSource,
+  "(?ms)^function\s+_decode_string_raw\s*\([^\r\n]*\).*?^end function\s*$"
+)
+if (-not $decodeString.Success) {
+  $failures += "mlc\minilang_parser.ml: string decoder function was not found"
+} else {
+  if (-not [Regex]::IsMatch($decodeString.Value, "StringBuilder\.withCapacity")) {
+    $failures += "mlc\minilang_parser.ml: string decoder lost its capacity-backed builder"
+  }
+  if ([Regex]::IsMatch($decodeString.Value, "decoded\s*=\s*decoded\s*\+")) {
+    $failures += "mlc\minilang_parser.ml: string decoder reintroduced immutable prefix copying"
+  }
+}
+
+$projectSource = Get-Content -LiteralPath (Join-Path $root "mlc\project.ml") -Raw
+$collectSources = [Regex]::Match(
+  $projectSource,
+  "(?ms)^function\s+_collect_ml_files\s*\([^\r\n]*\).*?^end function\s*$"
+)
+if (-not $collectSources.Success) {
+  $failures += "mlc\project.ml: project source collector was not found"
+} else {
+  if (-not [Regex]::IsMatch($collectSources.Value, "arr_vec_push") -or
+      -not [Regex]::IsMatch($collectSources.Value, "fastmap_has")) {
+    $failures += "mlc\project.ml: project source collector lost its indexed capacity-backed state"
+  }
+  if ([Regex]::IsMatch($collectSources.Value, "result_paths\s*=\s*result_paths\s*\+")) {
+    $failures += "mlc\project.ml: project source collector reintroduced immutable array growth"
+  }
+}
+
+# Windows compiler children must bypass cmd.exe; otherwise CRT quoting, percent
+# expansion and trailing path separators can alter valid compiler arguments.
+if (-not [Regex]::IsMatch($compilerSource, "_host_CreateProcessW\s*\(")) {
+  $failures += "mlc\compiler.ml: Windows child compiler launch no longer uses CreateProcessW"
+}
+
 if ($failures.Count -gt 0) {
   foreach ($failure in $failures) { Write-Error $failure }
   exit 1
 }
 
-Write-Host "[PASS] compiler hot paths retain reusable fragments, capacity-backed worklists and indexed facts"
+Write-Host "[PASS] compiler hot paths retain reusable fragments, linear source builders and indexed facts"
 exit 0
