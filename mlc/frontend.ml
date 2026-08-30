@@ -1,7 +1,6 @@
 // Source loading, line mapping and parser integration for compiler clients.
 package mlc.frontend
 import std.fs as fs
-import std.string as s
 import mlc.minilang_parser as parser
 import mlc.tools as t
 
@@ -12,56 +11,16 @@ struct FrontendParseResult
   errors,
 end struct
 
-function _isSpace(ch)
-  return ch == " " or ch == "\t" or ch == "\n" or ch == "\r"
+function inline _is_space_byte(ch)
+  return ch == 32 or ch == 9 or ch == 10 or ch == 13
 end function
 
-function _isDigit(ch)
-  b = bytes(ch)
-  if len(b) <= 0 then return false end if
-  c = b[0]
-  return c >= 48 and c <= 57
+function inline _is_digit_byte(ch)
+  return ch >= 48 and ch <= 57
 end function
 
-function _isAlpha(ch)
-  b = bytes(ch)
-  if len(b) <= 0 then return false end if
-  c = b[0]
-  return (c >= 65 and c <= 90) or(c >= 97 and c <= 122)
-end function
-
-function _isAlphaNum(ch)
-  return _isAlpha(ch) or _isDigit(ch)
-end function
-
-function _prev_nonspace_char(text)
-  if len(text) <= 0 then return "" end if
-  j = len(text) - 1
-  while j >= 0 and _isSpace(text[j])
-    j = j - 1
-  end while
-  if j < 0 then return "" end if
-  return text[j]
-end function
-
-function _append_piece(chunks, tail, piece, last_nonspace)
-  app = t.arr_chunked_push(chunks, tail, piece, 512)
-  chunks = app[0]
-  tail = app[1]
-
-  if typeof(piece) == "string" and len(piece) > 0 then
-    j = len(piece) - 1
-    while j >= 0
-      ch = piece[j]
-      if _isSpace(ch) == false then
-        last_nonspace = ch
-        break
-      end if
-      j = j - 1
-    end while
-  end if
-
-  return [chunks, tail, last_nonspace]
+function inline _is_alnum_byte(ch)
+  return (ch >= 48 and ch <= 57) or (ch >= 65 and ch <= 90) or (ch >= 97 and ch <= 122)
 end function
 
 function _normalize_frontend_error(err, fallback_path)
@@ -102,59 +61,84 @@ function _normalize_frontend_errors(errors, fallback_path)
 end function
 
 // Normalize comments/newlines while preserving source offsets for diagnostics.
+// Operate on one capacity-backed UTF-8 byte buffer: the previous character-
+// string builder allocated one managed string and one array slot per source
+// byte, which dominated frontend memory on large self-hosted compilations.
 function normalize_code_for_tokenizer(src)
   if typeof(src) != "string" then
     return ""
   end if
 
-  code = s.replaceAll(src, "\r\n", "\n")
-  if s.contains(code, "-") == false then
-    return code
-  end if
-  chunks = []
-  tail = []
-  last_nonspace = ""
+  raw = bytes(src)
+  n = len(raw)
+  if n <= 0 then return "" end if
+
+  // Preserve the no-op fast path. Only CRLF pairs and minus tokens can change
+  // the source; all other UTF-8 bytes can be returned without another copy.
+  needs_rewrite = false
+  for scan = 0 to n - 1
+    ch_scan = raw[scan]
+    if ch_scan == 45 then
+      needs_rewrite = true
+      break
+    end if
+    if ch_scan == 13 and scan + 1 < n and raw[scan + 1] == 10 then
+      needs_rewrite = true
+      break
+    end if
+  end for
+  if needs_rewrite == false then return src end if
+
+  // At most two separator spaces are inserted for each consumed '-' byte, so
+  // twice the input size plus a small guard is a strict practical upper bound.
+  output_buf = bytes((n * 2) + 16, 0)
+  out_pos = 0
+  last_nonspace = -1
   i = 0
-  n = len(code)
   in_string = false
   in_line_comment = false
   escape = false
 
   while i < n
-    c = code[i]
+    c = raw[i]
+
+    // Match the historical replaceAll("\r\n", "\n") preprocessing without
+    // allocating a second complete source string.
+    if c == 13 and i + 1 < n and raw[i + 1] == 10 then
+      c = 10
+      i = i + 1
+    end if
 
     if in_line_comment then
-      app0 = _append_piece(chunks, tail, c, last_nonspace)
-      chunks = app0[0]
-      tail = app0[1]
-      last_nonspace = app0[2]
-      if c == "\n" then in_line_comment = false end if
+      output_buf[out_pos] = c
+      out_pos = out_pos + 1
+      if _is_space_byte(c) == false then last_nonspace = c end if
+      if c == 10 then in_line_comment = false end if
       i = i + 1
       continue
     end if
 
-    if in_string == false and c == "/" and i + 1 < n and code[i + 1] == "/" then
-      app1 = _append_piece(chunks, tail, c + code[i + 1], last_nonspace)
-      chunks = app1[0]
-      tail = app1[1]
-      last_nonspace = app1[2]
+    if in_string == false and c == 47 and i + 1 < n and raw[i + 1] == 47 then
+      output_buf[out_pos] = 47
+      output_buf[out_pos + 1] = 47
+      out_pos = out_pos + 2
+      last_nonspace = 47
       i = i + 2
       in_line_comment = true
       continue
     end if
 
     if in_string then
-      app2 = _append_piece(chunks, tail, c, last_nonspace)
-      chunks = app2[0]
-      tail = app2[1]
-      last_nonspace = app2[2]
+      output_buf[out_pos] = c
+      out_pos = out_pos + 1
+      if _is_space_byte(c) == false then last_nonspace = c end if
       if escape then
         escape = false
       else
-        if c == "\\" then
+        if c == 92 then
           escape = true
         else
-          if c == "\"" then
+          if c == 34 then
             in_string = false
           end if
         end if
@@ -163,52 +147,39 @@ function normalize_code_for_tokenizer(src)
       continue
     end if
 
-    if c == "\"" then
-      app3 = _append_piece(chunks, tail, c, last_nonspace)
-      chunks = app3[0]
-      tail = app3[1]
-      last_nonspace = app3[2]
+    if c == 34 then
+      output_buf[out_pos] = c
+      out_pos = out_pos + 1
+      last_nonspace = c
       in_string = true
       i = i + 1
       continue
     end if
 
-    if c == "-" and i + 1 < n and _isDigit(code[i + 1]) then
+    if c == 45 and i + 1 < n and _is_digit_byte(raw[i + 1]) then
       p = last_nonspace
-      if _isAlphaNum(p) or p == "_" or p == ")" or p == "]" then
-        if p != "" then
-          app4 = _append_piece(chunks, tail, " ", last_nonspace)
-          chunks = app4[0]
-          tail = app4[1]
-          last_nonspace = app4[2]
-        end if
-        app5 = _append_piece(chunks, tail, "-", last_nonspace)
-        chunks = app5[0]
-        tail = app5[1]
-        last_nonspace = app5[2]
-        if _isSpace(code[i + 1]) == false then
-          app6 = _append_piece(chunks, tail, " ", last_nonspace)
-          chunks = app6[0]
-          tail = app6[1]
-          last_nonspace = app6[2]
-        end if
+      if _is_alnum_byte(p) or p == 95 or p == 41 or p == 93 then
+        output_buf[out_pos] = 32
+        output_buf[out_pos + 1] = 45
+        output_buf[out_pos + 2] = 32
+        out_pos = out_pos + 3
+        last_nonspace = 45
         i = i + 1
         continue
       end if
     end if
 
-    app7 = _append_piece(chunks, tail, c, last_nonspace)
-    chunks = app7[0]
-    tail = app7[1]
-    last_nonspace = app7[2]
+    output_buf[out_pos] = c
+    out_pos = out_pos + 1
+    if _is_space_byte(c) == false then last_nonspace = c end if
     i = i + 1
   end while
 
-  pieces = t.arr_chunked_finish(chunks, tail)
-  if typeof(pieces) != "array" or len(pieces) <= 0 then
-    return ""
-  end if
-  return s.join(pieces, "")
+  if out_pos <= 0 then return "" end if
+  if out_pos < len(output_buf) then output_buf = slice(output_buf, 0, out_pos) end if
+  decoded = decode(output_buf)
+  if typeof(decoded) != "string" then return "" end if
+  return decoded
 end function
 
 // Load and parse one file, returning syntax failures in the result record.

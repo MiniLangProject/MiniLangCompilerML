@@ -84,7 +84,7 @@ invoke_compiler \
   --heap-reserve 8g \
   --heap-commit 512m \
   --heap-shrink \
-  --heap-shrink-min 256m \
+  --heap-shrink-min 16m \
   --gc-limit 1536m \
   --object-pipeline
 chmod 755 "$STAGE_OUTPUT"

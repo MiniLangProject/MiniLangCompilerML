@@ -739,6 +739,18 @@ to 104.266 seconds (2.68%). Python Stage 1 and self-hosted Stages 2/3 converge
 to the same 60,690,432-byte image with SHA-256
 `5E2518E16AC783F90F8E72E353338629088035D35A7870A15DEA283D7C605E20`.
 
+Frontend source normalization is now a single capacity-backed UTF-8 byte pass
+instead of allocating a managed string and array slot per source character.
+Native compiler builds also trim the waiting object-pipeline coordinator to a
+16 MiB committed minimum after GC. The final self-build takes 88.776 seconds
+instead of 105.570 seconds and peaks at 1,841.1 instead of 1,972.3 MiB private
+commit. MiniQuake falls from 225.011 to 185.406 seconds and from 3,537.8 to
+3,288.7 MiB private commit. Python and self-hosted Windows stages, every Stage
+2/3 MLO object, Linux bootstrap/self-host stages and the current MiniQuake PE
+are byte-identical. The complete harness is 110/110 and all Windows/Linux gates
+pass; see
+[the frontend-buffer report](docs/COMPILER_FRONTEND_BUFFER_BENCHMARK_2026-08-30.md).
+
 
 ---
 
@@ -837,7 +849,9 @@ h = 0xFF
 m = 0b1010
 ```
 
-Note: the tokenizer currently treats a leading `-` as part of a numeric literal. In expressions like `a-1`, write spaces (`a - 1`) to ensure `-` is parsed as an operator.
+The frontend normalizes an unambiguous subtraction such as `a-1` to `a - 1`
+before tokenization. Spaces remain recommended for readability, but are not
+required around `-` when its left side is an identifier, number, `)` or `]`.
 
 ### Strings
 - Strings use double quotes: `"Text"`
