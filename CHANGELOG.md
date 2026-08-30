@@ -4,6 +4,20 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Stored compiler-internal `FastMap` slot generations in compact byte buffers
+  and raised the deterministic linear-probing occupancy limit from 70% to 80%.
+  An adjacent full self-build comparison reduced private peak memory from
+  1,944.2 to 1,823.9 MiB (6.19%), working set from 1,904.3 to 1,792.1 MiB
+  (5.89%) and object-emission time from 107.143 to 104.266 seconds (2.68%).
+  Python Stage 1 and self-hosted Stages 2/3 are byte-identical 60,690,432-byte
+  images; generation-wrap and dense-rehash behavior are covered explicitly.
+- Coalesced a retired TLAB tail with the still-adjacent central free-list head
+  in O(1). This avoids retaining two neighboring fragments until the next full
+  sweep without adding a list scan to the allocation path. A controlled
+  self-build improved from 105.781 to 103.573 seconds with an unchanged
+  2,279 MiB process-tree private peak. Python Stage 1 and self-hosted Stage 2
+  are byte-identical at 60,690,944 bytes; the threaded allocation/GC fixture is
+  also byte-identical and verifies the new retirement path in both suites.
 - Bounded serial object-emission allocation waves adaptively: compiler-sized
   programs collect completed fragment graphs every 32 batches, while function
   streams above 2,048 entries retain the 64-batch stride to avoid unnecessary

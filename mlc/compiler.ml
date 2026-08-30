@@ -4840,7 +4840,7 @@ function _link_build_label_maps(patch_file_recs, text_rva, rdata_rva, data_rva, 
   end if
   global_map_capacity = 262144
   if public_label_hint > 0 then
-    // FastMap grows at 70% occupancy. A 1.5x hint reaches the final power of
+    // FastMap grows at 80% occupancy. A 1.5x hint reaches the final power of
     // two capacity without the memory excess of a blanket 2x allocation.
     global_map_capacity = public_label_hint + (public_label_hint >> 1) + 64
   end if

@@ -245,7 +245,7 @@ function _fm_is_valid(mapv)
   if typeof(mapv) != "struct" then return false end if
   if typeof(mapv.keys) != "array" then return false end if
   if typeof(mapv.values) != "array" then return false end if
-  if typeof(mapv.used) != "array" then return false end if
+  if typeof(mapv.used) != "bytes" then return false end if
   if typeof(mapv.cap) != "int" or mapv.cap <= 0 then return false end if
   if typeof(mapv.epoch) != "int" or mapv.epoch <= 0 then return false end if
   if len(mapv.keys) != mapv.cap then return false end if
@@ -257,17 +257,20 @@ end function
 // FastMap operations use deterministic hashing and linear probing.
 function fastmap_new(initial_cap)
   cap = _fm_next_pow2(initial_cap)
-  return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), _arr_fill(cap, 0), cap, 0, 1)
+  // Slot generations need one byte, not one fully tagged array cell. Large
+  // compiler maps therefore spend 1/17 rather than 8/24 of their backing
+  // storage on occupancy metadata while keys and values remain unchanged.
+  return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), bytes(cap, 0), cap, 0, 1)
 end function
 
 function fastmap_clear(mapv)
   m = mapv
   if _fm_is_valid(m) == false then return fastmap_new(64) end if
   next_epoch = m.epoch + 1
-  // Epoch wrap is practically unreachable, but retain a deterministic full
+  // Byte epochs wrap after 254 clears; retain the deterministic full-array
   // reset so a very long-lived compiler process can never revive stale slots.
-  if next_epoch <= 0 or next_epoch >= 0x3FFFFFFF then
-    if typeof(m.used) == "array" and len(m.used) > 0 then
+  if next_epoch <= 0 or next_epoch >= 255 then
+    if typeof(m.used) == "bytes" and len(m.used) > 0 then
       for i = 0 to len(m.used) - 1
         m.used[i] = 0
       end for
@@ -298,7 +301,7 @@ function _fm_insert_no_resize(mapv, key, value)
   keys_arr = mapv.keys
   vals_arr = mapv.values
   epoch = mapv.epoch
-  if typeof(used_arr) != "array" then return mapv end if
+  if typeof(used_arr) != "bytes" then return mapv end if
   if typeof(keys_arr) != "array" then return mapv end if
   if typeof(vals_arr) != "array" then return mapv end if
   mask = mapv.cap - 1
@@ -340,7 +343,7 @@ end function
 function fastmap_set(mapv, key, value)
   m = mapv
   if _fm_is_valid(m) == false then m = fastmap_new(64) end if
-  if (m.size + 1) * 10 >= m.cap * 7 then
+  if (m.size + 1) * 10 >= m.cap * 8 then
     m = _fm_rehash(m, m.cap * 2)
   end if
   return _fm_insert_no_resize(m, key, value)

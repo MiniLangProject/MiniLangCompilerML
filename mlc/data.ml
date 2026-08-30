@@ -100,7 +100,7 @@ function _upsert_range_label(labels, name, offset, length)
 end function
 
 function _find_pool_entry(pool, key)
-  if typeof(pool) == "struct" and typeof(pool.cap) == "int" and typeof(pool.keys) == "array" and typeof(pool.values) == "array" and typeof(pool.used) == "array" then
+  if typeof(pool) == "struct" and typeof(pool.cap) == "int" and typeof(pool.keys) == "array" and typeof(pool.values) == "array" and typeof(pool.used) == "bytes" then
     return t.fastmap_get(pool, key, 0)
   end if
 

@@ -670,6 +670,15 @@ MiniQuake stays on the 64-batch path: its adjacent A/B changed from 259.279 to
 exact 57,197,056-byte PE with SHA-256
 `9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`.
 
+Compiler-internal `FastMap` indexes now store slot generations in byte buffers
+instead of tagged arrays and grow only after reaching 80% occupancy. This keeps
+the language-visible map behavior and target bytes unchanged while reducing an
+adjacent self-build's private peak from 1,944.2 to 1,823.9 MiB (6.19%), working
+set from 1,904.3 to 1,792.1 MiB (5.89%) and object-emission time from 107.143
+to 104.266 seconds (2.68%). Python Stage 1 and self-hosted Stages 2/3 converge
+to the same 60,690,432-byte image with SHA-256
+`5E2518E16AC783F90F8E72E353338629088035D35A7870A15DEA283D7C605E20`.
+
 
 ---
 

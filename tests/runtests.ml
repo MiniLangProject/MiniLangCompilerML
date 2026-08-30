@@ -7,6 +7,10 @@ extern function _wsystem(cmd as wstr) from "msvcrt.dll" returns int
 function _test_fastmap_clear()
   name = "fastmap_generation_clear"
   mapv = t.fastmap_new(8)
+  if typeof(mapv.used) != "bytes" or len(mapv.used) != mapv.cap then
+    print "[FAIL] " + name + " (slot generations are not compact bytes)"
+    return false
+  end if
   mapv = t.fastmap_set(mapv, "old", 11)
   mapv = t.fastmap_set(mapv, "collision-a", 22)
   mapv = t.fastmap_clear(mapv)
@@ -18,6 +22,40 @@ function _test_fastmap_clear()
   mapv = t.fastmap_set(mapv, "old", 44)
   if t.fastmap_size(mapv) != 2 or t.fastmap_get(mapv, "new", -1) != 33 or t.fastmap_get(mapv, "old", -1) != 44 then
     print "[FAIL] " + name + " (insert after clear failed)"
+    return false
+  end if
+  // Byte generations wrap after 254 O(1) clears. The wrap must physically
+  // zero every slot so no entry from an older generation can reappear.
+  for generation = 0 to 300
+    mapv = t.fastmap_clear(mapv)
+    if t.fastmap_size(mapv) != 0 or len(t.fastmap_items(mapv)) != 0 then
+      print "[FAIL] " + name + " (generation wrap retained stale slots)"
+      return false
+    end if
+    key = "generation-" + (generation % 17)
+    mapv = t.fastmap_set(mapv, key, generation)
+    if t.fastmap_get(mapv, key, -1) != generation then
+      print "[FAIL] " + name + " (generation insert failed)"
+      return false
+    end if
+  end for
+  mapv = t.fastmap_clear(mapv)
+  for stale = 0 to 16
+    if t.fastmap_has(mapv, "generation-" + stale) then
+      print "[FAIL] " + name + " (wrapped generation revived an old key)"
+      return false
+    end if
+  end for
+
+  dense = t.fastmap_new(16)
+  for dense_i = 0 to 11 dense = t.fastmap_set(dense, "dense-" + dense_i, dense_i) end for
+  if dense.cap != 16 or t.fastmap_size(dense) != 12 then
+    print "[FAIL] " + name + " (80-percent density resized too early)"
+    return false
+  end if
+  dense = t.fastmap_set(dense, "dense-12", 12)
+  if dense.cap != 32 or t.fastmap_get(dense, "dense-12", -1) != 12 then
+    print "[FAIL] " + name + " (dense map rehash failed)"
     return false
   end if
   print "[PASS] " + name
@@ -614,7 +652,7 @@ function _test_tlab_shared_heap(compiler_path, repo_root, extra_flags)
     return false
   end if
   labels = fs.readAllText(labels_abs)
-  if typeof(labels) != "string" or s.contains(labels, "[label] tlab_refill_") == false or s.contains(labels, "[label] tlab_retire_internal ") == false or s.contains(labels, "[label] fn_heap_enter ") == false or s.contains(labels, "[label] gc_context_loop_") == false or s.contains(labels, "[label] gcsafe_park_") == false then
+  if typeof(labels) != "string" or s.contains(labels, "[label] tlab_refill_") == false or s.contains(labels, "[label] tlab_retire_internal ") == false or s.contains(labels, "[label] tlab_retire_publish_") == false or s.contains(labels, "[label] fn_heap_enter ") == false or s.contains(labels, "[label] gc_context_loop_") == false or s.contains(labels, "[label] gcsafe_park_") == false then
     print "[FAIL] " + name + " (generated TLAB runtime shape is missing)"
     return false
   end if

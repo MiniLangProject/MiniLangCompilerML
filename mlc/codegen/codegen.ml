@@ -121,7 +121,7 @@ end function
 
 function _copy_fastmap(mapv)
   if typeof(mapv) != "struct" then return t.fastmap_new(16) end if
-  if typeof(mapv.keys) != "array" or typeof(mapv.values) != "array" or typeof(mapv.used) != "array" then
+  if typeof(mapv.keys) != "array" or typeof(mapv.values) != "array" or typeof(mapv.used) != "bytes" then
     return t.fastmap_new(16)
   end if
   cap = 16
@@ -131,7 +131,7 @@ function _copy_fastmap(mapv)
   out_map = t.fastmap_new(cap)
   out_map.keys = _copy_array(mapv.keys)
   out_map.values = _copy_array(mapv.values)
-  out_map.used = _copy_array(mapv.used)
+  out_map.used = _copy_bytes(mapv.used)
   out_map.cap = cap
   out_map.size = size
   if typeof(mapv.epoch) == "int" and mapv.epoch > 0 then out_map.epoch = mapv.epoch end if

@@ -597,6 +597,8 @@ function emit_alloc_function(state)
   state.label_id = state.label_id + 1
   l_retire_clear = "tlab_retire_clear_" + lid_retire
   l_retire_locked_empty = "tlab_retire_locked_empty_" + lid_retire
+  l_retire_link = "tlab_retire_link_" + lid_retire
+  l_retire_publish = "tlab_retire_publish_" + lid_retire
   l_retire_done = "tlab_retire_done_" + lid_retire
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
   state.asm = a.mov_r11_gs_qword_28(state.asm)
@@ -621,9 +623,26 @@ function emit_alloc_function(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_END_OFFSET, 0, true)
   state.asm = a.mov_r64_r64(state.asm, "r10", "r9")
   state.asm = a.sub_r64_r64(state.asm, "r10", "r8")
+  state.asm = a.mov_rax_rip_qword(state.asm, "gc_free_head")
+  // A central TLAB refill splits its 64-KiB range from the front of a free
+  // block and links the right remainder at the list head. If no intervening
+  // central allocation changed that head, retire the private tail directly
+  // into the remainder. This prevents adjacent sub-TLAB fragments from
+  // accumulating until the next full sweep.
+  state.asm = a.cmp_r64_r64(state.asm, "r9", "rax")
+  state.asm = a.jcc(state.asm, "ne", l_retire_link)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rax", 0)
+  state.asm = a.test_r64_imm32(state.asm, "rcx", c.GC_BLOCK_FREE_BIT)
+  state.asm = a.jcc(state.asm, "e", l_retire_link)
+  state.asm = a.and_r64_imm(state.asm, "rcx", c.GC_BLOCK_SIZE_MASK)
+  state.asm = a.add_r64_r64(state.asm, "r10", "rcx")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rax", c.GC_OFF_NEXT_FREE)
+  state.asm = a.jmp(state.asm, l_retire_publish)
+
+  state.asm = a.mark(state.asm, l_retire_link)
+  state.asm = a.mark(state.asm, l_retire_publish)
   state.asm = a.or_r64_imm(state.asm, "r10", c.GC_BLOCK_FREE_BIT)
   state.asm = a.mov_membase_disp_r64(state.asm, "r8", 0, "r10")
-  state.asm = a.mov_rax_rip_qword(state.asm, "gc_free_head")
   state.asm = a.mov_membase_disp_r64(state.asm, "r8", c.GC_OFF_NEXT_FREE, "rax")
   state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_head")
