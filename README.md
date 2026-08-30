@@ -435,7 +435,7 @@ Notes:
   `-KeepObjects` is passed.
 - Self-builds use the memory-bounded `.mlo` object pipeline. The generated
   compiler reserves an 8 GiB virtual heap so very large monolithic target builds
-  such as MiniQuake have headroom; only 2 GiB is initially committed and unused
+  such as MiniQuake have headroom; only 512 MiB is initially committed and unused
   top pages may be trimmed after GC.
 - During large monolithic target builds, each bounded phase resolves only the
   newly emitted `.text` fixups. Unknown forward targets move to a deferred
@@ -653,6 +653,22 @@ Python. Python bootstrap, self-hosted Stage 2 and Stage 3 are byte-identical
 Dedicated Windows and Linux tests verify that committed memory decreases
 without crossing `--heap-shrink-min`; the complete ML harness remains 107/107
 and all Windows/WSL host gates pass.
+
+Serial object emission now selects its compiler-GC cadence from the prepared
+function count. Streams of at most 2,048 functions collect completed fragment
+graphs every 32 batches; larger applications retain the 64-batch cadence,
+because their peak is dominated by the early live semantic graph and extra
+collections only add work. Native compiler builds also start with 512 MiB
+committed while retaining an 8 GiB reserve. On the same final self-host source,
+the adaptive compiler reduced process-tree private peak from 3,551.6 to
+2,281.8 MiB (35.75%), working-set peak from 3,179.8 to 1,928.8 MiB (39.34%) and
+wall time from 145.527 to 133.109 seconds (8.53%). Python and self-hosted builds
+are byte-identical 60,663,808-byte images with SHA-256
+`EFF138E771E6D2136D075E88863E6E3B0077481CEE6954A9794A0E48C931D370`.
+MiniQuake stays on the 64-batch path: its adjacent A/B changed from 259.279 to
+258.089 seconds, private peak from 3,570.8 to 3,531.4 MiB, and retained the
+exact 57,197,056-byte PE with SHA-256
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`.
 
 
 ---

@@ -1,6 +1,6 @@
 # Compiler parity and self-hosting
 
-Verified through 28 August 2026 against the matching 1.1.0 revisions of:
+Verified through 30 August 2026 against the matching 1.1.0 revisions of:
 
 - `MiniLangCompilerPy`, the Python bootstrap/reference compiler; and
 - `MiniLangCompilerML`, the compiler implemented in MiniLang.
@@ -907,6 +907,41 @@ and Linux ELF
 Both executables decommit unused pages without crossing the configured 16 MiB
 minimum. The complete self-hosted harness passed 107/107 plus every Windows
 and WSL/Linux host gate in 70.271 seconds; the Python suite passed 115/115.
+
+## Adaptive object-emission memory bound (2026-08-30)
+
+The serial object emitter uses a deterministic GC stride selected from the
+prepared function count. Compiler-sized streams collect completed fragment
+graphs every 32 batches. Streams above 2,048 functions retain the historical
+64-batch cadence: MiniQuake peaks while its early semantic graph is still live,
+so collecting twice as often did not reduce that peak materially and regressed
+its build time. Windows and Linux compiler build scripts now commit 512 MiB
+initially while retaining the same 8 GiB reserved address range and on-demand
+growth.
+
+On the same final compiler source and output configuration, adjacent sampled
+process-tree runs measured:
+
+| Self-host build | Wall time | Private peak | Working-set peak |
+| --- | ---: | ---: | ---: |
+| Previous 64-batch compiler | 145.527 s | 3,551.6 MiB | 3,179.8 MiB |
+| Adaptive compiler | 133.109 s | 2,281.8 MiB | 1,928.8 MiB |
+| Change | -8.53% | -35.75% | -39.34% |
+
+The Python bootstrap and adaptive self-hosted fixed point are byte-identical
+60,663,808-byte PE images with SHA-256:
+
+`EFF138E771E6D2136D075E88863E6E3B0077481CEE6954A9794A0E48C931D370`
+
+Clean MiniQuake commit `59ac8cfc6c447c82b207100741512359f95e595c`
+selects the 64-batch path. Its adjacent A/B changed from 259.279 to 258.089
+seconds and from 3,570.8 to 3,531.4 MiB private peak. Both compilers emitted
+the same 57,197,056-byte PE with SHA-256:
+
+`9AF2B206162B7BD2E632379CA4F6D2598FDD390F8177EDA801668B9EA35C66C8`
+
+The complete self-hosted harness passed 107/107 plus all Windows and WSL/Linux
+host gates in 80.255 seconds. The Python compiler suite passed 115/115.
 
 ## Reproducing target-output parity
 

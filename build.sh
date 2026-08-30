@@ -82,7 +82,7 @@ invoke_compiler \
   -I "$ROOT" \
   --target linux-x64 \
   --heap-reserve 8g \
-  --heap-commit 2g \
+  --heap-commit 512m \
   --heap-shrink \
   --heap-shrink-min 256m \
   --gc-limit 1536m \

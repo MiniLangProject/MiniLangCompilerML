@@ -116,6 +116,33 @@ if (-not $objectCompile.Success) {
   if (-not [Regex]::IsMatch($objectCompile.Value, "emit_module_function_entries\s*\([^\r\n]*fn_analysis_scratch\s*\)")) {
     $failures += "mlc\compiler.ml: reusable function-analysis workspace is not passed across object batches"
   }
+  if (-not [Regex]::IsMatch($compilerSource, "(?m)^const\s+OBJECT_EMISSION_GC_STRIDE\s*=\s*32\s*$")) {
+    $failures += "mlc\compiler.ml: bounded object-emission GC stride is not 32 fragments"
+  }
+  if (-not [Regex]::IsMatch($compilerSource, "(?m)^const\s+OBJECT_LARGE_EMISSION_GC_STRIDE\s*=\s*64\s*$")) {
+    $failures += "mlc\compiler.ml: large-program object-emission GC stride is not 64 fragments"
+  }
+  if (-not [Regex]::IsMatch($compilerSource, "(?m)^const\s+OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD\s*=\s*2048\s*$")) {
+    $failures += "mlc\compiler.ml: large-program GC threshold is not 2048 functions"
+  }
+  if (-not [Regex]::IsMatch($objectCompile.Value, "len\(fn_entries\)\s*>\s*OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD")) {
+    $failures += "mlc\compiler.ml: object emission no longer selects the large-program GC stride"
+  }
+  if (-not [Regex]::IsMatch($objectCompile.Value, "module_object_seq\s*%\s*fn_gc_stride")) {
+    $failures += "mlc\compiler.ml: object emission no longer uses the selected GC stride"
+  }
+}
+
+# Native compiler bootstraps keep the large reserve but start with a smaller
+# commit on both hosts. This prevents orchestrator/emitter heap commits from
+# multiplying without reducing the maximum heap available to large targets.
+$buildPsSource = Get-Content -LiteralPath (Join-Path $root "build.ps1") -Raw
+$buildShSource = Get-Content -LiteralPath (Join-Path $root "build.sh") -Raw
+if (-not [Regex]::IsMatch($buildPsSource, '"--heap-commit"\s*,\s*"512m"')) {
+  $failures += "build.ps1: self-host compiler initial heap commit is not 512 MiB"
+}
+if (-not [Regex]::IsMatch($buildShSource, "--heap-commit\s+512m")) {
+  $failures += "build.sh: self-host compiler initial heap commit is not 512 MiB"
 }
 
 # Traversal and fact workspaces must retain their high-water allocations between

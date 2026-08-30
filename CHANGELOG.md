@@ -4,6 +4,15 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Bounded serial object-emission allocation waves adaptively: compiler-sized
+  programs collect completed fragment graphs every 32 batches, while function
+  streams above 2,048 entries retain the 64-batch stride to avoid unnecessary
+  GC work in very large targets. Native compiler builds now start with a
+  512 MiB committed heap while retaining the 8 GiB reserve. On the same final
+  self-host source this reduced process-tree private peak from 3,551.6 to
+  2,281.8 MiB (35.75%) and wall time from 145.527 to 133.109 seconds (8.53%).
+  MiniQuake retained its 64-batch path, improved from 259.279 to 258.089
+  seconds and emitted the exact existing target image.
 - Reused capacity-backed statement/depth/pending worklists and epoch-cleared
   integer, type-flow, dependency, queue and promotion maps across the serial
   per-function analysis pipeline. A controlled same-configuration self-build

@@ -22,6 +22,12 @@ const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 const AUTO_OBJECT_PIPELINE_SCORE = 262144
 const OBJECT_FUNCTION_BATCH_SIZE = 8
 const OBJECT_COMPILER_BATCH_SIZE = 4
+// Moderate function streams benefit from shorter allocation waves. Very large
+// streams already peak while their early semantic graph is live, so extra
+// collections only add work; retain the wider stride for those programs.
+const OBJECT_EMISSION_GC_STRIDE = 32
+const OBJECT_LARGE_EMISSION_GC_STRIDE = 64
+const OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD = 2048
 const LINK_LABEL_GC_OBJECT_STRIDE = 128
 
 #if TARGET_OS == "windows"
@@ -6327,6 +6333,8 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   fn_codegen_ms = 0
   fn_serialize_ms = 0
   fn_start = 0
+  fn_gc_stride = OBJECT_EMISSION_GC_STRIDE
+  if typeof(fn_entries) == "array" and len(fn_entries) > OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD then fn_gc_stride = OBJECT_LARGE_EMISSION_GC_STRIDE end if
   // Materialize the prepared semantic state once, then reuse it for every
   // serial text fragment. Re-cloning the global scope/maps for each batch
   // creates large short-lived graphs and advances the non-moving compiler
@@ -6435,7 +6443,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     fn_batch_count = fn_batch_count + 1
     section_checkpoint = 0
     fin = 0
-    if (module_object_seq % 64) == 0 then gc_collect() end if
+    if (module_object_seq % fn_gc_stride) == 0 then gc_collect() end if
   end while
   if _compiler_profile_enabled then
     print "[profile] object_function_batches=" + fn_batch_count + " setup_ms=" + fn_setup_ms + " codegen_ms=" + fn_codegen_ms + " serialize_ms=" + fn_serialize_ms
