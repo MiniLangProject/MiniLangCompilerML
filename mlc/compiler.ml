@@ -29,14 +29,22 @@ const OBJECT_EMISSION_GC_STRIDE = 32
 const OBJECT_LARGE_EMISSION_GC_STRIDE = 64
 const OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD = 2048
 const LINK_LABEL_GC_OBJECT_STRIDE = 128
+const LINK_SECTION_COPY_GC_OBJECT_STRIDE = 64
+const MLO_WRITE_BATCH_BYTES = 1048576
 
 #if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" symbol "GetFullPathNameW" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
 extern function _host_system(cmd as wstr) from "msvcrt.dll" symbol "_wsystem" returns int
+extern function _mlo_CreateFileW(path as wstr, access as int, share as int, security as ptr, creation as int, flags as int, template as ptr) from "kernel32.dll" symbol "CreateFileW" returns ptr
+extern function _mlo_WriteFile(handle as ptr, input as bytes, count as int, written as bytes, overlapped as ptr) from "kernel32.dll" symbol "WriteFile" returns bool
+extern function _mlo_CloseHandle(handle as ptr) from "kernel32.dll" symbol "CloseHandle" returns bool
 #else
 extern function _host_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
 extern function _host_system(cmd as cstr) from "libc.so.6" symbol "system" returns i32
+extern function _mlo_open(path as cstr, flags as int, mode as u32) from "libc.so.6" symbol "open" returns i32
+extern function _mlo_write(fd as int, input as bytes, count as u64) from "libc.so.6" symbol "write" returns i64
+extern function _mlo_close(fd as int) from "libc.so.6" symbol "close" returns i32
 #endif
 
 // Frontend diagnostics and keep-going results.
@@ -169,6 +177,19 @@ struct MloObject
   imports,
 end struct
 
+// Metadata-only first-pass record. Section payloads are copied into their
+// final combined buffers in a separate pass and never retained per object.
+struct MloLayoutScan
+  entry_label,
+  text_size,
+  rdata_size,
+  data_size,
+  bss_size,
+  public_label_count,
+  private_label_count,
+  imports,
+end struct
+
 // Immutable section boundary used while one logical monolithic stream is
 // spilled into independently serializable .mlo fragments.
 struct MloStateCheckpoint
@@ -198,6 +219,7 @@ _dump_labels_path = ""
 _path_norm_cache = []
 _front_visited_set = []
 _front_resolve_cache = []
+_mlo_write_scratch = 0
 _pe_state_keepalive = 0
 _compile_codegen_keepalive = 0
 _link_patch_keepalive = 0
@@ -877,6 +899,37 @@ function _objreader_skip_bytes(rd)
   end if
   rd.pos = rd.pos + n
   return rd
+end function
+
+function _objreader_skip_bytes_len(rd)
+  rlen = _objreader_read_u32(rd)
+  if typeof(rlen) == "error" then return rlen end if
+  rd = rlen[0]
+  n = rlen[1]
+  if typeof(n) != "int" or n < 0 or rd.pos < 0 or rd.pos + n > len(rd.buf) then
+    return error(1, "truncated object blob while scanning length")
+  end if
+  rd.pos = rd.pos + n
+  return [rd, n]
+end function
+
+// Copy one length-prefixed blob from the current raw MLO file directly into
+// its final combined section. No intermediate per-object bytes value is made.
+function _objreader_copy_bytes_into(rd, destination, destination_offset)
+  rlen = _objreader_read_u32(rd)
+  if typeof(rlen) == "error" then return rlen end if
+  rd = rlen[0]
+  n = rlen[1]
+  if typeof(destination) != "bytes" or typeof(destination_offset) != "int" or destination_offset < 0 then
+    return error(1, "invalid streamed object destination")
+  end if
+  if typeof(n) != "int" or n < 0 or rd.pos < 0 or rd.pos + n > len(rd.buf) then
+    return error(1, "truncated streamed object blob")
+  end if
+  if destination_offset + n > len(destination) then return error(1, "streamed object section overflow") end if
+  if n > 0 then copyBytes(destination, destination_offset, rd.buf, rd.pos, n) end if
+  rd.pos = rd.pos + n
+  return [rd, n]
 end function
 
 function inline _node_pos(st)
@@ -3239,6 +3292,96 @@ function _mlo_write_imports(ob, imports)
   return ob
 end function
 
+function _mlo_write_scratch_buffer()
+  global _mlo_write_scratch
+  if typeof(_mlo_write_scratch) != "bytes" or len(_mlo_write_scratch) != MLO_WRITE_BATCH_BYTES then
+    _mlo_write_scratch = bytes(MLO_WRITE_BATCH_BYTES, 0)
+  end if
+  return _mlo_write_scratch
+end function
+
+// Complete one bounded native write even if the host reports a short write.
+// The common regular-file path passes the shared buffer without slicing.
+function _mlo_write_handle_all(handle, input, count)
+  position = 0
+  while position < count
+    remaining = count - position
+    part = input
+    if position > 0 then part = slice(input, position, remaining) end if
+#if TARGET_OS == "windows"
+    written = bytes(4, 0)
+    ok = _mlo_WriteFile(handle, part, remaining, written, 0)
+    actual = _u32le_at(written, 0)
+    if ok == false or actual <= 0 or actual > remaining then return false end if
+#else
+    actual = _mlo_write(handle, part, remaining)
+    if actual <= 0 or actual > remaining then return false end if
+#endif
+    position = position + actual
+  end while
+  return true
+end function
+
+// Serialize through a reusable bounded staging buffer. A one-megabyte batch
+// keeps native write-call overhead low while avoiding the old full-object
+// contiguous duplicate, whose size grew without bound with an MLO fragment.
+function _mlo_write_pages_file(path, bp)
+  if typeof(path) != "string" or typeof(bp) != "struct" then return error(1, "invalid paged MLO write") end if
+#if TARGET_OS == "windows"
+  handle = _mlo_CreateFileW(path, 0x40000000, 5, 0, 2, 0x80, 0)
+  if handle == -1 then return error(1, "CreateFileW failed") end if
+#else
+  handle = _mlo_open(path, 577, 0x1B6)
+  if handle < 0 then return error(1, "open failed during paged MLO write") end if
+#endif
+  scratch = _mlo_write_scratch_buffer()
+  batch_used = 0
+  page_count = t.byte_pages_page_count(bp)
+  for page_index = 0 to page_count - 1
+    page = t.byte_pages_page(bp, page_index)
+    used = t.byte_pages_page_used(bp, page_index)
+    if used <= 0 then continue end if
+    if batch_used + used > len(scratch) then
+      if _mlo_write_handle_all(handle, scratch, batch_used) == false then
+#if TARGET_OS == "windows"
+        _mlo_CloseHandle(handle)
+#else
+        _mlo_close(handle)
+#endif
+        return error(1, "native write failed during batched MLO serialization")
+      end if
+      batch_used = 0
+    end if
+    copyBytes(scratch, batch_used, page, 0, used)
+    batch_used = batch_used + used
+    if batch_used == len(scratch) then
+      if _mlo_write_handle_all(handle, scratch, batch_used) == false then
+#if TARGET_OS == "windows"
+        _mlo_CloseHandle(handle)
+#else
+        _mlo_close(handle)
+#endif
+        return error(1, "native write failed during batched MLO serialization")
+      end if
+      batch_used = 0
+    end if
+  end for
+  if batch_used > 0 and _mlo_write_handle_all(handle, scratch, batch_used) == false then
+#if TARGET_OS == "windows"
+    _mlo_CloseHandle(handle)
+#else
+    _mlo_close(handle)
+#endif
+    return error(1, "native write failed during final MLO batch")
+  end if
+#if TARGET_OS == "windows"
+  _mlo_CloseHandle(handle)
+#else
+  _mlo_close(handle)
+#endif
+  return true
+end function
+
 function _write_mlo_file(path, obj)
   bp = t.byte_pages_new()
   bp = _mlo_bp_string(bp, "MLO1")
@@ -3258,7 +3401,7 @@ function _write_mlo_file(path, obj)
   bp = _mlo_bp_write_patches(bp, obj.data_patches)
   bp = _mlo_bp_write_labels(bp, obj.bss_labels)
   bp = _mlo_bp_write_imports(bp, obj.imports)
-  return fs.writeAllBytes(path, t.byte_pages_to_bytes(bp))
+  return _mlo_write_pages_file(path, bp)
 end function
 
 function _mlo_read_labels(rd)
@@ -3908,6 +4051,136 @@ function _mlo_skip_patches(rd, version)
   return rd
 end function
 
+// Count serialized labels without decoding their names or allocating wrapper
+// structs. The private namespace is identified directly from the UTF-8 bytes
+// of the `objm_` prefix.
+function _mlo_scan_label_counts(rd)
+  rc = _objreader_read_u32(rd)
+  if typeof(rc) == "error" then return rc end if
+  rd = rc[0]
+  count = rc[1]
+  public_count = 0
+  private_count = 0
+  if count > 0 then
+    for i = 0 to count - 1
+      rlen = _objreader_read_u32(rd)
+      if typeof(rlen) == "error" then return rlen end if
+      rd = rlen[0]
+      name_len = rlen[1]
+      if typeof(name_len) != "int" or name_len < 0 or rd.pos < 0 or rd.pos + name_len > len(rd.buf) then
+        return error(1, "invalid serialized MLO label")
+      end if
+      is_private = false
+      if name_len >= 5 then
+        p = rd.pos
+        is_private = rd.buf[p] == 111 and rd.buf[p + 1] == 98 and rd.buf[p + 2] == 106 and rd.buf[p + 3] == 109 and rd.buf[p + 4] == 95
+      end if
+      if name_len > 0 then
+        if is_private then private_count = private_count + 1 else public_count = public_count + 1 end if
+      end if
+      rd.pos = rd.pos + name_len
+      ro = _objreader_read_u32(rd)
+      if typeof(ro) == "error" then return ro end if
+      rd = ro[0]
+    end for
+  end if
+  return [rd, public_count, private_count]
+end function
+
+// First linker pass: retain only section sizes, import metadata and label
+// capacity hints. Section payloads and label wrappers remain in the MLO file.
+function _read_mlo_layout_scan(path)
+  raw = fs.readAllBytes(path)
+  if typeof(raw) == "error" then return raw end if
+  rd = _objreader_new(raw)
+  rmagic = _objreader_read_string(rd)
+  if typeof(rmagic) == "error" then return rmagic end if
+  rd = rmagic[0]
+  if rmagic[1] != "MLO1" then return error(1, "invalid MiniLang object magic") end if
+  rver = _objreader_read_u32(rd)
+  if typeof(rver) == "error" then return rver end if
+  rd = rver[0]
+  version = rver[1]
+  if version != 1 and version != 2 then return error(1, "unsupported MiniLang object version") end if
+
+  rkind = _objreader_skip_bytes(rd)
+  if typeof(rkind) == "error" then return rkind end if
+  rd = rkind
+  rmodule = _objreader_skip_bytes(rd)
+  if typeof(rmodule) == "error" then return rmodule end if
+  rd = rmodule
+  rentry = _objreader_read_string(rd)
+  if typeof(rentry) == "error" then return rentry end if
+  rd = rentry[0]
+  entry_label = rentry[1]
+
+  rt = _objreader_skip_bytes_len(rd)
+  if typeof(rt) == "error" then return rt end if
+  rd = rt[0]
+  text_size = rt[1]
+  rr = _objreader_skip_bytes_len(rd)
+  if typeof(rr) == "error" then return rr end if
+  rd = rr[0]
+  rdata_size = rr[1]
+  rdt = _objreader_skip_bytes_len(rd)
+  if typeof(rdt) == "error" then return rdt end if
+  rd = rdt[0]
+  data_size = rdt[1]
+  rbss = _objreader_read_u32(rd)
+  if typeof(rbss) == "error" then return rbss end if
+  rd = rbss[0]
+  bss_size = rbss[1]
+
+  public_labels = 0
+  private_labels = 0
+  for section_index = 0 to 2
+    rlabels = _mlo_scan_label_counts(rd)
+    if typeof(rlabels) == "error" then return rlabels end if
+    rd = rlabels[0]
+    public_labels = public_labels + rlabels[1]
+    private_labels = private_labels + rlabels[2]
+    rpatches = _mlo_skip_patches(rd, version)
+    if typeof(rpatches) == "error" then return rpatches end if
+    rd = rpatches
+  end for
+  rbss_labels = _mlo_scan_label_counts(rd)
+  if typeof(rbss_labels) == "error" then return rbss_labels end if
+  rd = rbss_labels[0]
+  public_labels = public_labels + rbss_labels[1]
+  private_labels = private_labels + rbss_labels[2]
+  rimports = _mlo_read_imports(rd)
+  if typeof(rimports) == "error" then return rimports end if
+  return MloLayoutScan(entry_label, text_size, rdata_size, data_size, bss_size, public_labels, private_labels, rimports[1])
+end function
+
+function _copy_mlo_sections_from_file(path, text_buf, text_off, rdata_buf, rdata_off, data_buf, data_off)
+  raw = fs.readAllBytes(path)
+  if typeof(raw) == "error" then return raw end if
+  rd = _objreader_new(raw)
+  rmagic = _objreader_read_string(rd)
+  if typeof(rmagic) == "error" then return rmagic end if
+  rd = rmagic[0]
+  if rmagic[1] != "MLO1" then return error(1, "invalid MiniLang object magic") end if
+  rver = _objreader_read_u32(rd)
+  if typeof(rver) == "error" then return rver end if
+  rd = rver[0]
+  if rver[1] != 1 and rver[1] != 2 then return error(1, "unsupported MiniLang object version") end if
+  for i = 0 to 2
+    rs = _objreader_skip_bytes(rd)
+    if typeof(rs) == "error" then return rs end if
+    rd = rs
+  end for
+  rt = _objreader_copy_bytes_into(rd, text_buf, text_off)
+  if typeof(rt) == "error" then return rt end if
+  rd = rt[0]
+  rr = _objreader_copy_bytes_into(rd, rdata_buf, rdata_off)
+  if typeof(rr) == "error" then return rr end if
+  rd = rr[0]
+  rdt = _objreader_copy_bytes_into(rd, data_buf, data_off)
+  if typeof(rdt) == "error" then return rdt end if
+  return true
+end function
+
 // Count public and private labels while an object is already decoded during
 // the section pass. The later linker pass can then allocate only the maps and
 // capacities that the object actually needs.
@@ -3965,20 +4238,17 @@ function _read_mlo_file_for_layout(path)
   rd = rentry[0]
   entry_label = rentry[1]
 
-  rtext = _objreader_read_bytes(rd)
+  rtext = _objreader_skip_bytes(rd)
   if typeof(rtext) == "error" then return rtext end if
-  rd = rtext[0]
-  text = rtext[1]
+  rd = rtext
 
-  rrdata = _objreader_read_bytes(rd)
+  rrdata = _objreader_skip_bytes(rd)
   if typeof(rrdata) == "error" then return rrdata end if
-  rd = rrdata[0]
-  rdata = rrdata[1]
+  rd = rrdata
 
-  rdata2 = _objreader_read_bytes(rd)
+  rdata2 = _objreader_skip_bytes(rd)
   if typeof(rdata2) == "error" then return rdata2 end if
-  rd = rdata2[0]
-  data = rdata2[1]
+  rd = rdata2
 
   rbss = _objreader_read_u32(rd)
   if typeof(rbss) == "error" then return rbss end if
@@ -4021,7 +4291,7 @@ function _read_mlo_file_for_layout(path)
   if typeof(r8) == "error" then return r8 end if
   imports = r8[1]
 
-  return MloObject(kind, module_file, entry_label, text, rdata, data, bss_size, asm_labels, [], rdata_labels, [], data_labels, [], bss_labels, imports)
+  return MloObject(kind, module_file, entry_label, bytes(0), bytes(0), bytes(0), bss_size, asm_labels, [], rdata_labels, [], data_labels, [], bss_labels, imports)
 end function
 
 function _label_key(name)
@@ -4178,9 +4448,9 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
     rd = rs[0]
   end for
   for i = 0 to 2
-    rb = _objreader_read_bytes(rd)
+    rb = _objreader_skip_bytes(rd)
     if typeof(rb) == "error" then return [2, label_map, patch_index] end if
-    rd = rb[0]
+    rd = rb
   end for
   rbss = _objreader_read_u32(rd)
   if typeof(rbss) == "error" then return [2, label_map, patch_index] end if
@@ -4853,6 +5123,18 @@ function _heap_probe(tag)
   print "[mem] " + label + " used=" + heap_bytes_used() + " committed=" + heap_bytes_committed() + " reserved=" + heap_bytes_reserved() + " free=" + heap_free_bytes() + " blocks=" + heap_count()
 end function
 
+// End the parsing/semantic ownership phase in one operation. Generated code,
+// relocations and runtime metadata no longer refer to compact AST NodeIds at
+// the two call sites below, so the typed arenas and resolution caches can be
+// unrooted before the next full collection instead of surviving until exit.
+function _release_frontend_phase_arenas()
+  global _path_norm_cache, _front_visited_set, _front_resolve_cache
+  t.ast_arena_release()
+  _path_norm_cache = 0
+  _front_visited_set = 0
+  _front_resolve_cache = 0
+end function
+
 function _load_program_for_codegen(entry, include_dirs, keep_going, max_errors)
   entry_abs = _path_abspath(entry)
   if entry_abs == "" then entry_abs = entry end if
@@ -5114,9 +5396,6 @@ end function
 function _link_mlo_files(obj_paths, output_exe, subsystem)
   global _dump_labels_path
   global _link_patch_keepalive
-  text_parts_b = t.arr_chunk_new(64)
-  rdata_parts_b = t.arr_chunk_new(64)
-  data_parts_b = t.arr_chunk_new(64)
   patch_file_recs_b = t.arr_chunk_new(64)
   obj_label_recs_b = t.arr_chunk_new(64)
   imports = []
@@ -5134,40 +5413,28 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   _progress_phase("linking")
   _progress_link("objects=" + len(obj_paths) + " output=" + output_exe)
   _compiler_profile_phase("link: collecting objects")
-  _progress_link("collecting sections, labels and imports")
+  _progress_link("scanning section sizes, labels and imports")
   for oi = 0 to len(obj_paths) - 1
     obj_path = obj_paths[oi]
-    _progress_link("read object " + (oi + 1) + "/" + len(obj_paths) + ": " + obj_path)
-    ro = _read_mlo_file_for_layout(obj_path)
-    if typeof(ro) == "error" then
+    _progress_link("scan object " + (oi + 1) + "/" + len(obj_paths) + ": " + obj_path)
+    scan = _read_mlo_layout_scan(obj_path)
+    if typeof(scan) == "error" then
       msg = "failed to read MiniLang object file"
-      if typeof(ro.message) == "string" then msg = ro.message end if
+      if typeof(scan.message) == "string" then msg = scan.message end if
       print "CompileError: " + msg + " (" + obj_path + ")"
       return 2
     end if
-    obj = ro
-    _debug_validate_patch_names("obj_text " + obj_path, obj.asm_patches)
-    _debug_validate_patch_names("obj_rdata " + obj_path, obj.rdata_patches)
-    _debug_validate_patch_names("obj_data " + obj_path, obj.data_patches)
 
-    if entry_label == "" and typeof(obj.entry_label) == "string" and obj.entry_label != "" then
-      entry_label = obj.entry_label
+    if entry_label == "" and typeof(scan.entry_label) == "string" and scan.entry_label != "" then
+      entry_label = scan.entry_label
     end if
 
-    // Object files are canonical section fragments, not independently linked
-    // translation units.  Their builders already contain exactly the padding
-    // emitted by the monolithic compiler, so concatenate them byte-for-byte.
     text_obj_off = text_off
     rdata_obj_off = rdata_off
     data_obj_off = data_off
     bss_obj_off = bss_off
 
-    text_parts_b = t.arr_chunk_push(text_parts_b, obj.text)
-    rdata_parts_b = t.arr_chunk_push(rdata_parts_b, obj.rdata)
-    data_parts_b = t.arr_chunk_push(data_parts_b, obj.data)
-
-    object_label_counts = _mlo_label_counts(obj)
-    patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off, object_label_counts[0], object_label_counts[1]])
+    patch_file_recs_b = t.arr_chunk_push(patch_file_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off, scan.public_label_count, scan.private_label_count])
     // Keep only the file and section offsets. Label maps are built in a second,
     // streaming pass after section layout, and `_link_rec_labels_lookup`
     // reopens one object only on an actual defensive fallback miss. Retaining
@@ -5175,34 +5442,47 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
     // allocation trigger an exceptionally expensive large-heap collection.
     obj_label_recs_b = t.arr_chunk_push(obj_label_recs_b, [obj_path, text_obj_off, rdata_obj_off, data_obj_off, bss_obj_off])
 
-    imports = _mlo_merge_imports(imports, obj.imports)
-    text_off = text_obj_off + len(obj.text)
-    rdata_off = rdata_obj_off + len(obj.rdata)
-    data_off = data_obj_off + len(obj.data)
-    bss_off = bss_obj_off + obj.bss_size
+    imports = _mlo_merge_imports(imports, scan.imports)
+    text_off = text_obj_off + scan.text_size
+    rdata_off = rdata_obj_off + scan.rdata_size
+    data_off = data_obj_off + scan.data_size
+    bss_off = bss_obj_off + scan.bss_size
 
     if (oi % 32) == 0 then
       _heap_probe("link:obj_" + oi)
     end if
   end for
 
-  _compiler_profile_phase("link: combining sections")
-  _progress_link("building combined sections")
-  text_buf = _concat_bytes_parts(text_parts_b)
-  rdata_buf = _concat_bytes_parts(rdata_parts_b)
-  data_buf = _concat_bytes_parts(data_parts_b)
+  _compiler_profile_phase("link: streaming sections")
+  _progress_link("allocating final section buffers")
+  text_buf = bytes(text_off, 0)
+  rdata_buf = bytes(rdata_off, 0)
+  data_buf = bytes(data_off, 0)
   patch_file_recs = t.arr_chunk_finish(patch_file_recs_b)
   obj_label_recs = t.arr_chunk_finish(obj_label_recs_b)
-
-  // The combined buffers now own the section contents.  Release the per-file
-  // byte chunks and layout temporaries before building the million-label index.
-  text_parts_b = 0
-  rdata_parts_b = 0
-  data_parts_b = 0
   patch_file_recs_b = 0
   obj_label_recs_b = 0
-  obj = 0
-  ro = 0
+
+  // The first pass retained metadata only. Reopen one object at a time and
+  // copy its three payloads directly into their final offsets. Keep the output
+  // buffers explicitly rooted across stride collections.
+  _link_patch_keepalive = [text_buf, rdata_buf, data_buf, patch_file_recs, obj_label_recs, imports]
+  for oi = 0 to len(patch_file_recs) - 1
+    rec_copy = patch_file_recs[oi]
+    if typeof(rec_copy) != "array" or len(rec_copy) < 4 then continue end if
+    obj_path_copy = _coerce_name(rec_copy[0])
+    copy_result = _copy_mlo_sections_from_file(obj_path_copy, text_buf, rec_copy[1], rdata_buf, rec_copy[2], data_buf, rec_copy[3])
+    if typeof(copy_result) == "error" then
+      msg_copy = "failed to stream MiniLang object sections"
+      if typeof(copy_result.message) == "string" then msg_copy = copy_result.message end if
+      print "CompileError: " + msg_copy + " (" + obj_path_copy + ")"
+      return 2
+    end if
+    copy_result = 0
+    if ((oi + 1) % LINK_SECTION_COPY_GC_OBJECT_STRIDE) == 0 then gc_collect() end if
+  end for
+  rec_copy = 0
+  obj_path_copy = ""
   gc_collect()
 
   if _compile_target == "linux-x64" then
@@ -5770,8 +6050,12 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   st = _pe_state_keepalive
   load = 0
   cg = 0
+  extern_sigs = 0
+  extern_struct_names = 0
+  _release_frontend_phase_arenas()
   gc_collect()
   st = _pe_state_keepalive
+  _heap_probe("compile:frontend_arenas_released")
   if typeof(st.asm) == "struct" then
     st.asm = a.materialize(st.asm)
   end if
@@ -6590,7 +6874,11 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   st = 0
   cg = codegen.clear_program_function_state(cg)
   _compile_codegen_keepalive = [load, cg]
+  extern_sigs = 0
+  extern_struct_names = 0
+  _release_frontend_phase_arenas()
   gc_collect()
+  _heap_probe("compile:frontend_arenas_released")
 
   _progress_phase("emitting canonical support tail")
   tail_checkpoint = _mlo_state_checkpoint(cg.state)

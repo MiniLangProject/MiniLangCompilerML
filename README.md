@@ -514,6 +514,12 @@ Notes:
   [2026-08-30 arena report](docs/COMPILER_AST_ARENA_BENCHMARK_2026-08-30.md)
   records the self-build, MiniQuake and MiniSQL correctness/time/memory results
   and the current limitation that backend state still dominates peak memory.
+- At the final frontend/backend ownership boundary, the compiler releases all
+  compact AST columns and their intern tables in one operation. Path and module
+  resolution caches are detached at the same boundary, then a full collection
+  can reclaim the remaining frontend graph before support-tail emission or
+  executable materialization. The arena is initialized lazily when another
+  compilation starts in the same process.
 - The canonical function stream no longer allocates a wrapper array for every
   function. A typed function-root arena stores kinds and names in columns and
   exposes stable integer node IDs to the object emitter. Once a non-inline
@@ -527,10 +533,15 @@ Notes:
   slot tracking, so completed batches clear only live key/value references and
   do not scan their entire spare capacity. Reusable vector workspaces likewise
   clear stale reference slots before the next batch.
-- The streaming linker skips unneeded object payloads without copying them and
-  keeps only a compact fallback cache for uncommon relocation targets. Global
-  label maps are allocated once from counts collected during the section pass;
-  canonical `objm_N__` maps are sharded and pre-sized from their dense object
+- The streaming linker first scans only section sizes, import metadata and
+  label-count hints. It then allocates each final target section exactly once,
+  reopens one object at a time and copies its payload directly to the final
+  offset; per-object section arrays and a later concatenation copy no longer
+  coexist. Unneeded object payloads are skipped during label and relocation
+  passes, and only a compact fallback cache is kept for uncommon relocation
+  targets. Global label maps are allocated once from counts collected during
+  the section pass; canonical `objm_N__` maps are sharded and pre-sized from
+  their dense object
   index. Local relocations address the current shard directly, while legacy
   names retain the general parser fallback. Label-index GC runs at bounded
   128-object intervals, and `--profile-compiler` reports public/private label,
@@ -551,6 +562,13 @@ Notes:
   target encoding, so existing project caches and object directories remain
   linkable. A `--dump-labels` diagnostic build deliberately retains internal
   labels.
+- MLO serialization retains its 64 KiB paged builder but no longer flattens it
+  into a second object-sized byte array before writing. Windows and Linux use a
+  native short-write-safe file loop with one reusable bounded 1 MiB staging
+  buffer. This avoids unbounded duplicate object bytes without regressing into
+  one system call per page. The
+  [phase-release and MLO-streaming report](docs/COMPILER_PHASE_ARENA_MLO_STREAMING_BENCHMARK_2026-08-30.md)
+  records fixed-point, cross-compiler, Linux-host and memory measurements.
 - The folding pass traverses the assembler's fixed-size patch groups directly.
   It materializes only the small outer group index and the unresolved
   cross-fragment records; it no longer creates a second flat array containing

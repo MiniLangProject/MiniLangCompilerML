@@ -115,7 +115,10 @@ function inline _ast_u32_read(buf, index)
   return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24)
 end function
 
-function ast_leaf_reset()
+// Drop every compilation-owned compact AST column and intern table. This is a
+// bulk ownership boundary: callers must release only after code generation no
+// longer holds or dereferences NodeIds from this arena.
+function ast_arena_release()
   global _ast_leaf_kinds, _ast_leaf_payloads, _ast_leaf_positions
   global _ast_leaf_file_ids, _ast_leaf_symbol_ids, _ast_leaf_count, _ast_leaf_cap
   global _ast_filenames, _ast_filename_index, _ast_symbols, _ast_symbol_index
@@ -128,10 +131,10 @@ function ast_leaf_reset()
   _ast_leaf_symbol_ids = bytes(0)
   _ast_leaf_count = 0
   _ast_leaf_cap = 0
-  _ast_filenames = arr_vec_new(64)
-  _ast_filename_index = fastmap_new(128)
-  _ast_symbols = arr_vec_new(1024)
-  _ast_symbol_index = fastmap_new(2048)
+  _ast_filenames = 0
+  _ast_filename_index = 0
+  _ast_symbols = 0
+  _ast_symbol_index = 0
   _ast_bin_lefts = []
   _ast_bin_rights = []
   _ast_bin_op_ids = bytes(0)
@@ -139,6 +142,15 @@ function ast_leaf_reset()
   _ast_bin_file_ids = bytes(0)
   _ast_bin_count = 0
   _ast_bin_cap = 0
+end function
+
+function ast_leaf_reset()
+  global _ast_filenames, _ast_filename_index, _ast_symbols, _ast_symbol_index
+  ast_arena_release()
+  _ast_filenames = arr_vec_new(64)
+  _ast_filename_index = fastmap_new(128)
+  _ast_symbols = arr_vec_new(1024)
+  _ast_symbol_index = fastmap_new(2048)
 end function
 
 function _ast_bin_ensure(need)
@@ -1481,6 +1493,33 @@ function byte_pages_len(bp)
   if typeof(bp) != "struct" then return 0 end if
   if typeof(bp.size) != "int" or bp.size < 0 then return 0 end if
   return bp.size
+end function
+
+// Expose read-only pages to streaming serializers. The final page may contain
+// spare capacity; byte_pages_page_used() reports the exact writable prefix.
+function byte_pages_page_count(bp)
+  if typeof(bp) != "struct" then return 0 end if
+  n = byte_pages_len(bp)
+  if n <= 0 then return 0 end if
+  count = n >> 16
+  if (n & 0xFFFF) != 0 then count = count + 1 end if
+  return count
+end function
+
+function byte_pages_page(bp, page_index)
+  if typeof(bp) != "struct" or typeof(page_index) != "int" then return bytes(0) end if
+  if page_index < 0 or page_index >= byte_pages_page_count(bp) then return bytes(0) end if
+  return _bp_chunk_get(bp, page_index)
+end function
+
+function byte_pages_page_used(bp, page_index)
+  count = byte_pages_page_count(bp)
+  if typeof(page_index) != "int" or page_index < 0 or page_index >= count then return 0 end if
+  if page_index + 1 < count then return 65536 end if
+  used = byte_pages_len(bp) - (page_index << 16)
+  if used < 0 then return 0 end if
+  if used > 65536 then return 65536 end if
+  return used
 end function
 
 function byte_pages_append(bp, src)

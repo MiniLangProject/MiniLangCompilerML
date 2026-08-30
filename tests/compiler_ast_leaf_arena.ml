@@ -20,6 +20,18 @@ function main(args)
   stats = t.ast_leaf_stats()
   if t.ast_name(expr2) != "alpha" or stats[2] != 2 or stats[3] != 1 then return fail("symbol/operator/file interning") end if
   if stats[5] != 1 then return fail("binary arena count") end if
-  print "[OK] compact AST leaf/binary NodeIds, symbols and locations"
+
+  // A completed compilation can release all typed columns at once. A later
+  // parse in the same process must lazily establish an independent arena.
+  t.ast_arena_release()
+  released = t.ast_leaf_stats()
+  if released[0] != 0 or released[1] != 0 or released[2] != 0 or released[3] != 0 or released[4] != 0 or released[5] != 0 or released[6] != 0 or released[7] != 0 then
+    return fail("bulk arena release")
+  end if
+  expr3 = parser.parse_expression("beta * 2", "arena-reuse.ml")
+  if t.ast_is_bin(expr3) == false or t.ast_name(t.ast_left(expr3)) != "beta" or t.ast_value(t.ast_right(expr3)) != 2 then
+    return fail("arena reuse after release")
+  end if
+  print "[OK] compact AST NodeIds, phase release and reuse"
   return 0
 end function
