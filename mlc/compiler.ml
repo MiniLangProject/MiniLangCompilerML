@@ -6323,6 +6323,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   _progress_obj("wrote " + entry_path)
 
   fn_entries = codegen.all_function_entries(cg)
+  fn_entry_count = codegen.function_entry_count(fn_entries)
   fn_analysis_scratch = codegen.new_function_analysis_scratch()
   // Keep the reusable analysis buffers live across the explicit collections in
   // the object loop without adding compiler-only fields to generated CgState.
@@ -6334,20 +6335,18 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   fn_serialize_ms = 0
   fn_start = 0
   fn_gc_stride = OBJECT_EMISSION_GC_STRIDE
-  if typeof(fn_entries) == "array" and len(fn_entries) > OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD then fn_gc_stride = OBJECT_LARGE_EMISSION_GC_STRIDE end if
+  if fn_entry_count > OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD then fn_gc_stride = OBJECT_LARGE_EMISSION_GC_STRIDE end if
   // Materialize the prepared semantic state once, then reuse it for every
   // serial text fragment. Re-cloning the global scope/maps for each batch
   // creates large short-lived graphs and advances the non-moving compiler
   // heap even though only the assembler buffer is fragment-local.
   mod_cg = 0
-  while typeof(fn_entries) == "array" and fn_start < len(fn_entries)
+  while fn_start < fn_entry_count
     // Small text fragments keep assembler growth linear. Compiler functions
     // are larger still and therefore retain the narrower historical batch.
     fn_chunk_size = OBJECT_FUNCTION_BATCH_SIZE
     first_name = ""
-    if typeof(fn_entries[fn_start]) == "array" and len(fn_entries[fn_start]) >= 2 then
-      first_name = _coerce_name(fn_entries[fn_start][1])
-    end if
+    first_name = codegen.function_entry_name(fn_entries, fn_start)
     if _startsWith(first_name, "mlc.codegen.codegen_builtins_alloc.") or _startsWith(first_name, "mlc.codegen.codegen_expr.") or _startsWith(first_name, "mlc.codegen.codegen_stmt.") or _startsWith(first_name, "mlc.compiler.") then
       fn_chunk_size = OBJECT_COMPILER_BATCH_SIZE
     end if
@@ -6430,10 +6429,16 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     cg.state.rdata = mod_cg.state.rdata
     cg.state.data = mod_cg.state.data
     cg.state.bss = mod_cg.state.bss
+    // The serialized fragment no longer needs non-inline function bodies or
+    // references retained by its temporary analysis arena. Release both at the
+    // batch ownership boundary so later collections see only live compiler IR.
+    cg = codegen.release_emitted_function_entries(cg, fn_entries, fn_start, fn_chunk_size)
+    fn_analysis_scratch = codegen.release_function_analysis_scratch(fn_analysis_scratch)
+    _compile_codegen_keepalive = [load, cg, fn_analysis_scratch]
     text_stream_offset = text_stream_offset + fragment_text_size
     if _compiler_profile_batches_enabled then
       fn_batch_function_count = fn_chunk_size
-      if fn_start + fn_batch_function_count > len(fn_entries) then fn_batch_function_count = len(fn_entries) - fn_start end if
+      if fn_start + fn_batch_function_count > fn_entry_count then fn_batch_function_count = fn_entry_count - fn_start end if
       fn_batch_total_ms = fn_step_finished - fn_batch_started
       fn_owner = _compiler_profile_owner(first_name)
       print "[profile] object_function_batch=" + fn_batch_count + " module=" + fn_owner + " first=" + first_name + " functions=" + fn_batch_function_count + " text_bytes=" + fragment_text_size + " setup_ms=" + fn_batch_setup_ms + " codegen_ms=" + fn_batch_codegen_ms + " serialize_ms=" + fn_batch_serialize_ms + " total_ms=" + fn_batch_total_ms
@@ -6455,7 +6460,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   // compiler GC limit with almost exclusively live analysis data and spends
   // most of the tail phase rescanning it. This mirrors the monolithic cleanup
   // and cannot affect already serialized text or section order.
-  fn_entries = []
+  fn_entries = 0
   fn_analysis_scratch = []
   load.source = ""
   load.program = []

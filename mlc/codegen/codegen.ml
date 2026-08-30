@@ -434,10 +434,22 @@ function all_function_entries(cg)
   return stmt.all_function_entries(cg.state)
 end function
 
+function function_entry_count(entries)
+  return stmt.function_entry_count(entries)
+end function
+
+function function_entry_name(entries, node_id)
+  return stmt.function_entry_name(entries, node_id)
+end function
+
 // Allocate one reusable workspace for the serial per-function analyses. Object
 // emitters keep it outside cloned codegen state and pass it across fragments.
 function new_function_analysis_scratch()
   return stmt._new_function_analysis_scratch()
+end function
+
+function release_function_analysis_scratch(value)
+  return stmt._release_function_analysis_scratch(value)
 end function
 
 function emit_module_function_entries(cg, entries, start_index, count, analysis_scratch)
@@ -445,6 +457,13 @@ function emit_module_function_entries(cg, entries, start_index, count, analysis_
   if typeof(cg.state) != "struct" then return cg end if
   st = stmt.emit_module_function_entries(cg.state, entries, start_index, count, analysis_scratch)
   cg.state = st
+  return cg
+end function
+
+function release_emitted_function_entries(cg, entries, start_index, count)
+  if typeof(cg) != "struct" then return cg end if
+  if typeof(cg.state) != "struct" then return cg end if
+  cg.state = stmt.release_emitted_function_entries(cg.state, entries, start_index, count)
   return cg
 end function
 

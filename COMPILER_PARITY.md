@@ -986,6 +986,47 @@ the same 57,197,056-byte PE with SHA-256:
 The complete self-hosted harness passed 107/107 plus all Windows and WSL/Linux
 host gates in 80.255 seconds. The Python compiler suite passed 115/115.
 
+## Compact compiler graph and packed symbol IDs (2026-08-30)
+
+The self-hosted frontend and serial object emitter now reduce retained managed
+references at five boundaries without changing the generated-code contract:
+
+1. token payloads are packed U32 text/symbol IDs and repeated identifier,
+   keyword and operator spellings are interned once per module;
+2. canonical function roots live in a typed structure-of-arrays arena and are
+   addressed by integer node IDs;
+3. callable globals use a compact callable binding containing only fields read
+   by call resolution and emission;
+4. phase-local analysis maps track exactly the occupied reference slots and
+   release those references after a serialized batch; and
+5. serialized non-inline function roots release body and closure-analysis
+   references immediately, while inline bodies remain live for later callers.
+
+On the controlled full self-build, wall time improved from 111.922 to 105.422
+seconds (5.81%). The internal post-user-function heap high-water fell from
+1,735,693,608 to 1,659,852,560 bytes (75,841,048 bytes, 4.37%). A separate
+process-tree sample recorded a 1,884,930,048-byte private peak (1.76 GiB) and a
+1,780,158,464-byte working-set peak (1.66 GiB), roughly 15-16% below the
+preceding approximately 2.09 GiB private-memory reference. Process sampling
+distorts wall time, so the sampled run is used only for memory figures.
+
+The Python-bootstrap Stage 1 and self-hosted Stages 2 and 3 are byte-identical:
+
+| Compiler image | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Stage 1, built by Python | 61,230,592 | `6512E5AD675018FF7244A455D7199A45FA81772367A48CF90E339DFA6B8ABCF2` |
+| Stage 2, built by Stage 1 | 61,230,592 | `6512E5AD675018FF7244A455D7199A45FA81772367A48CF90E339DFA6B8ABCF2` |
+| Stage 3, built by Stage 2 | 61,230,592 | `6512E5AD675018FF7244A455D7199A45FA81772367A48CF90E339DFA6B8ABCF2` |
+
+Cross-compiler target checks remain byte-identical on both targets. The Windows
+`codegen_optimizations.ml` image has SHA-256
+`622B9E6F33ACCD73D0F4EF7F34B91A072D287B5E50B52B31D808055D99DD2B3F`;
+the Linux `linux_target_smoke.ml` image has SHA-256
+`73F7AD0753F8613A1A5E3162D5E0E2D07715A81BD1C1C970B93CA68176197459`.
+The complete self-hosted harness passes 108/108, including explicit packed
+token-column, repeated-symbol-ID and map-reference-release coverage. The
+hot-path allocation guard and monolithic/object-pipeline identity gates pass.
+
 ## Reproducing target-output parity
 
 From a workspace containing both repositories as siblings:

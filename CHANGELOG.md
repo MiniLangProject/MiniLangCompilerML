@@ -4,6 +4,19 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## 1.1.0 - 2026-08-24
 
+- Reduced the live self-hosted compiler graph in five coordinated steps. Token
+  payloads are packed 32-bit text/symbol IDs with module-local interning;
+  canonical function emission uses integer IDs into a typed function-root
+  arena; callable globals use compact callable-only bindings; phase-local
+  analysis maps track and release their live reference slots; and serialized
+  non-inline functions drop body and closure-analysis references immediately.
+  A controlled self-build improved from 111.922 to 105.422 seconds (5.81%).
+  The post-user-function heap high-water fell from 1,735,693,608 to
+  1,659,852,560 bytes (4.37%), while sampled process-tree private peak was
+  1,884,930,048 bytes (about 1.76 GiB, roughly 15-16% below the preceding
+  approximately 2.09 GiB reference). Python Stage 1 and self-hosted Stages 2/3
+  are byte-identical 61,230,592-byte images; the expanded Windows harness
+  passes 108/108, including packed-token and symbol-deduplication coverage.
 - Replaced the self-hosted frontend's per-token structs with a typed
   structure-of-arrays arena. Parser cursors are integer token IDs; token kinds
   occupy one byte, source offsets occupy four bytes and only the tagged value

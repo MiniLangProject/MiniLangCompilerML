@@ -58,6 +58,21 @@ function _test_fastmap_clear()
     print "[FAIL] " + name + " (dense map rehash failed)"
     return false
   end if
+
+  tracked = t.fastmap_new(16)
+  tracked = t.fastmap_set(tracked, "ast-a", [1, 2, 3])
+  tracked = t.fastmap_track_refs(tracked)
+  tracked = t.fastmap_clear(tracked)
+  tracked = t.fastmap_set(tracked, "ast-b", [4, 5, 6])
+  tracked = t.fastmap_release_refs(tracked)
+  if t.fastmap_size(tracked) != 0 or t.fastmap_has(tracked, "ast-a") or t.fastmap_has(tracked, "ast-b") then
+    print "[FAIL] " + name + " (tracked phase release retained a logical entry)"
+    return false
+  end if
+  if t.arr_vec_is(tracked.touched) == false or t.arr_vec_count(tracked.touched) != 0 then
+    print "[FAIL] " + name + " (tracked phase release retained touched slots)"
+    return false
+  end if
   print "[PASS] " + name
   return true
 end function
@@ -682,6 +697,7 @@ function main(args)
 
   // Suite-style runtime tests
   if _test(compiler_path, repo_root, "array_vector", "tests\\array_vector.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "compiler_token_arena", "tests\\compiler_token_arena.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_suite", "tests\\language_suite.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "stdlib_unit_tests", "tests\\stdlib_unit_tests.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_periodic_test", "tests\\gc_periodic_test.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

@@ -28,6 +28,25 @@ struct VarBinding
   promoted_xmm,
 end struct
 
+// Compact immutable-signature binding for function/struct/builtin/extern
+// objects. These globals can be rebound at runtime but never participate in
+// constexpr initialization, so retaining five const-evaluation fields per
+// callable only inflates the compiler's permanent root scope.
+struct CallableBinding
+  id,
+  name,
+  kind,
+  label,
+  offset,
+  depth,
+  boxed,
+  capture_depth,
+  capture_index,
+  decl_node,
+  is_const,
+  promoted_xmm,
+end struct
+
 function inline _is_ascii_digit(ch)
   return ch == "0" or ch == "1" or ch == "2" or ch == "3" or ch == "4" or ch == "5" or ch == "6" or ch == "7" or ch == "8" or ch == "9"
 end function
@@ -891,6 +910,53 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
     state.scope_declared_index_stack = sds
   end if
   state.global_slots = _append_unique(state.global_slots, b.label)
+  state.globals = _append_unique(state.globals, b)
+  return state
+end function
+
+function declare_callable_binding_root(state, name, decl_node)
+  nm = _coerce_name(name)
+  if nm == "" then return state end if
+  if _check_reserved_ident(state, nm, decl_node) == false then return state end if
+
+  if typeof(state.scope_stack) != "array" or len(state.scope_stack) <= 0 then state.scope_stack = [t.arr_vec_new(256)] end if
+  if typeof(state.scope_declared) != "array" or len(state.scope_declared) <= 0 then state.scope_declared = [t.arr_vec_new(256)] end if
+  if typeof(state.scope_index_stack) != "array" or len(state.scope_index_stack) <= 0 then state.scope_index_stack = [t.fastmap_new(128)] end if
+  if typeof(state.scope_declared_index_stack) != "array" or len(state.scope_declared_index_stack) <= 0 then state.scope_declared_index_stack = [t.fastmap_new(128)] end if
+
+  root = state.scope_stack[0]
+  if frame_count(root) <= 0 and t.arr_vec_is(root) == false then root = t.arr_vec_new(256) end if
+  existing = t.fastmap_get(state.scope_index_stack[0], nm, 0)
+  if typeof(existing) != "struct" then existing = _frame_last_binding(root, nm) end if
+  if typeof(existing) == "struct" and existing.kind == "global" then return state end if
+
+  bid = cg_next_binding_id(state)
+  label = "g_" + _sanitize_ident(nm) + "_" + bid
+  b = CallableBinding(bid, nm, "global", label, 0, 0, false, -1, -1, decl_node, false, "")
+  if typeof(state.data) == "struct" and d.data_has_label(state.data, label) == false then
+    state.data = d.data_add_u64(state.data, label, t.enc_void())
+  end if
+
+  ss = state.scope_stack
+  sd = state.scope_declared
+  rf = frame_push(ss[0], b)
+  rd = frame_push(sd[0], b)
+  ss[0] = rf
+  sd[0] = rd
+  state.scope_stack = ss
+  state.scope_declared = sd
+
+  sis = state.scope_index_stack
+  rsi = sis[0]
+  rsi = t.fastmap_set(rsi, nm, b)
+  sis[0] = rsi
+  state.scope_index_stack = sis
+  sds = state.scope_declared_index_stack
+  rsd = sds[0]
+  rsd = t.fastmap_set(rsd, nm, b)
+  sds[0] = rsd
+  state.scope_declared_index_stack = sds
+  state.global_slots = _append_unique(state.global_slots, label)
   state.globals = _append_unique(state.globals, b)
   return state
 end function

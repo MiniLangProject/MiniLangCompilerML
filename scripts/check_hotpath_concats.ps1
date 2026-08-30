@@ -125,7 +125,7 @@ if (-not $objectCompile.Success) {
   if (-not [Regex]::IsMatch($compilerSource, "(?m)^const\s+OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD\s*=\s*2048\s*$")) {
     $failures += "mlc\compiler.ml: large-program GC threshold is not 2048 functions"
   }
-  if (-not [Regex]::IsMatch($objectCompile.Value, "len\(fn_entries\)\s*>\s*OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD")) {
+  if (-not [Regex]::IsMatch($objectCompile.Value, "(?:len\(fn_entries\)|fn_entry_count)\s*>\s*OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD")) {
     $failures += "mlc\compiler.ml: object emission no longer selects the large-program GC stride"
   }
   if (-not [Regex]::IsMatch($objectCompile.Value, "module_object_seq\s*%\s*fn_gc_stride")) {

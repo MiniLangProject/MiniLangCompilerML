@@ -495,12 +495,22 @@ Notes:
 - The self-hosted tokenizer stores tokens in a typed structure-of-arrays arena
   instead of allocating one managed struct per token. Parser cursors are
   integer IDs, kinds use a byte column, source positions use packed 32-bit
-  offsets, and token values use one tagged array column. The arena is sized
-  from observed MiniLang token density and grows geometrically for compact or
-  generated sources. AST nodes remain ordinary typed structs because analysis
-  and code generation mutate and retain them across module boundaries; moving
-  those nodes to integer handles requires an arena-aware compiler IR rather
-  than a parser-only representation change.
+  offsets, and token payloads use packed 32-bit IDs. Identifiers, keywords and
+  operators are interned once per module; numbers and strings share the same
+  text pool, while fixed punctuation and newline tokens need no stored text.
+  The arena is sized from observed MiniLang token density and grows
+  geometrically for compact or generated sources.
+- Mutable AST nodes remain typed structs, but the canonical function stream no
+  longer allocates a wrapper array for every function. A typed function-root
+  arena stores kinds and names in columns and exposes stable integer node IDs
+  to the object emitter. Once a non-inline function has been serialized, its
+  body and analysis-only closure references are cleared; inline bodies remain
+  available for later call-site expansion.
+- Callable globals use a compact callable-only binding instead of the full
+  mutable-variable record. Phase-local analysis maps opt into exact touched-
+  slot tracking, so completed batches clear only live key/value references and
+  do not scan their entire spare capacity. Reusable vector workspaces likewise
+  clear stale reference slots before the next batch.
 - The streaming linker skips unneeded object payloads without copying them and
   keeps only a compact fallback cache for uncommon relocation targets. Global
   label maps are allocated once from counts collected during the section pass;
@@ -559,7 +569,7 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **107 passed, 0 failed**.
+- Latest complete run for this revision: **108 passed, 0 failed**.
 
 ### Compiler parity and self-hosting
 

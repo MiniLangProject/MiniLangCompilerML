@@ -67,6 +67,7 @@ struct FastMap
   cap,
   size,
   epoch,
+  touched,
 end struct
 
 _arr_void_sentinel = ArrayChunkVoidSentinel(0xA11D)
@@ -101,6 +102,22 @@ end function
 function arr_vec_clear(vec)
   v = vec
   if arr_vec_is(v) == false then return arr_vec_new(4) end if
+  v.size = 0
+  return v
+end function
+
+// Reset a transient vector and remove every managed reference from its backing
+// store.  Ordinary arr_vec_clear deliberately retains stale slots for speed;
+// compiler phase arenas must use this stronger form before a collection so a
+// high-water worklist cannot keep already emitted AST nodes alive.
+function arr_vec_release_refs(vec)
+  v = vec
+  if arr_vec_is(v) == false then return arr_vec_new(4) end if
+  if typeof(v.data) == "array" and len(v.data) > 0 then
+    for i = 0 to len(v.data) - 1
+      v.data[i] = _arr_void_sentinel
+    end for
+  end if
   v.size = 0
   return v
 end function
@@ -260,7 +277,27 @@ function fastmap_new(initial_cap)
   // Slot generations need one byte, not one fully tagged array cell. Large
   // compiler maps therefore spend 1/17 rather than 8/24 of their backing
   // storage on occupancy metadata while keys and values remain unchanged.
-  return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), bytes(cap, 0), cap, 0, 1)
+  return FastMap(_arr_fill(cap, ""), _arr_fill(cap, 0), bytes(cap, 0), cap, 0, 1, 0)
+end function
+
+// Enable precise reference release only for phase-local maps. Production
+// symbol and label indexes retain the O(1) insertion path and do not pay for a
+// touched-slot side vector they never need to reset strongly.
+function fastmap_track_refs(mapv)
+  m = mapv
+  if _fm_is_valid(m) == false then m = fastmap_new(64) end if
+  if arr_vec_is(try(m.touched)) == false then
+    m.touched = arr_vec_new(16)
+    // Tracking may be enabled on an already populated map by callers outside
+    // the compiler workspace. Seed its current live slots once so the first
+    // strong release cannot leave pre-tracking references behind.
+    if m.size > 0 then
+      for i = 0 to m.cap - 1
+        if m.used[i] == m.epoch then m.touched = arr_vec_push(m.touched, i) end if
+      end for
+    end if
+  end if
+  return m
 end function
 
 function fastmap_clear(mapv)
@@ -279,6 +316,43 @@ function fastmap_clear(mapv)
   end if
   m.epoch = next_epoch
   m.size = 0
+  return m
+end function
+
+// Reset a transient map including stale generations.  Epoch-only clearing is
+// O(1), but its old key/value cells remain visible to the tracing collector.
+// Batch arenas call this at ownership boundaries, trading one linear sweep for
+// prompt reclamation of large analysis graphs.
+function fastmap_release_refs(mapv)
+  m = mapv
+  if _fm_is_valid(m) == false then return fastmap_new(64) end if
+  touched = try(m.touched)
+  if arr_vec_is(touched) then
+    n = arr_vec_count(touched)
+    if n > 0 then
+      for i = 0 to n - 1
+        idx = arr_vec_get(touched, i, -1)
+        if typeof(idx) == "int" and idx >= 0 and idx < m.cap then
+          m.keys[idx] = ""
+          m.values[idx] = 0
+          m.used[idx] = 0
+        end if
+      end for
+    end if
+    m.touched = arr_vec_release_refs(touched)
+  else
+    // Compatibility fallback for a map produced by an older bootstrap image.
+    if m.cap > 0 then
+      for i = 0 to m.cap - 1
+        m.keys[i] = ""
+        m.values[i] = 0
+        m.used[i] = 0
+      end for
+    end if
+    m.touched = arr_vec_new(16)
+  end if
+  m.size = 0
+  m.epoch = 1
   return m
 end function
 
@@ -313,6 +387,7 @@ function _fm_insert_no_resize(mapv, key, value)
       keys_arr[idx] = key
       vals_arr[idx] = value
       mapv.size = mapv.size + 1
+      if arr_vec_is(try(mapv.touched)) then mapv.touched = arr_vec_push(mapv.touched, idx) end if
       mapv.used = used_arr
       mapv.keys = keys_arr
       mapv.values = vals_arr
@@ -332,6 +407,7 @@ end function
 function _fm_rehash(mapv, new_cap)
   nm = fastmap_new(new_cap)
   if _fm_is_valid(mapv) == false then return nm end if
+  if arr_vec_is(try(mapv.touched)) then nm = fastmap_track_refs(nm) end if
   for i = 0 to mapv.cap - 1
     if mapv.used[i] == mapv.epoch then
       nm = _fm_insert_no_resize(nm, mapv.keys[i], mapv.values[i])

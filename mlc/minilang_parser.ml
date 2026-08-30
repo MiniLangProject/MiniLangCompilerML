@@ -23,12 +23,15 @@ struct Token
   pos,
 end struct
 
-// Structure-of-arrays token arena. Parser cursors are integer IDs; kinds and
-// positions use compact byte columns while values keep ordinary tagged cells.
+// Structure-of-arrays token arena. Parser cursors are integer IDs; kinds use
+// one byte and positions/text IDs use packed u32 columns. Identifier, keyword
+// and operator spellings are module-local symbols instead of per-token strings.
 struct TokenArena
   kinds,
-  values,
+  value_ids,
   positions,
+  texts,
+  text_index,
   count,
   cap,
 end struct
@@ -693,10 +696,10 @@ function _token_arena_new(source_len)
   // over-reserving the tagged value column; generated input can still grow.
   cap = (((source_len + 7) >> 3) * 3) + 16
   if cap < 64 then cap = 64 end if
-  return TokenArena(bytes(cap, 0), array(cap, 0), bytes(cap * 4, 0), 0, cap)
+  return TokenArena(bytes(cap, 0), bytes(cap * 4, 0), bytes(cap * 4, 0), t.arr_vec_new(256), t.fastmap_new(256), 0, cap)
 end function
 
-function _token_pos_write(buf, index, value)
+function _token_u32_write(buf, index, value)
   off = index << 2
   buf[off] = value & 0xFF
   buf[off + 1] = (value >> 8) & 0xFF
@@ -704,23 +707,63 @@ function _token_pos_write(buf, index, value)
   buf[off + 3] = (value >> 24) & 0xFF
 end function
 
-function inline _token_pos_read(buf, index)
+function inline _token_u32_read(buf, index)
   off = index << 2
   return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24)
+end function
+
+function _token_pos_write(buf, index, value)
+  _token_u32_write(buf, index, value)
+end function
+
+function inline _token_pos_read(buf, index)
+  return _token_u32_read(buf, index)
+end function
+
+function _token_text_store(arena, kind, value)
+  // Fixed punctuation is reconstructed from the kind and needs no pool slot.
+  if kind == TK_NL or kind == TK_DOT or kind == TK_LPAREN or kind == TK_RPAREN then return [arena, 0] end if
+  if kind == TK_LBRACK or kind == TK_RBRACK or kind == TK_COMMA or kind == TK_SEMI or kind == TK_EOF then return [arena, 0] end if
+
+  text = value
+  if typeof(text) != "string" then text = _tok_text_part(text) end if
+  if kind == TK_IDENT or kind == TK_KW or kind == TK_OP then
+    existing = t.fastmap_get(arena.text_index, text, -1)
+    if typeof(existing) == "int" and existing >= 0 then return [arena, existing] end if
+  end if
+
+  id = t.arr_vec_count(arena.texts) + 1
+  arena.texts = t.arr_vec_push(arena.texts, text)
+  if kind == TK_IDENT or kind == TK_KW or kind == TK_OP then
+    arena.text_index = t.fastmap_set(arena.text_index, text, id)
+  end if
+  return [arena, id]
+end function
+
+function inline _token_fixed_value(kind)
+  if kind == TK_NL then return "\\n" end if
+  if kind == TK_DOT then return "." end if
+  if kind == TK_LPAREN then return "(" end if
+  if kind == TK_RPAREN then return ")" end if
+  if kind == TK_LBRACK then return "[" end if
+  if kind == TK_RBRACK then return "]" end if
+  if kind == TK_COMMA then return "," end if
+  if kind == TK_SEMI then return ";" end if
+  return ""
 end function
 
 function _token_arena_grow(arena)
   next_cap = arena.cap << 1
   next_kinds = bytes(next_cap, 0)
-  next_values = array(next_cap, 0)
+  next_value_ids = bytes(next_cap * 4, 0)
   next_positions = bytes(next_cap * 4, 0)
   if arena.count > 0 then
     copyBytes(next_kinds, 0, arena.kinds, 0, arena.count)
-    copyArray(next_values, 0, arena.values, 0, arena.count)
+    copyBytes(next_value_ids, 0, arena.value_ids, 0, arena.count * 4)
     copyBytes(next_positions, 0, arena.positions, 0, arena.count * 4)
   end if
   arena.kinds = next_kinds
-  arena.values = next_values
+  arena.value_ids = next_value_ids
   arena.positions = next_positions
   arena.cap = next_cap
   return arena
@@ -729,9 +772,12 @@ end function
 function _token_push(arena, tail, kind, value, pos)
   a = arena
   if a.count >= a.cap then a = _token_arena_grow(a) end if
+  stored = _token_text_store(a, kind, value)
+  a = stored[0]
+  value_id = stored[1]
   slot = a.count
   a.kinds[slot] = kind
-  a.values[slot] = value
+  _token_u32_write(a.value_ids, slot, value_id)
   _token_pos_write(a.positions, slot, pos)
   a.count = slot + 1
   return [a, tail]
@@ -1034,7 +1080,12 @@ end function
 
 function inline _tok_value(tok)
   global _tokens
-  if typeof(tok) == "int" and tok >= 0 and tok < _tokens.count then return _tokens.values[tok] end if
+  if typeof(tok) == "int" and tok >= 0 and tok < _tokens.count then
+    kind = _tokens.kinds[tok]
+    value_id = _token_u32_read(_tokens.value_ids, tok)
+    if value_id <= 0 then return _token_fixed_value(kind) end if
+    return t.arr_vec_get(_tokens.texts, value_id - 1, "")
+  end if
   return
 end function
 

@@ -20,23 +20,37 @@ import mlc.codegen.codegen_threads as th
 _phase_codegen_keepalive = 0
 _module_function_entry_index = 0
 
+// Typed arena for the immutable function-definition roots consumed by object
+// emission. The integer cursor is the NodeId; parallel byte/name/node columns
+// avoid allocating one two-element descriptor array per function.
+struct FunctionNodeArena
+  kinds,
+  names,
+  nodes,
+  count,
+end struct
+
 // Reusable per-codegen workspaces for the serial function-analysis pipeline.
 // The two fact maps remain distinct because both are live during body emission;
 // dependency, queue, promotion and traversal storage is reset between functions.
 // This backend phase is deliberately serial. Keeping the cache in one ordinary
 // array avoids adding a compiler-only struct shape to generated GC metadata.
 
+function _new_analysis_map(initial_cap)
+  return t.fastmap_track_refs(t.fastmap_new(initial_cap))
+end function
+
 function _new_function_analysis_scratch()
   return [
     t.arr_vec_new(256),
     t.arr_vec_new(256),
-    t.fastmap_new(64),
-    t.fastmap_new(64),
-    t.fastmap_new(64),
-    t.fastmap_new(64),
-    t.fastmap_new(64),
+    _new_analysis_map(64),
+    _new_analysis_map(64),
+    _new_analysis_map(64),
+    _new_analysis_map(64),
+    _new_analysis_map(64),
     t.arr_vec_new(64),
-    t.fastmap_new(64)
+    _new_analysis_map(64)
   ]
 end function
 
@@ -45,6 +59,41 @@ function _prepare_function_analysis_scratch(value)
   if typeof(scratch) != "array" or len(scratch) < 9 or t.arr_vec_is(scratch[0]) == false or t.arr_vec_is(scratch[7]) == false then
     scratch = _new_function_analysis_scratch()
   end if
+  return scratch
+end function
+
+function _release_analysis_vector(value, initial_cap, retained_cap)
+  v = value
+  if t.arr_vec_is(v) == false then return t.arr_vec_new(initial_cap) end if
+  // One unusually complex function must not permanently size every later
+  // batch arena to its high-water mark.
+  if typeof(v.cap) == "int" and v.cap > retained_cap then
+    return t.arr_vec_new(initial_cap)
+  end if
+  return t.arr_vec_release_refs(v)
+end function
+
+function _release_analysis_map(value, initial_cap, retained_cap)
+  m = value
+  if typeof(m) != "struct" or typeof(try(m.cap)) != "int" then return _new_analysis_map(initial_cap) end if
+  if m.cap > retained_cap then return _new_analysis_map(initial_cap) end if
+  return t.fastmap_release_refs(m)
+end function
+
+// End one function-object batch by dropping all references owned by its
+// temporary analysis arena. Logical epoch resets alone are insufficient here:
+// the tracing GC still sees stale keys and values in inactive map slots.
+function _release_function_analysis_scratch(value)
+  scratch = _prepare_function_analysis_scratch(value)
+  scratch[0] = _release_analysis_vector(scratch[0], 256, 16384)
+  scratch[1] = _release_analysis_vector(scratch[1], 256, 16384)
+  scratch[2] = _release_analysis_map(scratch[2], 64, 16384)
+  scratch[3] = _release_analysis_map(scratch[3], 64, 16384)
+  scratch[4] = _release_analysis_map(scratch[4], 64, 16384)
+  scratch[5] = _release_analysis_map(scratch[5], 64, 16384)
+  scratch[6] = _release_analysis_map(scratch[6], 64, 16384)
+  scratch[7] = _release_analysis_vector(scratch[7], 64, 8192)
+  scratch[8] = _release_analysis_map(scratch[8], 64, 16384)
   return scratch
 end function
 
@@ -57,7 +106,7 @@ function _reset_analysis_map(mapv, minimum_capacity)
   if typeof(mapv) == "struct" and typeof(try(mapv.cap)) == "int" and mapv.cap >= need then
     return t.fastmap_clear(mapv)
   end if
-  return t.fastmap_new(need)
+  return _new_analysis_map(need)
 end function
 
 function inline _join_qname(prefix, name)
@@ -342,11 +391,59 @@ function _release_emitted_fn_body(fn_node)
     end if
     fn_node._ml_uses_this = uses_this
   end if
-  // Keep the body rooted while object emission is still compiling later modules.
-  // Some call-lowering paths consult function metadata after the callee's module
-  // object has been emitted; dropping the body here lets the self-hosted GC reuse
-  // expression nodes that are still reachable through shared compiler state.
+  // Inline bodies remain codegen inputs for later callers. Non-inline bodies,
+  // however, are never inspected again once their native object is serialized;
+  // keep the signature shell for arity/callback checks and release the body and
+  // analysis-only closure sets promptly.
+  if typeof(try(fn_node.is_inline)) == "bool" and fn_node.is_inline then return fn_node end if
+  fn_node.body = []
+  fn_node._ml_locals = []
+  fn_node._ml_globals_declared = []
+  fn_node._ml_boxed = []
+  fn_node._ml_env_slots = []
+  fn_node._ml_env_index = []
+  fn_node._ml_captures = []
+  fn_node._ml_capture_depth = []
+  fn_node._ml_capture_index = []
+  fn_node._ml_nested_functions = []
+  fn_node._ml_parent_fn = 0
   return fn_node
+end function
+
+// Release the bodies covered by one completed object fragment while keeping
+// stable function signatures in the semantic indexes used by later callers.
+function release_emitted_function_entries(state, entries, start_index, count)
+  total = function_entry_count(entries)
+  if total <= 0 then return state end if
+  si = start_index
+  if typeof(si) != "int" or si < 0 then si = 0 end if
+  n = count
+  if typeof(n) != "int" or n <= 0 then n = total end if
+  end_i = si + n
+  if end_i > total then end_i = total end if
+  i = si
+  while i < end_i
+    if typeof(entries) == "struct" and typeof(try(entries.nodes)) == "array" then
+      fn0 = function_entry_node(entries, i)
+      if typeof(fn0) == "struct" then fn0 = _release_emitted_fn_body(fn0) end if
+      entries.nodes[i] = 0
+    else
+      ent = entries[i]
+      if typeof(ent) == "array" and len(ent) >= 2 then
+        kind = ent[0]
+        nm = _coerce_name(ent[1])
+        if kind == 0 then
+          fn = _user_function_get_node(state, nm)
+          if typeof(fn) == "struct" then fn = _release_emitted_fn_body(fn) end if
+        else
+          nf = _nested_function_get_by_codegen_name(state, nm)
+          if typeof(nf) == "struct" then nf = _release_emitted_fn_body(nf) end if
+        end if
+      end if
+    end if
+    i = i + 1
+  end while
+  return state
 end function
 
 function _copy_fn_array_field(v)
@@ -7555,7 +7652,7 @@ end function
 function _ensure_global_binding_label(state, qname, decl_node)
   lbl = _binding_global_label(state, qname)
   if lbl != "" then return [state, lbl] end if
-  state = scope.declare_global_binding_root(state, qname, decl_node, false, 0)
+  state = scope.declare_callable_binding_root(state, qname, decl_node)
   lbl = _binding_global_label(state, qname)
   return [state, lbl]
 end function
@@ -7819,21 +7916,62 @@ function _rebuild_lookup_indexes(state)
 end function
 
 function _all_function_entries(state)
-  entries_b = t.arr_chunk_new(128)
   uf_names = _user_function_keys_sorted(state)
-  if typeof(uf_names) == "array" and len(uf_names) > 0 then
-    for uf_i = 0 to len(uf_names) - 1
-      entries_b = t.arr_chunk_push(entries_b, [0, uf_names[uf_i]])
-    end for
-  end if
-
   nested_names = _nested_function_codegen_names_sorted(state)
-  if typeof(nested_names) == "array" and len(nested_names) > 0 then
-    for nfi = 0 to len(nested_names) - 1
-      entries_b = t.arr_chunk_push(entries_b, [1, nested_names[nfi]])
+  un = 0
+  nn = 0
+  if typeof(uf_names) == "array" then un = len(uf_names) end if
+  if typeof(nested_names) == "array" then nn = len(nested_names) end if
+  total = un + nn
+  kinds = bytes(total, 0)
+  names = array(total, "")
+  nodes = array(total, 0)
+  oi = 0
+  if un > 0 then
+    for uf_i = 0 to un - 1
+      nm = uf_names[uf_i]
+      names[oi] = nm
+      nodes[oi] = _user_function_get_node(state, nm)
+      oi = oi + 1
     end for
   end if
-  return t.arr_chunk_finish(entries_b)
+  if nn > 0 then
+    for nfi = 0 to nn - 1
+      nm2 = nested_names[nfi]
+      kinds[oi] = 1
+      names[oi] = nm2
+      nodes[oi] = _nested_function_get_by_codegen_name(state, nm2)
+      oi = oi + 1
+    end for
+  end if
+  return FunctionNodeArena(kinds, names, nodes, total)
+end function
+
+function function_entry_count(entries)
+  if typeof(entries) == "struct" and typeof(try(entries.count)) == "int" then return entries.count end if
+  if typeof(entries) == "array" then return len(entries) end if
+  return 0
+end function
+
+function function_entry_name(entries, node_id)
+  if typeof(node_id) != "int" or node_id < 0 then return "" end if
+  if typeof(entries) == "struct" and typeof(try(entries.names)) == "array" then
+    if node_id < entries.count and node_id < len(entries.names) then return _coerce_name(entries.names[node_id]) end if
+    return ""
+  end if
+  if typeof(entries) == "array" and node_id < len(entries) then
+    ent = entries[node_id]
+    if typeof(ent) == "array" and len(ent) >= 2 then return _coerce_name(ent[1]) end if
+  end if
+  return ""
+end function
+
+function function_entry_node(entries, node_id)
+  if typeof(node_id) != "int" or node_id < 0 then return 0 end if
+  if typeof(entries) == "struct" and typeof(try(entries.nodes)) == "array" then
+    if node_id < entries.count and node_id < len(entries.nodes) then return entries.nodes[node_id] end if
+  end if
+  return 0
 end function
 
 // Expose the canonical monolithic function order to the object writer.  The
@@ -7875,7 +8013,7 @@ function _emit_program_functions_all(state)
   // canonical function list directly without copying/filtering it first.
   state = _mem_probe(state, "user_fn_emit_start")
   i = 0
-  total = len(entries)
+  total = function_entry_count(entries)
   while i < total
     state = emit_module_function_entries(state, entries, i, 8, analysis_scratch)
     i = i + 8
@@ -8967,30 +9105,33 @@ function module_function_entries(state, module_file)
 end function
 
 function emit_module_function_entries(state, entries, start_index, count, analysis_scratch)
-  if typeof(entries) != "array" or len(entries) <= 0 then return state end if
+  total = function_entry_count(entries)
+  if total <= 0 then return state end if
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
   si = start_index
   if typeof(si) != "int" or si < 0 then si = 0 end if
   n = count
-  if typeof(n) != "int" or n <= 0 then n = len(entries) end if
+  if typeof(n) != "int" or n <= 0 then n = total end if
   end_i = si + n
-  if end_i > len(entries) then end_i = len(entries) end if
+  if end_i > total then end_i = total end if
   i = si
   while i < end_i
-    ent = entries[i]
-    if typeof(ent) == "array" and len(ent) >= 2 then
-      kind = ent[0]
-      nm = ent[1]
-      fn_node = 0
-      if kind == 0 then
-        fn_node = _user_function_get_node(state, nm)
-      else
-        fn_node = _nested_function_get_by_codegen_name(state, nm)
+    fn_node = function_entry_node(entries, i)
+    if typeof(fn_node) != "struct" and typeof(entries) == "array" then
+      ent = entries[i]
+      if typeof(ent) == "array" and len(ent) >= 2 then
+        kind = ent[0]
+        nm = ent[1]
+        if kind == 0 then
+          fn_node = _user_function_get_node(state, nm)
+        else
+          fn_node = _nested_function_get_by_codegen_name(state, nm)
+        end if
       end if
-      if typeof(fn_node) == "struct" then
-        emit_node = _clone_function_node_for_emit(fn_node)
-        state = emit_user_function(state, emit_node, scratch)
-      end if
+    end if
+    if typeof(fn_node) == "struct" then
+      emit_node = _clone_function_node_for_emit(fn_node)
+      state = emit_user_function(state, emit_node, scratch)
     end if
     i = i + 1
   end while
@@ -8999,7 +9140,7 @@ end function
 
 function emit_module_functions(state, module_file)
   entries = module_function_entries(state, module_file)
-  return emit_module_function_entries(state, entries, 0, len(entries), _new_function_analysis_scratch())
+  return emit_module_function_entries(state, entries, 0, function_entry_count(entries), _new_function_analysis_scratch())
 end function
 
 function emit_user_function(state, fn_node, analysis_scratch)
