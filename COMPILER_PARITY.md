@@ -24,6 +24,32 @@ sections, labels and relocations into either PE or ELF. Dynamic-import order is
 encoded explicitly, so Linux object builds retain the monolithic image's exact
 bytes.
 
+## Current modern-constructs fixed point
+
+Verified on 31 August 2026 after adding profile-selected type contracts,
+non-escaping variadic compiler helpers, native final-size array allocation and
+direct chunk/tail materialization:
+
+| Compiler image | Size | SHA-256 |
+| --- | ---: | --- |
+| Stage 1, built by Python | 65,654,784 | `DF65FD5091ADEFA200F15BB5E3BABC127923BA41081F263993B2282F19965341` |
+| Stage 2, built by Stage 1 | 65,654,784 | `DF65FD5091ADEFA200F15BB5E3BABC127923BA41081F263993B2282F19965341` |
+| Stage 3, built by Stage 2 | 65,654,784 | `DF65FD5091ADEFA200F15BB5E3BABC127923BA41081F263993B2282F19965341` |
+
+The complete Windows/WSL regression gate passes. Direct cross-compiler target
+checks are byte-identical and execute successfully:
+
+| Target fixture | Size | SHA-256 |
+| --- | ---: | --- |
+| Windows PE `language_performance_features.ml` | 585,216 | `0DD2A247A336E7AE1C2D697B3D69309D9A241D4288C43311902A8A43C0CCD9E1` |
+| Linux x64 ELF `language_performance_features.ml` | 667,216 | `3DC0F8C2CCF8D2B83782200E3A14F8D84975987F0ED156A2ECA11537D893B9D1` |
+
+The measured self-host build fell from 149.977 to 138.124 seconds. Sampled
+process-tree private peak fell from 1,830.3 to 902.6 MiB and working-set peak
+from 1,728.3 to 792.1 MiB. The complete methodology, per-phase data and the
+lazy-iterator/background-emission experiments that were rejected are in
+[the modern-constructs report](docs/COMPILER_MODERN_CONSTRUCTS_BENCHMARK_2026-08-31.md).
+
 ## Modern language-extension parity
 
 The combined gradual-types, richer-calls, lambda, `match`, iterator,

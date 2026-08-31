@@ -483,6 +483,19 @@ Notes:
   The hot-path guard in `scripts/check_hotpath_concats.ps1` prevents the main
   declaration/scope paths and nested-statement analysis worklists from
   regressing to growing-array concatenation.
+- Compiler-owned fixed-size arrays now use the runtime's native
+  `array(size, fill)` allocation instead of a bootstrap-era doubling/concatenation
+  builder. Chunk tails containing real `void` values allocate their final
+  `array(size, void)` directly, and parser/general builders copy chunk groups
+  plus the active tail into one final array without `groups + [tail]`.
+  Short-lived merge inputs use a non-escaping variadic view, while 29
+  profile-selected concrete leaf helpers carry exact type contracts so the
+  bounded automatic inliner can remove their hot direct-call overhead. A lazy
+  iterator for the three-pass closure-layout set and asynchronous object
+  emission were measured and rejected because they made full self-builds
+  slower. The retained changes, rejected A/B results, hashes and memory data
+  are recorded in the
+  [modern-constructs benchmark](docs/COMPILER_MODERN_CONSTRUCTS_BENCHMARK_2026-08-31.md).
 - Function-object emission uses bounded batches of eight functions, or four for
   the compiler backend's largest function groups. Per-function qualification
   maps use generation-stamped clearing, so resetting a large open-addressing
@@ -656,18 +669,18 @@ boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
 Current audited Windows fixed point (2026-08-31): with a warm filesystem cache
-and fresh object directories, the Python Stage 1 took 60.398 seconds and peaked
-at 1,100.8 MiB process-tree working set / 1,090.3 MiB private commit. The
-existing native bootstrap produced Stage 2 in 99.976 seconds at 1,787.1 /
-2,005.9 MiB; that freshly generated compiler produced Stage 3 in 130.402
-seconds at 1,778.8 / 1,893.6 MiB. Python Stage 1 and self-hosted Stages 2/3 are
-byte-identical 62,788,096-byte images with SHA-256
-`EDA1417DD6B2D88B9DB3643189275CB1AB2B92BE65C4037428A98890746334D7`.
-One repeated Stage 3 probe exited after writing 318 function objects, at support
-tail emission; an isolated retry completed and reproduced the exact fixed-point
-image. This remains a transient operational caveat rather than a known target
-miscompilation. The 8 GiB heap setting is virtual address-space reserve, not
-resident or committed memory.
+and fresh object directories, the Python bootstrap completed in 74.537 seconds.
+The measured self-hosted object build completed in 138.124 seconds and peaked
+at 792.1 MiB process-tree working set / 902.6 MiB private commit, compared with
+149.977 seconds and 1,728.3 / 1,830.3 MiB immediately before the retained
+modern-construct pass. Python Stage 1 and self-hosted Stages 2/3 are
+byte-identical 65,654,784-byte images with SHA-256
+`DF65FD5091ADEFA200F15BB5E3BABC127923BA41081F263993B2282F19965341`.
+Representative Python/self-hosted Windows PE and Linux ELF outputs are also
+byte-identical and run successfully. The 8 GiB heap setting is virtual
+address-space reserve, not resident or committed memory. Exact commands,
+phase timings and A/B decisions are in the
+[2026-08-31 report](docs/COMPILER_MODERN_CONSTRUCTS_BENCHMARK_2026-08-31.md).
 
 #### Historical performance record
 

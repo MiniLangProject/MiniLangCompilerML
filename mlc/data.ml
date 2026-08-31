@@ -189,7 +189,7 @@ function data_label_record(db, name)
   return 0
 end function
 
-function data_has_label(db, name)
+function data_has_label(db as struct, name as string) returns bool
   return typeof(data_label_record(db, name)) == "struct"
 end function
 

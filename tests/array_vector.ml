@@ -40,6 +40,18 @@ function main(args)
   copied = t.arr_vec_push(copied, "reused")
   if check(t.arr_vec_finish(copied) == ["reused"], "push after clear reuses active prefix") == false then ok = false end if
 
+  merged = t.arr_merge_variadic_parts([1, void], ["three"], 4)
+  if check(typeof(merged) == "array" and len(merged) == 4, "variadic merge length") == false then ok = false end if
+  if check(merged[0] == 1 and typeof(merged[1]) == "void" and merged[2] == "three" and merged[3] == 4, "variadic merge preserves order and void") == false then ok = false end if
+
+  chunks = t.arr_chunk_new(2)
+  chunks = t.arr_chunk_push(chunks, "first")
+  chunks = t.arr_chunk_push(chunks, void)
+  chunks = t.arr_chunk_push(chunks, "last")
+  chunked_flat = t.arr_chunk_finish(chunks)
+  if check(typeof(chunked_flat) == "array" and len(chunked_flat) == 3, "chunk finalization length") == false then ok = false end if
+  if check(chunked_flat[0] == "first" and typeof(chunked_flat[1]) == "void" and chunked_flat[2] == "last", "chunk finalization preserves order and void") == false then ok = false end if
+
   if ok == false then return 1 end if
   print "array vector tests [OK]"
   return 0

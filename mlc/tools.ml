@@ -512,7 +512,7 @@ function arr_vec_finish(vec)
   return _arr_tail_to_array(ArrayChunkTail(vec.data, n, vec.cap))
 end function
 
-function _u64_mask()
+function _u64_mask() returns int
   // All bits set without a large out-of-range source literal.
   return 0 - 1
 end function
@@ -793,7 +793,7 @@ function fastmap_items(mapv)
 end function
 
 // Round n upward to the next power-of-two alignment boundary.
-function align_up(n, a)
+function align_up(n as int, a as int) returns int
   return (n +(a - 1)) & ~(a - 1)
 end function
 
@@ -838,7 +838,7 @@ function u64(x)
   return b
 end function
 
-function enc_int(x)
+function enc_int(x as int) returns int
   return ((x << 3) & _u64_mask()) | c.TAG_INT
 end function
 
@@ -849,7 +849,7 @@ function enc_bool(b)
   return c.TAG_BOOL
 end function
 
-function enc_void()
+function enc_void() returns int
   return c.TAG_VOID
 end function
 
@@ -966,27 +966,10 @@ function try_enc_float_immediate(x)
 end function
 
 function _arr_fill(n, fill)
-  outv = []
-  if typeof(n) != "int" or n <= 0 then return outv end if
-  blk = [fill]
-  pows = []
-  while len(blk) <= n
-    pows = pows + [blk]
-    blk = blk + blk
-  end while
-
-  rem = n
-  i = len(pows) - 1
-  while i >= 0
-    b = pows[i]
-    if len(b) <= rem then
-      outv = outv + b
-      rem = rem - len(b)
-      if rem <= 0 then return outv end if
-    end if
-    i = i - 1
-  end while
-  return outv
+  if typeof(n) != "int" or n <= 0 then return [] end if
+  // Modern runtimes allocate and initialize the final array in one native
+  // operation. The old doubling builder existed only for early bootstraps.
+  return array(n, fill)
 end function
 
 function _arr_copy_prefix(arr, n)
@@ -1119,23 +1102,14 @@ function _arr_tail_to_array(tail)
     return outv
   end if
 
-  parts = []
-  blk = []
-  blk_cap = 256
+  outv = array(n, void)
   for i = 0 to n - 1
-    blk = blk + [_arr_unwrap_value(tail.data[i])]
-    if len(blk) >= blk_cap then
-      parts = parts + [blk]
-      blk = []
-    end if
+    cell2 = tail.data[i]
+    if typeof(cell2) == "struct" and cell2 == _arr_void_sentinel then continue end if
+    if typeof(cell2) == "void" then continue end if
+    outv[i] = cell2
   end for
-  if len(blk) > 0 then
-    parts = parts + [blk]
-  end if
-  // Index assignment of void is invalid in MiniLang. Balanced concatenation
-  // preserves real void elements and keeps the number of full-array copies
-  // logarithmic in the number of fixed-size blocks.
-  return _arr_concat_chunks_balanced(parts)
+  return outv
 end function
 
 function inline _chunks_paged_tag()
@@ -1223,7 +1197,7 @@ function _chunks_materialize(chunks)
 
   if len(flat) <= 0 then return tail_arr end if
   if len(tail_arr) <= 0 then return flat end if
-  return arr_merge_chunks_balanced([flat, tail_arr])
+  return arr_merge_variadic_parts(flat, tail_arr)
 end function
 
 // Create a chunked array builder with the requested tail capacity.
@@ -1303,11 +1277,74 @@ function arr_merge_chunks_balanced(chunks)
   return outv
 end function
 
+// Flatten existing chunk groups plus the active tail directly into the final
+// array. This avoids allocating and copying a temporary outer `groups + tail`
+// array at every builder finalization.
+function arr_merge_chunk_groups_with_tail(groups, tail_arr)
+  total = 0
+  if typeof(tail_arr) == "array" then total = len(tail_arr) end if
+  if typeof(groups) == "array" and len(groups) > 0 then
+    for i = 0 to len(groups) - 1
+      part = groups[i]
+      if typeof(part) == "array" then total = total + len(part) else total = total + 1 end if
+    end for
+  end if
+  if total <= 0 then return [] end if
+  outv = _arr_fill(total, 0)
+  oi = 0
+  if typeof(groups) == "array" and len(groups) > 0 then
+    for i = 0 to len(groups) - 1
+      part = groups[i]
+      if typeof(part) == "array" then
+        copyArray(outv, oi, part, 0, len(part))
+        oi = oi + len(part)
+      else
+        outv[oi] = part
+        oi = oi + 1
+      end if
+    end for
+  end if
+  if typeof(tail_arr) == "array" and len(tail_arr) > 0 then
+    copyArray(outv, oi, tail_arr, 0, len(tail_arr))
+  end if
+  return outv
+end function
+
+// Merge short-lived call-site parts without first allocating an outer array.
+// The variadic tail is read-only and never escapes, so the compiler represents
+// it as an immutable view over the caller's argument slots.
+function arr_merge_variadic_parts(parts...)
+  if len(parts) <= 0 then return [] end if
+  total = 0
+  for i = 0 to len(parts) - 1
+    part = parts[i]
+    if typeof(part) == "array" then
+      total = total + len(part)
+    else
+      total = total + 1
+    end if
+  end for
+  if total <= 0 then return [] end if
+  outv = _arr_fill(total, 0)
+  oi = 0
+  for i = 0 to len(parts) - 1
+    part = parts[i]
+    if typeof(part) == "array" then
+      copyArray(outv, oi, part, 0, len(part))
+      oi = oi + len(part)
+    else
+      outv[oi] = part
+      oi = oi + 1
+    end if
+  end for
+  return outv
+end function
+
 function arr_chunked_finish(chunks, tail)
   all = _chunks_materialize(chunks)
   tail_arr = _arr_tail_to_array(tail)
   if typeof(tail_arr) == "array" and len(tail_arr) > 0 then
-    all = all + [tail_arr]
+    return arr_merge_chunk_groups_with_tail(all, tail_arr)
   end if
   if typeof(all) == "array" and len(all) == 1 and typeof(all[0]) == "array" then
     return all[0]
@@ -1322,7 +1359,12 @@ function arr_chunked_groups(chunks, tail)
   all = _chunks_materialize(chunks)
   tail_arr = _arr_tail_to_array(tail)
   if typeof(tail_arr) == "array" and len(tail_arr) > 0 then
-    all = all + [tail_arr]
+    n = 0
+    if typeof(all) == "array" then n = len(all) end if
+    grown = array(n + 1, void)
+    if n > 0 then copyArray(grown, 0, all, 0, n) end if
+    grown[n] = tail_arr
+    return grown
   end if
   return all
 end function

@@ -3305,7 +3305,7 @@ function _mlo_bp_push(bp, b)
   return t.byte_pages_append(bp, b)
 end function
 
-function _mlo_bp_u32(bp, value)
+function _mlo_bp_u32(bp as struct, value as int) returns struct
   return t.byte_pages_append_u32(bp, value)
 end function
 

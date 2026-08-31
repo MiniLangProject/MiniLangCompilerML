@@ -583,11 +583,11 @@ function _isAlpha(ch)
   return (c >= 65 and c <= 90) or(c >= 97 and c <= 122)
 end function
 
-function _isIdentStart(ch)
+function _isIdentStart(ch as string) returns bool
   return _isAlpha(ch) or ch == "_"
 end function
 
-function _isIdentPart(ch)
+function _isIdentPart(ch as string) returns bool
   return _isIdentStart(ch) or _isDigit(ch)
 end function
 
@@ -691,20 +691,14 @@ function _parser_chunk_tail_to_array(tail)
     end for
     return outv
   end if
-  parts = []
-  blk = []
-  blk_cap = 256
+  outv = array(n, void)
   for i = 0 to n - 1
-    blk = blk + [_parser_chunk_unwrap_value(tail.data[i])]
-    if len(blk) >= blk_cap then
-      parts = parts + [blk]
-      blk = []
-    end if
+    cell2 = tail.data[i]
+    if typeof(cell2) == "struct" and cell2 == _parser_chunk_void_sentinel then continue end if
+    if typeof(cell2) == "void" then continue end if
+    outv[i] = cell2
   end for
-  if len(blk) > 0 then
-    parts = parts + [blk]
-  end if
-  return _chunked_merge_balanced(parts)
+  return outv
 end function
 
 function _chunked_push(chunks, tail, value, cap)
@@ -761,11 +755,41 @@ function _chunked_merge_balanced(chunks)
   return outv
 end function
 
+function _chunked_merge_with_tail(chunks, tail_arr)
+  total = 0
+  if typeof(tail_arr) == "array" then total = len(tail_arr) end if
+  if typeof(chunks) == "array" and len(chunks) > 0 then
+    for i = 0 to len(chunks) - 1
+      part = chunks[i]
+      if typeof(part) == "array" then total = total + len(part) else total = total + 1 end if
+    end for
+  end if
+  if total <= 0 then return [] end if
+  outv = array(total, 0)
+  oi = 0
+  if typeof(chunks) == "array" and len(chunks) > 0 then
+    for i = 0 to len(chunks) - 1
+      part = chunks[i]
+      if typeof(part) == "array" then
+        copyArray(outv, oi, part, 0, len(part))
+        oi = oi + len(part)
+      else
+        outv[oi] = part
+        oi = oi + 1
+      end if
+    end for
+  end if
+  if typeof(tail_arr) == "array" and len(tail_arr) > 0 then
+    copyArray(outv, oi, tail_arr, 0, len(tail_arr))
+  end if
+  return outv
+end function
+
 function _chunked_finish(chunks, tail)
   if typeof(chunks) != "array" then chunks = [] end if
   tail_arr = _parser_chunk_tail_to_array(tail)
   if typeof(tail_arr) == "array" and len(tail_arr) > 0 then
-    chunks = chunks + [tail_arr]
+    return _chunked_merge_with_tail(chunks, tail_arr)
   end if
   return _chunked_merge_balanced(chunks)
 end function

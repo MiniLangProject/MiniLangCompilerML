@@ -362,15 +362,15 @@ function _rid_any(name)
   return -1
 end function
 
-function _is_r8_name(name)
+function _is_r8_name(name as string) returns bool
   return name == "al" or name == "cl" or name == "dl" or name == "bl" or name == "spl" or name == "bpl" or name == "sil" or name == "dil" or name == "r8b" or name == "r9b" or name == "r10b" or name == "r11b" or name == "r12b" or name == "r13b" or name == "r14b" or name == "r15b"
 end function
 
-function _is_r32_name(name)
+function _is_r32_name(name as string) returns bool
   return name == "eax" or name == "ecx" or name == "edx" or name == "ebx" or name == "esp" or name == "ebp" or name == "esi" or name == "edi" or name == "r8d" or name == "r9d" or name == "r10d" or name == "r11d" or name == "r12d" or name == "r13d" or name == "r14d" or name == "r15d"
 end function
 
-function _is_force_rex_8(name)
+function _is_force_rex_8(name as string) returns bool
   return name == "spl" or name == "bpl" or name == "sil" or name == "dil"
 end function
 
@@ -708,7 +708,7 @@ function _emit64(asm, x)
   return asm
 end function
 
-function pos(asm)
+function pos(asm as struct) returns int
   return asm.size
 end function
 
@@ -725,15 +725,15 @@ function _emit_modrm(asm, mod, reg, rm)
   return _emit8(asm, v)
 end function
 
-function _modrm_byte(mod, reg, rm)
+function _modrm_byte(mod as int, reg as int, rm as int) returns int
   return ((mod & 3) << 6) |((reg & 7) << 3) |(rm & 7)
 end function
 
-function _sib_byte(scale, index, base)
+function _sib_byte(scale as int, index as int, base as int) returns int
   return ((scale & 3) << 6) |((index & 7) << 3) |(base & 7)
 end function
 
-function _fits_i8(x)
+function _fits_i8(x as int) returns bool
   return x >= -128 and x <= 127
 end function
 
@@ -1155,7 +1155,7 @@ function lea_r64_rip(asm, dst, label)
   return asm
 end function
 
-function lea_rax_rip(asm, label)
+function lea_rax_rip(asm as struct, label as string) returns struct
   return lea_r64_rip(asm, "rax", label)
 end function
 
@@ -1259,7 +1259,7 @@ function mov_r32_imm32(asm, dst, imm)
   return asm
 end function
 
-function mov_rax_imm64(asm, imm)
+function mov_rax_imm64(asm as struct, imm as int) returns struct
   return mov_r64_imm64(asm, "rax", imm)
 end function
 
@@ -1275,7 +1275,7 @@ function mov_r64_tagged_int(asm, dst, value)
   return mov_r64_u64_hi_lo_exact(asm, dst, hi32, lo32)
 end function
 
-function mov_rax_tagged_int(asm, value)
+function mov_rax_tagged_int(asm as struct, value as int) returns struct
   return mov_r64_tagged_int(asm, "rax", value)
 end function
 
@@ -1293,7 +1293,7 @@ function mov_rax_u64_hi_lo_exact(asm, hi32, lo32)
   return mov_r64_u64_hi_lo_exact(asm, "rax", hi32, lo32)
 end function
 
-function mov_rcx_imm32(asm, imm)
+function mov_rcx_imm32(asm as struct, imm as int) returns struct
   return mov_r32_imm32(asm, "ecx", imm)
 end function
 
@@ -1390,16 +1390,16 @@ end function
 function sub_r64_imm8(asm, reg_name, imm)
   return sub_r64_imm(asm, reg_name, imm)
 end function
-function and_r64_imm8(asm, reg_name, imm)
+function and_r64_imm8(asm as struct, reg_name as string, imm as int) returns struct
   return and_r64_imm(asm, reg_name, imm)
 end function
-function or_r64_imm8(asm, reg_name, imm)
+function or_r64_imm8(asm as struct, reg_name as string, imm as int) returns struct
   return or_r64_imm(asm, reg_name, imm)
 end function
 function xor_r64_imm8(asm, reg_name, imm)
   return xor_r64_imm(asm, reg_name, imm)
 end function
-function cmp_r64_imm8(asm, reg_name, imm)
+function cmp_r64_imm8(asm as struct, reg_name as string, imm as int) returns struct
   return cmp_r64_imm(asm, reg_name, imm)
 end function
 
@@ -1485,7 +1485,7 @@ function setcc_r8(asm, cc, dst8)
   return asm
 end function
 
-function setcc_al(asm, cc)
+function setcc_al(asm as struct, cc as string) returns struct
   return setcc_r8(asm, cc, "al")
 end function
 
@@ -1501,7 +1501,7 @@ function movzx_r32_r8(asm, dst, src8)
   return asm
 end function
 
-function movzx_eax_al(asm)
+function movzx_eax_al(asm as struct) returns struct
   return movzx_r32_r8(asm, "eax", "al")
 end function
 
@@ -1557,7 +1557,7 @@ function cmp_rax_r10(asm)
   return cmp_r64_r64(asm, "rax", "r10")
 end function
 
-function cmp_rax_imm8(asm, imm)
+function cmp_rax_imm8(asm as struct, imm as int) returns struct
   return cmp_r64_imm8(asm, "rax", imm)
 end function
 
@@ -1750,11 +1750,11 @@ function mov_rsp_disp8_rax(asm, disp)
   return mov_membase_disp_r64(asm, "rsp", disp, "rax")
 end function
 
-function mov_rax_rsp_disp32(asm, disp)
+function mov_rax_rsp_disp32(asm as struct, disp as int) returns struct
   return mov_r64_membase_disp(asm, "rax", "rsp", disp)
 end function
 
-function mov_rsp_disp32_rax(asm, disp)
+function mov_rsp_disp32_rax(asm as struct, disp as int) returns struct
   return mov_membase_disp_r64(asm, "rsp", disp, "rax")
 end function
 
@@ -2335,11 +2335,11 @@ function divsd_xmm_xmm(asm, dst_xmm, src_xmm)
   return _emit_sse_rr(asm, 0xF2, -1, 0x5E, dst_xmm, src_xmm)
 end function
 
-function ucomisd_xmm_xmm(asm, left_xmm, right_xmm)
+function ucomisd_xmm_xmm(asm as struct, left_xmm as string, right_xmm as string) returns struct
   return _emit_sse_rr(asm, 0x66, -1, 0x2E, left_xmm, right_xmm)
 end function
 
-function xorpd_xmm_xmm(asm, dst_xmm, src_xmm)
+function xorpd_xmm_xmm(asm as struct, dst_xmm as string, src_xmm as string) returns struct
   return _emit_sse_rr(asm, 0x66, -1, 0x57, dst_xmm, src_xmm)
 end function
 
