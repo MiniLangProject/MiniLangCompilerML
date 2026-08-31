@@ -1744,6 +1744,57 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
   return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
 end function
 
+function _front_body_contains_async(body)
+  if typeof(body) != "array" or len(body) <= 0 then return false end if
+  for i = 0 to len(body) - 1
+    if _front_node_contains_async(body[i]) then return true end if
+  end for
+  return false
+end function
+
+// Async lowering uses the standard shared thread pool. Discover it before
+// language lowering so programs do not need a synthetic source-level import.
+function _front_node_contains_async(node)
+  if typeof(node) != "struct" then return false end if
+  kind = try(node.node_kind)
+  if kind == "FunctionDef" then
+    if typeof(try(node.is_async)) == "bool" and node.is_async then return true end if
+    return _front_body_contains_async(try(node.body))
+  end if
+  if kind == "NamespaceDef" then return _front_body_contains_async(try(node.body)) end if
+  if kind == "StructDef" then
+    methods = try(node.methods)
+    if typeof(methods) == "array" and len(methods) > 0 then
+      for i = 0 to len(methods) - 1
+        if _front_node_contains_async(methods[i]) then return true end if
+      end for
+    end if
+    return false
+  end if
+  if kind == "If" then
+    if _front_body_contains_async(try(node.then_body)) then return true end if
+    elifs = try(node.elifs)
+    if typeof(elifs) == "array" and len(elifs) > 0 then
+      for i = 0 to len(elifs) - 1
+        if typeof(elifs[i]) == "array" and len(elifs[i]) >= 2 and _front_body_contains_async(elifs[i][1]) then return true end if
+      end for
+    end if
+    return _front_body_contains_async(try(node.else_body))
+  end if
+  if kind == "Switch" then
+    cases = try(node.cases)
+    if typeof(cases) == "array" and len(cases) > 0 then
+      for i = 0 to len(cases) - 1
+        if _front_body_contains_async(try(cases[i].body)) then return true end if
+      end for
+    end if
+    return _front_body_contains_async(try(node.default_body))
+  end if
+  nested = try(node.body)
+  if typeof(nested) == "array" then return _front_body_contains_async(nested) end if
+  return false
+end function
+
 function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
   global _path_norm_cache, _front_visited_set, _front_resolve_cache
   _path_norm_cache = t.fastmap_new(4096)
@@ -1789,6 +1840,25 @@ function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
     keep_going,
     max_errors
   )
+  scan_paths = _visited_finish(res.visited, entry_abs)
+  needs_async_pool = false
+  if len(scan_paths) > 0 then
+    for spi = 0 to len(scan_paths) - 1
+      module_rec = _parsed_module_get(res.parsed_modules, scan_paths[spi])
+      if typeof(module_rec) == "struct" and _front_body_contains_async(module_rec.program) then
+        needs_async_pool = true
+        break
+      end if
+    end for
+  end if
+  if needs_async_pool then
+    pool_resolve = _resolve_import_cached("std/concurrent/thread_pool.ml", d0, dirs)
+    if pool_resolve.resolved == "" then
+      res.diagnostics = _add_diag(res.diagnostics, "CompileError", entry_abs, 0, "Import file not found: std/concurrent/thread_pool.ml")
+    else
+      res = _module_visit(pool_resolve.resolved, entry_abs, dirs, 0, res.visited, res.modules, res.aliases, res.parsed_modules, res.diagnostics, keep_going, max_errors)
+    end if
+  end if
   return FrontCheckResult(res.diagnostics, _visited_finish(res.visited, entry_abs), res.modules, _alias_to_array(res.aliases), res.parsed_modules)
 end function
 
@@ -6947,7 +7017,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     // boundary. They are not referenced again until serialization or linking,
     // so relying on native stack-slot liveness made the first stride GC turn
     // tmp_dir into a stale pointer in large, non-instrumented self-builds.
-    _compile_codegen_keepalive = [load, cg, mod_cg, fn_entries, fn_analysis_scratch, helper_union, module_obj_paths_b, tmp_dir, input_abs, entry_path, runtime_config]
+    _compile_codegen_keepalive = [load, cg, mod_cg, fn_entries, fn_analysis_scratch, helper_union, module_obj_paths_b, tmp_dir, input_abs, entry_path, runtime_config, output_exe]
     text_stream_offset = text_stream_offset + fragment_text_size
     if _compiler_profile_batches_enabled then
       fn_batch_function_count = fn_chunk_size
@@ -6961,7 +7031,27 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     fn_batch_count = fn_batch_count + 1
     section_checkpoint = 0
     fin = 0
-    if (module_object_seq % fn_gc_stride) == 0 then gc_collect() end if
+    if (module_object_seq % fn_gc_stride) == 0 then
+      gc_collect()
+      // Reload every managed loop value from the global root after the
+      // collection.  Merely publishing the frontier keeps the objects alive,
+      // but a native self-host build may otherwise continue through stale
+      // stack slots whose liveness ended at the gc_collect call.
+      object_gc_roots = _compile_codegen_keepalive
+      load = object_gc_roots[0]
+      cg = object_gc_roots[1]
+      mod_cg = object_gc_roots[2]
+      fn_entries = object_gc_roots[3]
+      fn_analysis_scratch = object_gc_roots[4]
+      helper_union = object_gc_roots[5]
+      module_obj_paths_b = object_gc_roots[6]
+      tmp_dir = object_gc_roots[7]
+      input_abs = object_gc_roots[8]
+      entry_path = object_gc_roots[9]
+      runtime_config = object_gc_roots[10]
+      output_exe = object_gc_roots[11]
+      object_gc_roots = 0
+    end if
   end while
   if _compiler_profile_enabled then
     print "[profile] object_function_batches=" + fn_batch_count + " setup_ms=" + fn_setup_ms + " codegen_ms=" + fn_codegen_ms + " serialize_ms=" + fn_serialize_ms

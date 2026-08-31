@@ -395,7 +395,7 @@ function _release_emitted_fn_body(fn_node)
   // however, are never inspected again once their native object is serialized;
   // keep the signature shell for arity/callback checks and release the body and
   // analysis-only closure sets promptly.
-  if typeof(try(fn_node.is_inline)) == "bool" and fn_node.is_inline then return fn_node end if
+  if exprmod._function_wants_inline(fn_node) then return fn_node end if
   fn_node.body = []
   fn_node._ml_locals = []
   fn_node._ml_globals_declared = []
@@ -2392,9 +2392,14 @@ function cg_emit_stmt(state, stmt)
     l_setup_arr_fe = "foreach_setup_arr_" + fid_fe
     l_setup_bytes_fe = "foreach_setup_bytes_" + fid_fe
     l_setup_str_fe = "foreach_setup_str_" + fid_fe
+    l_setup_func_fe = "foreach_setup_func_" + fid_fe
     l_top_arr_fe = "foreach_top_arr_" + fid_fe
     l_top_bytes_fe = "foreach_top_bytes_" + fid_fe
     l_top_str_fe = "foreach_top_str_" + fid_fe
+    l_top_func_fe = "foreach_top_func_" + fid_fe
+    l_func_plain_fe = "foreach_func_plain_" + fid_fe
+    l_func_closure_fe = "foreach_func_closure_" + fid_fe
+    l_func_value_fe = "foreach_func_value_" + fid_fe
     l_body_fe = "foreach_body_" + fid_fe
     l_cont_fe = "foreach_cont_" + fid_fe
     l_end_fe = "foreach_end_" + fid_fe
@@ -2435,6 +2440,10 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.jcc(state.asm, "e", l_setup_bytes_fe)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
     state.asm = a.jcc(state.asm, "e", l_setup_str_fe)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FUNCTION)
+    state.asm = a.jcc(state.asm, "e", l_setup_func_fe)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_CLOSURE)
+    state.asm = a.jcc(state.asm, "e", l_setup_func_fe)
     state.asm = a.jmp(state.asm, l_end_fe)
 
     state.asm = a.mark(state.asm, l_setup_arr_fe)
@@ -2472,6 +2481,46 @@ function cg_emit_stmt(state, stmt)
     state.asm = a.lea_rax_rip(state.asm, l_top_str_fe)
     state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
     state.asm = a.jmp(state.asm, l_top_str_fe)
+
+    state.asm = a.mark(state.asm, l_setup_func_fe)
+    state.asm = a.lea_rax_rip(state.asm, l_top_func_fe)
+    state = scope.emit_store_var_scoped(state, top_ptr_name, stmt)
+    state.asm = a.jmp(state.asm, l_top_func_fe)
+
+    // A lazy iterator is a zero-argument callable. Pull one value per loop
+    // iteration and stop when it returns void; closure environment pointers
+    // are passed in r10 just like the ordinary indirect-call ABI.
+    state.asm = a.mark(state.asm, l_top_func_fe)
+    state = scope.emit_load_var_scoped(state, it_name)
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FUNCTION)
+    state.asm = a.jcc(state.asm, "e", l_func_plain_fe)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_CLOSURE)
+    state.asm = a.jcc(state.asm, "e", l_func_closure_fe)
+    state.asm = a.jmp(state.asm, l_end_fe)
+
+    state.asm = a.mark(state.asm, l_func_plain_fe)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", 0)
+    state.asm = a.jcc(state.asm, "ne", l_end_fe)
+    state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+    state.asm = a.call_membase_disp(state.asm, "r11", 8)
+    state.asm = a.jmp(state.asm, l_func_value_fe)
+
+    state.asm = a.mark(state.asm, l_func_closure_fe)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", 0)
+    state.asm = a.jcc(state.asm, "ne", l_end_fe)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r10", "r11", 16)
+    state.asm = a.call_membase_disp(state.asm, "r11", 8)
+
+    state.asm = a.mark(state.asm, l_func_value_fe)
+    state = exprmod._emit_auto_errprop(state)
+    state.asm = a.cmp_rax_imm8(state.asm, t.enc_void())
+    state.asm = a.jcc(state.asm, "e", l_end_fe)
+    state = scope.emit_store_var_scoped(state, vname_fe, stmt)
+    state.asm = a.jmp(state.asm, l_body_fe)
 
     state.asm = a.mark(state.asm, l_top_arr_fe)
     state = _foreach_load_dword_eax(state, i_name)
@@ -2596,7 +2645,21 @@ function cg_emit_stmt(state, stmt)
       return state
     end if
     if t.ast_is_node(stmt.expr) then
-      state = exprmod.cg_emit_expr(state, stmt.expr)
+      return_expr = stmt.expr
+      // Declared return types are lowered to TypeGuard nodes. If local type
+      // flow already proves the inner primitive representation, the guard is
+      // redundant. Entry guards are deliberately retained for dynamic calls.
+      if t.ast_kind(return_expr) == "TypeGuard" and (typeof(try(return_expr.optional)) != "bool" or return_expr.optional == false) then
+        raw_return_type = _coerce_name(try(return_expr.type_name))
+        canonical_return_type = s.toLowerAscii(raw_return_type)
+        if canonical_return_type == "integer" then canonical_return_type = "int" end if
+        if canonical_return_type == "boolean" then canonical_return_type = "bool" end if
+        if canonical_return_type == "str" then canonical_return_type = "string" end if
+        known_return_type = _typeflow_base(exprmod._opt_expr_known_type(state, try(return_expr.expr)))
+        primitive_return = canonical_return_type == "int" or canonical_return_type == "float" or canonical_return_type == "bool" or canonical_return_type == "string" or canonical_return_type == "array" or canonical_return_type == "bytes" or canonical_return_type == "function" or canonical_return_type == "thread" or canonical_return_type == "error" or canonical_return_type == "void"
+        if primitive_return and known_return_type == canonical_return_type then return_expr = return_expr.expr end if
+      end if
+      state = exprmod.cg_emit_expr(state, return_expr)
     else
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
     end if
@@ -2878,6 +2941,10 @@ function _intflow_expr_is_int(state, ex, known)
     if typeof(known) == "struct" then return t.fastmap_get(known, known_name, 0) != 0 end if
     return _arr_has(known, known_name)
   end if
+  if k == "TypeGuard" then
+    raw_type = s.toLowerAscii(_coerce_name(try(ex.type_name)))
+    return (typeof(try(ex.optional)) != "bool" or ex.optional == false) and (raw_type == "int" or raw_type == "integer")
+  end if
   if k == "Unary" then
     op_u = _coerce_name(t.ast_op(ex))
     if op_u != "-" and op_u != "~" then return false end if
@@ -2919,10 +2986,20 @@ function _collect_function_flow_inputs(fn_node, analysis_scratch)
 
   params = try(fn_node.params)
   if typeof(params) == "array" and len(params) > 0 then
+    param_types = try(fn_node.param_types)
+    if typeof(param_types) != "array" then param_types = [] end if
+    param_optional = try(fn_node.param_optional)
+    if typeof(param_optional) != "array" then param_optional = [] end if
     for i = 0 to len(params) - 1
       param_name = _coerce_name(params[i])
-      int_excluded = _arr_add_unique(int_excluded, param_name)
-      value_excluded = _arr_add_unique(value_excluded, param_name)
+      param_type = 0
+      if i < len(param_types) then param_type = param_types[i] end if
+      optional = false
+      if i < len(param_optional) and typeof(param_optional[i]) == "bool" then optional = param_optional[i] end if
+      if typeof(param_type) != "string" or param_type == "" or optional then
+        int_excluded = _arr_add_unique(int_excluded, param_name)
+        value_excluded = _arr_add_unique(value_excluded, param_name)
+      end if
     end for
   end if
   boxed = try(fn_node._ml_boxed)
@@ -3221,6 +3298,18 @@ function _typeflow_expr_type(state, ex, known)
     return "array:" + len(items)
   end if
   if k == "Var" then return _typeflow_get(known, _coerce_name(t.ast_name(ex))) end if
+  if k == "TypeGuard" then
+    if typeof(try(ex.optional)) == "bool" and ex.optional then return "" end if
+    raw_guard_type = _coerce_name(try(ex.type_name))
+    lower_guard_type = s.toLowerAscii(raw_guard_type)
+    if lower_guard_type == "integer" then lower_guard_type = "int" end if
+    if lower_guard_type == "boolean" then lower_guard_type = "bool" end if
+    if lower_guard_type == "str" then lower_guard_type = "string" end if
+    if lower_guard_type == "int" or lower_guard_type == "float" or lower_guard_type == "bool" or lower_guard_type == "string" or lower_guard_type == "array" or lower_guard_type == "bytes" or lower_guard_type == "function" or lower_guard_type == "thread" or lower_guard_type == "error" or lower_guard_type == "void" then return lower_guard_type end if
+    qualified_guard = exprmod._qualify_identifier(state, raw_guard_type)
+    if qualified_guard == "" then qualified_guard = raw_guard_type end if
+    return "struct:" + qualified_guard
+  end if
   if k == "IsType" then return "bool" end if
   if k == "Unary" then
     op_u = _coerce_name(t.ast_op(ex))
@@ -3272,6 +3361,14 @@ function _typeflow_expr_type(state, ex, known)
     if typeof(args) != "array" then args = [] end if
     if raw == "len" then return "int" end if
     if raw == "typeof" or raw == "typeName" then return "string" end if
+    fn_qname = exprmod._native_callback_resolve_user_fn(state, cal)
+    if fn_qname != "" then
+      declared_fn = exprmod._user_function_get(state, fn_qname)
+      if typeof(declared_fn) == "struct" and (typeof(try(declared_fn.return_optional)) != "bool" or declared_fn.return_optional == false) and typeof(try(declared_fn.return_type)) == "string" then
+        guarded_call = ml.TypeGuard("TypeGuard", ex, declared_fn.return_type, false, t.ast_pos(ex), t.ast_filename(ex))
+        return _typeflow_expr_type(state, guarded_call, known)
+      end if
+    end if
     if raw == "bytes" or raw == "byteBuffer" then
       if len(args) == 0 then return "bytes:0" end if
       if len(args) == 1 then
@@ -8692,7 +8789,7 @@ function prepare_program_for_objects(state, program)
       if typeof(ifn_rec) != "array" or len(ifn_rec) != 2 then continue end if
       ifn = ifn_rec[1]
       if typeof(ifn) != "struct" then continue end if
-      if typeof(try(ifn.is_inline)) != "bool" or ifn.is_inline == false then continue end if
+      if exprmod._function_wants_inline(ifn) == false then continue end if
       if exprmod._inline_call_eligible(ifn) == false then continue end if
       ifn_arity = max_calls_stmts(state, try(ifn.body))
       if typeof(ifn_arity) == "int" and ifn_arity > state.max_inline_call_args_global then

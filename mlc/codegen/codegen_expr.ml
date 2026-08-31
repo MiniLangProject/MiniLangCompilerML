@@ -35,6 +35,110 @@ struct ArgNormalizeResult
   message,
 end struct
 
+function _variadic_is_direct_var(ex, name)
+  return t.ast_is_node(ex) and t.ast_kind(ex) == "Var" and _coerce_name(t.ast_name(ex)) == name
+end function
+
+function _variadic_expr_safe(ex, name, allow_direct)
+  if typeof(ex) == "void" or ex == 0 then return true end if
+  if t.ast_is_node(ex) == false then return true end if
+  kind = _coerce_name(t.ast_kind(ex))
+  if kind == "Var" then
+    if _coerce_name(t.ast_name(ex)) == name then return allow_direct end if
+    return true
+  end if
+  if kind == "Index" then
+    return _variadic_expr_safe(try(ex.target), name, true) and _variadic_expr_safe(try(ex.index), name, false)
+  end if
+  if kind == "Call" then
+    callee = try(ex.callee)
+    args = try(ex.args)
+    if typeof(args) != "array" then args = [] end if
+    callee_name = ""
+    if t.ast_is_node(callee) and t.ast_kind(callee) == "Var" then callee_name = _coerce_name(t.ast_name(callee)) end if
+    if (callee_name == "len" or callee_name == "typeof" or callee_name == "typeName") and len(args) == 1 and _variadic_is_direct_var(args[0], name) then return true end if
+    if _variadic_expr_safe(callee, name, false) == false then return false end if
+    if len(args) > 0 then
+      for i = 0 to len(args) - 1
+        if _variadic_expr_safe(args[i], name, false) == false then return false end if
+      end for
+    end if
+    return true
+  end if
+  if kind == "Bin" then return _variadic_expr_safe(t.ast_left(ex), name, false) and _variadic_expr_safe(t.ast_right(ex), name, false) end if
+  if kind == "Unary" then return _variadic_expr_safe(t.ast_right(ex), name, false) end if
+  if kind == "IsType" or kind == "TypeGuard" then return _variadic_expr_safe(try(ex.expr), name, false) end if
+  if kind == "Member" or kind == "SafeMember" then return _variadic_expr_safe(try(ex.target), name, false) end if
+  if kind == "ArrayLit" then
+    items = try(ex.items)
+    if typeof(items) == "array" and len(items) > 0 then
+      for i = 0 to len(items) - 1
+        if _variadic_expr_safe(items[i], name, false) == false then return false end if
+      end for
+    end if
+    return true
+  end if
+  // Unknown expression shapes are safe only if their common child slots do
+  // not contain the variadic parameter directly or transitively.
+  if _variadic_expr_safe(try(ex.expr), name, false) == false then return false end if
+  if _variadic_expr_safe(try(ex.target), name, false) == false then return false end if
+  if _variadic_expr_safe(try(ex.index), name, false) == false then return false end if
+  return true
+end function
+
+function _variadic_stmts_safe(body, name)
+  if typeof(body) != "array" or len(body) <= 0 then return true end if
+  for i = 0 to len(body) - 1
+    st = body[i]
+    if typeof(st) != "struct" then continue end if
+    kind = _coerce_name(t.ast_kind(st))
+    if kind == "Assign" or kind == "ConstDecl" or kind == "SynchronizedDecl" then
+      if _coerce_name(try(st.name)) == name or _variadic_expr_safe(try(st.expr), name, false) == false then return false end if
+    else if kind == "Return" or kind == "Yield" or kind == "Defer" or kind == "ExprStmt" or kind == "Print" then
+      if _variadic_expr_safe(try(st.expr), name, false) == false then return false end if
+    else if kind == "SetIndex" then
+      if _variadic_is_direct_var(try(st.target), name) then return false end if
+      if _variadic_expr_safe(try(st.target), name, false) == false or _variadic_expr_safe(try(st.index), name, false) == false or _variadic_expr_safe(try(st.expr), name, false) == false then return false end if
+    else if kind == "SetMember" then
+      if _variadic_expr_safe(try(st.obj), name, false) == false or _variadic_expr_safe(try(st.expr), name, false) == false then return false end if
+    else if kind == "ForEach" then
+      if _variadic_expr_safe(try(st.iterable), name, true) == false or _variadic_stmts_safe(try(st.body), name) == false then return false end if
+      continue
+    else
+      if _variadic_expr_safe(try(st.expr), name, false) == false or _variadic_expr_safe(try(st.cond), name, false) == false or _variadic_expr_safe(try(st.start), name, false) == false or _variadic_expr_safe(try(st.end_expr), name, false) == false or _variadic_expr_safe(try(st.iterable), name, false) == false or _variadic_expr_safe(try(st.lock), name, false) == false then return false end if
+    end if
+    if kind == "If" then
+      if _variadic_stmts_safe(try(st.then_body), name) == false or _variadic_stmts_safe(try(st.else_body), name) == false then return false end if
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
+        for j = 0 to len(elifs) - 1
+          if _variadic_expr_safe(elifs[j][0], name, false) == false or _variadic_stmts_safe(elifs[j][1], name) == false then return false end if
+        end for
+      end if
+    else if kind == "Switch" then
+      cases = try(st.cases)
+      if typeof(cases) == "array" and len(cases) > 0 then
+        for j = 0 to len(cases) - 1
+          if _variadic_stmts_safe(try(cases[j].body), name) == false then return false end if
+        end for
+      end if
+      if _variadic_stmts_safe(try(st.default_body), name) == false then return false end if
+    else if kind != "ForEach" then
+      nested = try(st.body)
+      if typeof(nested) == "array" and _variadic_stmts_safe(nested, name) == false then return false end if
+    end if
+  end for
+  return true
+end function
+
+function _variadic_param_stack_safe(fn)
+  if typeof(fn) != "struct" then return false end if
+  index = try(fn.variadic_index)
+  params = try(fn.params)
+  if typeof(index) != "int" or index < 0 or typeof(params) != "array" or index >= len(params) then return false end if
+  return _variadic_stmts_safe(try(fn.body), _coerce_name(params[index]))
+end function
+
 function _normalize_declared_call_args(expr, fn, implicit)
   supplied = try(expr.args)
   if typeof(supplied) != "array" then supplied = [] end if
@@ -112,7 +216,11 @@ function _normalize_declared_call_args(expr, fn, implicit)
       end if
     end for
   end if
-  if variadic >= 0 then slots = slots + [ml.ArrayLit("ArrayLit", extras, try(expr._pos), try(expr._filename))] end if
+  if variadic >= 0 then
+    tail = ml.ArrayLit("ArrayLit", extras, false, try(expr._pos), try(expr._filename))
+    if implicit == 0 and _variadic_param_stack_safe(fn) then tail.stack_variadic = true end if
+    slots = slots + [tail]
+  end if
   return ArgNormalizeResult(true, slots, "")
 end function
 
@@ -2185,7 +2293,9 @@ function _opt_expr_known_int(state, ex)
   k = _coerce_name(t.ast_kind(ex))
   if k == "Var" then
     nm = _coerce_name(t.ast_name(ex))
-    if _intflow_name_has(state.known_int_names, nm) == false then return false end if
+    known_by_flow = _intflow_name_has(state.known_int_names, nm)
+    known_by_contract = _opt_type_base(_opt_type_fact_get(state.known_value_types, nm)) == "int"
+    if known_by_flow == false and known_by_contract == false then return false end if
     b = scope.cg_resolve_binding(state, nm)
     if typeof(b) != "struct" then return false end if
     if b.kind != "local" and b.kind != "param" then return false end if
@@ -4321,8 +4431,7 @@ function _emit_expr_call(state, expr)
           known_inline_used = t.fastmap_get(state._inline_emitted_bytes, known_method_dyn, 0)
           if typeof(known_inline_used) != "int" then known_inline_used = 0 end if
         end if
-        known_is_inline = typeof(try(known_def_dyn.is_inline)) == "bool" and known_def_dyn.is_inline
-        if known_inline_used < 4096 and known_is_inline and _inline_call_eligible(known_def_dyn) then
+        if known_inline_used < 4096 and _function_wants_inline(known_def_dyn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(known_def_dyn) then
           // Only the inliner needs a synthetic receiver-plus-arguments array;
           // the common direct-call path emits from the original AST arrays.
           known_args_b = t.arr_chunk_new(total_dyn)
@@ -6979,7 +7088,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     inline_used_bytes = t.fastmap_get(state._inline_emitted_bytes, inline_name, 0)
     if typeof(inline_used_bytes) != "int" then inline_used_bytes = 0 end if
   end if
-  if inline_used_bytes < 4096 and typeof(inline_fn) == "struct" and typeof(try(inline_fn.is_inline)) == "bool" and inline_fn.is_inline and _inline_call_eligible(inline_fn) then
+  if inline_used_bytes < 4096 and typeof(inline_fn) == "struct" and _function_wants_inline(inline_fn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(inline_fn) then
     inline_binding = scope.cg_resolve_binding(state, inline_name)
     if typeof(inline_binding) != "struct" or inline_binding.kind == "global" then
       state = _emit_inline_call(state, inline_name, call_args)
@@ -7261,7 +7370,21 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
   if true then
     diag_extra_nm = 0
     if callee_is_member then diag_extra_nm = 24 end if
-    base_nm = core.alloc_expr_temps(state, (nargs + 1) * 8 + diag_extra_nm)
+    stack_varargs_nm = []
+    stack_vararg_bytes_nm = 0
+    if typeof(call_args) == "array" and len(call_args) > 0 then
+      for sva_i = 0 to len(call_args) - 1
+        sva_arg = call_args[sva_i]
+        if typeof(sva_arg) == "struct" and t.ast_kind(sva_arg) == "ArrayLit" and typeof(try(sva_arg.stack_variadic)) == "bool" and sva_arg.stack_variadic then
+          stack_varargs_nm = stack_varargs_nm + [[sva_i, sva_arg, stack_vararg_bytes_nm]]
+          sva_items = try(sva_arg.items)
+          if typeof(sva_items) != "array" then sva_items = [] end if
+          stack_vararg_bytes_nm = stack_vararg_bytes_nm + 8 + len(sva_items) * 8
+        end if
+      end for
+    end if
+    temp_bytes_nm = (nargs + 1) * 8 + diag_extra_nm + stack_vararg_bytes_nm
+    base_nm = core.alloc_expr_temps(state, temp_bytes_nm)
     if typeof(base_nm) != "int" or base_nm <= 0 then
       state.diagnostics = state.diagnostics + ["Expression temp overflow in indirect call lowering"]
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -7277,6 +7400,25 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     state = cg_emit_expr(state, cal)
     state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_nm, "rax")
 
+    // Match the Python frontend's evaluation order: preserve the callee first,
+    // then initialize the call-scoped variadic views before evaluating args.
+    stack_region_nm = base_nm + (nargs + 1) * 8 + diag_extra_nm
+    if len(stack_varargs_nm) > 0 then
+      for sva_i = 0 to len(stack_varargs_nm) - 1
+        sva_rec = stack_varargs_nm[sva_i]
+        sva_items = try(sva_rec[1].items)
+        if typeof(sva_items) != "array" then sva_items = [] end if
+        sva_base = stack_region_nm + sva_rec[2]
+        state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", sva_base, c.OBJ_ARRAY_IMM, false)
+        state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", sva_base + 4, len(sva_items), false)
+        if len(sva_items) > 0 then
+          for svi = 0 to len(sva_items) - 1
+            state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", sva_base + 8 + svi * 8, t.enc_void(), true)
+          end for
+        end if
+      end for
+    end if
+
     if nargs > 0 then
       for argi_nm = 0 to nargs - 1
         if skip_call_args_eval then
@@ -7284,7 +7426,27 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
           if typeof(arg_nm) == "int" and arg_nm == 0 then
             state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
           else
-            state = cg_emit_expr(state, arg_nm)
+            stack_match_nm = -1
+            if len(stack_varargs_nm) > 0 then
+              for sva_i = 0 to len(stack_varargs_nm) - 1
+                if stack_varargs_nm[sva_i][0] == argi_nm then stack_match_nm = sva_i; break end if
+              end for
+            end if
+            if stack_match_nm >= 0 then
+              sva_rec = stack_varargs_nm[stack_match_nm]
+              sva_items = try(sva_rec[1].items)
+              if typeof(sva_items) != "array" then sva_items = [] end if
+              sva_base = stack_region_nm + sva_rec[2]
+              if len(sva_items) > 0 then
+                for svi = 0 to len(sva_items) - 1
+                  state = cg_emit_expr(state, sva_items[svi])
+                  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", sva_base + 8 + svi * 8, "rax")
+                end for
+              end if
+              state.asm = a.lea_r64_membase_disp(state.asm, "rax", "rsp", sva_base)
+            else
+              state = cg_emit_expr(state, arg_nm)
+            end if
           end if
         else
           state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", call_args_base + argi_nm * 8)
@@ -7615,7 +7777,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
       state.asm = a.mark(state.asm, devirt_done_lbl_nm)
     end if
 
-    state = core.free_expr_temps(state, (nargs + 1) * 8 + diag_extra_nm)
+    state = core.free_expr_temps(state, temp_bytes_nm)
     void_imm_nm = t.enc_void()
     if nargs > 4 then
       for clr_nm = 4 to nargs - 1
@@ -9180,6 +9342,58 @@ function _inline_collect_stmt_stats(st, stats)
   return 6
 end function
 
+function _function_wants_inline(fn)
+  if typeof(fn) != "struct" then return false end if
+  if typeof(try(fn.is_inline)) == "bool" and fn.is_inline then return true end if
+  if typeof(try(fn.is_synchronized)) == "bool" and fn.is_synchronized then return false end if
+  name = _coerce_name(try(fn.name))
+  generated_lambda = s.startsWith(name, "__ml_lambda_")
+  variadic = try(fn.variadic_index)
+  if typeof(variadic) == "int" and variadic >= 0 then return false end if
+  params = try(fn.params)
+  types = try(fn.param_types)
+  if typeof(params) != "array" then return false end if
+  if typeof(types) != "array" then types = [] end if
+  if generated_lambda == false and len(params) != len(types) then return false end if
+  if generated_lambda == false and len(types) > 0 then
+    for i = 0 to len(types) - 1
+      if typeof(types[i]) != "string" or types[i] == "" then return false end if
+    end for
+  end if
+  fully_typed = typeof(try(fn.return_type)) == "string" and fn.return_type != ""
+  if fully_typed == false and generated_lambda == false then return false end if
+  body = try(fn.body)
+  if typeof(body) != "array" or len(body) <= 0 or t.ast_kind(body[len(body) - 1]) != "Return" then return false end if
+  if len(body) > 1 then
+    for bi = 0 to len(body) - 2
+      guard = body[bi]
+      if t.ast_kind(guard) != "Assign" or _intflow_name_has(params, _coerce_name(try(guard.name))) == false or t.ast_kind(try(guard.expr)) != "TypeGuard" then return false end if
+    end for
+  end if
+  return true
+end function
+
+function _call_args_have_stack_variadic(args)
+  if typeof(args) != "array" or len(args) <= 0 then return false end if
+  for i = 0 to len(args) - 1
+    arg = args[i]
+    if typeof(arg) == "struct" and t.ast_kind(arg) == "ArrayLit" and typeof(try(arg.stack_variadic)) == "bool" and arg.stack_variadic then return true end if
+  end for
+  return false
+end function
+
+function _inline_declared_type_fact(state, raw_type)
+  if typeof(raw_type) != "string" or raw_type == "" then return "" end if
+  lower = s.toLowerAscii(raw_type)
+  if lower == "integer" then lower = "int" end if
+  if lower == "boolean" then lower = "bool" end if
+  if lower == "str" then lower = "string" end if
+  if lower == "int" or lower == "float" or lower == "bool" or lower == "string" or lower == "array" or lower == "bytes" or lower == "function" or lower == "thread" or lower == "error" or lower == "void" then return lower end if
+  qualified = _qualify_identifier(state, raw_type)
+  if qualified == "" then qualified = raw_type end if
+  return "struct:" + qualified
+end function
+
 function _inline_call_eligible(fn)
   if typeof(fn) != "struct" then return false end if
   stats = InlineStats(0, 0, 0, 0, 0, false, false, false)
@@ -9262,6 +9476,7 @@ function _emit_inline_call(state, callee, args)
   saved_env_index = state.current_fn_env_index
   saved_param_names = try(state.current_fn_param_names)
   saved_known_value_types = state.known_value_types
+  saved_known_int_names = state.known_int_names
   saved_loop_index_fast_stack = state.loop_index_fast_stack
 
   base_globals = []
@@ -9286,7 +9501,24 @@ function _emit_inline_call(state, callee, args)
   state.current_fn_param_names = params
   state.in_function = true
   state.func_ret_label = l_end
-  state.known_value_types = []
+  state.known_value_types = t.fastmap_new(64)
+  state.known_int_names = t.fastmap_new(64)
+  param_types = try(fn.param_types)
+  param_optional = try(fn.param_optional)
+  if typeof(param_types) != "array" then param_types = [] end if
+  if typeof(param_optional) != "array" then param_optional = [] end if
+  if len(params) > 0 then
+    for pti = 0 to len(params) - 1
+      optional = false
+      if pti < len(param_optional) and typeof(param_optional[pti]) == "bool" then optional = param_optional[pti] end if
+      if optional or pti >= len(param_types) then continue end if
+      fact = _inline_declared_type_fact(state, param_types[pti])
+      if fact == "" then continue end if
+      pname = _coerce_name(params[pti])
+      state.known_value_types = t.fastmap_set(state.known_value_types, pname, fact)
+      if _opt_type_base(fact) == "int" then state.known_int_names = t.fastmap_set(state.known_int_names, pname, 1) end if
+    end for
+  end if
   state.loop_index_fast_stack = []
 
   dot = -1
@@ -9359,6 +9591,7 @@ function _emit_inline_call(state, callee, args)
   state.current_fn_env_index = saved_env_index
   state.current_fn_param_names = saved_param_names
   state.known_value_types = saved_known_value_types
+  state.known_int_names = saved_known_int_names
   state.loop_index_fast_stack = saved_loop_index_fast_stack
 
   delta = state.expr_temp_top - base_top

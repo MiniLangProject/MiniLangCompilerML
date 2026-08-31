@@ -134,11 +134,19 @@ if (-not $objectCompile.Success) {
   # Every managed value read after the stride collection must be present in
   # the explicit root frontier. Missing paths were previously hidden by
   # --mem-probe and crashed a plain self-build immediately after object 127.
-  foreach ($rootName in @("tmp_dir", "input_abs", "entry_path", "runtime_config")) {
+  foreach ($rootName in @("tmp_dir", "input_abs", "entry_path", "runtime_config", "output_exe")) {
     if (-not [Regex]::IsMatch(
         $objectCompile.Value,
         "_compile_codegen_keepalive\s*=\s*\[[^\]]*\b$rootName\b[^\]]*\]")) {
       $failures += "mlc\compiler.ml: object-emission GC frontier does not root '$rootName'"
+    }
+  }
+  if (-not [Regex]::IsMatch($objectCompile.Value, "object_gc_roots\s*=\s*_compile_codegen_keepalive")) {
+    $failures += "mlc\compiler.ml: object-emission GC frontier is not reloaded after collection"
+  }
+  foreach ($reloadName in @("load", "cg", "mod_cg", "fn_entries", "tmp_dir", "output_exe")) {
+    if (-not [Regex]::IsMatch($objectCompile.Value, "\b$reloadName\s*=\s*object_gc_roots\s*\[")) {
+      $failures += "mlc\compiler.ml: object-emission GC frontier does not reload '$reloadName'"
     }
   }
 }

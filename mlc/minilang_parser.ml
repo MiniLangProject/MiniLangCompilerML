@@ -104,6 +104,9 @@ end struct
 struct ArrayLit
   node_kind,
   items,
+  // Internal-only marker: a proven non-escaping variadic tail may live in the
+  // caller's rooted expression stack instead of allocating a heap array.
+  stack_variadic,
   _pos,
   _filename,
 end struct
@@ -1399,6 +1402,14 @@ function _decode_string_raw(raw, pos)
   return decoded.toString()
 end function
 
+function _peek3()
+  global _tokens, _i
+  count = _token_count(_tokens)
+  if count <= 0 then return -1 end if
+  if _i + 2 < count then return _i + 2 end if
+  return count - 1
+end function
+
 function _decode_string_token(tok)
   if _tok_kind_id(tok) != TK_STRING then
     _set_error("Expect STRING literal", _tok_pos(tok))
@@ -1493,7 +1504,7 @@ function _parse_primary()
     _advance()
     items = _parse_expr_list(TK_RBRACK)
     if _has_error() then return end if
-    return ArrayLit("ArrayLit", items, sp, _filename)
+    return ArrayLit("ArrayLit", items, false, sp, _filename)
   end if
 
   if _tok_kind_id(tok) == TK_KW and _tok_value(tok) == "function" then
@@ -1546,7 +1557,7 @@ function _parse_primary()
       end for
     end if
     callee = t.ast_leaf_new("Var", "__ml_select", sp, _filename)
-    return Call("Call", callee, [ArrayLit("ArrayLit", parsed_args.values, sp, _filename)], [], sp, _filename)
+    return Call("Call", callee, [ArrayLit("ArrayLit", parsed_args.values, false, sp, _filename)], [], sp, _filename)
   end if
 
   if _tok_kind_id(tok) == TK_NUMBER then
@@ -2366,7 +2377,8 @@ function _parse_stmt()
     return _parse_stmt_enum(start_pos, t)
   end if
 
-  if kind == TK_KW and(value == "function" or value == "async" or value == "iterator") then
+  is_lazy_iterator = kind == TK_IDENT and value == "lazy" and _tok_kind_id(_peek2()) == TK_KW and _tok_value(_peek2()) == "iterator" and _tok_kind_id(_peek3()) == TK_KW and _tok_value(_peek3()) == "function"
+  if (kind == TK_KW and(value == "function" or value == "async" or value == "iterator")) or is_lazy_iterator then
     return _parse_stmt_function(start_pos, t)
   end if
 
@@ -2957,9 +2969,16 @@ function _parse_stmt_function(start_pos, t)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   prefix = _tok_value(t)
   is_async = prefix == "async"
-  is_iterator = prefix == "iterator"
+  is_lazy_iterator = prefix == "lazy"
+  is_iterator = false
+  if is_lazy_iterator then is_iterator = 2 else is_iterator = prefix == "iterator" end if
   _advance()
-  if is_async or is_iterator then
+  if is_lazy_iterator then
+    _expect_value(TK_KW, "iterator")
+    if _has_error() then return end if
+    _expect_value(TK_KW, "function")
+    if _has_error() then return end if
+  else if is_async or is_iterator then
     _expect_value(TK_KW, "function")
     if _has_error() then return end if
   end if
@@ -3848,6 +3867,8 @@ end function
 _language_serial = 0
 _language_needs_await = false
 _language_needs_select = false
+_language_needs_async_pool = false
+_language_async_pool_name = "__ml_async_pool_global"
 _language_await_pos = 0
 _language_await_file = ""
 _language_select_pos = 0
@@ -4143,11 +4164,374 @@ function _lang_lower_iterator(fn)
   return fn
 end function
 
+// Mutable construction state for a lazy iterator's pull-closure state machine.
+// Integer state IDs keep suspension/resumption explicit and avoid materializing
+// yielded elements in an intermediate array.
+struct LazyIteratorState
+  fn,
+  state_name,
+  blocks,
+  persistent,
+  globals_declared,
+end struct
+
+function _lang_add_unique(items, value)
+  if _contains(items, value) == false then items = items + [value] end if
+  return items
+end function
+
+function _lang_sort_strings(items)
+  result = []
+  if typeof(items) != "array" then return result end if
+  if len(items) > 0 then
+    for i = 0 to len(items) - 1
+      value = items[i]
+      inserted = false
+      next = []
+      if len(result) > 0 then
+        for j = 0 to len(result) - 1
+          if inserted == false and _compile_string_compare(value, result[j]) < 0 then
+            next = next + [value]
+            inserted = true
+          end if
+          next = next + [result[j]]
+        end for
+      end if
+      if inserted == false then next = next + [value] end if
+      result = next
+    end for
+  end if
+  return result
+end function
+
+function _lang_lazy_reserve(state)
+  state.blocks = state.blocks + [[]]
+  return [state, len(state.blocks) - 1]
+end function
+
+function _lang_lazy_jump(state, target, node)
+  generated_file = "__ml_generated__"
+  target_node = t.ast_leaf_new("Num", target, 0, generated_file)
+  assign_state = Assign("Assign", state.state_name, target_node, 0, false, 0, generated_file)
+  return [assign_state, Continue("Continue", 0, generated_file)]
+end function
+
+function _lang_lazy_contains_yield(st)
+  kind = t.ast_kind(st)
+  if kind == "Yield" then return true end if
+  if kind == "FunctionDef" then return false end if
+  if kind == "If" then
+    if typeof(st.then_body) == "array" and len(st.then_body) > 0 then
+      for i = 0 to len(st.then_body) - 1
+        if _lang_lazy_contains_yield(st.then_body[i]) then return true end if
+      end for
+    end if
+    if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
+      for i = 0 to len(st.elifs) - 1
+        branch = st.elifs[i][1]
+        if len(branch) > 0 then
+          for j = 0 to len(branch) - 1
+            if _lang_lazy_contains_yield(branch[j]) then return true end if
+          end for
+        end if
+      end for
+    end if
+    if typeof(st.else_body) == "array" and len(st.else_body) > 0 then
+      for i = 0 to len(st.else_body) - 1
+        if _lang_lazy_contains_yield(st.else_body[i]) then return true end if
+      end for
+    end if
+    return false
+  end if
+  if kind == "Switch" then
+    if typeof(st.cases) == "array" and len(st.cases) > 0 then
+      for i = 0 to len(st.cases) - 1
+        body = st.cases[i].body
+        if len(body) > 0 then
+          for j = 0 to len(body) - 1
+            if _lang_lazy_contains_yield(body[j]) then return true end if
+          end for
+        end if
+      end for
+    end if
+    if typeof(st.default_body) == "array" and len(st.default_body) > 0 then
+      for i = 0 to len(st.default_body) - 1
+        if _lang_lazy_contains_yield(st.default_body[i]) then return true end if
+      end for
+    end if
+    return false
+  end if
+  body = try(st.body)
+  if typeof(body) == "array" and len(body) > 0 then
+    for i = 0 to len(body) - 1
+      if _lang_lazy_contains_yield(body[i]) then return true end if
+    end for
+  end if
+  return false
+end function
+
+function _lang_lazy_collect_names(state, body)
+  if typeof(body) != "array" or len(body) <= 0 then return state end if
+  for i = 0 to len(body) - 1
+    st = body[i]
+    kind = t.ast_kind(st)
+    if kind == "GlobalDecl" then
+      if len(st.names) > 0 then
+        for j = 0 to len(st.names) - 1
+          state.globals_declared = _lang_add_unique(state.globals_declared, st.names[j])
+        end for
+      end if
+      continue
+    end if
+    if kind == "Assign" or kind == "ConstDecl" or kind == "SynchronizedDecl" then
+      state.persistent = _lang_add_unique(state.persistent, st.name)
+    else if kind == "For" or kind == "ForEach" then
+      state.persistent = _lang_add_unique(state.persistent, st.var)
+    else if kind == "FunctionDef" then
+      state.persistent = _lang_add_unique(state.persistent, st.name)
+      continue
+    end if
+    if kind == "If" then
+      state = _lang_lazy_collect_names(state, st.then_body)
+      if len(st.elifs) > 0 then
+        for j = 0 to len(st.elifs) - 1
+          state = _lang_lazy_collect_names(state, st.elifs[j][1])
+        end for
+      end if
+      state = _lang_lazy_collect_names(state, st.else_body)
+    else if kind == "Switch" then
+      if len(st.cases) > 0 then
+        for j = 0 to len(st.cases) - 1
+          state = _lang_lazy_collect_names(state, st.cases[j].body)
+        end for
+      end if
+      state = _lang_lazy_collect_names(state, st.default_body)
+    else
+      nested = try(st.body)
+      if typeof(nested) == "array" then state = _lang_lazy_collect_names(state, nested) end if
+    end if
+  end for
+  return state
+end function
+
+function _lang_lazy_compile_seq(state, body, cont, break_target, continue_target)
+  current = cont
+  if typeof(body) != "array" or len(body) <= 0 then return [state, current] end if
+  for reverse_i = 0 to len(body) - 1
+    st = body[len(body) - reverse_i - 1]
+    kind = t.ast_kind(st)
+    if kind == "Yield" then
+      generated_file = "__ml_generated__"
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      block = reserved[1]
+      value = try(st.expr)
+      if typeof(value) == "void" or value == 0 then value = t.ast_leaf_new("VoidLit", 0, 0, generated_file) end if
+      if typeof(state.fn.return_type) == "string" then
+        value = TypeGuard("TypeGuard", value, state.fn.return_type, state.fn.return_optional, 0, generated_file)
+      end if
+      state.blocks[block] = [Assign("Assign", state.state_name, t.ast_leaf_new("Num", current, 0, generated_file), 0, false, 0, generated_file), Return("Return", value, 0, generated_file)]
+      current = block
+      continue
+    end if
+    if kind == "Return" then
+      _lang_fail("iterator functions use yield and cannot return a value")
+      return [state, current]
+    end if
+    if kind == "Break" then
+      if st.count != 1 or typeof(break_target) != "int" or break_target < 0 then
+        _lang_fail("lazy iterators only support break for the innermost loop")
+        return [state, current]
+      end if
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      block = reserved[1]
+      state.blocks[block] = _lang_lazy_jump(state, break_target, st)
+      current = block
+      continue
+    end if
+    if kind == "Continue" then
+      if typeof(continue_target) != "int" or continue_target < 0 then
+        _lang_fail("continue outside a lazy-iterator loop")
+        return [state, current]
+      end if
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      block = reserved[1]
+      state.blocks[block] = _lang_lazy_jump(state, continue_target, st)
+      current = block
+      continue
+    end if
+    if kind == "If" then
+      compiled = _lang_lazy_compile_seq(state, st.then_body, current, break_target, continue_target)
+      state = compiled[0]
+      then_entry = compiled[1]
+      compiled = _lang_lazy_compile_seq(state, st.else_body, current, break_target, continue_target)
+      state = compiled[0]
+      else_entry = compiled[1]
+      elif_entries = []
+      if len(st.elifs) > 0 then
+        for i = 0 to len(st.elifs) - 1
+          compiled = _lang_lazy_compile_seq(state, st.elifs[i][1], current, break_target, continue_target)
+          state = compiled[0]
+          elif_entries = elif_entries + [[st.elifs[i][0], compiled[1]]]
+        end for
+      end if
+      branch_elifs = []
+      if len(elif_entries) > 0 then
+        for i = 0 to len(elif_entries) - 1
+          branch_elifs = branch_elifs + [[elif_entries[i][0], _lang_lazy_jump(state, elif_entries[i][1], st)]]
+        end for
+      end if
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      branch = reserved[1]
+      state.blocks[branch] = [If("If", st.cond, _lang_lazy_jump(state, then_entry, st), branch_elifs, _lang_lazy_jump(state, else_entry, st), 0, "__ml_generated__")]
+      current = branch
+      continue
+    end if
+    if kind == "While" or kind == "DoWhile" then
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      cond_block = reserved[1]
+      compiled = _lang_lazy_compile_seq(state, st.body, cond_block, current, cond_block)
+      state = compiled[0]
+      body_entry = compiled[1]
+      state.blocks[cond_block] = [If("If", st.cond, _lang_lazy_jump(state, body_entry, st), [], _lang_lazy_jump(state, current, st), 0, "__ml_generated__")]
+      if kind == "DoWhile" then current = body_entry else current = cond_block end if
+      continue
+    end if
+    if kind == "For" then
+      generated_file = "__ml_generated__"
+      end_name = _lang_fresh("lazy_for_end")
+      step_name = _lang_fresh("lazy_for_step")
+      state.persistent = _lang_add_unique(state.persistent, st.var)
+      state.persistent = _lang_add_unique(state.persistent, end_name)
+      state.persistent = _lang_add_unique(state.persistent, step_name)
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      cond_block = reserved[1]
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      inc_block = reserved[1]
+      compiled = _lang_lazy_compile_seq(state, st.body, inc_block, current, inc_block)
+      state = compiled[0]
+      body_entry = compiled[1]
+      positive = t.ast_bin_new(t.ast_leaf_new("Var", step_name, 0, generated_file), ">", t.ast_leaf_new("Num", 0, 0, generated_file), 0, generated_file)
+      within_up = t.ast_bin_new(t.ast_leaf_new("Var", st.var, 0, generated_file), "<=", t.ast_leaf_new("Var", end_name, 0, generated_file), 0, generated_file)
+      within_down = t.ast_bin_new(t.ast_leaf_new("Var", st.var, 0, generated_file), ">=", t.ast_leaf_new("Var", end_name, 0, generated_file), 0, generated_file)
+      up = t.ast_bin_new(positive, "and", within_up, 0, generated_file)
+      down = t.ast_bin_new(Unary("Unary", "not", positive, 0, generated_file), "and", within_down, 0, generated_file)
+      condition = t.ast_bin_new(up, "or", down, 0, generated_file)
+      state.blocks[cond_block] = [If("If", condition, _lang_lazy_jump(state, body_entry, st), [], _lang_lazy_jump(state, current, st), 0, generated_file)]
+      increment = t.ast_bin_new(t.ast_leaf_new("Var", st.var, 0, generated_file), "+", t.ast_leaf_new("Var", step_name, 0, generated_file), 0, generated_file)
+      state.blocks[inc_block] = [Assign("Assign", st.var, increment, 0, false, 0, generated_file)] + _lang_lazy_jump(state, cond_block, st)
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      init_block = reserved[1]
+      choose_step_cond = t.ast_bin_new(t.ast_leaf_new("Var", st.var, 0, generated_file), "<=", t.ast_leaf_new("Var", end_name, 0, generated_file), 0, generated_file)
+      choose_step = If("If", choose_step_cond, [Assign("Assign", step_name, t.ast_leaf_new("Num", 1, 0, generated_file), 0, false, 0, generated_file)], [], [Assign("Assign", step_name, t.ast_leaf_new("Num", -1, 0, generated_file), 0, false, 0, generated_file)], 0, generated_file)
+      state.blocks[init_block] = [Assign("Assign", st.var, st.start, 0, false, 0, generated_file), Assign("Assign", end_name, st.end_expr, 0, false, 0, generated_file), choose_step] + _lang_lazy_jump(state, cond_block, st)
+      current = init_block
+      continue
+    end if
+    if kind == "ForEach" then
+      generated_file = "__ml_generated__"
+      seq_name = _lang_fresh("lazy_each_seq")
+      index_name = _lang_fresh("lazy_each_index")
+      state.persistent = _lang_add_unique(state.persistent, st.var)
+      state.persistent = _lang_add_unique(state.persistent, seq_name)
+      state.persistent = _lang_add_unique(state.persistent, index_name)
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      cond_block = reserved[1]
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      inc_block = reserved[1]
+      compiled = _lang_lazy_compile_seq(state, st.body, inc_block, current, inc_block)
+      state = compiled[0]
+      body_entry = compiled[1]
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      load_block = reserved[1]
+      load_value = Index("Index", t.ast_leaf_new("Var", seq_name, 0, generated_file), t.ast_leaf_new("Var", index_name, 0, generated_file), 0, generated_file)
+      state.blocks[load_block] = [Assign("Assign", st.var, load_value, 0, false, 0, generated_file)] + _lang_lazy_jump(state, body_entry, st)
+      len_call = Call("Call", t.ast_leaf_new("Var", "len", 0, generated_file), [t.ast_leaf_new("Var", seq_name, 0, generated_file)], [], 0, generated_file)
+      condition = t.ast_bin_new(t.ast_leaf_new("Var", index_name, 0, generated_file), "<", len_call, 0, generated_file)
+      state.blocks[cond_block] = [If("If", condition, _lang_lazy_jump(state, load_block, st), [], _lang_lazy_jump(state, current, st), 0, generated_file)]
+      increment = t.ast_bin_new(t.ast_leaf_new("Var", index_name, 0, generated_file), "+", t.ast_leaf_new("Num", 1, 0, generated_file), 0, generated_file)
+      state.blocks[inc_block] = [Assign("Assign", index_name, increment, 0, false, 0, generated_file)] + _lang_lazy_jump(state, cond_block, st)
+      reserved = _lang_lazy_reserve(state)
+      state = reserved[0]
+      init_block = reserved[1]
+      state.blocks[init_block] = [Assign("Assign", seq_name, st.iterable, 0, false, 0, generated_file), Assign("Assign", index_name, t.ast_leaf_new("Num", 0, 0, generated_file), 0, false, 0, generated_file)] + _lang_lazy_jump(state, cond_block, st)
+      current = init_block
+      continue
+    end if
+    if (kind == "Switch" or kind == "SynchronizedBlock") and _lang_lazy_contains_yield(st) then
+      _lang_fail("yield inside match/switch or synchronized is not supported by lazy iterators")
+      return [state, current]
+    end if
+    if kind == "Defer" then
+      _lang_fail("defer is not supported inside a lazy iterator")
+      return [state, current]
+    end if
+    simple = st
+    if kind == "ConstDecl" then simple = Assign("Assign", st.name, st.expr, 0, false, 0, "__ml_generated__") end if
+    reserved = _lang_lazy_reserve(state)
+    state = reserved[0]
+    block = reserved[1]
+    state.blocks[block] = [simple] + _lang_lazy_jump(state, current, st)
+    current = block
+  end for
+  return [state, current]
+end function
+
+function _lang_lower_lazy_iterator(fn)
+  if fn.is_async then _lang_fail("A function cannot be both async and iterator") return fn end if
+  state_name = _lang_fresh("lazy_state")
+  next_name = _lang_fresh("lazy_next")
+  state = LazyIteratorState(fn, state_name, [], [state_name], [])
+  state = _lang_lazy_collect_names(state, fn.body)
+  reserved = _lang_lazy_reserve(state)
+  state = reserved[0]
+  done = reserved[1]
+  generated_file = "__ml_generated__"
+  state.blocks[done] = [Return("Return", t.ast_leaf_new("VoidLit", 0, 0, generated_file), 0, generated_file)]
+  compiled = _lang_lazy_compile_seq(state, fn.body, done, -1, -1)
+  state = compiled[0]
+  entry = compiled[1]
+  cases = []
+  if len(state.blocks) > 0 then
+    for i = 0 to len(state.blocks) - 1
+      cases = cases + [SwitchCase("SwitchCase", "values", [t.ast_leaf_new("Num", i, 0, generated_file)], 0, 0, state.blocks[i], 0, generated_file)]
+    end for
+  end if
+  dispatch = Switch("Switch", t.ast_leaf_new("Var", state_name, 0, generated_file), cases, [Return("Return", t.ast_leaf_new("VoidLit", 0, 0, generated_file), 0, generated_file)], 0, generated_file)
+  next_fn = _new_function_node(next_name, [], [While("While", t.ast_leaf_new("Bool", true, 0, generated_file), [dispatch], 0, generated_file)], false, false, false, [], [], [], -1, 0, false, false, false, t.ast_pos(fn), t.ast_filename(fn))
+  initializers = []
+  names = _lang_sort_strings(state.persistent)
+  if len(names) > 0 then
+    for i = 0 to len(names) - 1
+      name = names[i]
+      if name == state_name or _contains(fn.params, name) or _contains(state.globals_declared, name) then continue end if
+      initializers = initializers + [Assign("Assign", name, _lang_void(fn), 0, false, t.ast_pos(fn), t.ast_filename(fn))]
+    end for
+  end if
+  initializers = initializers + [Assign("Assign", state_name, _lang_num(entry, fn), 0, false, t.ast_pos(fn), t.ast_filename(fn))]
+  fn.body = initializers + [next_fn, Return("Return", _lang_var(next_name, fn), t.ast_pos(fn), t.ast_filename(fn))]
+  fn.return_type = 0
+  fn.return_optional = false
+  fn.is_iterator = false
+  return fn
+end function
+
 function _lang_lower_async(fn)
+  global _language_needs_async_pool, _language_async_pool_name
   impl_name = _lang_fresh("async_impl")
   entry_name = _lang_fresh("async_entry")
   arg_name = _lang_fresh("async_args")
-  thread_name = _lang_fresh("async_thread")
+  _language_needs_async_pool = true
   // The wrapper has already packed a variadic tail, so the implementation ABI
   // is fixed even when the public declaration was variadic.
   impl = _new_function_node(impl_name, fn.params, fn.body, false, false, false, fn.param_types, fn.param_optional, [], -1, fn.return_type, fn.return_optional, false, false, t.ast_pos(fn), t.ast_filename(fn))
@@ -4165,13 +4549,13 @@ function _lang_lower_async(fn)
       packed_items = packed_items + [_lang_var(fn.params[i], fn)]
     end for
   end if
-  packed = ArrayLit("ArrayLit", packed_items, t.ast_pos(fn), "__ml_generated__")
-  create_thread = Call("Call", _lang_var("Thread", fn), [_lang_var(entry_name, fn)], [], t.ast_pos(fn), "__ml_generated__")
-  assign_thread = Assign("Assign", thread_name, create_thread, 0, false, t.ast_pos(fn), "__ml_generated__")
-  start_member = Member("Member", _lang_var(thread_name, fn), "Start", t.ast_pos(fn), "__ml_generated__")
-  start_call = ExprStmt("ExprStmt", Call("Call", start_member, [packed], [], t.ast_pos(fn), "__ml_generated__"), t.ast_pos(fn), "__ml_generated__")
-  wrapper_body = [assign_thread, start_call, Return("Return", _lang_var(thread_name, fn), t.ast_pos(fn), "__ml_generated__")]
-  wrapper = _new_function_node(fn.name, fn.params, wrapper_body, fn.is_static, false, false, fn.param_types, fn.param_optional, fn.param_defaults, fn.variadic_index, fn.return_type, fn.return_optional, false, false, t.ast_pos(fn), t.ast_filename(fn))
+  packed = ArrayLit("ArrayLit", packed_items, false, t.ast_pos(fn), "__ml_generated__")
+  submit_member = Member("Member", _lang_var(_language_async_pool_name, fn), "Submit", t.ast_pos(fn), "__ml_generated__")
+  submit_call = Call("Call", submit_member, [_lang_var(entry_name, fn), packed], [], t.ast_pos(fn), "__ml_generated__")
+  wrapper_body = [Return("Return", submit_call, t.ast_pos(fn), "__ml_generated__")]
+  // The public async function returns a job handle. Its declared return type
+  // still describes the value produced by await, not the wrapper itself.
+  wrapper = _new_function_node(fn.name, fn.params, wrapper_body, fn.is_static, false, false, fn.param_types, fn.param_optional, fn.param_defaults, fn.variadic_index, 0, false, false, false, t.ast_pos(fn), t.ast_filename(fn))
   return [impl, entry, wrapper]
 end function
 
@@ -4180,9 +4564,12 @@ function _lang_await_helper()
   node = _new_function_node("__ml_await", ["value"], [], false, false, false, [], [], [], -1, 0, false, false, false, _language_await_pos, _language_await_file)
   value = _lang_var("value", node)
   cond = t.ast_bin_new(_lang_call("typeof", [value], node), "==", t.ast_leaf_new("Str", "thread", 0, "__ml_generated__"), 0, "__ml_generated__")
+  is_job = IsType("IsType", value, "std.concurrent.thread_pool.ThreadPoolJob", false, 0, "__ml_generated__")
   join_call = ExprStmt("ExprStmt", Call("Call", Member("Member", value, "Join", 0, "__ml_generated__"), [], [], 0, "__ml_generated__"), 0, "__ml_generated__")
   result_call = Call("Call", Member("Member", value, "Result", 0, "__ml_generated__"), [], [], 0, "__ml_generated__")
-  node.body = [If("If", cond, [join_call, Return("Return", result_call, 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), Return("Return", value, 0, "__ml_generated__")]
+  wait_job = ExprStmt("ExprStmt", Call("Call", Member("Member", value, "Wait", 0, "__ml_generated__"), [], [], 0, "__ml_generated__"), 0, "__ml_generated__")
+  job_result = Call("Call", Member("Member", value, "GetResult", 0, "__ml_generated__"), [], [], 0, "__ml_generated__")
+  node.body = [If("If", cond, [join_call, Return("Return", result_call, 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), If("If", is_job, [wait_job, Return("Return", job_result, 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), Return("Return", value, 0, "__ml_generated__")]
   return node
 end function
 
@@ -4197,11 +4584,16 @@ function _lang_select_helper()
   both = t.ast_bin_new(valid, "and", nonempty, 0, "__ml_generated__")
   invalid = Unary("Unary", "not", both, 0, "__ml_generated__")
   assign_handle = Assign("Assign", "__ml_select_handle", Index("Index", handles, idx, 0, "__ml_generated__"), 0, false, 0, "__ml_generated__")
-  not_thread = t.ast_bin_new(_lang_call("typeof", [handle], node), "!=", t.ast_leaf_new("Str", "thread", 0, "__ml_generated__"), 0, "__ml_generated__")
+  is_thread = t.ast_bin_new(_lang_call("typeof", [handle], node), "==", t.ast_leaf_new("Str", "thread", 0, "__ml_generated__"), 0, "__ml_generated__")
+  is_job = IsType("IsType", handle, "std.concurrent.thread_pool.ThreadPoolJob", false, 0, "__ml_generated__")
+  valid_handle = t.ast_bin_new(is_thread, "or", is_job, 0, "__ml_generated__")
+  invalid_handle = Unary("Unary", "not", valid_handle, 0, "__ml_generated__")
   alive_call = Call("Call", Member("Member", handle, "IsAlive", 0, "__ml_generated__"), [], [], 0, "__ml_generated__")
-  completed = Unary("Unary", "not", alive_call, 0, "__ml_generated__")
-  join_call = ExprStmt("ExprStmt", Call("Call", Member("Member", handle, "Join", 0, "__ml_generated__"), [], [], 0, "__ml_generated__"), 0, "__ml_generated__")
-  check_loop = For("For", "__ml_select_i", _lang_num(0, node), t.ast_bin_new(_lang_call("len", [handles], node), "-", _lang_num(1, node), 0, "__ml_generated__"), [assign_handle, If("If", not_thread, [Return("Return", idx, 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), If("If", completed, [join_call, Return("Return", idx, 0, "__ml_generated__")], [], [], 0, "__ml_generated__")], 0, "__ml_generated__")
+  completed_thread = t.ast_bin_new(is_thread, "and", Unary("Unary", "not", alive_call, 0, "__ml_generated__"), 0, "__ml_generated__")
+  done_call = Call("Call", Member("Member", handle, "IsDone", 0, "__ml_generated__"), [], [], 0, "__ml_generated__")
+  completed_job = t.ast_bin_new(is_job, "and", done_call, 0, "__ml_generated__")
+  completed = t.ast_bin_new(completed_thread, "or", completed_job, 0, "__ml_generated__")
+  check_loop = For("For", "__ml_select_i", _lang_num(0, node), t.ast_bin_new(_lang_call("len", [handles], node), "-", _lang_num(1, node), 0, "__ml_generated__"), [assign_handle, If("If", invalid_handle, [Return("Return", idx, 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), If("If", completed, [Return("Return", idx, 0, "__ml_generated__")], [], [], 0, "__ml_generated__")], 0, "__ml_generated__")
   sleep_call = ExprStmt("ExprStmt", _lang_call("threadSleep", [_lang_num(1, node)], node), 0, "__ml_generated__")
   wait_loop = While("While", t.ast_leaf_new("Bool", true, 0, "__ml_generated__"), [check_loop, sleep_call], 0, "__ml_generated__")
   node.body = [If("If", invalid, [Return("Return", _lang_num(-1, node), 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), wait_loop, Return("Return", _lang_num(-1, node), 0, "__ml_generated__")]
@@ -4216,7 +4608,9 @@ function _lang_lower_stmt(st, function_depth)
   else if kind == "FunctionDef" then
     st = _lang_apply_contracts(st)
     st.body = _lang_lower_block(st.body, function_depth + 1)
-    if st.is_iterator then st = _lang_lower_iterator(st) end if
+    if st.is_iterator then
+      if st.is_iterator == 2 then st = _lang_lower_lazy_iterator(st) else st = _lang_lower_iterator(st) end if
+    end if
     if st.is_async then
       if function_depth > 0 then _lang_fail("async functions must be declared at module or namespace scope") return [st] end if
       return _lang_lower_async(st)
@@ -4226,7 +4620,9 @@ function _lang_lower_stmt(st, function_depth)
       for i = 0 to len(st.methods) - 1
         method = _lang_apply_contracts(st.methods[i])
         method.body = _lang_lower_block(method.body, function_depth + 1)
-        if method.is_iterator then method = _lang_lower_iterator(method) end if
+        if method.is_iterator then
+          if method.is_iterator == 2 then method = _lang_lower_lazy_iterator(method) else method = _lang_lower_iterator(method) end if
+        end if
         st.methods[i] = method
       end for
     end if
@@ -4445,10 +4841,11 @@ function _lang_remove_interfaces(body)
 end function
 
 function prepare_language_features(program)
-  global _language_serial, _language_needs_await, _language_needs_select, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file, _language_failure
+  global _language_serial, _language_needs_await, _language_needs_select, _language_needs_async_pool, _language_async_pool_name, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file, _language_failure
   _language_serial = 0
   _language_needs_await = false
   _language_needs_select = false
+  _language_needs_async_pool = false
   _language_await_pos = 0
   _language_await_file = ""
   _language_select_pos = 0
@@ -4462,6 +4859,20 @@ function prepare_language_features(program)
   helpers = []
   if _language_needs_await then helpers = helpers + [_lang_await_helper()] end if
   if _language_needs_select then helpers = helpers + [_lang_select_helper()] end if
+  if _language_needs_async_pool then
+    // The pool initializer is generated infrastructure. A neutral source
+    // position avoids attributing its machine code to a user's await line and
+    // keeps the Python and self-hosted debug tables byte-identical.
+    generated_file = "__ml_generated__"
+    std_var = t.ast_leaf_new("Var", "std", 0, generated_file)
+    std_member = Member("Member", std_var, "concurrent", 0, generated_file)
+    concurrent_member = Member("Member", std_member, "thread_pool", 0, generated_file)
+    pool_type = Member("Member", concurrent_member, "ThreadPool", 0, generated_file)
+    pool_new = Member("Member", pool_type, "new", 0, generated_file)
+    pool_count = t.ast_leaf_new("Num", 4, 0, generated_file)
+    pool_init = Assign("Assign", _language_async_pool_name, Call("Call", pool_new, [pool_count], [], 0, generated_file), 0, false, 0, generated_file)
+    helpers = [pool_init] + helpers
+  end if
   return helpers + lowered
 end function
 
