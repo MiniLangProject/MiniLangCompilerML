@@ -203,7 +203,8 @@ $buildArgs = @(
   "--gc-limit", "1536m",
   "--object-pipeline"
 )
-if (-not $NoBootstrapProbe) {
+$enableBootstrapProbe = -not $NoBootstrapProbe -and -not $script:CompilerIsPython
+if ($enableBootstrapProbe) {
   $buildArgs += "--mem-probe"
 }
 
@@ -215,8 +216,10 @@ if ($replaceFinal) {
 } else {
   Write-Host "Output:   $FinalOutput"
 }
-if (-not $NoBootstrapProbe) {
+if ($enableBootstrapProbe) {
   Write-Host "Bootstrap: mem-probe enabled"
+} elseif (-not $NoBootstrapProbe -and $script:CompilerIsPython) {
+  Write-Host "Bootstrap: mem-probe omitted for Python compiler"
 }
 
 $buildTimer = [System.Diagnostics.Stopwatch]::StartNew()

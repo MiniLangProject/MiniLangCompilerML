@@ -5,16 +5,19 @@ import std.fs as fs
 import std.process as process
 import std.string as s
 import std.sort as sort
+import std.io.file as fileio
+import std.checksum.crc32 as crc32
+import std.checksum.crc32c as crc32c
 import mlc.tools as t
 
 #if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" returns u32
-extern function GetFileAttributesExW(path as wstr, level as int, info as bytes) from "kernel32.dll" returns bool
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" returns bool
 extern function MoveFileExW(source as wstr, destination as wstr, flags as u32) from "kernel32.dll" returns bool
 #else
 extern function _project_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
 extern function _project_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
+extern function _project_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
 extern function _project_rename(source as cstr, destination as cstr) from "libc.so.6" symbol "rename" returns i32
 #endif
 
@@ -156,14 +159,41 @@ function _parse_string_array(value)
   if len(value) < 2 or value[0] != "[" or value[len(value) - 1] != "]" then return error(1, "expected array of strings") end if
   inner = s.trim(s.substr(value, 1, len(value) - 2))
   if inner == "" then return [] end if
-  raw = s.split(inner, ",")
-  result_items = []
-  for i = 0 to len(raw) - 1
-    item = _unquote(raw[i])
+  result_items = t.arr_vec_new(8)
+  i = 0
+  while i < len(inner)
+    while i < len(inner) and (inner[i] == " " or inner[i] == "\t" or inner[i] == "\r" or inner[i] == "\n")
+      i = i + 1
+    end while
+    if i >= len(inner) or inner[i] != "\"" then return error(1, "expected quoted string") end if
+    start = i
+    i = i + 1
+    escaped = false
+    while i < len(inner)
+      if escaped then
+        escaped = false
+      else if inner[i] == "\\" then
+        escaped = true
+      else if inner[i] == "\"" then
+        break
+      end if
+      i = i + 1
+    end while
+    if i >= len(inner) or inner[i] != "\"" then return error(1, "unterminated quoted string") end if
+    item = _unquote(s.substr(inner, start, i - start + 1))
     if typeof(item) == "error" then return item end if
-    result_items = result_items + [item]
-  end for
-  return result_items
+    result_items = t.arr_vec_push(result_items, item)
+    i = i + 1
+    while i < len(inner) and (inner[i] == " " or inner[i] == "\t" or inner[i] == "\r" or inner[i] == "\n")
+      i = i + 1
+    end while
+    if i < len(inner) then
+      if inner[i] != "," then return error(1, "expected comma between strings") end if
+      i = i + 1
+      if i >= len(inner) then return error(1, "trailing comma is not supported in project arrays") end if
+    end if
+  end while
+  return t.arr_vec_finish(result_items)
 end function
 
 function _is_known_key(key)
@@ -388,6 +418,135 @@ function _append_unique_path(paths, path)
   return paths + [path]
 end function
 
+function _project_word_char(source, index)
+  if index < 0 or index >= len(source) then return false end if
+  value = bytes(source[index])[0]
+  return (value >= 65 and value <= 90) or (value >= 97 and value <= 122) or (value >= 48 and value <= 57) or value == 95
+end function
+
+// Advance past whitespace and comments between the import keyword and path.
+function _skip_import_trivia(source, index)
+  i = index
+  while i < len(source)
+    if source[i] == " " or source[i] == "\t" or source[i] == "\r" or source[i] == "\n" then
+      i = i + 1
+      continue
+    end if
+    if i + 1 < len(source) and source[i] == "/" and source[i + 1] == "/" then
+      i = i + 2
+      while i < len(source) and source[i] != "\n"
+        i = i + 1
+      end while
+      continue
+    end if
+    if i + 1 < len(source) and source[i] == "/" and source[i + 1] == "*" then
+      i = i + 2
+      while i + 1 < len(source) and (source[i] != "*" or source[i + 1] != "/")
+        i = i + 1
+      end while
+      if i + 1 < len(source) then i = i + 2 else i = len(source) end if
+      continue
+    end if
+    break
+  end while
+  return i
+end function
+
+function _skip_project_string(source, index)
+  i = index + 1
+  while i < len(source)
+    if source[i] == "\\" then
+      i = i + 2
+      continue
+    end if
+    if source[i] == "\"" then return i + 1 end if
+    i = i + 1
+  end while
+  return len(source)
+end function
+
+// Extract quoted import paths without treating strings or comments as source.
+// False positives would only make the cache more conservative; misses could
+// return stale code, so comments between the keyword and path are supported.
+function _quoted_import_paths(source)
+  result = t.arr_vec_new(16)
+  i = 0
+  while i < len(source)
+    if i + 1 < len(source) and source[i] == "/" and source[i + 1] == "/" then
+      i = _skip_import_trivia(source, i)
+      continue
+    end if
+    if i + 1 < len(source) and source[i] == "/" and source[i + 1] == "*" then
+      i = _skip_import_trivia(source, i)
+      continue
+    end if
+    if source[i] == "\"" then
+      i = _skip_project_string(source, i)
+      continue
+    end if
+    if i + 6 <= len(source) and s.substr(source, i, 6) == "import" and not _project_word_char(source, i - 1) and not _project_word_char(source, i + 6) then
+      path_start = _skip_import_trivia(source, i + 6)
+      if path_start < len(source) and source[path_start] == "\"" then
+        path_end = _skip_project_string(source, path_start)
+        if path_end > path_start + 1 and path_end <= len(source) and source[path_end - 1] == "\"" then
+          value = _unquote(s.substr(source, path_start, path_end - path_start))
+          if typeof(value) == "string" then result = t.arr_vec_push(result, value) end if
+        end if
+        i = path_end
+        continue
+      end if
+    end if
+    i = i + 1
+  end while
+  return t.arr_vec_finish(result)
+end function
+
+function _collector_add_import_file(collector, path, excluded)
+  absolute = _abspath(path)
+  key = _path_key(absolute)
+  excluded_key = _path_key(excluded)
+#if TARGET_OS == "linux"
+  separator = "/"
+#else
+  separator = "\\"
+#endif
+  if key == excluded_key or s.startsWith(key, excluded_key + separator) then return collector end if
+  if fs.isFile(absolute) and t.fastmap_has(collector.seen_files, key) == false then
+    collector.seen_files = t.fastmap_set(collector.seen_files, key, 1)
+    collector.files = t.arr_vec_push(collector.files, absolute)
+  end if
+  return collector
+end function
+
+// Broad root traversal covers inactive package imports. This second pass
+// follows quoted imports recursively so absolute and parent-relative imports
+// outside those roots also participate in the exact cache fingerprint.
+function _collect_import_dependencies(collector, include_dirs, excluded)
+  scan_index = 0
+  while scan_index < t.arr_vec_count(collector.files)
+    importer = t.arr_vec_get(collector.files, scan_index, "")
+    scan_index = scan_index + 1
+    source = fs.readAllText(importer)
+    if typeof(source) != "string" then continue end if
+    requests = _quoted_import_paths(source)
+    if len(requests) <= 0 then continue end if
+    for request_index = 0 to len(requests) - 1
+      requested = requests[request_index]
+      if _is_abs(requested) then
+        collector = _collector_add_import_file(collector, requested, excluded)
+      else
+        collector = _collector_add_import_file(collector, _join(_dirname(importer), requested), excluded)
+        if typeof(include_dirs) == "array" and len(include_dirs) > 0 then
+          for include_index = 0 to len(include_dirs) - 1
+            collector = _collector_add_import_file(collector, _join(include_dirs[include_index], requested), excluded)
+          end for
+        end if
+      end if
+    end for
+  end while
+  return collector
+end function
+
 function _hex32(value)
   digits = "0123456789ABCDEF"
   hex_value = ""
@@ -418,12 +577,72 @@ function _string_less(left, right)
   return len(left_bytes) < len(right_bytes)
 end function
 
-// Hash the manifest, effective arguments and every MiniLang source below the
-// entry/include roots. The broad set is intentionally conservative: changing
-// a currently inactive conditional import must still invalidate the cache.
+function _project_u32le(value, offset)
+  return value[offset] | (value[offset + 1] << 8) | (value[offset + 2] << 16) | (value[offset + 3] << 24)
+end function
+
+// Two native CRC polynomials plus the exact length provide a fast bounded-
+// memory content identity. Native checksum instructions avoid interpreting
+// every byte in MiniLang when hashing the 50+ MiB compiler executable.
+function _file_content_id(path)
+  file = fileio.openRead(path)
+  if typeof(file) == "error" then return file end if
+  count = fileio.size(file)
+  if typeof(count) == "error" then ignored = fileio.close(file); return count end if
+  buffer = bytes(1048576, 0)
+  offset = 0
+  ieee = 0
+  castagnoli = 0
+  while offset < count
+    requested = count - offset
+    if requested > len(buffer) then requested = len(buffer) end if
+    actual = fileio.readAt(file, offset, buffer, 0, requested)
+    if typeof(actual) == "error" or actual <= 0 then
+      ignored = fileio.close(file)
+      return error(1, "failed to hash cache file")
+    end if
+    ieee = crc32.update(ieee, buffer, 0, actual)
+    castagnoli = crc32c.update(castagnoli, buffer, 0, actual)
+    offset = offset + actual
+  end while
+  closed = fileio.close(file)
+  if typeof(closed) == "error" then return closed end if
+  return count + ":" + _hex32(ieee) + ":" + _hex32(castagnoli)
+end function
+
+function _valid_project_digest(value)
+  if typeof(value) != "string" or len(value) != 16 then return false end if
+  for i = 0 to len(value) - 1
+    ch = bytes(value[i])[0]
+    if not ((ch >= 48 and ch <= 57) or (ch >= 65 and ch <= 70)) then return false end if
+  end for
+  return true
+end function
+
+function _cache_artifact_path(pb, digest)
+  return _join(pb.cache_dir, "build." + digest + ".exe")
+end function
+
+// std.fs.copyFile intentionally copies bytes only. Cache artifacts additionally
+// retain their POSIX mode so a native Linux cache hit remains executable.
+function _copy_file_preserve_mode(source_path, destination_path)
+  copied = fs.copyFile(source_path, destination_path, true)
+  if typeof(copied) == "error" then return copied end if
+#if TARGET_OS == "linux"
+  attr = bytes(144, 0)
+  if _project_stat(source_path, attr) != 0 then return error(1, "failed to read cached file mode") end if
+  mode = _project_u32le(attr, 24) & 4095
+  if _project_chmod(destination_path, mode) != 0 then return error(1, "failed to preserve cached file mode") end if
+#endif
+  return true
+end function
+
+// Hash the manifest, effective arguments and all broad-root/imported sources.
+// The broad set is intentionally conservative: changing a currently inactive
+// conditional import must still invalidate the cache.
 function fingerprint(pb, input_path, include_dirs)
   h = ProjectHash(2166136261, 3266489917)
-  h = _hash_text(h, "MiniLang-project-cache-v1")
+  h = _hash_text(h, "MiniLang-project-cache-v2")
   for ai = 0 to len(pb.expanded_args) - 1
     h = _hash_byte(h, 0)
     h = _hash_text(h, pb.expanded_args[ai])
@@ -444,6 +663,7 @@ function fingerprint(pb, input_path, include_dirs)
   for ri = 0 to len(roots) - 1
     collector = _collect_ml_files(roots[ri], pb.cache_dir, collector)
   end for
+  collector = _collect_import_dependencies(collector, include_dirs, pb.cache_dir)
   unique_files = t.arr_vec_finish(collector.files)
   unique_files = sort.sortBy(unique_files, _string_less)
   if len(unique_files) > 0 then
@@ -461,43 +681,35 @@ function fingerprint(pb, input_path, include_dirs)
     end for
   end if
 
-  // Last-write time + size make compiler rebuilds invalidate the cache without
-  // hashing a 50+ MiB self-hosted executable on every invocation.
+  // Compiler identity is content-based. Size/mtime alone can survive release
+  // replacement tools which preserve metadata and would then restore stale code.
   exe_path = process.executablePath()
   if typeof(exe_path) == "string" and exe_path != "" then
-#if TARGET_OS == "windows"
-    attr = bytes(36, 0)
-    if typeof(exe_path) == "string" and GetFileAttributesExW(exe_path, 0, attr) then
-      h = _hash_text(h, s.toLowerAscii(exe_path))
-      // Do not hash last-access time: merely launching the compiler may update
-      // it and would turn every invocation into a cache miss.
-      h = _hash_bytes(h, slice(attr, 0, 12))
-      h = _hash_bytes(h, slice(attr, 20, 16))
-    end if
-#else
-    // Linux x86-64 struct stat stores size at 48 and mtime at 88. Avoid atime,
-    // which may change merely because the compiler image was launched.
-    attr = bytes(144, 0)
-    if _project_stat(exe_path, attr) == 0 then
-      h = _hash_text(h, exe_path)
-      h = _hash_bytes(h, slice(attr, 48, 8))
-      h = _hash_bytes(h, slice(attr, 88, 16))
-    end if
-#endif
+    compiler_id = _file_content_id(exe_path)
+    if typeof(compiler_id) == "error" then return compiler_id end if
+    h = _hash_text(h, _path_key(exe_path))
+    h = _hash_byte(h, 0)
+    h = _hash_text(h, compiler_id)
   end if
   return _hex32(h.a) + _hex32(h.b)
 end function
 
-// Restore a cached artifact only when its recorded digest matches exactly.
+// Restore only a checksum-validated artifact from the requested generation.
 function restore(pb, digest, output_path)
   if typeof(pb) != "struct" or pb.incremental == false then return false end if
   state_path = _join(pb.cache_dir, "build.state")
-  artifact_path = _join(pb.cache_dir, "build.exe")
+  artifact_path = _cache_artifact_path(pb, digest)
   if fs.isFile(state_path) == false or fs.isFile(artifact_path) == false then return false end if
   state = fs.readAllText(state_path)
-  if typeof(state) != "string" or s.trim(state) != digest then return false end if
+  if typeof(state) != "string" then return false end if
+  state_lines = s.split(state, "\n")
+  if len(state_lines) < 2 or s.trim(state_lines[0]) != digest then return false end if
+  expected_artifact_id = s.trim(state_lines[1])
+  if expected_artifact_id == "" then return false end if
+  artifact_id = _file_content_id(artifact_path)
+  if typeof(artifact_id) != "string" or artifact_id != expected_artifact_id then return false end if
   if _ensure_dir(_dirname(output_path)) == false then return false end if
-  copied = fs.copyFile(artifact_path, output_path, true)
+  copied = _copy_file_preserve_mode(artifact_path, output_path)
   return typeof(copied) != "error"
 end function
 
@@ -559,19 +771,35 @@ end function
 function store(pb, digest, output_path)
   if typeof(pb) != "struct" or pb.incremental == false then return true end if
   if _ensure_dir(pb.cache_dir) == false then return error(1, "failed to create project cache directory") end if
-  artifact_path = _join(pb.cache_dir, "build.exe")
+  artifact_path = _cache_artifact_path(pb, digest)
   state_path = _join(pb.cache_dir, "build.state")
-  artifact_tmp = artifact_path + ".tmp"
-  state_tmp = state_path + ".tmp"
-  copied = fs.copyFile(output_path, artifact_tmp, true)
+  suffix = "." + process.id() + ".tmp"
+  artifact_tmp = artifact_path + suffix
+  state_tmp = state_path + suffix
+  old_digest = ""
+  if fs.isFile(state_path) then
+    old_state = fs.readAllText(state_path)
+    if typeof(old_state) == "string" then
+      old_lines = s.split(old_state, "\n")
+      if len(old_lines) > 0 then old_digest = s.trim(old_lines[0]) end if
+    end if
+  end if
+  copied = _copy_file_preserve_mode(output_path, artifact_tmp)
   if typeof(copied) == "error" then return copied end if
-  written = fs.writeAllText(state_tmp, digest + "\n")
+  artifact_id = _file_content_id(artifact_tmp)
+  if typeof(artifact_id) == "error" then return artifact_id end if
+  written = fs.writeAllText(state_tmp, digest + "\n" + artifact_id + "\n")
   if typeof(written) == "error" then return written end if
   moved_artifact = _atomic_replace(artifact_tmp, artifact_path)
   if typeof(moved_artifact) == "error" then return moved_artifact end if
-  // Publish metadata last. A crash between the two moves can only produce a
-  // cache miss because the old digest no longer validates the new artifact.
-  return _atomic_replace(state_tmp, state_path)
+  // Content-addressed generations keep the previous state's artifact valid
+  // until this final atomic pointer publication succeeds.
+  moved_state = _atomic_replace(state_tmp, state_path)
+  if typeof(moved_state) == "error" then return moved_state end if
+  if old_digest != digest and _valid_project_digest(old_digest) then
+    ignored_delete = fs.delete(_cache_artifact_path(pb, old_digest))
+  end if
+  return true
 end function
 
 // Populate the flat per-fingerprint object directory and publish its state
@@ -617,7 +845,7 @@ function storeObjects(pb, digest, source_dir)
   if copied_count <= 0 or support_count != 1 then return error(1, "object cache requires one complete support object") end if
 
   state_path = _join(obj_dir, "objects.state")
-  state_tmp = state_path + ".tmp"
+  state_tmp = state_path + "." + process.id() + ".tmp"
   state_text = digest + "\n"
   for ni = 0 to len(cached_names) - 1
     state_text = state_text + cached_names[ni] + "\n"

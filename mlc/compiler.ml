@@ -46,6 +46,7 @@ extern function _mlo_CloseHandle(handle as ptr) from "kernel32.dll" symbol "Clos
 extern function _host_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
 extern function _host_system(cmd as cstr) from "libc.so.6" symbol "system" returns i32
 extern function _host_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
+extern function _host_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
 extern function _mlo_open(path as cstr, flags as int, mode as u32) from "libc.so.6" symbol "open" returns i32
 extern function _mlo_write(fd as int, input as bytes, count as u64) from "libc.so.6" symbol "write" returns i64
 extern function _mlo_close(fd as int) from "libc.so.6" symbol "close" returns i32
@@ -699,7 +700,13 @@ end function
 // leave deployment-time chmod behavior unchanged.
 function _make_linux_output_executable(path)
 #if TARGET_OS == "linux"
-  if _host_chmod(path, 493) != 0 then return error(1, "chmod failed for Linux executable") end if
+  attr = bytes(144, 0)
+  if _host_stat(path, attr) != 0 then return error(1, "stat failed for Linux executable") end if
+  current_mode = _u32le_at(attr, 24) & 4095
+  // Add execute only where the umask left a corresponding read permission.
+  // A private 0600 output becomes 0700; a normal 0644 output becomes 0755.
+  executable_mode = current_mode | ((current_mode & 292) >> 2)
+  if _host_chmod(path, executable_mode) != 0 then return error(1, "chmod failed for Linux executable") end if
 #endif
   return true
 end function

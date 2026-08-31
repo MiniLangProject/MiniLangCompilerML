@@ -151,6 +151,11 @@ $buildShSource = Get-Content -LiteralPath (Join-Path $root "build.sh") -Raw
 if (-not [Regex]::IsMatch($buildPsSource, '"--heap-commit"\s*,\s*"512m"')) {
   $failures += "build.ps1: self-host compiler initial heap commit is not 512 MiB"
 }
+if (-not [Regex]::IsMatch(
+    $buildPsSource,
+    '\$enableBootstrapProbe\s*=\s*-not\s+\$NoBootstrapProbe\s+-and\s+-not\s+\$script:CompilerIsPython')) {
+  $failures += "build.ps1: Python bootstrap is no longer protected from the self-host-only --mem-probe flag"
+}
 if (-not [Regex]::IsMatch($buildShSource, "--heap-commit\s+512m")) {
   $failures += "build.sh: self-host compiler initial heap commit is not 512 MiB"
 }

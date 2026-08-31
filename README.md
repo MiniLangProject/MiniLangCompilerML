@@ -131,8 +131,9 @@ Notes:
   and verifies a native ELF compiler; either host can cross-compile both target
   formats.
 - A native Linux compiler marks both monolithic and `.mlo` ELF outputs
-  executable. A Windows-to-Linux cross-build cannot carry POSIX mode bits, so
-  deployment from Windows still needs `chmod +x output` on the Linux host.
+  executable while retaining the caller's `umask`; exact project-cache restores
+  preserve that mode. A Windows-to-Linux cross-build cannot carry POSIX mode
+  bits, so deployment from Windows still needs `chmod +x output` on Linux.
 
 Common options:
 
@@ -269,12 +270,15 @@ For manifests that must work with both compilers, use the conservative TOML
 subset shown above: a `[project]` table, quoted strings, booleans, and
 single-line arrays of quoted strings. Keep comments on their own lines. The
 self-hosted compiler has a small purpose-built parser for this shared subset;
-the Python implementation uses `tomllib` and therefore accepts full TOML.
+commas inside quoted array strings are preserved. The Python implementation
+uses `tomllib` and therefore accepts full TOML.
 
 The incremental cache is deliberately conservative. Its fingerprint covers the
-manifest, effective compiler arguments, compiler executable identity and every
-`.ml` source below the entry/include roots. An exact hit restores the already
-linked executable. When that final artifact is unavailable but a complete
+manifest, effective compiler arguments, a content-based compiler executable
+identity, every `.ml` source below the entry/include roots, and recursively
+quoted imports which escape those roots. An exact hit verifies the
+content-addressed cached executable before restoring it. POSIX modes are copied
+with the artifact. When that final artifact is unavailable but a complete
 fingerprint-matched `.mlo` set remains, the self-hosted compiler relinks those
 objects without repeating parsing, analysis or code generation. The object
 manifest records the sorted expected file set and is published last, so a
@@ -287,7 +291,9 @@ self-frontcheck builds bypass the cache. Omit `object_pipeline` to let the
 self-hosted compiler select by the recursively measured import graph, or set it
 explicitly to force either pipeline. The same manifest works with the Python
 compiler, which accepts both values but emits the equivalent monolithic image.
-Final artifacts and validation metadata are also published atomically.
+Final artifacts use per-process temporary names and are published before one
+atomic state-pointer update, so interrupted or concurrent generations cannot
+pair one input digest with another executable.
 
 ### Conditional compilation
 
@@ -594,7 +600,9 @@ Notes:
   peak working set fell from 875.5 to 481.4 MiB (45.01%). Both sets emitted the
   same 60,443,136-byte executable with SHA-256
   `101C11E9E17D19A58A01C8EABF5E6B4CB7971DC28FB3A66472C12BF8642D6A25`.
-- By default it enables the compiler's `--mem-probe` bootstrap mode and filters the noisy `[mem]` lines from the console.
+- Native bootstrap builds enable the compiler's `--mem-probe` mode by default
+  and filter its noisy `[mem]` lines from the console. A clean Python bootstrap
+  omits this self-host-only diagnostic flag automatically.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 
 ### Run compiled programs
@@ -645,6 +653,25 @@ canonical layout is covered by automated byte-identity gates against both the
 normal self-hosted path and the Python bootstrap. Exact hashes, test counts,
 boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
+
+Current audited Windows fixed point (2026-08-31): with a warm filesystem cache
+and fresh object directories, the Python Stage 1 took 60.398 seconds and peaked
+at 1,100.8 MiB process-tree working set / 1,090.3 MiB private commit. The
+existing native bootstrap produced Stage 2 in 99.976 seconds at 1,787.1 /
+2,005.9 MiB; that freshly generated compiler produced Stage 3 in 130.402
+seconds at 1,778.8 / 1,893.6 MiB. Python Stage 1 and self-hosted Stages 2/3 are
+byte-identical 62,788,096-byte images with SHA-256
+`EDA1417DD6B2D88B9DB3643189275CB1AB2B92BE65C4037428A98890746334D7`.
+One repeated Stage 3 probe exited after writing 318 function objects, at support
+tail emission; an isolated retry completed and reproduced the exact fixed-point
+image. This remains a transient operational caveat rather than a known target
+miscompilation. The 8 GiB heap setting is virtual address-space reserve, not
+resident or committed memory.
+
+#### Historical performance record
+
+The measurements below preserve the chronology of earlier optimization passes;
+the audited fixed-point values above describe the current tree.
 
 For the 1.1.0 acceptance pass, a 142-file snapshot of the current MiniQuake
 worktree at commit `1036b1c3b551d00de777c67293d262a6cc5c2739` plus 18 dirty
@@ -1675,6 +1702,8 @@ pool.Dispose()
 - `ThreadPool.new(workerCount)` uses an unbounded queue.
 - `ThreadPool.withQueueCapacity(workerCount, capacity)` bounds waiting jobs;
   capacity `0` is unbounded. Worker counts must be between 1 and 256.
+- Pending jobs use a geometrically growing circular buffer, keeping total queue
+  growth linear even when producers temporarily outrun every worker.
 - `Submit(function, data)` returns a `ThreadPoolJob`, or `void` after shutdown
   or when a bounded queue is full.
 - `PendingCount()`, `WorkerCount()` and `IsShutdown()` expose pool state.

@@ -288,14 +288,29 @@ end function
 function _test_project_manifest(compiler_path, repo_root)
   name = "project_manifest_cache"
   manifest_abs = _path_join(repo_root, "build\\_rt_project_manifest.toml")
-  source_abs = _path_join(repo_root, "build\\_rt_project_source.ml")
+  source_dir = _path_join(repo_root, "build\\tmp")
+  source_abs = _path_join(source_dir, "_rt_project_source.ml")
+  shared_abs = _path_join(repo_root, "build\\_rt_project_shared.ml")
   output_abs = _path_join(repo_root, "build\\_rt_project_output.exe")
-  manifest_text = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = true\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 0\n"
+  cache_abs = _path_join(repo_root, "build\\_rt_project_cache")
+  if fs.exists(cache_abs) and _wsystem("rmdir /s /q " + _q(cache_abs)) != 0 then
+    print "[FAIL] " + name + " (could not reset cache fixture)"
+    return false
+  end if
+  if fs.exists(source_dir) == false and _wsystem("mkdir " + _q(source_dir)) != 0 then
+    print "[FAIL] " + name + " (could not create source fixture directory)"
+    return false
+  end if
+  manifest_text = "[project]\nentry = \"tmp/_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = true\nincremental = true\ncache_dir = \"_rt_project_cache\"\ncompiler_args = [\"--asm-cols\", \"addr,code\"]\n\n[defines]\nRESULT = 0\n"
   if typeof(fs.writeAllText(manifest_abs, manifest_text)) == "error" then
     print "[FAIL] " + name + " (could not write manifest)"
     return false
   end if
-  source_v1 = "#option RESULT: int = 9\nfunction main(args)\n#if RESULT == 0\n  return 0\n#else\n  return 9\n#endif\nend function\n"
+  if typeof(fs.writeAllText(shared_abs, "package shared\nfunction value()\n  return 0\nend function\n")) == "error" then
+    print "[FAIL] " + name + " (could not write shared source)"
+    return false
+  end if
+  source_v1 = "import \"../_rt_project_shared.ml\" as shared\n#option RESULT: int = 9\nfunction main(args)\n#if RESULT == 0\n  return shared.value()\n#else\n  return 9 + shared.value()\n#endif\nend function\n"
   if typeof(fs.writeAllText(source_abs, source_v1)) == "error" then
     print "[FAIL] " + name + " (could not write v1 source)"
     return false
@@ -305,14 +320,17 @@ function _test_project_manifest(compiler_path, repo_root)
     print "[FAIL] " + name + " (initial build/run failed)"
     return false
   end if
-  cache_abs = _path_join(repo_root, "build\\_rt_project_cache")
-  if fs.exists(_path_join(cache_abs, "build.exe")) == false or fs.exists(_path_join(cache_abs, "build.state")) == false or fs.exists(_path_join(cache_abs, "build.exe.tmp")) or fs.exists(_path_join(cache_abs, "build.state.tmp")) then
+  state_text = fs.readAllText(_path_join(cache_abs, "build.state"))
+  state_lines = s.split(state_text, "\n")
+  cache_artifact = ""
+  if len(state_lines) > 0 then cache_artifact = _path_join(cache_abs, "build." + s.trim(state_lines[0]) + ".exe") end if
+  if len(state_lines) < 2 or fs.exists(cache_artifact) == false then
     print "[FAIL] " + name + " (cache publication left incomplete files)"
     return false
   end if
 
   // A source-content change must invalidate the cached executable.
-  source_v2 = "#option RESULT: int = 9\nfunction main(args)\n#if RESULT == 0\n  return 7\n#else\n  return 8\n#endif\nend function\n"
+  source_v2 = "import \"../_rt_project_shared.ml\" as shared\n#option RESULT: int = 9\nfunction main(args)\n#if RESULT == 0\n  return 7 + shared.value()\n#else\n  return 9 + shared.value()\n#endif\nend function\n"
   if typeof(fs.writeAllText(source_abs, source_v2)) == "error" or _wsystem(cmd) != 0 then
     print "[FAIL] " + name + " (source-change rebuild failed)"
     return false
@@ -332,25 +350,52 @@ function _test_project_manifest(compiler_path, repo_root)
     return false
   end if
 
+  // Corruption cannot be accepted merely because the input digest matches.
+  state_text = fs.readAllText(_path_join(cache_abs, "build.state"))
+  state_lines = s.split(state_text, "\n")
+  cache_artifact = _path_join(cache_abs, "build." + s.trim(state_lines[0]) + ".exe")
+  if typeof(fs.writeAllBytes(cache_artifact, bytes([1, 2, 3, 4]))) == "error" or fs.delete(output_abs) == false then
+    print "[FAIL] " + name + " (could not damage cached executable)"
+    return false
+  end if
+  if _wsystem(cmd) != 0 or _run_exe(output_abs, "") != 7 then
+    print "[FAIL] " + name + " (damaged executable cache was restored)"
+    return false
+  end if
+
+  // The quoted import escapes the entry's tests/ root and must still
+  // invalidate the executable and object generations.
+  if typeof(fs.writeAllText(shared_abs, "package shared\nfunction value()\n  return 1\nend function\n")) == "error" or _wsystem(cmd) != 0 then
+    print "[FAIL] " + name + " (external import rebuild failed)"
+    return false
+  end if
+  if _run_exe(output_abs, "") != 8 then
+    print "[FAIL] " + name + " (stale executable after external import change)"
+    return false
+  end if
+
   // The deterministic MLO cache is an independent recovery layer. Removing
   // both executable copies must relink the exact cached objects without
   // parsing or regenerating code.
-  if fs.delete(output_abs) == false or fs.delete(_path_join(cache_abs, "build.exe")) == false then
+  state_text = fs.readAllText(_path_join(cache_abs, "build.state"))
+  state_lines = s.split(state_text, "\n")
+  cache_artifact = _path_join(cache_abs, "build." + s.trim(state_lines[0]) + ".exe")
+  if fs.delete(output_abs) == false or fs.delete(cache_artifact) == false then
     print "[FAIL] " + name + " (could not prepare object-cache restore)"
     return false
   end if
-  if _wsystem(cmd) != 0 or fs.exists(output_abs) == false or _run_exe(output_abs, "") != 7 then
+  if _wsystem(cmd) != 0 or fs.exists(output_abs) == false or _run_exe(output_abs, "") != 8 then
     print "[FAIL] " + name + " (object-cache relink failed)"
     return false
   end if
 
   // A changed typed definition is part of the cache identity and selects code.
-  manifest_changed = "[project]\nentry = \"_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = true\nincremental = true\ncache_dir = \"_rt_project_cache\"\n\n[defines]\nRESULT = 1\n"
+  manifest_changed = "[project]\nentry = \"tmp/_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = true\nincremental = true\ncache_dir = \"_rt_project_cache\"\ncompiler_args = [\"--asm-cols\", \"addr,code\"]\n\n[defines]\nRESULT = 1\n"
   if typeof(fs.writeAllText(manifest_abs, manifest_changed)) == "error" or _wsystem(cmd) != 0 then
     print "[FAIL] " + name + " (define-change rebuild failed)"
     return false
   end if
-  if _run_exe(output_abs, "") != 8 then
+  if _run_exe(output_abs, "") != 10 then
     print "[FAIL] " + name + " (manifest define was not applied)"
     return false
   end if

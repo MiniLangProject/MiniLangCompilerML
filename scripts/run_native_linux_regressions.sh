@@ -33,6 +33,15 @@ test -x "$scratch/simple-object"
 "$scratch/simple-object"
 cmp "$scratch/simple-mono" "$scratch/simple-object"
 
+# Executable permission follows the caller's umask instead of being widened to
+# a hard-coded 0755 mode.
+(
+  umask 077
+  "$compiler" "$scratch/simple.ml" "$scratch/simple-private" --target linux-x64 --no-object-pipeline
+  [[ $(stat -c '%a' "$scratch/simple-private") == "700" ]]
+  "$scratch/simple-private"
+)
+
 cat >"$scratch/Foo.ml" <<'EOF'
 package ReviewUpper
 function value()
@@ -69,22 +78,50 @@ object_pipeline = false
 incremental = true
 cache_dir = "cache"
 EOF
+cat >"$scratch/shared.ml" <<'EOF'
+package shared
+function value()
+  return "CACHE_V1"
+end function
+EOF
 cat >"$scratch/Cache/main.ml" <<'EOF'
+import "../shared.ml" as shared
 function main(args)
-  print "CACHE_V1"
+  print shared.value()
   return 0
 end function
 EOF
 
 "$compiler" --project "$scratch/project.toml"
 [[ $("$scratch/project-output") == "CACHE_V1" ]]
+
+# Deleting only the output exercises a real final-artifact cache hit. The
+# restored ELF must retain its executable mode and remain runnable.
+rm -- "$scratch/project-output"
+"$compiler" --project "$scratch/project.toml"
+test -x "$scratch/project-output"
+[[ $("$scratch/project-output") == "CACHE_V1" ]]
+
 cat >"$scratch/Cache/main.ml" <<'EOF'
+import "../shared.ml" as shared
 function main(args)
-  print "CACHE_V2"
+  print shared.value()
+  print "_SOURCE_V2"
   return 0
 end function
 EOF
 "$compiler" --project "$scratch/project.toml"
-[[ $("$scratch/project-output") == "CACHE_V2" ]]
+[[ $("$scratch/project-output") == $'CACHE_V1\n_SOURCE_V2' ]]
+
+# A quoted parent-relative dependency lies outside Cache/, but must still
+# invalidate the project generation when only that imported file changes.
+cat >"$scratch/shared.ml" <<'EOF'
+package shared
+function value()
+  return "CACHE_V2"
+end function
+EOF
+"$compiler" --project "$scratch/project.toml"
+[[ $("$scratch/project-output") == $'CACHE_V2\n_SOURCE_V2' ]]
 
 echo "native Linux compiler regressions [PASS]"
