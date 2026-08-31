@@ -247,21 +247,29 @@ function inline _decl_node_key(node)
   end if
   if typeof(node) == "struct" then
     k = ""
-    if typeof(node.node_kind) == "string" then k = node.node_kind end if
-    if k == "" and typeof(node.kind) == "string" then k = node.kind end if
+    node_kind_value = try(node.node_kind)
+    if typeof(node_kind_value) == "string" then k = node_kind_value end if
+    kind_value = try(node.kind)
+    if k == "" and typeof(kind_value) == "string" then k = kind_value end if
     file_s = ""
-    if typeof(node._filename) == "string" then file_s = node._filename end if
-    if file_s == "" and typeof(node.filename) == "string" then file_s = node.filename end if
+    private_filename = try(node._filename)
+    if typeof(private_filename) == "string" then file_s = private_filename end if
+    public_filename = try(node.filename)
+    if file_s == "" and typeof(public_filename) == "string" then file_s = public_filename end if
     pos_s = ""
-    if typeof(node._pos) == "int" then pos_s = "" + node._pos end if
-    if pos_s == "" and typeof(node.pos) == "int" then pos_s = "" + node.pos end if
+    private_pos = try(node._pos)
+    if typeof(private_pos) == "int" then pos_s = "" + private_pos end if
+    public_pos = try(node.pos)
+    if pos_s == "" and typeof(public_pos) == "int" then pos_s = "" + public_pos end if
     if pos_s != "" then
       if file_s == "" then file_s = "?" end if
       if k == "" then k = "struct" end if
       return file_s + ":" + pos_s + ":" + k
     end if
-    if k == "" and typeof(node.name) == "string" then k = node.name end if
-    if k == "" and typeof(node.value) == "string" then k = node.value end if
+    node_name = try(node.name)
+    if k == "" and typeof(node_name) == "string" then k = node_name end if
+    node_value = try(node.value)
+    if k == "" and typeof(node_value) == "string" then k = node_value end if
     if k == "" then k = "" + node end if
     return k
   end if

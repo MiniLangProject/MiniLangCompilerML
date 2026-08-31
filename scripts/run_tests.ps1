@@ -283,7 +283,8 @@ try {
       [pscustomobject]@{ Name = "Linux shared-value snapshots"; Source = "shared_value.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux platform services"; Source = "platform_services.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux extern/user basename collision"; Source = "extern_user_name_collision\main.ml"; RunArgs = @() },
-      [pscustomobject]@{ Name = "Linux GC safepoint publication"; Source = "gc_back_to_back_safepoint.ml"; RunArgs = @() }
+      [pscustomobject]@{ Name = "Linux GC safepoint publication"; Source = "gc_back_to_back_safepoint.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux language extensions"; Source = "language_extensions.ml"; RunArgs = @() }
     )
     foreach ($linuxCase in $linuxCases) {
       $linuxSource = Join-Path $Root ("tests\" + $linuxCase.Source)
@@ -420,6 +421,18 @@ try {
     [pscustomobject]@{
       Name = "synchronized globals"
       Source = Join-Path $Root "tests\thread_features.ml"
+      Includes = @($Root)
+      Args = @()
+    },
+    [pscustomobject]@{
+      Name = "language extensions"
+      Source = Join-Path $Root "tests\language_extensions.ml"
+      Includes = @($Root)
+      Args = @()
+    },
+    [pscustomobject]@{
+      Name = "typed struct field guards"
+      Source = Join-Path $Root "tests\language_type_guard_object.ml"
       Includes = @($Root)
       Args = @()
     }

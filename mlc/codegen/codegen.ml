@@ -247,6 +247,10 @@ function _clone_state_for_object(base, seed_runtime)
   st.var_slots = _copy_array(base.var_slots)
   st.break_stack = []
   st.struct_fields = base.struct_fields
+  // Typed field contracts are semantic state, not fragment-local analysis.
+  // Dropping them made object builds omit constructor TypeGuards even though
+  // the canonical monolithic stream retained them.
+  st.struct_field_types = base.struct_field_types
   st.struct_ids = base.struct_ids
   st.enum_variants = base.enum_variants
   st.enum_ids = base.enum_ids

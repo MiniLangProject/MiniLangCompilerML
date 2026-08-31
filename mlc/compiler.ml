@@ -6045,6 +6045,14 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
     return 2
   end if
 
+  prepared_program = ml.prepare_language_features(load.program)
+  if typeof(prepared_program) == "error" then
+    print "CompileError: " + prepared_program.message
+    return 2
+  end if
+  load.program = prepared_program
+  _compile_codegen_keepalive = load
+
   _compiler_profile_phase("collecting extern declarations")
   extern_sigs = collect_extern_sigs(load.program)
   _heap_probe("compile:extern_sigs_done")
@@ -6686,6 +6694,15 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
     end if
     return 2
   end if
+
+
+  prepared_program = ml.prepare_language_features(load.program)
+  if typeof(prepared_program) == "error" then
+    print "CompileError: " + prepared_program.message
+    return 2
+  end if
+  load.program = prepared_program
+  _compile_codegen_keepalive = load
 
   _progress_phase("collecting extern declarations")
   extern_sigs = collect_extern_sigs(load.program)

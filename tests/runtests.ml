@@ -772,6 +772,13 @@ function main(args)
   if _test(compiler_path, repo_root, "compiler_ast_leaf_arena", "tests\\compiler_ast_leaf_arena.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "compiler_frontend_normalize", "tests\\compiler_frontend_normalize.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_suite", "tests\\language_suite.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_extensions", "tests\\language_extensions.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_type_guard_object", "tests\\language_type_guard_object.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_interface_missing", "tests\\language_interface_missing.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_interface_signature", "tests\\language_interface_signature.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_iterator_return", "tests\\language_iterator_return.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_named_argument_error", "tests\\language_named_argument_error.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_lambda_parameter_error", "tests\\language_lambda_parameter_error.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "stdlib_unit_tests", "tests\\stdlib_unit_tests.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_periodic_test", "tests\\gc_periodic_test.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_heap_stress", "tests\\gc_heap_stress.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

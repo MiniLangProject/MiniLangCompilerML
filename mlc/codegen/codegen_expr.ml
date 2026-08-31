@@ -5,6 +5,7 @@ import mlc.asm as a
 import mlc.constants as c
 import mlc.tools as t
 import mlc.data as d
+import mlc.minilang_parser as ml
 import mlc.codegen.codegen_scope as scope
 import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
@@ -27,6 +28,93 @@ struct InlineStats
   has_switch,
   has_nested_fn,
 end struct
+
+struct ArgNormalizeResult
+  ok,
+  args,
+  message,
+end struct
+
+function _normalize_declared_call_args(expr, fn, implicit)
+  supplied = try(expr.args)
+  if typeof(supplied) != "array" then supplied = [] end if
+  names = try(expr.arg_names)
+  if typeof(names) != "array" then names = [] end if
+  params_all = try(fn.params)
+  if typeof(params_all) != "array" then params_all = [] end if
+  defaults_all = try(fn.param_defaults)
+  if typeof(defaults_all) != "array" then defaults_all = [] end if
+  params = []
+  defaults = []
+  if implicit < len(params_all) then
+    for i = implicit to len(params_all) - 1
+      params = params + [params_all[i]]
+      dv = void
+      if i < len(defaults_all) then dv = defaults_all[i] end if
+      defaults = defaults + [dv]
+    end for
+  end if
+  raw_variadic = try(fn.variadic_index)
+  if typeof(raw_variadic) != "int" then raw_variadic = -1 end if
+  variadic = -1
+  if raw_variadic >= implicit then variadic = raw_variadic - implicit end if
+  fixed_count = len(params)
+  if variadic >= 0 then fixed_count = variadic end if
+  slots = array(fixed_count, void)
+  extras = []
+  next_pos = 0
+  used_names = []
+  if len(supplied) > 0 then
+    for i = 0 to len(supplied) - 1
+      arg_name = void
+      if i < len(names) then arg_name = names[i] end if
+      if typeof(arg_name) != "string" then
+        while next_pos < fixed_count and typeof(slots[next_pos]) != "void"
+          next_pos = next_pos + 1
+        end while
+        if next_pos < fixed_count then
+          slots[next_pos] = supplied[i]
+          next_pos = next_pos + 1
+        else if variadic >= 0 then
+          extras = extras + [supplied[i]]
+        else
+          return ArgNormalizeResult(false, [], "Function " + fn.name + " expects " + len(params) + " args, got " + len(supplied))
+        end if
+        continue
+      end if
+      duplicate_name = false
+      if len(used_names) > 0 then
+        for ui = 0 to len(used_names) - 1
+          if used_names[ui] == arg_name then duplicate_name = true break end if
+        end for
+      end if
+      if duplicate_name then return ArgNormalizeResult(false, [], "Argument '" + arg_name + "' was supplied more than once") end if
+      used_names = used_names + [arg_name]
+      index = -1
+      if len(params) > 0 then
+        for j = 0 to len(params) - 1
+          if params[j] == arg_name then index = j break end if
+        end for
+      end if
+      if index < 0 then return ArgNormalizeResult(false, [], "Unknown named argument '" + arg_name + "' for " + fn.name) end if
+      if index == variadic then return ArgNormalizeResult(false, [], "Variadic parameter '" + arg_name + "' cannot be supplied by name") end if
+      if index >= fixed_count or typeof(slots[index]) != "void" then return ArgNormalizeResult(false, [], "Argument '" + arg_name + "' was supplied more than once") end if
+      slots[index] = supplied[i]
+    end for
+  end if
+  if fixed_count > 0 then
+    for i = 0 to fixed_count - 1
+      if typeof(slots[i]) == "void" then
+        default_value = void
+        if i < len(defaults) then default_value = defaults[i] end if
+        if typeof(default_value) == "void" then return ArgNormalizeResult(false, [], "Missing required argument '" + params[i] + "' for " + fn.name) end if
+        slots[i] = default_value
+      end if
+    end for
+  end if
+  if variadic >= 0 then slots = slots + [ml.ArrayLit("ArrayLit", extras, try(expr._pos), try(expr._filename))] end if
+  return ArgNormalizeResult(true, slots, "")
+end function
 
 function inline _opt_truthy(v)
   tv = typeof(v)
@@ -118,6 +206,10 @@ end function
 
 function inline _state_struct_fields_get(state, key)
   return _state_named_array_get(state.struct_fields_index, state.struct_fields, key)
+end function
+
+function inline _state_struct_field_types_get(state, key)
+  return _state_named_array_get(0, state.struct_field_types, key)
 end function
 
 function inline _state_struct_methods_get(state, key)
@@ -1201,6 +1293,10 @@ function cg_emit_expr(state, expr)
     return state
   end if
 
+  if k == "Coalesce" then return _emit_expr_coalesce(state, expr) end if
+  if k == "SafeMember" then return _emit_expr_safe_member(state, expr) end if
+  if k == "TypeGuard" then return _emit_expr_type_guard(state, expr) end if
+
   // Constant folding must precede the node-kind dispatch. Keeping it after the
   // known expression cases made it unreachable for every foldable AST node
   // (notably unary literals and constant arithmetic), unlike the Python backend.
@@ -1250,6 +1346,7 @@ function cg_emit_expr(state, expr)
   end if
 
   if k == "Call" then
+    if t.ast_kind(expr.callee) == "SafeMember" then return _emit_expr_safe_call(state, expr) end if
     return _emit_expr_call(state, expr)
   end if
 
@@ -1258,6 +1355,106 @@ function cg_emit_expr(state, expr)
   end if
 
   return _emit_expr_unsupported(state, expr, k)
+end function
+
+function _emit_expr_coalesce(state, expr)
+  lid = _next_lid(state)
+  l_done = "coalesce_done_" + lid
+  state = cg_emit_expr(state, expr.left)
+  state.asm = a.cmp_rax_imm8(state.asm, t.enc_void())
+  state.asm = a.jcc(state.asm, "ne", l_done)
+  state = cg_emit_expr(state, expr.right)
+  state.asm = a.mark(state.asm, l_done)
+  return state
+end function
+
+function _emit_expr_safe_member(state, expr)
+  lid = _next_lid(state)
+  l_void = "safe_member_void_" + lid
+  l_done = "safe_member_done_" + lid
+  off = core.alloc_expr_temps(state, 8)
+  state = cg_emit_expr(state, expr.target)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, off)
+  state.asm = a.cmp_rax_imm8(state.asm, t.enc_void())
+  state.asm = a.jcc(state.asm, "e", l_void)
+  target = ml.DeferredCapture("DeferredCapture", off, -1, "")
+  member = ml.Member("Member", target, expr.name, -1, "")
+  state = cg_emit_expr(state, member)
+  state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_void)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.mark(state.asm, l_done)
+  state = core.free_expr_temps(state, 8)
+  return state
+end function
+
+function _emit_expr_safe_call(state, expr)
+  safe = expr.callee
+  lid = _next_lid(state)
+  l_void = "safe_call_void_" + lid
+  l_done = "safe_call_done_" + lid
+  off = core.alloc_expr_temps(state, 8)
+  state = cg_emit_expr(state, safe.target)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, off)
+  state.asm = a.cmp_rax_imm8(state.asm, t.enc_void())
+  state.asm = a.jcc(state.asm, "e", l_void)
+  target = ml.DeferredCapture("DeferredCapture", off, -1, "")
+  member = ml.Member("Member", target, safe.name, -1, "")
+  nested = ml.Call("Call", member, expr.args, try(expr.arg_names), -1, "")
+  state = cg_emit_expr(state, nested)
+  state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_void)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.mark(state.asm, l_done)
+  state = core.free_expr_temps(state, 8)
+  return state
+end function
+
+function _emit_expr_type_guard(state, expr)
+  lid = _next_lid(state)
+  l_valid = "type_guard_valid_" + lid
+  l_done = "type_guard_done_" + lid
+  off = core.alloc_expr_temps(state, 8)
+  state = cg_emit_expr(state, expr.expr)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, off)
+  optional = false
+  if typeof(expr.optional) == "bool" and expr.optional then optional = true end if
+  if optional then
+    state.asm = a.cmp_rax_imm8(state.asm, t.enc_void())
+    state.asm = a.jcc(state.asm, "e", l_valid)
+  end if
+  raw_type = _coerce_name(expr.type_name)
+  canonical = raw_type
+  if s.contains(raw_type, ".") == false then
+    canonical = s.toLowerAscii(raw_type)
+    if canonical == "integer" then canonical = "int" end if
+    if canonical == "boolean" then canonical = "bool" end if
+    if canonical == "str" then canonical = "string" end if
+  end if
+  loaded = ml.DeferredCapture("DeferredCapture", off, -1, "")
+  primitive = canonical == "int" or canonical == "float" or canonical == "bool" or canonical == "string" or canonical == "array" or canonical == "bytes" or canonical == "function" or canonical == "struct" or canonical == "enum" or canonical == "error" or canonical == "thread" or canonical == "void" or canonical == "unknown"
+  check = 0
+  if primitive then
+    typeof_call = ml.Call("Call", ml.Var("Var", "typeof", -1, ""), [loaded], [], -1, "")
+    check = ml.Bin("Bin", typeof_call, "==", ml.Str("Str", canonical, -1, ""), -1, "")
+  else
+    check = ml.IsType("IsType", loaded, raw_type, false, -1, "")
+  end if
+  state = cg_emit_expr(state, check)
+  state.asm = a.cmp_rax_imm8(state.asm, t.enc_bool(true))
+  state.asm = a.jcc(state.asm, "e", l_valid)
+  suffix = ""
+  if optional then suffix = "?" end if
+  state = _emit_make_error_const(state, c.ERR_TYPE_GUARD, "Expected value of type " + raw_type + suffix)
+  state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_valid)
+  state.asm = a.mov_rax_rsp_disp32(state.asm, off)
+  state.asm = a.mark(state.asm, l_done)
+  state = core.free_expr_temps(state, 8)
+  // Type contracts propagate like other fallible expressions, while try()
+  // suppresses this branch through the shared errprop_suppression counter.
+  state = _emit_auto_errprop(state)
+  return state
 end function
 
 function _emit_expr_num(state, expr)
@@ -3878,6 +4075,83 @@ function _emit_expr_call(state, expr)
   end if
   if callee == "" and raw_name != "" then callee = raw_name end if
 
+  // Normalize named/default/variadic syntax before direct-call and inline
+  // paths. The native ABI remains fixed; a variadic tail is one array value.
+  has_named = false
+  arg_names = try(expr.arg_names)
+  if typeof(arg_names) == "array" and len(arg_names) > 0 then
+    for ni = 0 to len(arg_names) - 1
+      if typeof(arg_names[ni]) == "string" then has_named = true break end if
+    end for
+  end if
+  direct_decl = _user_function_get(state, callee)
+  if typeof(direct_decl) == "struct" and _is_instance_method_qname(state, callee) == false then
+    normalized = _normalize_declared_call_args(expr, direct_decl, 0)
+    if normalized.ok == false then
+      state.diagnostics = state.diagnostics + [normalized.message]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    call_args = normalized.args
+    expr.args = call_args
+    expr.arg_names = array(len(call_args), void)
+    nargs = len(call_args)
+  else
+    if has_named and not (member_runtime and cal_kind == "Member") then
+      ctor_fields = _state_struct_fields_get(state, callee)
+      if typeof(ctor_fields) != "array" then
+        state.diagnostics = state.diagnostics + ["Named arguments require a directly resolved MiniLang function or struct"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      values = array(len(ctor_fields), void)
+      next_pos = 0
+      for ni = 0 to len(call_args) - 1
+        arg_name = void
+        if ni < len(arg_names) then arg_name = arg_names[ni] end if
+        if typeof(arg_name) != "string" then
+          while next_pos < len(values) and typeof(values[next_pos]) != "void"
+            next_pos = next_pos + 1
+          end while
+          if next_pos >= len(values) then
+            state.diagnostics = state.diagnostics + ["Struct " + callee + " received too many arguments"]
+            state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+            return state
+          end if
+          values[next_pos] = call_args[ni]
+          next_pos = next_pos + 1
+        else
+          field_index = -1
+          for fi = 0 to len(ctor_fields) - 1
+            if ctor_fields[fi] == arg_name then field_index = fi break end if
+          end for
+          if field_index < 0 then
+            state.diagnostics = state.diagnostics + ["Unknown field argument '" + arg_name + "' for struct " + callee]
+            state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+            return state
+          end if
+          if typeof(values[field_index]) != "void" then
+            state.diagnostics = state.diagnostics + ["Field argument '" + arg_name + "' was supplied more than once"]
+            state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+            return state
+          end if
+          values[field_index] = call_args[ni]
+        end if
+      end for
+      for fi = 0 to len(values) - 1
+        if typeof(values[fi]) == "void" then
+          state.diagnostics = state.diagnostics + ["Missing field argument '" + ctor_fields[fi] + "' for struct " + callee]
+          state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+          return state
+        end if
+      end for
+      call_args = values
+      expr.args = values
+      expr.arg_names = array(len(values), void)
+      nargs = len(values)
+    end if
+  end if
+
   math_callee = callee
   if math_callee == "" then math_callee = raw_name end if
   if nargs == 1 and (math_callee == "std.math.floor" or math_callee == "std.math.ceil" or math_callee == "std.math.trunc" or math_callee == "std.math.round") then
@@ -3919,6 +4193,16 @@ function _emit_expr_call(state, expr)
     if mname_th == "Result" then helper_th = "fn_thread_result" end if
     if mname_th == "Close" then helper_th = "fn_thread_close" end if
     if helper_th != "" then
+      arg_names_th = try(expr.arg_names)
+      if typeof(arg_names_th) == "array" and len(arg_names_th) > 0 then
+        for ani_th = 0 to len(arg_names_th) - 1
+          if typeof(arg_names_th[ani_th]) == "string" then
+            state.diagnostics = state.diagnostics + ["Thread." + mname_th + " does not accept named arguments"]
+            state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+            return state
+          end if
+        end for
+      end if
       if nargs < min_args_th or nargs > max_args_th then
         allowed_th = "" + min_args_th
         if max_args_th != min_args_th then allowed_th = allowed_th + " or " + max_args_th end if
@@ -3996,8 +4280,6 @@ function _emit_expr_call(state, expr)
     if t.ast_is_node(tgt_dyn) == false then tgt_dyn = obj_dyn end if
 
     if mname_dyn != "" and typeof(state.struct_methods) == "array" and len(state.struct_methods) > 0 then
-      total_dyn = nargs + 1
-
       // A concrete receiver fact makes runtime tag/type checks, struct-id
       // dispatch and the polymorphic cache redundant. It also gives a small
       // inline method to the existing source-level inliner.
@@ -4012,6 +4294,23 @@ function _emit_expr_call(state, expr)
       end if
       known_def_dyn = 0
       if known_method_dyn != "" then known_def_dyn = _user_function_get(state, known_method_dyn) end if
+      if typeof(known_def_dyn) == "struct" then
+        normalized_dyn = _normalize_declared_call_args(expr, known_def_dyn, 1)
+        if normalized_dyn.ok == false then
+          state.diagnostics = state.diagnostics + [normalized_dyn.message]
+          state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+          return state
+        end if
+        call_args = normalized_dyn.args
+        expr.args = call_args
+        expr.arg_names = array(len(call_args), void)
+        nargs = len(call_args)
+      else if has_named then
+        state.diagnostics = state.diagnostics + ["Named method arguments require a statically known struct receiver"]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      total_dyn = nargs + 1
       known_arity_dyn = -1
       if typeof(known_def_dyn) == "struct" and typeof(try(known_def_dyn.params)) == "array" then
         known_arity_dyn = len(known_def_dyn.params)
@@ -6755,8 +7054,16 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, sid, false)
     if nargs > 0 then
+      field_contracts = _state_struct_field_types_get(state, scallee)
       for fi = 0 to nargs - 1
-        state = cg_emit_expr(state, call_args[fi])
+        guarded_arg = call_args[fi]
+        if typeof(field_contracts) == "array" and fi < len(field_contracts) then
+          contract = field_contracts[fi]
+          if typeof(contract) == "array" and len(contract) >= 2 and typeof(contract[0]) == "string" then
+            guarded_arg = ml.TypeGuard("TypeGuard", guarded_arg, contract[0], contract[1], t.ast_pos(call_args[fi]), t.ast_filename(call_args[fi]))
+          end if
+        end if
+        state = cg_emit_expr(state, guarded_arg)
         state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_struct)
         state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + fi * 8, "rax")
       end for

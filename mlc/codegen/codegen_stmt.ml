@@ -467,6 +467,14 @@ function _clone_function_node_for_emit(fn_node)
     try(fn_node.is_static),
     try(fn_node.is_inline),
     try(fn_node.is_synchronized),
+    _copy_fn_array_field(try(fn_node.param_types)),
+    _copy_fn_array_field(try(fn_node.param_optional)),
+    _copy_fn_array_field(try(fn_node.param_defaults)),
+    try(fn_node.variadic_index),
+    try(fn_node.return_type),
+    try(fn_node.return_optional),
+    try(fn_node.is_async),
+    try(fn_node.is_iterator),
     _copy_fn_array_field(try(fn_node._ml_locals)),
     _copy_fn_array_field(try(fn_node._ml_globals_declared)),
     _copy_fn_array_field(try(fn_node._ml_captures)),
@@ -775,7 +783,7 @@ function _collect_defer_walk(state, stmts, in_loop, builder, count)
         state.diagnostics = state.diagnostics + ["break/continue cannot leave synchronized(lock); move the control transfer outside the block" + _diag_stmt_loc(st)]
       end if
       member = ml.Member("Member", st.lock, "release", try(st._pos), try(st._filename))
-      call = ml.Call("Call", member, [], try(st._pos), try(st._filename))
+      call = ml.Call("Call", member, [], [], try(st._pos), try(st._filename))
       cleanup = ml.Defer("Defer", call, count, [], "", try(st._pos), try(st._filename))
       st.cleanup = cleanup
       builder = t.arr_chunk_push(builder, cleanup)
@@ -907,7 +915,7 @@ function _defer_replay_call(stmt)
       ab = t.arr_chunk_push(ab, _defer_capture_node(stmt, offs[dri + 2]))
     end for
   end if
-  return ml.Call("Call", callee, t.arr_chunk_finish(ab), try(stmt._pos), try(stmt._filename))
+  return ml.Call("Call", callee, t.arr_chunk_finish(ab), [], try(stmt._pos), try(stmt._filename))
 end function
 
 function _emit_defer_cleanup(state, sites, ret_off)
@@ -1428,7 +1436,7 @@ function cg_emit_stmt(state, stmt)
 
     captured = ml.DeferredCapture("DeferredCapture", offs[1], try(stmt._pos), try(stmt._filename))
     acquire_member = ml.Member("Member", captured, "acquire", try(stmt._pos), try(stmt._filename))
-    acquire_call = ml.Call("Call", acquire_member, [], try(stmt._pos), try(stmt._filename))
+    acquire_call = ml.Call("Call", acquire_member, [], [], try(stmt._pos), try(stmt._filename))
     state = exprmod.cg_emit_expr(state, acquire_call)
     lid_acquire = state.label_id
     state.label_id = state.label_id + 1
@@ -5535,6 +5543,16 @@ function _closure_expr_reads(ex, used)
     return used
   end if
 
+  if k == "Coalesce" then
+    used = _closure_expr_reads(try(ex.left), used)
+    used = _closure_expr_reads(try(ex.right), used)
+    return used
+  end if
+
+  if k == "TypeGuard" or k == "IsType" then
+    return _closure_expr_reads(try(ex.expr), used)
+  end if
+
   if k == "Unary" then
     return _closure_expr_reads(t.ast_right(ex), used)
   end if
@@ -5564,7 +5582,7 @@ function _closure_expr_reads(ex, used)
     return used
   end if
 
-  if k == "Member" then
+  if k == "Member" or k == "SafeMember" then
     tgt = _analysis_member_target(ex)
     return _closure_expr_reads(tgt, used)
   end if
@@ -6587,7 +6605,9 @@ function _expr_uses_this(ex)
   if k == "Var" then
     return _coerce_name(t.ast_name(ex)) == "this"
   end if
-  if k == "IsType" then return _expr_uses_this(try(ex.expr)) end if
+  if k == "IsType" or k == "TypeGuard" then return _expr_uses_this(try(ex.expr)) end if
+  if k == "Coalesce" then return _expr_uses_this(try(ex.left)) or _expr_uses_this(try(ex.right)) end if
+  if k == "SafeMember" then return _expr_uses_this(try(ex.target)) end if
   if k == "Unary" then return _expr_uses_this(t.ast_right(ex)) end if
   if k == "Bin" then
     if _expr_uses_this(t.ast_left(ex)) then return true end if
@@ -7073,6 +7093,17 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
           state.diagnostics = state.diagnostics +["duplicate field " + dup_field + " in struct " + sqn]
         else
           state.struct_fields = _named_array_set(state.struct_fields, sqn, flds)
+          contracts = []
+          if len(flds) > 0 then
+            for fi = 0 to len(flds) - 1
+              field_ty = void
+              field_optional = false
+              if typeof(try(st.field_types)) == "array" and fi < len(st.field_types) then field_ty = st.field_types[fi] end if
+              if typeof(try(st.field_optional)) == "array" and fi < len(st.field_optional) then field_optional = st.field_optional[fi] end if
+              contracts = contracts + [[field_ty, field_optional]]
+            end for
+          end if
+          state.struct_field_types = _named_array_set(state.struct_field_types, sqn, contracts)
         end if
       end if
 
@@ -7113,6 +7144,10 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
           else
             qfn = sqn + "." + mname
             params_new = ["this"] + params_new
+            if typeof(try(mfn.param_types)) == "array" then mfn.param_types = [void] + mfn.param_types else mfn.param_types = [void] end if
+            if typeof(try(mfn.param_optional)) == "array" then mfn.param_optional = [false] + mfn.param_optional else mfn.param_optional = [false] end if
+            if typeof(try(mfn.param_defaults)) == "array" then mfn.param_defaults = [void] + mfn.param_defaults else mfn.param_defaults = [void] end if
+            if typeof(try(mfn.variadic_index)) == "int" and mfn.variadic_index >= 0 then mfn.variadic_index = mfn.variadic_index + 1 end if
             mdict = _strpair_set(mdict, mname, qfn)
           end if
 
@@ -9812,8 +9847,15 @@ function analyze_expr(state, ex)
     nm = _coerce_name(t.ast_name(ex))
     if nm != "" then state = analyze_read_var(state, nm) end if
   end if
-  if nk == "Member" then
+  if nk == "Member" or nk == "SafeMember" then
     state = analyze_expr(state, _analysis_member_target(ex))
+  end if
+  if nk == "TypeGuard" or nk == "IsType" then
+    state = analyze_expr(state, try(ex.expr))
+  end if
+  if nk == "Coalesce" then
+    state = analyze_expr(state, try(ex.left))
+    state = analyze_expr(state, try(ex.right))
   end if
   if nk == "Unary" then
     state = analyze_expr(state, t.ast_right(ex))

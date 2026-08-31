@@ -32,6 +32,7 @@ struct CgState
   var_slots,
   break_stack,
   struct_fields,
+  struct_field_types,
   struct_ids,
   enum_variants,
   enum_ids,
@@ -408,6 +409,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   [],
   [],
   [NamedArray("error", ["code", "message", "script", "func", "line"])],
+  [NamedArray("error", [])],
   [NamedInt("error", 0xE0000001)],
   [],
   [],
@@ -697,10 +699,12 @@ end function
 function _line_from_pos(state, pos, filename)
   source = _source_for_dbg_filename(state, filename)
   if typeof(pos) != "int" then return 0 end if
+  // Negative positions mark compiler-generated statements which have no
+  // independent source line. Python's AST uses a missing `_line` for these.
+  if pos < 0 then return 0 end if
   if typeof(source) == "array" then
     nstarts = len(source)
     if nstarts <= 0 then return 1 end if
-    if pos < 0 then pos = 0 end if
     lo = 0
     hi = nstarts - 1
     best = 0
@@ -719,7 +723,6 @@ function _line_from_pos(state, pos, filename)
   end if
   if typeof(source) != "string" then return 0 end if
   n = len(source)
-  if pos < 0 then pos = 0 end if
   if pos > n then pos = n end if
   line = 1
   if pos <= 0 then return line end if
@@ -1109,6 +1112,7 @@ function core_error(state, msg, node)
 end function
 
 function emit_dbg_line(state, node)
+  if t.ast_is_node(node) and t.ast_filename(node) == "__ml_generated__" then return state end if
   ln = 0
   if t.ast_is_node(node) and typeof(node) != "struct" then
     ln = _line_from_pos(state, t.ast_pos(node), t.ast_filename(node))

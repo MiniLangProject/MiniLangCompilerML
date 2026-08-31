@@ -134,10 +134,30 @@ struct IsType
   _filename,
 end struct
 
+// Runtime guard inserted at explicitly annotated type boundaries.
+struct TypeGuard
+  node_kind,
+  expr,
+  type_name,
+  optional,
+  _pos,
+  _filename,
+end struct
+
+// Lazy void coalescing (`left ?? right`).
+struct Coalesce
+  node_kind,
+  left,
+  right,
+  _pos,
+  _filename,
+end struct
+
 struct Call
   node_kind,
   callee,
   args,
+  arg_names,
   _pos,
   _filename,
 end struct
@@ -154,6 +174,30 @@ struct Member
   node_kind,
   target,
   name,
+  _pos,
+  _filename,
+end struct
+
+// Void-safe member access (`value?.member`).
+struct SafeMember
+  node_kind,
+  target,
+  name,
+  _pos,
+  _filename,
+end struct
+
+// Parser-only anonymous function lowered to an ordinary nested closure.
+struct Lambda
+  node_kind,
+  params,
+  body,
+  param_types,
+  param_optional,
+  param_defaults,
+  variadic_index,
+  return_type,
+  return_optional,
   _pos,
   _filename,
 end struct
@@ -202,6 +246,8 @@ struct Assign
   node_kind,
   name,
   expr,
+  declared_type,
+  declared_optional,
   _pos,
   _filename,
 end struct
@@ -264,6 +310,14 @@ struct FunctionDef
   is_static,
   is_inline,
   is_synchronized,
+  param_types,
+  param_optional,
+  param_defaults,
+  variadic_index,
+  return_type,
+  return_optional,
+  is_async,
+  is_iterator,
   _ml_locals,
   _ml_globals_declared,
   _ml_captures,
@@ -280,6 +334,13 @@ struct FunctionDef
 end struct
 
 struct Return
+  node_kind,
+  expr,
+  _pos,
+  _filename,
+end struct
+
+struct Yield
   node_kind,
   expr,
   _pos,
@@ -386,9 +447,35 @@ struct StructDef
   name,
   fields,
   methods,
+  field_types,
+  field_optional,
+  interfaces,
   _extern_field_types,
   _pos,
   _filename,
+end struct
+
+// Compile-time structural contract with no runtime representation.
+struct InterfaceDef
+  node_kind,
+  name,
+  methods,
+  _pos,
+  _filename,
+end struct
+
+// Compact parser results for rich parameter and call-argument lists.
+struct ParameterList
+  names,
+  types,
+  optionals,
+  defaults,
+  variadic_index,
+end struct
+
+struct CallArguments
+  values,
+  names,
 end struct
 
 struct EnumDef
@@ -447,7 +534,8 @@ _keywords =[
 "print", "if", "then", "else", "end", "while", "loop", "true", "false", "and", "or", "not",
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
 "switch", "case", "default", "struct", "enum", "are", "namespace", "import", "as", "package",
-"extern", "from", "returns", "symbol", "out", "static", "inline", "synchronized", "void", "is", "defer"
+"extern", "from", "returns", "symbol", "out", "static", "inline", "synchronized", "void", "is", "defer",
+"interface", "implements", "iterator", "yield", "async", "await"
 ]
 
 function newToken(kind, value, pos)
@@ -456,6 +544,12 @@ end function
 
 function newParseError(message, pos, filename)
   return ParseError(message, pos, filename)
+end function
+
+// Keep compiler-internal closure fields centralized when surface syntax creates
+// ordinary, lambda, iterator or async functions.
+function _new_function_node(name, params, body, is_static, is_inline, is_synchronized, param_types, param_optional, param_defaults, variadic_index, return_type, return_optional, is_async, is_iterator, pos, filename)
+  return FunctionDef("FunctionDef", name, params, body, is_static, is_inline, is_synchronized, param_types, param_optional, param_defaults, variadic_index, return_type, return_optional, is_async, is_iterator, [], [], [], [], [], 0, [], [], [], [], false, pos, filename)
 end function
 
 function _substr(text, start, length)
@@ -923,9 +1017,17 @@ function tokenize(code)
       continue
     end if
 
+    if i + 2 < n and ch == "." and code[i + 1] == "." and code[i + 2] == "." then
+      app = _token_push(token_chunks, token_tail, TK_OP, "...", i)
+      token_chunks = app[0]
+      token_tail = app[1]
+      i = i + 3
+      continue
+    end if
+
     if i + 1 < n then
       two = ch + code[i + 1]
-      if two == "==" or two == "!=" or two == ">=" or two == "<=" or two == "<<" or two == ">>" then
+      if two == "==" or two == "!=" or two == ">=" or two == "<=" or two == "<<" or two == ">>" or two == "=>" or two == "??" or two == "?." then
         app = _token_push(token_chunks, token_tail, TK_OP, two, i)
         token_chunks = app[0]
         token_tail = app[1]
@@ -984,7 +1086,7 @@ function tokenize(code)
       continue
     end if
 
-    if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "%" or ch == "=" or ch == "<" or ch == ">" or ch == "&" or ch == "|" or ch == "^" or ch == "~" then
+    if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "%" or ch == "=" or ch == "<" or ch == ">" or ch == "&" or ch == "|" or ch == "^" or ch == "~" or ch == "?" then
       app = _token_push(token_chunks, token_tail, TK_OP, ch, i)
       token_chunks = app[0]
       token_tail = app[1]
@@ -1334,6 +1436,7 @@ function _parse_float_literal(raw)
 end function
 
 function _precedence(op)
+  if op == "??" then return 0 end if
   if op == "or" then return 1 end if
   if op == "and" then return 2 end if
   if op == "|" then return 3 end if
@@ -1393,6 +1496,59 @@ function _parse_primary()
     return ArrayLit("ArrayLit", items, sp, _filename)
   end if
 
+  if _tok_kind_id(tok) == TK_KW and _tok_value(tok) == "function" then
+    sp = _tok_pos(tok)
+    _advance()
+    _expect_kind(TK_LPAREN)
+    if _has_error() then return end if
+    parsed = _parse_parameter_list()
+    if _has_error() then return end if
+    has_lambda_default = false
+    if len(parsed.defaults) > 0 then
+      for default_i = 0 to len(parsed.defaults) - 1
+        if typeof(parsed.defaults[default_i]) != "void" then has_lambda_default = true break end if
+      end for
+    end if
+    if parsed.variadic_index >= 0 or has_lambda_default then
+      _set_error("Lambda parameters do not support default or variadic arguments", sp)
+      return
+    end if
+    return_type = void
+    return_optional = false
+    if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "returns" then
+      _advance()
+      rt = _parse_type_ref()
+      if _has_error() then return end if
+      return_type = rt[0]
+      return_optional = rt[1]
+    end if
+    _expect_value(TK_OP, "=>")
+    if _has_error() then return end if
+    value = _parse_expr(0)
+    if _has_error() then return end if
+    if typeof(return_type) == "string" then
+      value = TypeGuard("TypeGuard", value, return_type, return_optional, sp, _filename)
+    end if
+    body = [Return("Return", value, sp, _filename)]
+    return Lambda("Lambda", parsed.names, body, parsed.types, parsed.optionals, parsed.defaults, parsed.variadic_index, return_type, return_optional, sp, _filename)
+  end if
+
+  if (_tok_kind_id(tok) == TK_KW or _tok_kind_id(tok) == TK_IDENT) and _tok_value(tok) == "select" and _tok_kind_id(_peek2()) == TK_LPAREN then
+    sp = _tok_pos(tok)
+    _advance()
+    _expect_kind(TK_LPAREN)
+    if _has_error() then return end if
+    parsed_args = _parse_call_arguments()
+    if _has_error() then return end if
+    if len(parsed_args.names) > 0 then
+      for i = 0 to len(parsed_args.names) - 1
+        if typeof(parsed_args.names[i]) == "string" then _set_error("select does not accept named arguments", sp) return end if
+      end for
+    end if
+    callee = t.ast_leaf_new("Var", "__ml_select", sp, _filename)
+    return Call("Call", callee, [ArrayLit("ArrayLit", parsed_args.values, sp, _filename)], [], sp, _filename)
+  end if
+
   if _tok_kind_id(tok) == TK_NUMBER then
     sp = _tok_pos(tok)
     value = _tok_value(tok)
@@ -1436,6 +1592,140 @@ function _parse_primary()
   _set_error("Unexpected expression: " + _tok_desc(tok), _tok_pos(tok))
 end function
 
+function _parse_type_ref()
+  tok = _peek()
+  if _tok_kind_id(tok) != TK_IDENT and _tok_kind_id(tok) != TK_KW then
+    _set_error("Expected type name", _tok_pos(tok))
+    return
+  end if
+  name = _tok_value(_advance())
+  while _match_kind(TK_DOT)
+    seg = _expect_kind(TK_IDENT)
+    if _has_error() then return end if
+    name = name + "." + _tok_value(seg)
+  end while
+  optional = _match_value(TK_OP, "?")
+  return [name, optional]
+end function
+
+function _parse_parameter_list()
+  names_chunks = []
+  names_tail = []
+  types_chunks = []
+  types_tail = []
+  optional_chunks = []
+  optional_tail = []
+  defaults_chunks = []
+  defaults_tail = []
+  variadic_index = -1
+  saw_default = false
+  index = 0
+  _skip_newlines()
+  if _match_kind(TK_RPAREN) then return ParameterList([], [], [], [], -1) end if
+  while true
+    name_tok = _expect_kind(TK_IDENT)
+    if _has_error() then return end if
+    name = _tok_value(name_tok)
+    ty = void
+    optional = false
+    if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "as" then
+      _advance()
+      tref = _parse_type_ref()
+      if _has_error() then return end if
+      ty = tref[0]
+      optional = tref[1]
+    end if
+    variadic = _match_value(TK_OP, "...")
+    default_value = void
+    if _match_value(TK_OP, "=") then
+      if variadic then _set_error("A variadic parameter cannot have a default value", _tok_pos(_peek())) return end if
+      default_value = _parse_expr(0)
+      if _has_error() then return end if
+      saw_default = true
+    else if saw_default and not variadic then
+      _set_error("Required parameters cannot follow default parameters", _tok_pos(name_tok))
+      return
+    end if
+    if variadic then variadic_index = index end if
+
+    appn = _chunked_push(names_chunks, names_tail, name, 16)
+    names_chunks = appn[0]
+    names_tail = appn[1]
+    appt = _chunked_push(types_chunks, types_tail, ty, 16)
+    types_chunks = appt[0]
+    types_tail = appt[1]
+    appo = _chunked_push(optional_chunks, optional_tail, optional, 16)
+    optional_chunks = appo[0]
+    optional_tail = appo[1]
+    appd = _chunked_push(defaults_chunks, defaults_tail, default_value, 16)
+    defaults_chunks = appd[0]
+    defaults_tail = appd[1]
+    index = index + 1
+
+    _skip_newlines()
+    if _match_kind(TK_COMMA) then
+      _skip_newlines()
+      if _match_kind(TK_RPAREN) then break end if
+      continue
+    end if
+    _expect_kind(TK_RPAREN)
+    if _has_error() then return end if
+    break
+  end while
+  names = _chunked_finish(names_chunks, names_tail)
+  if variadic_index >= 0 and variadic_index != len(names) - 1 then
+    _set_error("The variadic parameter must be last", _tok_pos(_peek()))
+    return
+  end if
+  if len(names) > 1 then
+    for i = 0 to len(names) - 2
+      for j = i + 1 to len(names) - 1
+        if names[i] == names[j] then _set_error("Duplicate function parameter", _tok_pos(_peek())) return end if
+      end for
+    end for
+  end if
+  return ParameterList(names, _chunked_finish(types_chunks, types_tail), _chunked_finish(optional_chunks, optional_tail), _chunked_finish(defaults_chunks, defaults_tail), variadic_index)
+end function
+
+function _parse_call_arguments()
+  values_chunks = []
+  values_tail = []
+  names_chunks = []
+  names_tail = []
+  named_seen = false
+  _skip_newlines()
+  if _match_kind(TK_RPAREN) then return CallArguments([], []) end if
+  while true
+    arg_name = void
+    if _tok_kind_id(_peek()) == TK_IDENT and _tok_kind_id(_peek2()) == TK_OP and _tok_value(_peek2()) == "=" then
+      arg_name = _tok_value(_advance())
+      _advance()
+      named_seen = true
+    else if named_seen then
+      _set_error("Positional arguments cannot follow named arguments", _tok_pos(_peek()))
+      return
+    end if
+    value = _parse_expr(0)
+    if _has_error() then return end if
+    appv = _chunked_push(values_chunks, values_tail, value, 16)
+    values_chunks = appv[0]
+    values_tail = appv[1]
+    appn = _chunked_push(names_chunks, names_tail, arg_name, 16)
+    names_chunks = appn[0]
+    names_tail = appn[1]
+    _skip_newlines()
+    if _match_kind(TK_COMMA) then
+      _skip_newlines()
+      if _match_kind(TK_RPAREN) then break end if
+      continue
+    end if
+    _expect_kind(TK_RPAREN)
+    if _has_error() then return end if
+    break
+  end while
+  return CallArguments(_chunked_finish(values_chunks, values_tail), _chunked_finish(names_chunks, names_tail))
+end function
+
 function _match_number_has_dot(text)
   if len(text) <= 0 then return false end if
   for i = 0 to len(text) - 1
@@ -1461,9 +1751,9 @@ function _parse_postfix()
       sp = t.ast_pos(expr)
       if typeof(sp) != "int" then sp = _tok_pos(tok) end if
       _advance()
-      args = _parse_expr_list(TK_RPAREN)
+      parsed_args = _parse_call_arguments()
       if _has_error() then return end if
-      expr = Call("Call", expr, args, sp, _filename)
+      expr = Call("Call", expr, parsed_args.values, parsed_args.names, sp, _filename)
       continue
     end if
     if _tok_kind_id(tok) == TK_LBRACK then
@@ -1486,6 +1776,15 @@ function _parse_postfix()
       nm = _expect_kind(TK_IDENT)
       if _has_error() then return end if
       expr = Member("Member", expr, _tok_value(nm), sp, _filename)
+      continue
+    end if
+    if _tok_kind_id(tok) == TK_OP and _tok_value(tok) == "?." then
+      sp = t.ast_pos(expr)
+      if typeof(sp) != "int" then sp = _tok_pos(tok) end if
+      _advance()
+      nm = _expect_kind(TK_IDENT)
+      if _has_error() then return end if
+      expr = SafeMember("SafeMember", expr, _tok_value(nm), sp, _filename)
       continue
     end if
     break
@@ -1518,6 +1817,15 @@ function _parse_unary()
     r = _parse_unary()
     if _has_error() then return end if
     return Unary("Unary", "not", r, sp, _filename)
+  end if
+  if _tok_kind_id(t) == TK_KW and _tok_value(t) == "await" then
+    sp = _tok_pos(t)
+    _advance()
+    _skip_newlines()
+    r = _parse_unary()
+    if _has_error() then return end if
+    callee = Var("Var", "__ml_await", sp, _filename)
+    return Call("Call", callee, [r], [], sp, _filename)
   end if
   return _parse_postfix()
 end function
@@ -1580,7 +1888,7 @@ function _parse_expr(min_prec)
 
       if _is_allowed_type_name(ty_canon) then
         tvar = t.ast_leaf_new("Var", "typeof", is_start, _filename)
-        tcall = Call("Call", tvar,[left], sp, _filename)
+        tcall = Call("Call", tvar,[left], [], sp, _filename)
         rhs = t.ast_leaf_new("Str", ty_canon, _tok_pos(ty_tok), _filename)
         cmp = t.ast_bin_new(tcall, "==", rhs, sp, _filename)
         if is_not then
@@ -1598,7 +1906,11 @@ function _parse_expr(min_prec)
     if _has_error() then return end if
     sp = t.ast_pos(left)
     if typeof(sp) != "int" then sp = _tok_pos(tok) end if
-    left = t.ast_bin_new(left, op, right, sp, _filename)
+    if op == "??" then
+      left = Coalesce("Coalesce", left, right, sp, _filename)
+    else
+      left = t.ast_bin_new(left, op, right, sp, _filename)
+    end if
   end while
   return left
 end function
@@ -1643,13 +1955,20 @@ function _expect_block_nl()
 end function
 
 function _is_end_of(what)
-  return _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "end" and _tok_kind_id(_peek2()) == TK_KW and _tok_value(_peek2()) == what
+  next_kind = _tok_kind_id(_peek2())
+  return _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "end" and (next_kind == TK_KW or next_kind == TK_IDENT) and _tok_value(_peek2()) == what
 end function
 
 function _expect_end_of(what)
   _expect_value(TK_KW, "end")
   if _has_error() then return end if
-  _expect_value(TK_KW, what)
+  tok = _peek()
+  kind = _tok_kind_id(tok)
+  if (kind != TK_KW and kind != TK_IDENT) or _tok_value(tok) != what then
+    _set_error("Expected '" + what + "'", _tok_pos(tok))
+    return
+  end if
+  _advance()
 end function
 
 function _parse_dotted_name()
@@ -2023,6 +2342,10 @@ function _parse_stmt()
     return _parse_stmt_return(start_pos, t)
   end if
 
+  if kind == TK_KW and value == "yield" then
+    return _parse_stmt_yield(start_pos, t)
+  end if
+
   if kind == TK_KW and value == "defer" then
     return _parse_stmt_defer(start_pos, t)
   end if
@@ -2035,11 +2358,15 @@ function _parse_stmt()
     return _parse_stmt_struct(start_pos, t)
   end if
 
+  if kind == TK_KW and value == "interface" then
+    return _parse_stmt_interface(start_pos, t)
+  end if
+
   if kind == TK_KW and value == "enum" then
     return _parse_stmt_enum(start_pos, t)
   end if
 
-  if kind == TK_KW and value == "function" then
+  if kind == TK_KW and(value == "function" or value == "async" or value == "iterator") then
     return _parse_stmt_function(start_pos, t)
   end if
 
@@ -2047,7 +2374,7 @@ function _parse_stmt()
     return _parse_stmt_loop(start_pos, t)
   end if
 
-  if kind == TK_KW and value == "switch" then
+  if (kind == TK_KW and value == "switch") or ((kind == TK_KW or kind == TK_IDENT) and value == "match" and _tok_kind_id(_peek2()) != TK_OP and _tok_kind_id(_peek2()) != TK_DOT) then
     return _parse_stmt_switch(start_pos, t)
   end if
 
@@ -2229,6 +2556,22 @@ function _parse_stmt_return(start_pos, t)
   return Return("Return", e, start_pos, _filename)
 end function
 
+function _parse_stmt_yield(start_pos, tok)
+  global _func_depth
+  if _func_depth <= 0 then _set_error("'yield' is only allowed inside iterator functions", start_pos) return end if
+  _advance()
+  nxt = _peek()
+  if _tok_kind_id(nxt) == TK_NL or _tok_kind_id(nxt) == TK_SEMI or _tok_kind_id(nxt) == TK_EOF then
+    return Yield("Yield", 0, start_pos, _filename)
+  end if
+  if _tok_kind_id(nxt) == TK_KW and(_tok_value(nxt) == "end" or _tok_value(nxt) == "else" or _tok_value(nxt) == "case" or _tok_value(nxt) == "default") then
+    return Yield("Yield", 0, start_pos, _filename)
+  end if
+  value = _parse_expr(0)
+  if _has_error() then return end if
+  return Yield("Yield", value, start_pos, _filename)
+end function
+
 function _parse_stmt_defer(start_pos, t)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth <= 0 then
@@ -2289,7 +2632,7 @@ function _parse_stmt_extern(start_pos, t)
     end while
     _expect_end_of("struct")
     if _has_error() then return end if
-    return StructDef("StructDef", _tok_value(nm), _chunked_finish(fields_chunks, fields_tail), [], _chunked_finish(field_tys_chunks, field_tys_tail), start_pos, _filename)
+    return StructDef("StructDef", _tok_value(nm), _chunked_finish(fields_chunks, fields_tail), [], [], [], [], _chunked_finish(field_tys_chunks, field_tys_tail), start_pos, _filename)
   end if
 
   _expect_value(TK_KW, "function")
@@ -2335,11 +2678,68 @@ function _parse_stmt_extern(start_pos, t)
   return ExternFunctionDef("ExternFunctionDef", _tok_value(nm), params, dll, sym_name, ret_ty, start_pos, _filename)
 end function
 
+function _parse_stmt_interface(start_pos, tok)
+  global _func_depth
+  if _func_depth > 0 then _set_error("'interface' is only allowed at declaration scope", start_pos) return end if
+  _advance()
+  name_tok = _expect_kind(TK_IDENT)
+  if _has_error() then return end if
+  _expect_block_nl()
+  methods_chunks = []
+  methods_tail = []
+  while not _is_end_of("interface")
+    _skip_stmt_seps()
+    if _is_end_of("interface") then break end if
+    _expect_value(TK_KW, "function")
+    if _has_error() then return end if
+    mpos = _tok_pos(_peek())
+    method_name = _expect_kind(TK_IDENT)
+    if _has_error() then return end if
+    _expect_kind(TK_LPAREN)
+    if _has_error() then return end if
+    parsed = _parse_parameter_list()
+    if _has_error() then return end if
+    if len(parsed.defaults) > 0 then
+      for i = 0 to len(parsed.defaults) - 1
+        if typeof(parsed.defaults[i]) != "void" then _set_error("Interface methods cannot declare default values", mpos) return end if
+      end for
+    end if
+    return_type = void
+    return_optional = false
+    if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "returns" then
+      _advance()
+      rt = _parse_type_ref()
+      if _has_error() then return end if
+      return_type = rt[0]
+      return_optional = rt[1]
+    end if
+    method = _new_function_node(_tok_value(method_name), parsed.names, [], false, false, false, parsed.types, parsed.optionals, [], parsed.variadic_index, return_type, return_optional, false, false, mpos, _filename)
+    app = _chunked_push(methods_chunks, methods_tail, method, 16)
+    methods_chunks = app[0]
+    methods_tail = app[1]
+    _expect_block_nl()
+  end while
+  _expect_end_of("interface")
+  if _has_error() then return end if
+  return InterfaceDef("InterfaceDef", _tok_value(name_tok), _chunked_finish(methods_chunks, methods_tail), start_pos, _filename)
+end function
+
 function _parse_stmt_struct(start_pos, t)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   nm = _expect_kind(TK_IDENT)
   if _has_error() then return end if
+  interfaces = []
+  if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "implements" then
+    _advance()
+    while true
+      iface = _parse_type_ref()
+      if _has_error() then return end if
+      if iface[1] then _set_error("An implemented interface cannot be optional", _tok_pos(_peek())) return end if
+      interfaces = interfaces + [iface[0]]
+      if not _match_kind(TK_COMMA) then break end if
+    end while
+  end if
   if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "are" then
     _advance()
   end if
@@ -2347,6 +2747,10 @@ function _parse_stmt_struct(start_pos, t)
 
   fields_chunks = []
   fields_tail = []
+  field_types_chunks = []
+  field_types_tail = []
+  field_optional_chunks = []
+  field_optional_tail = []
   methods_chunks = []
   methods_tail = []
   while not _is_end_of("struct")
@@ -2387,8 +2791,17 @@ function _parse_stmt_struct(start_pos, t)
       if _has_error() then return end if
       _expect_kind(TK_LPAREN)
       if _has_error() then return end if
-      mp = _parse_ident_list(TK_RPAREN)
+      parsed = _parse_parameter_list()
       if _has_error() then return end if
+      method_return_type = void
+      method_return_optional = false
+      if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "returns" then
+        _advance()
+        mrt = _parse_type_ref()
+        if _has_error() then return end if
+        method_return_type = mrt[0]
+        method_return_optional = mrt[1]
+      end if
       _expect_block_nl()
       _func_depth = _func_depth + 1
       mb = _parse_block_until_end("function", mpos)
@@ -2396,7 +2809,7 @@ function _parse_stmt_struct(start_pos, t)
       if _has_error() then return end if
       _expect_end_of("function")
       if _has_error() then return end if
-      appm = _chunked_push(methods_chunks, methods_tail, FunctionDef("FunctionDef", _tok_value(mn), mp, mb, is_static, is_inline, is_synchronized, [], [], [], [], [], 0, [], [], [], [], false, mpos, _filename), 16)
+      appm = _chunked_push(methods_chunks, methods_tail, _new_function_node(_tok_value(mn), parsed.names, mb, is_static, is_inline, is_synchronized, parsed.types, parsed.optionals, parsed.defaults, parsed.variadic_index, method_return_type, method_return_optional, false, false, mpos, _filename), 16)
       methods_chunks = appm[0]
       methods_tail = appm[1]
       continue
@@ -2407,6 +2820,21 @@ function _parse_stmt_struct(start_pos, t)
     appf0 = _chunked_push(fields_chunks, fields_tail, _tok_value(f), 16)
     fields_chunks = appf0[0]
     fields_tail = appf0[1]
+    fty = void
+    foptional = false
+    if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "as" then
+      _advance()
+      ftref = _parse_type_ref()
+      if _has_error() then return end if
+      fty = ftref[0]
+      foptional = ftref[1]
+    end if
+    appft0 = _chunked_push(field_types_chunks, field_types_tail, fty, 16)
+    field_types_chunks = appft0[0]
+    field_types_tail = appft0[1]
+    appfo0 = _chunked_push(field_optional_chunks, field_optional_tail, foptional, 16)
+    field_optional_chunks = appfo0[0]
+    field_optional_tail = appfo0[1]
     while _match_kind(TK_COMMA)
       if _tok_kind_id(_peek()) == TK_NL then
         nxt = _peek_non_nl()
@@ -2419,6 +2847,21 @@ function _parse_stmt_struct(start_pos, t)
       appf = _chunked_push(fields_chunks, fields_tail, _tok_value(fi), 16)
       fields_chunks = appf[0]
       fields_tail = appf[1]
+      fty = void
+      foptional = false
+      if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "as" then
+        _advance()
+        ftref = _parse_type_ref()
+        if _has_error() then return end if
+        fty = ftref[0]
+        foptional = ftref[1]
+      end if
+      appft = _chunked_push(field_types_chunks, field_types_tail, fty, 16)
+      field_types_chunks = appft[0]
+      field_types_tail = appft[1]
+      appfo = _chunked_push(field_optional_chunks, field_optional_tail, foptional, 16)
+      field_optional_chunks = appfo[0]
+      field_optional_tail = appfo[1]
     end while
     _expect_block_nl()
   end while
@@ -2430,6 +2873,9 @@ function _parse_stmt_struct(start_pos, t)
     _tok_value(nm),
     _chunked_finish(fields_chunks, fields_tail),
     _chunked_finish(methods_chunks, methods_tail),
+    _chunked_finish(field_types_chunks, field_types_tail),
+    _chunked_finish(field_optional_chunks, field_optional_tail),
+    interfaces,
     [],
     start_pos,
     _filename
@@ -2509,7 +2955,14 @@ end function
 
 function _parse_stmt_function(start_pos, t)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  prefix = _tok_value(t)
+  is_async = prefix == "async"
+  is_iterator = prefix == "iterator"
   _advance()
+  if is_async or is_iterator then
+    _expect_value(TK_KW, "function")
+    if _has_error() then return end if
+  end if
   is_inline = false
   is_synchronized = false
   while _tok_kind_id(_peek()) == TK_KW and(_tok_value(_peek()) == "inline" or _tok_value(_peek()) == "synchronized")
@@ -2526,8 +2979,17 @@ function _parse_stmt_function(start_pos, t)
   if _has_error() then return end if
   _expect_kind(TK_LPAREN)
   if _has_error() then return end if
-  params = _parse_ident_list(TK_RPAREN)
+  parsed = _parse_parameter_list()
   if _has_error() then return end if
+  return_type = void
+  return_optional = false
+  if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "returns" then
+    _advance()
+    rt = _parse_type_ref()
+    if _has_error() then return end if
+    return_type = rt[0]
+    return_optional = rt[1]
+  end if
   _expect_block_nl()
   _func_depth = _func_depth + 1
   body = _parse_block_until_end("function", start_pos)
@@ -2535,7 +2997,7 @@ function _parse_stmt_function(start_pos, t)
   if _has_error() then return end if
   _expect_end_of("function")
   if _has_error() then return end if
-  return FunctionDef("FunctionDef", _tok_value(nm), params, body, false, is_inline, is_synchronized, [], [], [], [], [], 0, [], [], [], [], false, start_pos, _filename)
+  return _new_function_node(_tok_value(nm), parsed.names, body, false, is_inline, is_synchronized, parsed.types, parsed.optionals, parsed.defaults, parsed.variadic_index, return_type, return_optional, is_async, is_iterator, start_pos, _filename)
 end function
 
 function _parse_stmt_loop(start_pos, t)
@@ -2587,6 +3049,7 @@ end function
 
 function _parse_stmt_switch(start_pos, t)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  block_kind = _tok_value(t)
   _advance()
   ex = _parse_expr(0)
   if _has_error() then return end if
@@ -2670,7 +3133,7 @@ function _parse_stmt_switch(start_pos, t)
     break
   end while
 
-  _expect_end_of("switch")
+  _expect_end_of(block_kind)
   if _has_error() then return end if
   return Switch("Switch", ex, _chunked_finish(cases_chunks, cases_tail), default_body, start_pos, _filename)
 end function
@@ -2766,11 +3229,23 @@ function _parse_stmt_ident(start_pos, first_tok)
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   expr = _parse_postfix()
   if _has_error() then return end if
+  declared_type = void
+  declared_optional = false
+  if t.ast_kind(expr) == "Var" and _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "as" then
+    _advance()
+    tref = _parse_type_ref()
+    if _has_error() then return end if
+    declared_type = tref[0]
+    declared_optional = tref[1]
+  end if
   if _match_value(TK_OP, "=") then
     rhs = _parse_expr(0)
     if _has_error() then return end if
     if t.ast_kind(expr) == "Var" then
-      return Assign("Assign", t.ast_name(expr), rhs, start_pos, _filename)
+      if typeof(declared_type) == "string" then
+        rhs = TypeGuard("TypeGuard", rhs, declared_type, declared_optional, start_pos, _filename)
+      end if
+      return Assign("Assign", t.ast_name(expr), rhs, declared_type, declared_optional, start_pos, _filename)
     end if
     if t.ast_kind(expr) == "Member" then
       return SetMember("SetMember", expr.target, expr.name, rhs, start_pos, _filename)
@@ -2779,6 +3254,10 @@ function _parse_stmt_ident(start_pos, first_tok)
       return SetIndex("SetIndex", expr.target, expr.index, rhs, start_pos, _filename)
     end if
     _set_error("Invalid assignment target (lvalue)", start_pos)
+    return
+  end if
+  if typeof(declared_type) == "string" then
+    _set_error("A typed variable declaration requires '='", start_pos)
     return
   end if
   if t.ast_kind(expr) == "Call" then
@@ -3364,6 +3843,626 @@ function preprocess_compile_directives(code, filename)
   end for
   if len(frames) > 0 then return ParseError("unterminated #if (missing #endif)", frames[len(frames) - 1].pos, filename) end if
   return s.join(t.arr_chunked_finish(chunks, tail), "")
+end function
+
+_language_serial = 0
+_language_needs_await = false
+_language_needs_select = false
+_language_await_pos = 0
+_language_await_file = ""
+_language_select_pos = 0
+_language_select_file = ""
+_language_failure = ""
+
+function _lang_fail(message)
+  global _language_failure
+  if _language_failure == "" then _language_failure = message end if
+end function
+
+function _lang_fresh(stem)
+  global _language_serial
+  _language_serial = _language_serial + 1
+  return "__ml_" + stem + "_" + _language_serial
+end function
+
+function _lang_var(name, node)
+  return t.ast_leaf_new("Var", name, t.ast_pos(node), t.ast_filename(node))
+end function
+
+function _lang_num(value, node)
+  return t.ast_leaf_new("Num", value, t.ast_pos(node), t.ast_filename(node))
+end function
+
+function _lang_void(node)
+  return t.ast_leaf_new("VoidLit", 0, t.ast_pos(node), t.ast_filename(node))
+end function
+
+function _lang_call(name, args, node)
+  // Calls introduced after source-line annotation intentionally have no own
+  // line, matching the Python lowerer. Their surrounding source statement
+  // remains responsible for runtime error locations.
+  return Call("Call", _lang_var(name, node), args, [], t.ast_pos(node), "__ml_generated__")
+end function
+
+function _lang_guard_returns(body, return_type, return_optional)
+  if typeof(return_type) != "string" or typeof(body) != "array" then return body end if
+  if len(body) <= 0 then return body end if
+  for i = 0 to len(body) - 1
+    st = body[i]
+    kind = t.ast_kind(st)
+    if kind == "Return" then
+      value = try(st.expr)
+      if typeof(value) == "void" or value == 0 then value = _lang_void(st) end if
+      st.expr = TypeGuard("TypeGuard", value, return_type, return_optional, t.ast_pos(st), t.ast_filename(st))
+      body[i] = st
+      continue
+    end if
+    if kind == "FunctionDef" then continue end if
+    if kind == "If" then
+      st.then_body = _lang_guard_returns(st.then_body, return_type, return_optional)
+      if typeof(st.elifs) == "array" and len(st.elifs) > 0 then
+        for j = 0 to len(st.elifs) - 1
+          pair = st.elifs[j]
+          pair[1] = _lang_guard_returns(pair[1], return_type, return_optional)
+          st.elifs[j] = pair
+        end for
+      end if
+      st.else_body = _lang_guard_returns(st.else_body, return_type, return_optional)
+      body[i] = st
+      continue
+    end if
+    if kind == "Switch" then
+      if len(st.cases) > 0 then
+        for j = 0 to len(st.cases) - 1
+          cs = st.cases[j]
+          cs.body = _lang_guard_returns(cs.body, return_type, return_optional)
+          st.cases[j] = cs
+        end for
+      end if
+      st.default_body = _lang_guard_returns(st.default_body, return_type, return_optional)
+      body[i] = st
+      continue
+    end if
+    if kind == "While" or kind == "DoWhile" or kind == "For" or kind == "ForEach" or kind == "SynchronizedBlock" then
+      st.body = _lang_guard_returns(st.body, return_type, return_optional)
+      body[i] = st
+    end if
+  end for
+  return body
+end function
+
+function _lang_apply_parameter_contracts(fn)
+  guards = []
+  if typeof(fn.params) == "array" and len(fn.params) > 0 then
+    for i = 0 to len(fn.params) - 1
+      ty = void
+      optional = false
+      if typeof(fn.param_types) == "array" and i < len(fn.param_types) then ty = fn.param_types[i] end if
+      if typeof(fn.param_optional) == "array" and i < len(fn.param_optional) then optional = fn.param_optional[i] end if
+      if typeof(ty) == "string" then
+        value = _lang_var(fn.params[i], fn)
+        guarded = TypeGuard("TypeGuard", value, ty, optional, t.ast_pos(fn), t.ast_filename(fn))
+        // Parameter guards are compiler-generated statements. Keep their source
+        // position empty so debug-line emission matches the Python compiler and
+        // the first real source statement remains the active runtime location.
+        guards = guards + [Assign("Assign", fn.params[i], guarded, ty, optional, t.ast_pos(fn), t.ast_filename(fn))]
+      end if
+    end for
+  end if
+  if len(guards) > 0 then fn.body = guards + fn.body end if
+  return fn
+end function
+
+function _lang_apply_contracts(fn)
+  fn = _lang_apply_parameter_contracts(fn)
+  if fn.is_iterator == false then fn.body = _lang_guard_returns(fn.body, fn.return_type, fn.return_optional) end if
+  return fn
+end function
+
+function _lang_lower_expr(expr, prelude)
+  global _language_needs_await, _language_needs_select, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file
+  if t.ast_is_node(expr) == false then return [expr, prelude] end if
+  kind = t.ast_kind(expr)
+  if kind == "Lambda" then
+    name = _lang_fresh("lambda")
+    body = _lang_lower_block(expr.body, 1)
+    fn = _new_function_node(name, expr.params, body, false, false, false, expr.param_types, expr.param_optional, expr.param_defaults, expr.variadic_index, expr.return_type, expr.return_optional, false, false, t.ast_pos(expr), t.ast_filename(expr))
+    // The expression-bodied lambda parser already guarded its return value.
+    // Only parameter contracts still need to be inserted at this stage.
+    fn = _lang_apply_parameter_contracts(fn)
+    prelude = prelude + [fn]
+    return [_lang_var(name, expr), prelude]
+  end if
+  if kind == "Call" then
+    lowered = _lang_lower_expr(expr.callee, prelude)
+    expr.callee = lowered[0]
+    prelude = lowered[1]
+    if typeof(expr.args) == "array" and len(expr.args) > 0 then
+      for i = 0 to len(expr.args) - 1
+        lowered = _lang_lower_expr(expr.args[i], prelude)
+        expr.args[i] = lowered[0]
+        prelude = lowered[1]
+      end for
+    end if
+    if t.ast_kind(expr.callee) == "Var" and t.ast_name(expr.callee) == "__ml_await" then
+      if _language_needs_await == false then
+        _language_await_pos = t.ast_pos(expr)
+        _language_await_file = t.ast_filename(expr)
+      end if
+      _language_needs_await = true
+    end if
+    if t.ast_kind(expr.callee) == "Var" and t.ast_name(expr.callee) == "__ml_select" then
+      if _language_needs_select == false then
+        _language_select_pos = t.ast_pos(expr)
+        _language_select_file = t.ast_filename(expr)
+      end if
+      _language_needs_select = true
+    end if
+    return [expr, prelude]
+  end if
+  if kind == "Bin" then
+    old_left = t.ast_left(expr)
+    old_right = t.ast_right(expr)
+    left_result = _lang_lower_expr(old_left, prelude)
+    right_result = _lang_lower_expr(old_right, left_result[1])
+    if left_result[0] == old_left and right_result[0] == old_right then return [expr, right_result[1]] end if
+    return [t.ast_bin_new(left_result[0], t.ast_op(expr), right_result[0], t.ast_pos(expr), t.ast_filename(expr)), right_result[1]]
+  end if
+  if kind == "Coalesce" then
+    left_result = _lang_lower_expr(expr.left, prelude)
+    right_result = _lang_lower_expr(expr.right, left_result[1])
+    expr.left = left_result[0]
+    expr.right = right_result[0]
+    return [expr, right_result[1]]
+  end if
+  if kind == "Unary" then
+    lowered = _lang_lower_expr(expr.right, prelude)
+    expr.right = lowered[0]
+    return [expr, lowered[1]]
+  end if
+  if kind == "IsType" or kind == "TypeGuard" then
+    lowered = _lang_lower_expr(expr.expr, prelude)
+    expr.expr = lowered[0]
+    return [expr, lowered[1]]
+  end if
+  if kind == "Member" or kind == "SafeMember" then
+    lowered = _lang_lower_expr(expr.target, prelude)
+    expr.target = lowered[0]
+    return [expr, lowered[1]]
+  end if
+  if kind == "Index" then
+    lowered = _lang_lower_expr(expr.target, prelude)
+    expr.target = lowered[0]
+    lowered2 = _lang_lower_expr(expr.index, lowered[1])
+    expr.index = lowered2[0]
+    return [expr, lowered2[1]]
+  end if
+  if kind == "ArrayLit" then
+    if len(expr.items) > 0 then
+      for i = 0 to len(expr.items) - 1
+        lowered = _lang_lower_expr(expr.items[i], prelude)
+        expr.items[i] = lowered[0]
+        prelude = lowered[1]
+      end for
+    end if
+    return [expr, prelude]
+  end if
+  return [expr, prelude]
+end function
+
+function _lang_iterator_append(yield_stmt, fn, names)
+  buf = names[0]
+  count = names[1]
+  grown = names[2]
+  copy_i = names[3]
+  value = try(yield_stmt.expr)
+  if typeof(value) == "void" or value == 0 then value = _lang_void(yield_stmt) end if
+  if typeof(fn.return_type) == "string" then
+    value = TypeGuard("TypeGuard", value, fn.return_type, fn.return_optional, t.ast_pos(yield_stmt), t.ast_filename(yield_stmt))
+  end if
+  len_buf = _lang_call("len", [_lang_var(buf, yield_stmt)], yield_stmt)
+  double_cap = t.ast_bin_new(len_buf, "*", _lang_num(2, yield_stmt), t.ast_pos(yield_stmt), t.ast_filename(yield_stmt))
+  allocate = _lang_call("array", [double_cap, _lang_void(yield_stmt)], yield_stmt)
+  grow_assign = Assign("Assign", grown, allocate, 0, false, t.ast_pos(yield_stmt), "__ml_generated__")
+  copy_value = Index("Index", _lang_var(buf, yield_stmt), _lang_var(copy_i, yield_stmt), t.ast_pos(yield_stmt), "__ml_generated__")
+  copy_set = SetIndex("SetIndex", _lang_var(grown, yield_stmt), _lang_var(copy_i, yield_stmt), copy_value, t.ast_pos(yield_stmt), "__ml_generated__")
+  copy_end = t.ast_bin_new(_lang_var(count, yield_stmt), "-", _lang_num(1, yield_stmt), t.ast_pos(yield_stmt), t.ast_filename(yield_stmt))
+  copy_loop = For("For", copy_i, _lang_num(0, yield_stmt), copy_end, [copy_set], t.ast_pos(yield_stmt), "__ml_generated__")
+  replace_buf = Assign("Assign", buf, _lang_var(grown, yield_stmt), 0, false, t.ast_pos(yield_stmt), "__ml_generated__")
+  full = t.ast_bin_new(_lang_var(count, yield_stmt), "==", _lang_call("len", [_lang_var(buf, yield_stmt)], yield_stmt), t.ast_pos(yield_stmt), t.ast_filename(yield_stmt))
+  grow_if = If("If", full, [grow_assign, copy_loop, replace_buf], [], [], t.ast_pos(yield_stmt), "__ml_generated__")
+  store = SetIndex("SetIndex", _lang_var(buf, yield_stmt), _lang_var(count, yield_stmt), value, t.ast_pos(yield_stmt), "__ml_generated__")
+  increment = t.ast_bin_new(_lang_var(count, yield_stmt), "+", _lang_num(1, yield_stmt), t.ast_pos(yield_stmt), t.ast_filename(yield_stmt))
+  count_assign = Assign("Assign", count, increment, 0, false, t.ast_pos(yield_stmt), "__ml_generated__")
+  return [grow_if, store, count_assign]
+end function
+
+function _lang_rewrite_yields(body, fn, names)
+  if typeof(body) != "array" or len(body) <= 0 then return [] end if
+  result_items = []
+  for i = 0 to len(body) - 1
+    st = body[i]
+    kind = t.ast_kind(st)
+    if kind == "Yield" then
+      result_items = result_items + _lang_iterator_append(st, fn, names)
+      continue
+    end if
+    if kind == "Return" then
+      _lang_fail("iterator functions use yield and cannot return a value")
+      result_items = result_items + [st]
+      continue
+    end if
+    if kind == "FunctionDef" then result_items = result_items + [st] continue end if
+    if kind == "If" then
+      st.then_body = _lang_rewrite_yields(st.then_body, fn, names)
+      if len(st.elifs) > 0 then
+        for j = 0 to len(st.elifs) - 1
+          pair = st.elifs[j]
+          pair[1] = _lang_rewrite_yields(pair[1], fn, names)
+          st.elifs[j] = pair
+        end for
+      end if
+      st.else_body = _lang_rewrite_yields(st.else_body, fn, names)
+    else if kind == "Switch" then
+      if len(st.cases) > 0 then
+        for j = 0 to len(st.cases) - 1
+          cs = st.cases[j]
+          cs.body = _lang_rewrite_yields(cs.body, fn, names)
+          st.cases[j] = cs
+        end for
+      end if
+      st.default_body = _lang_rewrite_yields(st.default_body, fn, names)
+    else if kind == "While" or kind == "DoWhile" or kind == "For" or kind == "ForEach" or kind == "SynchronizedBlock" then
+      st.body = _lang_rewrite_yields(st.body, fn, names)
+    end if
+    result_items = result_items + [st]
+  end for
+  return result_items
+end function
+
+function _lang_lower_iterator(fn)
+  if fn.is_async then _lang_fail("A function cannot be both async and iterator") return fn end if
+  suffix = _lang_fresh("iter")
+  buf = suffix + "_buf"
+  count = suffix + "_count"
+  grown = suffix + "_grown"
+  copy_i = suffix + "_copy_i"
+  result = suffix + "_result"
+  names = [buf, count, grown, copy_i]
+  original = _lang_rewrite_yields(fn.body, fn, names)
+  init_buf = Assign("Assign", buf, _lang_call("array", [_lang_num(8, fn), _lang_void(fn)], fn), 0, false, t.ast_pos(fn), "__ml_generated__")
+  init_count = Assign("Assign", count, _lang_num(0, fn), 0, false, t.ast_pos(fn), "__ml_generated__")
+  result_alloc = Assign("Assign", result, _lang_call("array", [_lang_var(count, fn), _lang_void(fn)], fn), 0, false, t.ast_pos(fn), "__ml_generated__")
+  copy_value = Index("Index", _lang_var(buf, fn), _lang_var(copy_i, fn), t.ast_pos(fn), "__ml_generated__")
+  copy_set = SetIndex("SetIndex", _lang_var(result, fn), _lang_var(copy_i, fn), copy_value, t.ast_pos(fn), "__ml_generated__")
+  copy_end = t.ast_bin_new(_lang_var(count, fn), "-", _lang_num(1, fn), t.ast_pos(fn), t.ast_filename(fn))
+  copy_loop = For("For", copy_i, _lang_num(0, fn), copy_end, [copy_set], t.ast_pos(fn), "__ml_generated__")
+  final_return = Return("Return", _lang_var(result, fn), t.ast_pos(fn), "__ml_generated__")
+  fn.body = [init_buf, init_count] + original + [result_alloc, copy_loop, final_return]
+  fn.is_iterator = false
+  return fn
+end function
+
+function _lang_lower_async(fn)
+  impl_name = _lang_fresh("async_impl")
+  entry_name = _lang_fresh("async_entry")
+  arg_name = _lang_fresh("async_args")
+  thread_name = _lang_fresh("async_thread")
+  // The wrapper has already packed a variadic tail, so the implementation ABI
+  // is fixed even when the public declaration was variadic.
+  impl = _new_function_node(impl_name, fn.params, fn.body, false, false, false, fn.param_types, fn.param_optional, [], -1, fn.return_type, fn.return_optional, false, false, t.ast_pos(fn), t.ast_filename(fn))
+  forwarded = []
+  if len(fn.params) > 0 then
+    for i = 0 to len(fn.params) - 1
+      forwarded = forwarded + [Index("Index", _lang_var(arg_name, fn), _lang_num(i, fn), t.ast_pos(fn), "__ml_generated__")]
+    end for
+  end if
+  entry_call = Call("Call", _lang_var(impl_name, fn), forwarded, [], t.ast_pos(fn), "__ml_generated__")
+  entry = _new_function_node(entry_name, [arg_name], [Return("Return", entry_call, t.ast_pos(fn), "__ml_generated__")], false, false, false, [], [], [], -1, 0, false, false, false, t.ast_pos(fn), t.ast_filename(fn))
+  packed_items = []
+  if len(fn.params) > 0 then
+    for i = 0 to len(fn.params) - 1
+      packed_items = packed_items + [_lang_var(fn.params[i], fn)]
+    end for
+  end if
+  packed = ArrayLit("ArrayLit", packed_items, t.ast_pos(fn), "__ml_generated__")
+  create_thread = Call("Call", _lang_var("Thread", fn), [_lang_var(entry_name, fn)], [], t.ast_pos(fn), "__ml_generated__")
+  assign_thread = Assign("Assign", thread_name, create_thread, 0, false, t.ast_pos(fn), "__ml_generated__")
+  start_member = Member("Member", _lang_var(thread_name, fn), "Start", t.ast_pos(fn), "__ml_generated__")
+  start_call = ExprStmt("ExprStmt", Call("Call", start_member, [packed], [], t.ast_pos(fn), "__ml_generated__"), t.ast_pos(fn), "__ml_generated__")
+  wrapper_body = [assign_thread, start_call, Return("Return", _lang_var(thread_name, fn), t.ast_pos(fn), "__ml_generated__")]
+  wrapper = _new_function_node(fn.name, fn.params, wrapper_body, fn.is_static, false, false, fn.param_types, fn.param_optional, fn.param_defaults, fn.variadic_index, fn.return_type, fn.return_optional, false, false, t.ast_pos(fn), t.ast_filename(fn))
+  return [impl, entry, wrapper]
+end function
+
+function _lang_await_helper()
+  global _language_await_pos, _language_await_file
+  node = _new_function_node("__ml_await", ["value"], [], false, false, false, [], [], [], -1, 0, false, false, false, _language_await_pos, _language_await_file)
+  value = _lang_var("value", node)
+  cond = t.ast_bin_new(_lang_call("typeof", [value], node), "==", t.ast_leaf_new("Str", "thread", 0, "__ml_generated__"), 0, "__ml_generated__")
+  join_call = ExprStmt("ExprStmt", Call("Call", Member("Member", value, "Join", 0, "__ml_generated__"), [], [], 0, "__ml_generated__"), 0, "__ml_generated__")
+  result_call = Call("Call", Member("Member", value, "Result", 0, "__ml_generated__"), [], [], 0, "__ml_generated__")
+  node.body = [If("If", cond, [join_call, Return("Return", result_call, 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), Return("Return", value, 0, "__ml_generated__")]
+  return node
+end function
+
+function _lang_select_helper()
+  global _language_select_pos, _language_select_file
+  node = _new_function_node("__ml_select", ["handles"], [], false, false, false, [], [], [], -1, 0, false, false, false, _language_select_pos, _language_select_file)
+  handles = _lang_var("handles", node)
+  idx = _lang_var("__ml_select_i", node)
+  handle = _lang_var("__ml_select_handle", node)
+  valid = t.ast_bin_new(_lang_call("typeof", [handles], node), "==", t.ast_leaf_new("Str", "array", 0, "__ml_generated__"), 0, "__ml_generated__")
+  nonempty = t.ast_bin_new(_lang_call("len", [handles], node), ">", _lang_num(0, node), 0, "__ml_generated__")
+  both = t.ast_bin_new(valid, "and", nonempty, 0, "__ml_generated__")
+  invalid = Unary("Unary", "not", both, 0, "__ml_generated__")
+  assign_handle = Assign("Assign", "__ml_select_handle", Index("Index", handles, idx, 0, "__ml_generated__"), 0, false, 0, "__ml_generated__")
+  not_thread = t.ast_bin_new(_lang_call("typeof", [handle], node), "!=", t.ast_leaf_new("Str", "thread", 0, "__ml_generated__"), 0, "__ml_generated__")
+  alive_call = Call("Call", Member("Member", handle, "IsAlive", 0, "__ml_generated__"), [], [], 0, "__ml_generated__")
+  completed = Unary("Unary", "not", alive_call, 0, "__ml_generated__")
+  join_call = ExprStmt("ExprStmt", Call("Call", Member("Member", handle, "Join", 0, "__ml_generated__"), [], [], 0, "__ml_generated__"), 0, "__ml_generated__")
+  check_loop = For("For", "__ml_select_i", _lang_num(0, node), t.ast_bin_new(_lang_call("len", [handles], node), "-", _lang_num(1, node), 0, "__ml_generated__"), [assign_handle, If("If", not_thread, [Return("Return", idx, 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), If("If", completed, [join_call, Return("Return", idx, 0, "__ml_generated__")], [], [], 0, "__ml_generated__")], 0, "__ml_generated__")
+  sleep_call = ExprStmt("ExprStmt", _lang_call("threadSleep", [_lang_num(1, node)], node), 0, "__ml_generated__")
+  wait_loop = While("While", t.ast_leaf_new("Bool", true, 0, "__ml_generated__"), [check_loop, sleep_call], 0, "__ml_generated__")
+  node.body = [If("If", invalid, [Return("Return", _lang_num(-1, node), 0, "__ml_generated__")], [], [], 0, "__ml_generated__"), wait_loop, Return("Return", _lang_num(-1, node), 0, "__ml_generated__")]
+  return node
+end function
+
+function _lang_lower_stmt(st, function_depth)
+  kind = t.ast_kind(st)
+  prelude = []
+  if kind == "NamespaceDef" then
+    st.body = _lang_lower_block(st.body, function_depth)
+  else if kind == "FunctionDef" then
+    st = _lang_apply_contracts(st)
+    st.body = _lang_lower_block(st.body, function_depth + 1)
+    if st.is_iterator then st = _lang_lower_iterator(st) end if
+    if st.is_async then
+      if function_depth > 0 then _lang_fail("async functions must be declared at module or namespace scope") return [st] end if
+      return _lang_lower_async(st)
+    end if
+  else if kind == "StructDef" then
+    if typeof(st.methods) == "array" and len(st.methods) > 0 then
+      for i = 0 to len(st.methods) - 1
+        method = _lang_apply_contracts(st.methods[i])
+        method.body = _lang_lower_block(method.body, function_depth + 1)
+        if method.is_iterator then method = _lang_lower_iterator(method) end if
+        st.methods[i] = method
+      end for
+    end if
+  else if kind == "If" then
+    lowered = _lang_lower_expr(st.cond, prelude)
+    st.cond = lowered[0]
+    prelude = lowered[1]
+    st.then_body = _lang_lower_block(st.then_body, function_depth)
+    if len(st.elifs) > 0 then
+      for i = 0 to len(st.elifs) - 1
+        pair = st.elifs[i]
+        lowered = _lang_lower_expr(pair[0], prelude)
+        pair[0] = lowered[0]
+        prelude = lowered[1]
+        pair[1] = _lang_lower_block(pair[1], function_depth)
+        st.elifs[i] = pair
+      end for
+    end if
+    st.else_body = _lang_lower_block(st.else_body, function_depth)
+  else if kind == "While" or kind == "DoWhile" then
+    lowered = _lang_lower_expr(st.cond, prelude)
+    st.cond = lowered[0]
+    prelude = lowered[1]
+    st.body = _lang_lower_block(st.body, function_depth)
+  else if kind == "For" then
+    lowered = _lang_lower_expr(st.start, prelude)
+    st.start = lowered[0]
+    lowered2 = _lang_lower_expr(st.end_expr, lowered[1])
+    st.end_expr = lowered2[0]
+    prelude = lowered2[1]
+    st.body = _lang_lower_block(st.body, function_depth)
+  else if kind == "ForEach" then
+    lowered = _lang_lower_expr(st.iterable, prelude)
+    st.iterable = lowered[0]
+    prelude = lowered[1]
+    st.body = _lang_lower_block(st.body, function_depth)
+  else if kind == "SynchronizedBlock" then
+    lowered = _lang_lower_expr(st.lock, prelude)
+    st.lock = lowered[0]
+    prelude = lowered[1]
+    st.body = _lang_lower_block(st.body, function_depth)
+  else if kind == "Switch" then
+    lowered = _lang_lower_expr(st.expr, prelude)
+    st.expr = lowered[0]
+    prelude = lowered[1]
+    if len(st.cases) > 0 then
+      for i = 0 to len(st.cases) - 1
+        cs = st.cases[i]
+        if len(cs.values) > 0 then
+          for j = 0 to len(cs.values) - 1
+            lowered = _lang_lower_expr(cs.values[j], prelude)
+            cs.values[j] = lowered[0]
+            prelude = lowered[1]
+          end for
+        end if
+        if typeof(cs.range_start) != "void" and cs.range_start != 0 then
+          lowered = _lang_lower_expr(cs.range_start, prelude)
+          cs.range_start = lowered[0]
+          prelude = lowered[1]
+          lowered = _lang_lower_expr(cs.range_end, prelude)
+          cs.range_end = lowered[0]
+          prelude = lowered[1]
+        end if
+        cs.body = _lang_lower_block(cs.body, function_depth)
+        st.cases[i] = cs
+      end for
+    end if
+    st.default_body = _lang_lower_block(st.default_body, function_depth)
+  else
+    if kind == "SetMember" then
+      lowered = _lang_lower_expr(st.obj, prelude)
+      st.obj = lowered[0]
+      prelude = lowered[1]
+    end if
+    if kind == "Assign" or kind == "SynchronizedDecl" or kind == "ConstDecl" or kind == "Print" or kind == "ExprStmt" or kind == "Return" or kind == "Yield" or kind == "Defer" or kind == "SetMember" or kind == "SetIndex" then
+      expr_value = st.expr
+      if typeof(expr_value) != "void" and expr_value != 0 then
+        lowered = _lang_lower_expr(expr_value, prelude)
+        st.expr = lowered[0]
+        prelude = lowered[1]
+      end if
+    end if
+    if kind == "SetIndex" then
+      lowered = _lang_lower_expr(st.target, prelude)
+      st.target = lowered[0]
+      lowered2 = _lang_lower_expr(st.index, lowered[1])
+      st.index = lowered2[0]
+      prelude = lowered2[1]
+    end if
+  end if
+  return prelude + [st]
+end function
+
+function _lang_lower_block(body, function_depth)
+  if typeof(body) != "array" or len(body) <= 0 then return [] end if
+  chunks = []
+  tail = []
+  for i = 0 to len(body) - 1
+    items = _lang_lower_stmt(body[i], function_depth)
+    if len(items) > 0 then
+      for j = 0 to len(items) - 1
+        app = _chunked_push(chunks, tail, items[j], 64)
+        chunks = app[0]
+        tail = app[1]
+      end for
+    end if
+  end for
+  return _chunked_finish(chunks, tail)
+end function
+
+_language_interfaces = []
+_language_structs = []
+
+function _lang_collect_contracts(body, prefix)
+  global _language_interfaces, _language_structs
+  if typeof(body) != "array" or len(body) <= 0 then return end if
+  for i = 0 to len(body) - 1
+    st = body[i]
+    kind = t.ast_kind(st)
+    if kind == "NamespaceDef" then
+      _lang_collect_contracts(st.body, prefix + st.name + ".")
+    else if kind == "InterfaceDef" then
+      _language_interfaces = _language_interfaces + [[prefix + st.name, st]]
+    else if kind == "StructDef" then
+      _language_structs = _language_structs + [[prefix + st.name, prefix, st]]
+    end if
+  end for
+end function
+
+function _lang_find_interface(raw_name, prefix)
+  if len(_language_interfaces) <= 0 then return void end if
+  local_name = prefix + raw_name
+  unique = void
+  for i = 0 to len(_language_interfaces) - 1
+    item = _language_interfaces[i]
+    if item[0] == local_name or item[0] == raw_name then return item[1] end if
+    full = item[0]
+    simple = full
+    last_dot = s.lastIndexOf(full, ".")
+    if typeof(last_dot) == "int" and last_dot >= 0 then simple = s.substr(full, last_dot + 1, len(full) - last_dot - 1) end if
+    if simple == raw_name then
+      if typeof(unique) != "void" then return void end if
+      unique = item[1]
+    end if
+  end for
+  return unique
+end function
+
+function _lang_interface_signature_matches(required, actual)
+  if try(actual.is_static) == true then return false end if
+  if len(actual.params) != len(required.params) or actual.variadic_index != required.variadic_index then return false end if
+  count = len(required.params)
+  if count > 0 then
+    for i = 0 to count - 1
+      required_type = void
+      actual_type = void
+      required_optional = false
+      actual_optional = false
+      if typeof(required.param_types) == "array" and i < len(required.param_types) then required_type = required.param_types[i] end if
+      if typeof(actual.param_types) == "array" and i < len(actual.param_types) then actual_type = actual.param_types[i] end if
+      if typeof(required.param_optional) == "array" and i < len(required.param_optional) then required_optional = required.param_optional[i] end if
+      if typeof(actual.param_optional) == "array" and i < len(actual.param_optional) then actual_optional = actual.param_optional[i] end if
+      if required_type != actual_type or required_optional != actual_optional then return false end if
+    end for
+  end if
+  if try(required.return_type) != try(actual.return_type) then return false end if
+  if try(required.return_optional) != try(actual.return_optional) then return false end if
+  return true
+end function
+
+function _lang_validate_interfaces(program)
+  global _language_interfaces, _language_structs
+  _language_interfaces = []
+  _language_structs = []
+  _lang_collect_contracts(program, "")
+  if len(_language_structs) <= 0 then return "" end if
+  for i = 0 to len(_language_structs) - 1
+    item = _language_structs[i]
+    struct_name = item[0]
+    prefix = item[1]
+    st = item[2]
+    if typeof(st.interfaces) != "array" or len(st.interfaces) <= 0 then continue end if
+    for j = 0 to len(st.interfaces) - 1
+      raw_name = st.interfaces[j]
+      iface = _lang_find_interface(raw_name, prefix)
+      if typeof(iface) == "void" then return "Unknown interface '" + raw_name + "' implemented by " + struct_name end if
+      if len(iface.methods) <= 0 then continue end if
+      for k = 0 to len(iface.methods) - 1
+        required = iface.methods[k]
+        actual = void
+        if len(st.methods) > 0 then
+          for m = 0 to len(st.methods) - 1
+            if st.methods[m].name == required.name then actual = st.methods[m] break end if
+          end for
+        end if
+        if typeof(actual) == "void" then return "Struct " + struct_name + " does not implement " + raw_name + "." + required.name end if
+        if _lang_interface_signature_matches(required, actual) == false then
+          return "Method " + struct_name + "." + actual.name + " has an incompatible interface signature"
+        end if
+      end for
+    end for
+  end for
+  return ""
+end function
+
+function _lang_remove_interfaces(body)
+  if typeof(body) != "array" or len(body) <= 0 then return [] end if
+  result_items = []
+  for i = 0 to len(body) - 1
+    st = body[i]
+    if t.ast_kind(st) == "InterfaceDef" then continue end if
+    if t.ast_kind(st) == "NamespaceDef" then st.body = _lang_remove_interfaces(st.body) end if
+    result_items = result_items + [st]
+  end for
+  return result_items
+end function
+
+function prepare_language_features(program)
+  global _language_serial, _language_needs_await, _language_needs_select, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file, _language_failure
+  _language_serial = 0
+  _language_needs_await = false
+  _language_needs_select = false
+  _language_await_pos = 0
+  _language_await_file = ""
+  _language_select_pos = 0
+  _language_select_file = ""
+  _language_failure = ""
+  validation = _lang_validate_interfaces(program)
+  if validation != "" then return error(1600, validation) end if
+  lowered = _lang_lower_block(program, 0)
+  if _language_failure != "" then return error(1600, _language_failure) end if
+  lowered = _lang_remove_interfaces(lowered)
+  helpers = []
+  if _language_needs_await then helpers = helpers + [_lang_await_helper()] end if
+  if _language_needs_select then helpers = helpers + [_lang_select_helper()] end if
+  return helpers + lowered
 end function
 
 function parse_program(source, filename)
