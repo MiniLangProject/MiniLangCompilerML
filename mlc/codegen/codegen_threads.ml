@@ -29,7 +29,9 @@ const THREAD_HEAP_BYPASS_DEPTH = 168
 const THREAD_TLAB_START = 176
 const THREAD_TLAB_CURSOR = 184
 const THREAD_TLAB_END = 192
-const THREAD_CONTEXT_SIZE = 200
+// Active Join() operations retain THREAD_HANDLE until their native wait ends.
+const THREAD_HANDLE_USERS = 200
+const THREAD_CONTEXT_SIZE = 208
 const THREAD_CONTEXT_STRIDE = 208
 const THREAD_CONTEXT_POOL_SIZE = 0x10000
 
@@ -131,6 +133,7 @@ function emit_sync_init(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_START, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_CURSOR, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_END, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HANDLE_USERS, 0, false)
   state.asm = a.mov_rip_qword_rax(state.asm, "thread_contexts_head")
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_requested")
@@ -636,6 +639,7 @@ function emit_thread_new_function(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_START, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_CURSOR, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_END, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HANDLE_USERS, 0, false)
   state.asm = a.lea_rax_rip(state.asm, "gc_coord_monitor")
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_EnterCriticalSection")
@@ -774,6 +778,10 @@ function emit_thread_join_function(state)
   l_false = "thjoin_false_" + lid
   l_wait_handle = "thjoin_wait_handle_" + lid
   l_have_published_state = "thjoin_have_published_state_" + lid
+  l_ref_retry = "thjoin_ref_retry_" + lid
+  l_ref_lost = "thjoin_ref_lost_" + lid
+  l_ref_lost_retry = "thjoin_ref_lost_retry_" + lid
+  l_release_retry = "thjoin_release_retry_" + lid
   l_done = "thjoin_done_" + lid
   state.asm = a.call(state.asm, "fn_gc_native_enter")
   state.asm = a.mark(state.asm, l_wait_handle)
@@ -798,15 +806,46 @@ function emit_thread_join_function(state)
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", THREAD_HANDLE)
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
   state.asm = a.jcc(state.asm, "e", l_false)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x30, "rax")
+  // Pin the handle, then recheck its identity. Close may have removed it
+  // between the first load and our reference increment, in which case the
+  // saved native value must never be dereferenced.
+  state.asm = a.mark(state.asm, l_ref_retry)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", THREAD_HANDLE_USERS)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.inc_r32(state.asm, "edx")
+  state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "r11", THREAD_HANDLE_USERS, "edx")
+  state.asm = a.jcc(state.asm, "ne", l_ref_retry)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "r11", THREAD_HANDLE)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x30)
+  state.asm = a.cmp_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.jcc(state.asm, "ne", l_ref_lost)
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
   state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rsp", 0x28)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_WaitForSingleObject")
   state.asm = a.call_rax(state.asm)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x30, "eax")
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x20)
+  state.asm = a.mark(state.asm, l_release_retry)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", THREAD_HANDLE_USERS)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.dec_r32(state.asm, "edx")
+  state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "r11", THREAD_HANDLE_USERS, "edx")
+  state.asm = a.jcc(state.asm, "ne", l_release_retry)
   state.asm = a.call(state.asm, "fn_gc_native_leave")
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x30)
   state.asm = a.cmp_r32_imm(state.asm, "eax", 0)
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
   state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_ref_lost)
+  state.asm = a.mark(state.asm, l_ref_lost_retry)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", THREAD_HANDLE_USERS)
+  state.asm = a.mov_r32_r32(state.asm, "edx", "eax")
+  state.asm = a.dec_r32(state.asm, "edx")
+  state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "r11", THREAD_HANDLE_USERS, "edx")
+  state.asm = a.jcc(state.asm, "ne", l_ref_lost_retry)
+  state.asm = a.jmp(state.asm, l_false)
   state.asm = a.mark(state.asm, l_false)
   l_false_ready = "thjoin_false_ready_" + lid
   state.asm = a.mov_r11_gs_qword_28(state.asm)
@@ -928,11 +967,16 @@ function emit_thread_status_function(state)
 end function
 
 function emit_thread_close_function(state)
+  state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
+  state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
   state.asm = a.mark(state.asm, "fn_thread_close")
   state.asm = a.sub_rsp_imm8(state.asm, 0x38)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x30, "rcx")
   lid = _new_label_id(state)
   l_false = "thclose_false_" + lid
+  l_wait_users = "thclose_wait_users_" + lid
+  l_wait_native = "thclose_wait_native_" + lid
+  l_native_restore = "thclose_native_restore_" + lid
   l_done = "thclose_done_" + lid
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_STATUS)
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_RUNNING)
@@ -950,18 +994,34 @@ function emit_thread_close_function(state)
   state.asm = a.lock_cmpxchg_membase_disp_r64(state.asm, "rcx", THREAD_HANDLE, "rdx")
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x28, "rax")
+  // A blocking closer must be invisible to stop-the-world scans. Otherwise a
+  // worker parked while retiring its final TLAB can form a Close/GC deadlock.
+  state.asm = a.call(state.asm, "fn_gc_native_enter")
+  // Existing joins own references to the removed handle. Let all of them leave
+  // their native waits before releasing the handle or Linux control mapping.
+  state.asm = a.mark(state.asm, l_wait_users)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", THREAD_HANDLE_USERS)
+  state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.jcc(state.asm, "e", l_wait_native)
+  state.asm = a.mov_r32_imm32(state.asm, "ecx", 1)
+  state.asm = a.mov_rax_rip_qword(state.asm, "iat_Sleep")
+  state.asm = a.call_rax(state.asm)
+  state.asm = a.jmp(state.asm, l_wait_users)
   // Terminal publication precedes the last native epilogue instructions.
   // Close owns the handle now, so wait before clearing roots or releasing it.
-  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.mark(state.asm, l_wait_native)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 0x28)
   state.asm = a.mov_r32_imm32(state.asm, "edx", -1)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_WaitForSingleObject")
   state.asm = a.call_rax(state.asm)
   l_restore = "thclose_restore_" + lid
   state.asm = a.test_r32_r32(state.asm, "eax", "eax")
-  state.asm = a.jcc(state.asm, "ne", l_restore)
+  state.asm = a.jcc(state.asm, "ne", l_native_restore)
   state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 0x28)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_CloseHandle")
   state.asm = a.call_rax(state.asm)
+  state.asm = a.call(state.asm, "fn_gc_native_leave")
   state.asm = a.test_r32_r32(state.asm, "eax", "eax")
   state.asm = a.jcc(state.asm, "e", l_restore)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
@@ -977,6 +1037,8 @@ function emit_thread_close_function(state)
   end for
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
   state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_native_restore)
+  state.asm = a.call(state.asm, "fn_gc_native_leave")
   state.asm = a.mark(state.asm, l_restore)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")

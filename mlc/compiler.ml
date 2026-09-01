@@ -5213,20 +5213,13 @@ function validate_extern_sigs(extern_sigs, extern_struct_names)
           aty = "" + ap
         end if
         if ai > 0 then physical_abi = physical_abi + "," end if
-        // Build the short ABI descriptor in place. Keeping these scalar values
-        // local also avoids retaining declaration objects during validation.
-        param_abi = "gpr"
-        if not aout and s.toLowerAscii(s.trim(aty)) == "double" then param_abi = "xmm" end if
+        // Keep ABI classification centralized so validation cannot drift from
+        // the out-pointer and floating-register rules above.
+        param_abi = _extern_physical_abi_class(aty, aout)
         physical_abi = physical_abi + param_abi
       end for
     end if
-    return_abi = "gpr"
-    normalized_return = s.toLowerAscii(s.trim(ret_ty))
-    if normalized_return == "void" or normalized_return == "none" then
-      return_abi = "void"
-    else if normalized_return == "double" then
-      return_abi = "xmm"
-    end if
+    return_abi = _extern_physical_abi_class(ret_ty, false)
     physical_abi = physical_abi + "->" + return_abi
     if len(physical_keys) > 0 then
       for ki = 0 to len(physical_keys) - 1
