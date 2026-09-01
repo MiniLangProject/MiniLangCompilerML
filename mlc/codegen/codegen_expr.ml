@@ -9408,6 +9408,11 @@ function _inline_call_eligible(fn)
 end function
 
 function _emit_inline_call(state, callee, args)
+  // Inline expansion evaluates arguments left-to-right into persistent root
+  // slots, then emits the callee in an isolated scope so caller bindings cannot
+  // leak into it. Return statements target one local join label. Every saved
+  // scope, root cursor and inline-recursion record is restored before returning
+  // to the caller, including diagnostic exits.
   fn = _user_function_get(state, callee)
   if typeof(fn) != "struct" then
     state.diagnostics = state.diagnostics + ["Unknown inline function '" + callee + "'"]

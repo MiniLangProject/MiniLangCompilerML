@@ -625,15 +625,18 @@ function emit_thread_start_function(state)
   l_wrong_arity = "thstart_wrong_arity_" + lid
   l_create_fail = "thstart_create_fail_" + lid
   l_done = "thstart_done_" + lid
-  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_STATUS)
-  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CREATED)
-  state.asm = a.jcc(state.asm, "ne", l_not_created)
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_ARITY)
   state.asm = a.cmp_r32_r32(state.asm, "eax", "r8d")
   state.asm = a.jcc(state.asm, "ne", l_wrong_arity)
+  // Claim the one-shot Thread object before publishing its argument. A plain
+  // load/store allowed two callers to overwrite the same handle and argument.
+  state.asm = a.mov_r32_imm32(state.asm, "eax", THREAD_CREATED)
+  state.asm = a.mov_r32_imm32(state.asm, "r11d", THREAD_RUNNING)
+  state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "rcx", THREAD_STATUS, "r11d")
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CREATED)
+  state.asm = a.jcc(state.asm, "ne", l_not_created)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STOP, 0, false)
   state.asm = a.mov_membase_disp_r64(state.asm, "rcx", THREAD_ARG, "rdx")
-  state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STATUS, THREAD_RUNNING, false)
   state = _emit_managed_thread_count_delta(state, 1)
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "rax")

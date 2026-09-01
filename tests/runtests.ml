@@ -374,6 +374,37 @@ function _test_project_manifest(compiler_path, repo_root)
     return false
   end if
 
+  // An interrupted cache population can leave metadata but no object files.
+  // Treat that directory as a miss instead of indexing an empty name array.
+  state_text = fs.readAllText(_path_join(cache_abs, "build.state"))
+  state_lines = s.split(state_text, "\n")
+  object_digest = s.trim(state_lines[0])
+  object_dir = _path_join(_path_join(cache_abs, "objects"), object_digest)
+  object_names = fs.listDir(object_dir)
+  if typeof(object_names) != "array" then
+    print "[FAIL] " + name + " (could not inspect object cache)"
+    return false
+  end if
+  if len(object_names) > 0 then
+    for oi = 0 to len(object_names) - 1
+      object_name = object_names[oi]
+      if s.endsWith(s.toLowerAscii(object_name), ".mlo") then fs.delete(_path_join(object_dir, object_name)) end if
+    end for
+  end if
+  if typeof(fs.writeAllText(_path_join(object_dir, "objects.state"), object_digest + "\n")) == "error" then
+    print "[FAIL] " + name + " (could not damage object-cache metadata)"
+    return false
+  end if
+  cache_artifact = _path_join(cache_abs, "build." + object_digest + ".exe")
+  if fs.delete(output_abs) == false or fs.delete(cache_artifact) == false then
+    print "[FAIL] " + name + " (could not prepare empty object-cache recovery)"
+    return false
+  end if
+  if _wsystem(cmd) != 0 or _run_exe(output_abs, "") != 8 then
+    print "[FAIL] " + name + " (empty object cache did not rebuild cleanly)"
+    return false
+  end if
+
   // The deterministic MLO cache is an independent recovery layer. Removing
   // both executable copies must relink the exact cached objects without
   // parsing or regenerating code.
@@ -774,6 +805,9 @@ function main(args)
   if _test(compiler_path, repo_root, "language_suite", "tests\\language_suite.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_extensions", "tests\\language_extensions.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_performance_features", "tests\\language_performance_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_async_variadic", "tests\\language_async_variadic.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_default_lambda", "tests\\language_default_lambda.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_imported_interface", "tests\\language_imported_interface.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_type_guard_object", "tests\\language_type_guard_object.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_interface_missing", "tests\\language_interface_missing.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_interface_signature", "tests\\language_interface_signature.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
@@ -814,6 +848,7 @@ function main(args)
   if _test(compiler_path, repo_root, "conditional_error", "tests\\conditional_compilation_error.ml", "compile_fail", conditional_error_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "global_function_rebind", "tests\\global_function_rebind.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_features", "tests\\thread_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "thread_concurrent_start", "tests\\thread_concurrent_start.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test_tlab_shared_heap(compiler_path, repo_root, extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_back_to_back_safepoint", "tests\\gc_back_to_back_safepoint.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "threading_stdlib", "tests\\threading_stdlib.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

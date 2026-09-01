@@ -9280,6 +9280,12 @@ function emit_module_functions(state, module_file)
 end function
 
 function emit_user_function(state, fn_node, analysis_scratch)
+  // Function emission preserves four coupled invariants: parameters live in
+  // the root lexical scope, first writes own stable declaration-site slots,
+  // nested shadowing never reuses an outer binding, and all managed values are
+  // published in GC-visible roots before any allocating call. The analysis
+  // pass lays out those bindings and ABI call space before the prologue is
+  // emitted; real emission then installs each preassigned binding by AST site.
   if typeof(fn_node) != "struct" then return state end if
   qn = _coerce_name(fn_node.name)
   code_name = _fn_codegen_name(state, fn_node)

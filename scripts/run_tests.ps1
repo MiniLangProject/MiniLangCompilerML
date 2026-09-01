@@ -275,7 +275,9 @@ try {
     $linuxCases = @(
       [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
       [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux float rounding carry"; Source = "linux_float_format.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared heap and threads"; Source = "thread_features.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux atomic Thread.Start"; Source = "thread_concurrent_start.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux managed thread pool"; Source = "thread_pool.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux standard library"; Source = "stdlib_unit_tests.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux threading standard library"; Source = "threading_stdlib.ml"; RunArgs = @() },
@@ -284,7 +286,10 @@ try {
       [pscustomobject]@{ Name = "Linux platform services"; Source = "platform_services.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux extern/user basename collision"; Source = "extern_user_name_collision\main.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux GC safepoint publication"; Source = "gc_back_to_back_safepoint.ml"; RunArgs = @() },
-      [pscustomobject]@{ Name = "Linux language extensions"; Source = "language_extensions.ml"; RunArgs = @() }
+      [pscustomobject]@{ Name = "Linux language extensions"; Source = "language_extensions.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux async variadics"; Source = "language_async_variadic.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux default lambda lowering"; Source = "language_default_lambda.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux imported interfaces"; Source = "language_imported_interface.ml"; RunArgs = @() }
     )
     foreach ($linuxCase in $linuxCases) {
       $linuxSource = Join-Path $Root ("tests\" + $linuxCase.Source)

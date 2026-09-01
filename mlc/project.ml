@@ -748,11 +748,11 @@ function restoreObjects(pb, digest)
     if s.endsWith(s.toLowerAscii(name), "_support.mlo") then support_count = support_count + 1 end if
   end for
   mlo_names = sort.sortBy(mlo_names, _string_less)
+  if mlo_count <= 0 or support_count != 1 then return "" end if
   if len(expected_names) != len(mlo_names) then return "" end if
   for ni = 0 to len(mlo_names) - 1
     if expected_names[ni] != mlo_names[ni] then return "" end if
   end for
-  if mlo_count <= 0 or support_count != 1 then return "" end if
   return obj_dir
 end function
 

@@ -2139,7 +2139,7 @@ function emit_heap_grow_function(state)
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
   state.asm = a.jcc(state.asm, "e", l_fail)
 
-  // heap_end aus rbx aktualisieren
+  // Publish the heap-end cursor held in RBX.
   state.asm = a.mov_r64_r64(state.asm, "rax", "rbx")
   state.asm = a.mov_rip_qword_rax(state.asm, "heap_end")
 

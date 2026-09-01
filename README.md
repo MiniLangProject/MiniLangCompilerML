@@ -212,6 +212,8 @@ Notes (current implementation):
 - Linux images without external native imports are static. A source containing
   `extern function ... from "lib.so..."` gets a minimal dynamic ELF image using
   the x64 System V ABI and the glibc interpreter `/lib64/ld-linux-x86-64.so.2`.
+  Each source extern is resolved through its declared library handle, so equal
+  symbol names from different shared libraries keep distinct function slots.
 - Listing order is stable; PE header dumps are available only for Windows.
 - The compiler uses the shared MiniLang frontend for parsing (tokenizer/parser).
 
@@ -651,21 +653,25 @@ It verifies executable mode bits, case-sensitive imports, distinct
 `Cache`/`cache` paths in incremental projects and monolithic/`.mlo` identity.
 
 Notes:
-- The test runner compiles a set of `.ml` programs to Windows `.exe` files and executes them.
-- On Windows, `.exe` runs natively; on non-Windows you need `wine` to execute the produced binaries.
+- The test runner compiles and executes the Windows PE suite and, when WSL is
+  available, the Linux ELF/FFI/threading matrix. Native-Linux host behavior has
+  the separate gate shown above.
+- Windows images run natively on Windows; a non-Windows host needs Wine for the
+  PE suite. Linux images run natively or through WSL.
 - Full logs are written to `build/test-logs/`; temporary test binaries are removed unless `-KeepArtifacts` is passed.
 - `-ShowCompilerProgress` keeps the compiler's `[phase]`, `[obj]`, and `[link]` progress lines visible on the console.
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **131 recorded pass gates, 0 failed**, plus all
-  outer Windows/Linux, object-pipeline, FFI, GC and byte-identity gates.
+- Latest complete run for this revision: **125/125 inner harness tests**, plus
+  all outer Windows/Linux, object-pipeline, FFI, GC and byte-identity gates.
 
 ### Compiler parity and self-hosting
 
 For identical source files, include roots and compiler options, the normal
 monolithic path of this compiler and the Python reference compiler emit
-byte-identical PE files. The current 25-program parity matrix covers the
+byte-identical Windows PE and Linux ELF files. The current 25-program parity
+matrix covers the
 language/standard-library suites, GC stress, compiler-GC liveness,
 extern/native interop, global rebinding, native threads and managed thread
 pools; every pair matches by SHA-256.
@@ -676,18 +682,16 @@ normal self-hosted path and the Python bootstrap. Exact hashes, test counts,
 boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
-Current audited Windows fixed point (2026-09-01): with a warm filesystem cache
-and fresh object directories, the Python bootstrap completed in 90.524 seconds
-under the current host load. A same-window self-hosted control took 169.959
-seconds; the retained backend completed in 153.763 seconds with identical
-diagnostics, a 9.53% reduction. Its sampled process-tree peak was 809.9 MiB
-working set / 907.1 MiB private commit. Python Stage 1 and self-hosted Stages
-2/3 are byte-identical 65,592,832-byte images with SHA-256
-`55F3E04FD9A44A81EFBBE3B67CCECE60D091383AF7697E707BD401FF9421D0E5`.
-Representative Python/self-hosted Windows PE and Linux ELF outputs are also
-byte-identical and run successfully. The 8 GiB heap setting is virtual
-address-space reserve, not resident or committed memory. Exact commands,
-phase timings and A/B decisions are in the
+Current audited Windows fixed point (2026-09-01): the Python bootstrap produced
+Stage 1 in 62.598 seconds, and Stage 1 produced the self-hosted Stage 2 in
+102.987 seconds. Both are byte-identical 65,826,816-byte images with SHA-256
+`1CBD04DB789A8CF19738DEE07B9D2F653851155642034F8B240CC8D80BC6F1D0`.
+The complete inner harness passes 125/125 in 83.271 seconds; the full wrapper,
+including every Windows/Linux, FFI, GC, object-pipeline and relink gate, passes
+in 123.361 seconds. A targeted ten-case matrix is byte-identical across the
+Python, self-hosted monolithic and self-hosted `.mlo` paths on both targets.
+The 8 GiB heap setting is virtual address-space reserve, not resident or
+committed memory. Earlier backend A/B measurements remain in the
 [2026-09-01 report](docs/COMPILER_BACKEND_HOTPATH_BENCHMARK_2026-09-01.md).
 
 #### Historical performance record
@@ -1666,8 +1670,10 @@ print t is not Thread  // false
 
 Thread methods:
 
-- `Start()` or `Start(value)` starts a newly created thread once and returns
-  `bool`. Its argument count must match the entry function's zero/one arity.
+- `Start()` or `Start(value)` atomically claims and starts a newly created
+  thread once and returns `bool`; concurrent calls on the same object can
+  produce only one worker. Its argument count must match the entry function's
+  zero/one arity.
 - `Stop()` atomically requests cooperative cancellation and returns whether a
   running thread changed to `StopRequested`.
 - `Join()` waits indefinitely; `Join(timeoutMs)` waits at most the given number
@@ -1679,7 +1685,7 @@ Thread methods:
 - `LogicalId()` returns the user-defined logical id. `SetLogicalId(value)` can
   replace it while the thread is still in `Created`; the constructor's optional
   second argument sets the initial value. Logical ids do not change the native
-  Win32 id.
+  operating-system thread id.
 - `Result()` returns the worker's result (`void` until it publishes one). Use
   `try(t.Result())` when a failed worker returned an `error` value.
 - `Close()` closes the native handle after termination. Status metadata remains
@@ -1774,7 +1780,7 @@ This selection is automatic and does not change source semantics.
 
 `std.threading` exposes native process-wide synchronization objects:
 
-- `Lock.new()` creates a recursive Win32 mutex. Methods are `acquire()`,
+- `Lock.new()` creates a native recursive mutex on either target. Methods are `acquire()`,
   `tryAcquire()`, `acquireFor(timeoutMs)`, `release()`, `isClosed()` and
   `close()`. `Acquire`, `TryAcquire`, `AcquireFor` and `Release` aliases are
   also available.
@@ -1784,8 +1790,9 @@ This selection is automatic and does not change source semantics.
 - `Event.new(manualReset, initialState)` provides `wait()`, `tryWait()`,
   `waitFor(timeoutMs)`, `set()`, `reset()`, `isClosed()` and `close()`.
 
-All waits return `bool`; a timeout is reported as `false`. A lock acquired after
-`WAIT_ABANDONED` is treated as successfully acquired and must be released.
+All waits return `bool`; a timeout is reported as `false`. On Windows, a lock
+acquired after `WAIT_ABANDONED` is treated as successfully acquired and must be
+released.
 
 The collection modules serialize access to managed backing arrays in the global
 heap:
@@ -2009,7 +2016,8 @@ end function
 Rules:
 - `main` must be declared at top-level (not inside a `namespace`).
 - Signature must be `main(args)` (exactly 1 parameter).
-- `args` contains `argv[1..]` (arguments after the executable name), parsed with Windows quoting rules.
+- `args` contains `argv[1..]` (arguments after the executable name). Windows
+  uses `CommandLineToArgvW` quoting; Linux consumes the kernel-provided `argv`.
 - If `main` returns an `int`, it becomes the process exit code. If it returns `void` (no return), the exit code is `0`.
 - The entrypoint call happens **after** module initialization has executed. Imported modules are initialized automatically before the entry file continues, and all module-init blocks run at most once.
 

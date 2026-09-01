@@ -36,6 +36,7 @@ struct AsmBuilder
   tracked_helpers,
   label_pos_map,
   peephole_last_jump,
+  peephole_last_push,
   record_calls,
   tracked_helper_map,
   active_chunk,
@@ -89,7 +90,7 @@ end function
 function newAsmBuilder()
   cs = 65536
   first_chunk = bytes(cs, 0)
-  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [first_chunk], cs, false, [], [], t.fastmap_new(256), [], true, t.fastmap_new(256), first_chunk, 0)
+  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [first_chunk], cs, false, [], [], t.fastmap_new(256), [], [], true, t.fastmap_new(256), first_chunk, 0)
   return asm
 end function
 
@@ -958,6 +959,8 @@ end function
 
 function mark(asm, name)
   here = pos(asm)
+  // Never fold stack operations across a control-flow boundary.
+  asm.peephole_last_push = []
   last_jump = []
   if typeof(asm.peephole_last_jump) == "array" then last_jump = asm.peephole_last_jump end if
   if len(last_jump) == 4 then
@@ -1198,10 +1201,13 @@ end function
 function push_reg(asm, reg)
   rid = _rid_any(reg)
   if rid < 0 then return asm end if
+  push_len = 1
   if rid >= 8 then
     asm = _emit8(asm, 0x41)
+    push_len = 2
   end if
   asm = _emit8(asm, 0x50 +(rid & 7))
+  asm.peephole_last_push = [asm.size, rid, push_len]
   return asm
 end function
 
@@ -1210,7 +1216,9 @@ function pop_reg(asm, reg)
   if rid < 0 then return asm end if
   push_len = 1
   if rid >= 8 then push_len = 2 end if
-  if asm.size >= push_len then
+  last_push = asm.peephole_last_push
+  asm.peephole_last_push = []
+  if typeof(last_push) == "array" and len(last_push) == 3 and last_push[0] == asm.size and last_push[1] == rid and last_push[2] == push_len and asm.size >= push_len then
     start = asm.size - push_len
     ok = true
     if rid >= 8 and _byte_at(asm, start) != 0x41 then ok = false end if

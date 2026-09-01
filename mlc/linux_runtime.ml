@@ -44,9 +44,9 @@ function prepare_dynamic_imports(state)
   imports = []
   // Runtime-created workers must go through pthreads so every worker owns the
   // libc TLS needed by malloc, recursive mutexes, OpenSSL and other providers.
-  runtime_libraries = ["libpthread.so.0", "libpthread.so.0"]
-  runtime_symbols = ["pthread_create", "pthread_join"]
-  runtime_labels = ["elfiat_runtime_pthread_create", "elfiat_runtime_pthread_join"]
+  runtime_libraries = ["libpthread.so.0", "libpthread.so.0", "libdl.so.2", "libdl.so.2"]
+  runtime_symbols = ["pthread_create", "pthread_join", "dlopen", "dlsym"]
+  runtime_labels = ["elfiat_runtime_pthread_create", "elfiat_runtime_pthread_join", "elfiat_runtime_dlopen", "elfiat_runtime_dlsym"]
   for i = 0 to len(runtime_symbols) - 1
     loader_label = runtime_labels[i]
     if d.data_has_label(state.data, loader_label) == false then
@@ -77,15 +77,15 @@ function prepare_dynamic_imports(state)
       state.data = d.data_pad_align(state.data, 8)
       state.data = d.data_add_u64(state.data, loader_label, 0)
     end if
-    rec = d.data_label_record(state.data, loader_label)
-    duplicate = false
-    if len(imports) > 0 then
-      for j = 0 to len(imports) - 1
-        old = imports[j]
-        if old.library == library and old.symbol_name == sym and old.slot_offset == rec.offset then duplicate = true end if
-      end for
+    suffix = s.substr(label, 4, len(label) - 4)
+    library_label = "linux_extern_library_" + suffix
+    symbol_label = "linux_extern_symbol_" + suffix
+    if d.rdata_has_label(state.rdata, library_label) == false then
+      state.rdata = d.rdata_add_bytes(state.rdata, library_label, bytes(library + "\0"))
     end if
-    if duplicate == false then imports = imports + [DynamicImport(library, sym, rec.offset)] end if
+    if d.rdata_has_label(state.rdata, symbol_label) == false then
+      state.rdata = d.rdata_add_bytes(state.rdata, symbol_label, bytes(sym + "\0"))
+    end if
   end for
   return DynamicImportsResult(state, imports)
 end function
@@ -145,21 +145,30 @@ function _runtime_labels()
     RuntimeLabel("linux_thread_wait_done", 1177), RuntimeLabel("linux_CloseHandle", 1264), RuntimeLabel("linux_thread_close_unmap", 1397),
     RuntimeLabel("linux_thread_close_fail", 1431), RuntimeLabel("linux_thread_close_done", 1433), RuntimeLabel("linux_fmod", 1518),
     RuntimeLabel("linux__gcvt", 1541), RuntimeLabel("linux_gcvt_abs", 1600), RuntimeLabel("linux_gcvt_int_loop", 1630),
-    RuntimeLabel("linux_gcvt_reverse_loop", 1670), RuntimeLabel("linux_gcvt_int_done", 1699), RuntimeLabel("linux_gcvt_frac_loop", 1761),
-    RuntimeLabel("linux_gcvt_trim", 1803), RuntimeLabel("linux_gcvt_terminate", 1821), RuntimeLabel("linux_SetConsoleOutputCP", 1841),
-    RuntimeLabel("linux_FreeConsole", 1847), RuntimeLabel("linux_LocalFree", 1853), RuntimeLabel("linux_GetCommandLineW", 1859),
-    RuntimeLabel("linux_CommandLineToArgvW", 1862), RuntimeLabel("linux_WriteConsoleW", 1865), RuntimeLabel("linux_MultiByteToWideChar", 1868),
-    RuntimeLabel("linux_WideCharToMultiByte", 1871)
+    RuntimeLabel("linux_gcvt_reverse_loop", 1670), RuntimeLabel("linux_gcvt_int_done", 1699), RuntimeLabel("linux_gcvt_carry_loop", 1754),
+    RuntimeLabel("linux_gcvt_carry_increment", 1795), RuntimeLabel("linux_gcvt_fraction_ready", 1806), RuntimeLabel("linux_gcvt_frac_loop", 1829),
+    RuntimeLabel("linux_gcvt_trim", 1871), RuntimeLabel("linux_gcvt_terminate", 1889), RuntimeLabel("linux_SetConsoleOutputCP", 1909),
+    RuntimeLabel("linux_FreeConsole", 1915), RuntimeLabel("linux_LocalFree", 1921), RuntimeLabel("linux_GetCommandLineW", 1927),
+    RuntimeLabel("linux_CommandLineToArgvW", 1930), RuntimeLabel("linux_WriteConsoleW", 1933), RuntimeLabel("linux_MultiByteToWideChar", 1936),
+    RuntimeLabel("linux_WideCharToMultiByte", 1939)
   ]
 end function
 
-function _runtime_blob()
+function _runtime_blob_raw()
   // Stable base blob for the syscall helpers surrounding the thread runtime.
   // emit_runtime replaces its legacy raw-clone thread range with the pthread
   // implementation below. Sleep(0) and contended runtime-monitor acquisition
   // use sched_yield so a collector cannot starve the mutator whose safepoint or
   // monitor release it is awaiting.
-  return fromHex("83f9f60f840f00000083f9f50f8409000000b802000000c333c0c3b801000000c35756488bf9488bf2418bd0b8010000000f054885c00f880d000000418901b801000000e90200000033c05e5fc35756488bf9488bf2418bd033c00f054885c00f880d000000418901b801000000e90200000033c05e5fc38bf9b83c0000000f050f0b4585c0418bc081e0002000000f84500000005756488bf9488bf2418bc081e000100000ba0000000085c00f8405000000ba0300000041ba2200000049c7c0ffffffff4533c9b8090000000f054c8bd85e5f498bc34881f801f0ffff0f8327000000c35756488bf9488bf2ba03000000b80a0000000f054c8bd85e5f4d85db0f8504000000488bc1c333c0c35756488bf9488bf2ba04000000b81c0000000f0533d2b80a0000000f055e5fb801000000c3575685c90f850c000000b8180000000f05e90d00000033ff33f68bd1b8070000000f055e5fc3c70100000000c34c8bd1b8ba0000000f05448bc8418b4204413bc10f850b000000418b4208ffc041894208c333c0ba01000000f0410fb1120f840b000000f390b8180000000f05ebe345894a0441c7420801000000c34c8bd1b8ba0000000f05418b52043bd00f852b000000418b520883fa010f8e07000000ffca41895208c341c742080000000041c742040000000041c70200000000c3415441554156415757564d8be84d8bf14c8b7c246033ffbe00001000ba0300000041ba2200000049c7c0ffffffff4533c9b8090000000f054881f801f0ffff0f83800000004c8be0498db42400001000bf000f3501498bd44d8bd44533c0b8380000000f054885c00f841d0000004885c00f883f0000004189074d8bdc5e5f415f415e415d415c498bc3c3498d442440488bf0bf01100000b89e0000000f054883ec20498bce498bc5ffd0b83c00000033ff0f050f0b498bfcbe00001000b80b0000000f055e5f415f415e415d415c33c0c3415441554c8be1448bea418b042485c00f841e0000004585ed0f841c000000b901000000e847feffff4183fdff74db41ffcdebd633c0e905000000b802010000415d415cc35756488bf9be00001000b80b0000000f055e5f4833c04885c0b801000000c3f20f10d0f20f5ed1660f3a0bd203f20f59d1f20f5cc2c353415441554156415756574d8be04d8be866480f7ec04c8bd849c1eb3f48c1e00148c1e80166480f6ec04d85db0f840800000041c645002d49ffc5f24c0f2cf04d8bfd4d85f60f850d00000041c645003049ffc5e945000000498bc64899bb0a00000048f7f383c2304188550049ffc54c8bf04d85f675e14d8bd74d8bdd49ffcb4d3bd30f8314000000418a02418a1341881241880349ffc249ffcbebe3f24c0f2cf0f2490f2acef20f5cc1b840420f00f2480f2ac8f20f59c1660f3a0bc000f24c0f2cf04d85f60f844a00000041c645002e49ffc541bfa0860100498bc6489949f7f783c0304188450049ffc54c8bf2498bc74899bb0a00000048f7f34c8bf84d85ff75d6418a45ff80f8300f850500000049ffcdebee41c6450000498bc45f5e415f415e415d415c5bc3b801000000c3b801000000c3b801000000c333c0c333c0c333c0c333c0c333c0c3")
+  return fromHex("83f9f60f840f00000083f9f50f8409000000b802000000c333c0c3b801000000c35756488bf9488bf2418bd0b8010000000f054885c00f880d000000418901b801000000e90200000033c05e5fc35756488bf9488bf2418bd033c00f054885c00f880d000000418901b801000000e90200000033c05e5fc38bf9b83c0000000f050f0b4585c0418bc081e0002000000f84500000005756488bf9488bf2418bc081e000100000ba0000000085c00f8405000000ba0300000041ba2200000049c7c0ffffffff4533c9b8090000000f054c8bd85e5f498bc34881f801f0ffff0f8327000000c35756488bf9488bf2ba03000000b80a0000000f054c8bd85e5f4d85db0f8504000000488bc1c333c0c35756488bf9488bf2ba04000000b81c0000000f0533d2b80a0000000f055e5fb801000000c3575685c90f850c000000b8180000000f05e90d00000033ff33f68bd1b8070000000f055e5fc3c70100000000c34c8bd1b8ba0000000f05448bc8418b4204413bc10f850b000000418b4208ffc041894208c333c0ba01000000f0410fb1120f840b000000f390b8180000000f05ebe345894a0441c7420801000000c34c8bd1b8ba0000000f05418b52043bd00f852b000000418b520883fa010f8e07000000ffca41895208c341c742080000000041c742040000000041c70200000000c3415441554156415757564d8be84d8bf14c8b7c246033ffbe00001000ba0300000041ba2200000049c7c0ffffffff4533c9b8090000000f054881f801f0ffff0f83800000004c8be0498db42400001000bf000f3501498bd44d8bd44533c0b8380000000f054885c00f841d0000004885c00f883f0000004189074d8bdc5e5f415f415e415d415c498bc3c3498d442440488bf0bf01100000b89e0000000f054883ec20498bce498bc5ffd0b83c00000033ff0f050f0b498bfcbe00001000b80b0000000f055e5f415f415e415d415c33c0c3415441554c8be1448bea418b042485c00f841e0000004585ed0f841c000000b901000000e847feffff4183fdff74db41ffcdebd633c0e905000000b802010000415d415cc35756488bf9be00001000b80b0000000f055e5f4833c04885c0b801000000c34154415541564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004c8be1448bea418b44240885c00f841e0000004585ed0f8450000000b901000000e8e5fcffff4183fdff74da41ffcdebd5418b44242085c00f851d000000498b3c2433f6ff150000000085c00f851000000041c74424200100000033c0e90f000000b8ffffffffe905000000b802010000f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a0000000415e415d415cc3415457564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004c8be1418b44240885c00f8543000000418b44242085c00f8514000000498b3c2433f6ff150000000085c00f8522000000498bfcbe00100000b80b0000000f054885c00f850a000000b801000000e90200000033c0f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a00000005e5f415cc3f20f10d0f20f5ed1660f3a0bd203f20f59d1f20f5cc2c353415441554156415756574d8be04d8be866480f7ec04c8bd849c1eb3f48c1e00148c1e80166480f6ec04d85db0f840800000041c645002d49ffc5f24c0f2cf04d8bfd4d85f60f850d00000041c645003049ffc5e945000000498bc64899bb0a00000048f7f383c2304188550049ffc54c8bf04d85f675e14d8bd74d8bdd49ffcb4d3bd30f8314000000418a02418a1341881241880349ffc249ffcbebe3f24c0f2cf0f2490f2acef20f5cc1b840420f00f2480f2ac8f20f59c1660f3a0bc000f24c0f2cf04981fe40420f000f85370000004d8bd549ffca418a0280f8390f851a00000041c602304d3bd777e841c6073141c645003049ffc5e95e00000080c001418802e9530000004d85f60f844a00000041c645002e49ffc541bfa0860100498bc6489949f7f783c0304188450049ffc54c8bf2498bc74899bb0a00000048f7f34c8bf84d85ff75d6418a45ff80f8300f850500000049ffcdebee41c6450000498bc45f5e415f415e415d415c5bc3b801000000c3b801000000c3b801000000c333c0c333c0c333c0c333c0c333c0c3")
+end function
+
+// The generated raw blob still contains the superseded pthread wait/close
+// fragment at bytes 807..1360. emit_runtime inserts the canonical pthread
+// implementation separately, so remove that historical range exactly once.
+function _runtime_blob()
+  raw = _runtime_blob_raw()
+  return slice(raw, 0, 807) + slice(raw, 1361, len(raw) - 1361)
 end function
 
 // Generated pthread-backed replacement for the legacy CreateThread through
@@ -209,6 +218,9 @@ function _emit_extern_thunks(state)
     if _array_has(emitted, thunk_label) then continue end if
     emitted = emitted + [thunk_label]
     loader_label = "elfiat_" + s.substr(iat_label, 4, len(iat_label) - 4)
+    suffix = s.substr(iat_label, 4, len(iat_label) - 4)
+    library_label = "linux_extern_library_" + suffix
+    symbol_label = "linux_extern_symbol_" + suffix
     params = try(sig.params)
     if typeof(params) != "array" then params = [] end if
 
@@ -270,6 +282,39 @@ function _emit_extern_thunks(state)
       fragment = a.movdqu_membase_disp_xmm(fragment, "rsp", xmm_save_base + (i - 6) * 16, "xmm" + i)
     end for
 
+    // Resolve through the declared library's handle. ELF symbol relocations
+    // alone use one process-global namespace and cannot distinguish duplicate
+    // symbol names from different shared libraries.
+    external_patches = []
+    fragment = a.emit(fragment, fromHex("488b05"))
+    external_patches = external_patches + [[a.pos(fragment), loader_label]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.test_r64_r64(fragment, "rax", "rax")
+    resolved_label = thunk_label + "_resolved"
+    fragment = a.jcc(fragment, "ne", resolved_label)
+    fragment = a.emit(fragment, fromHex("488d05"))
+    external_patches = external_patches + [[a.pos(fragment), library_label]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.mov_r64_r64(fragment, "rdi", "rax")
+    fragment = a.mov_r32_imm32(fragment, "esi", 2)
+    fragment = a.emit(fragment, fromHex("ff15"))
+    external_patches = external_patches + [[a.pos(fragment), "elfiat_runtime_dlopen"]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.test_r64_r64(fragment, "rax", "rax")
+    fragment = a.jcc(fragment, "e", resolved_label)
+    fragment = a.mov_r64_r64(fragment, "rdi", "rax")
+    fragment = a.emit(fragment, fromHex("488d05"))
+    external_patches = external_patches + [[a.pos(fragment), symbol_label]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.mov_r64_r64(fragment, "rsi", "rax")
+    fragment = a.emit(fragment, fromHex("ff15"))
+    external_patches = external_patches + [[a.pos(fragment), "elfiat_runtime_dlsym"]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.emit(fragment, fromHex("488905"))
+    external_patches = external_patches + [[a.pos(fragment), loader_label]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.mark(fragment, resolved_label)
+
     if len(destinations) > 0 then
       for i = 0 to len(destinations) - 1
         item = destinations[i]
@@ -301,9 +346,18 @@ function _emit_extern_thunks(state)
     fragment = a.pop_reg(fragment, "rsi")
     fragment = a.pop_reg(fragment, "rdi")
     fragment = a.ret(fragment)
-    fragment = a.materialize(fragment)
+    // The resolver path above introduces forward local branches. Fold those
+    // fragment-owned patches before copying its bytes into the parent builder;
+    // materializing alone would leave zero displacements in every thunk.
+    folded_fragment = a.materialize_and_fold_local_patches(fragment)
+    fragment = folded_fragment[0]
     fragment_base = a.pos(asm)
     asm = a.emit(asm, fragment.buf)
+    if len(external_patches) > 0 then
+      for pi = 0 to len(external_patches) - 1
+        asm = a.add_patch(asm, fragment_base + external_patches[pi][0], external_patches[pi][1], "rip32")
+      end for
+    end if
     asm = a.add_patch(asm, fragment_base + call_patch_offset, loader_label, "rip32")
   end for
   state.asm = asm

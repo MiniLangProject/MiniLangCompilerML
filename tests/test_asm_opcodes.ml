@@ -2,7 +2,20 @@ import std.fs as fs
 import std.string as s
 import mlc.asm as a
 import mlc.data as d
+import mlc.linux_runtime as linux_runtime
 import mlc.tools as tools
+
+struct TestExternSignature
+  name,
+  dll,
+  symbol_name,
+  params,
+end struct
+
+struct TestLinuxThunkState
+  asm,
+  extern_sigs,
+end struct
 
 function checkOpcode(name, builder, expected)
   actual = hex(a.finalize(builder))
@@ -11,6 +24,32 @@ function checkOpcode(name, builder, expected)
     return 1
   end if
   return 0
+end function
+
+function checkLinuxThunkLocalBranches()
+  sig = TestExternSignature("strlen", "libc.so.6", "strlen", [])
+  state = TestLinuxThunkState(a.newCodegenAsmBuilder(), [sig])
+  state = linux_runtime._emit_extern_thunks(state)
+  state.asm = a.materialize(state.asm)
+  buf = state.asm.buf
+  seen = 0
+  failures = 0
+  if len(buf) >= 6 then
+    for i = 0 to len(buf) - 6
+      if buf[i] == 0x0F and (buf[i + 1] == 0x84 or buf[i + 1] == 0x85) then
+        seen = seen + 1
+        if buf[i + 2] == 0 and buf[i + 3] == 0 and buf[i + 4] == 0 and buf[i + 5] == 0 then
+          print "FAIL: Linux extern thunk retained a zero local branch displacement"
+          failures = failures + 1
+        end if
+      end if
+    end for
+  end if
+  if seen != 2 then
+    print "FAIL: Linux extern thunk resolver branch count"
+    failures = failures + 1
+  end if
+  return failures
 end function
 
 function checkRDataLabelScale()
@@ -283,6 +322,13 @@ function main(args)
   failures = failures + checkOpcode("push/pop/ret peephole", b, "c3")
 
   b = a.newAsmBuilder()
+  b = a.push_reg(b, "rax")
+  b = a.mov_r32_imm32(b, "eax", 0x50000000)
+  b = a.pop_reg(b, "rax")
+  // The immediate ends in 0x50 too, but it makes PUSH and POP non-adjacent.
+  failures = failures + checkOpcode("non-adjacent push/pop", b, "50b80000005058")
+
+  b = a.newAsmBuilder()
   b = a.mark(b, "loop")
   b = a.nop(b)
   b = a.jmp(b, "loop")
@@ -335,6 +381,7 @@ function main(args)
     failures = failures + 1
   end if
 
+  failures = failures + checkLinuxThunkLocalBranches()
   failures = failures + checkRDataLabelScale()
   failures = failures + checkDataLabelScale()
   failures = failures + checkChunkedIndexedRead()

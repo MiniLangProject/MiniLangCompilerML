@@ -2117,7 +2117,7 @@ function _parse_namespace_def(start_pos)
       break
     end if
 
-    if _tok_kind_id(t) == TK_KW and(_tok_value(t) == "function" or _tok_value(t) == "struct" or _tok_value(t) == "enum" or _tok_value(t) == "namespace" or _tok_value(t) == "extern" or _tok_value(t) == "const") then
+    if _tok_kind_id(t) == TK_KW and(_tok_value(t) == "function" or _tok_value(t) == "struct" or _tok_value(t) == "interface" or _tok_value(t) == "enum" or _tok_value(t) == "namespace" or _tok_value(t) == "extern" or _tok_value(t) == "const") then
       if _collect_errors then
         st = _parse_stmt_recover([], "namespace")
         if st != 0 then
@@ -4631,18 +4631,36 @@ function _lang_lower_stmt(st, function_depth)
     st.body = _lang_lower_block(st.body, function_depth)
   else if kind == "FunctionDef" then
     st = _lang_apply_contracts(st)
+    if typeof(st.param_defaults) == "array" and len(st.param_defaults) > 0 then
+      for i = 0 to len(st.param_defaults) - 1
+        if typeof(st.param_defaults[i]) != "void" then
+          lowered_default = _lang_lower_expr(st.param_defaults[i], prelude)
+          st.param_defaults[i] = lowered_default[0]
+          prelude = lowered_default[1]
+        end if
+      end for
+    end if
     st.body = _lang_lower_block(st.body, function_depth + 1)
     if st.is_iterator then
       if st.is_iterator == 2 then st = _lang_lower_lazy_iterator(st) else st = _lang_lower_iterator(st) end if
     end if
     if st.is_async then
       if function_depth > 0 then _lang_fail("async functions must be declared at module or namespace scope") return [st] end if
-      return _lang_lower_async(st)
+      return prelude + _lang_lower_async(st)
     end if
   else if kind == "StructDef" then
     if typeof(st.methods) == "array" and len(st.methods) > 0 then
       for i = 0 to len(st.methods) - 1
         method = _lang_apply_contracts(st.methods[i])
+        if typeof(method.param_defaults) == "array" and len(method.param_defaults) > 0 then
+          for j = 0 to len(method.param_defaults) - 1
+            if typeof(method.param_defaults[j]) != "void" then
+              lowered_default = _lang_lower_expr(method.param_defaults[j], prelude)
+              method.param_defaults[j] = lowered_default[0]
+              prelude = lowered_default[1]
+            end if
+          end for
+        end if
         method.body = _lang_lower_block(method.body, function_depth + 1)
         if method.is_iterator then
           if method.is_iterator == 2 then method = _lang_lower_lazy_iterator(method) else method = _lang_lower_iterator(method) end if
