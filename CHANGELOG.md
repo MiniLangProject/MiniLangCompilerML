@@ -4,6 +4,13 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## Unreleased
 
+- Made lazy Linux extern resolution an atomic one-owner transition, cached
+  failed lookups and closed handles after missing-symbol failures. Concurrent
+  first calls no longer repeat `dlopen`/`dlsym` work or leak loader references.
+- Validated every public TCP/UDP port before 16-bit encoding and made Windows
+  TCP listeners and UDP binds exclusive by default; Linux retains
+  restart-friendly address reuse. Test/build cleanup now removes only
+  invocation-owned staging paths.
 - Made `Thread.Start` an atomic one-shot transition, preventing concurrent
   callers from launching the same thread object twice or overwriting its
   argument/handle state. `SetLogicalId` is atomic against that transition,

@@ -45,9 +45,9 @@ function prepare_dynamic_imports(state)
   imports = []
   // Runtime-created workers must go through pthreads so every worker owns the
   // libc TLS needed by malloc, recursive mutexes, OpenSSL and other providers.
-  runtime_libraries = ["libpthread.so.0", "libpthread.so.0", "libdl.so.2", "libdl.so.2"]
-  runtime_symbols = ["pthread_create", "pthread_join", "dlopen", "dlsym"]
-  runtime_labels = ["elfiat_runtime_pthread_create", "elfiat_runtime_pthread_join", "elfiat_runtime_dlopen", "elfiat_runtime_dlsym"]
+  runtime_libraries = ["libpthread.so.0", "libpthread.so.0", "libdl.so.2", "libdl.so.2", "libdl.so.2"]
+  runtime_symbols = ["pthread_create", "pthread_join", "dlopen", "dlsym", "dlclose"]
+  runtime_labels = ["elfiat_runtime_pthread_create", "elfiat_runtime_pthread_join", "elfiat_runtime_dlopen", "elfiat_runtime_dlsym", "elfiat_runtime_dlclose"]
   for i = 0 to len(runtime_symbols) - 1
     loader_label = runtime_labels[i]
     if d.data_has_label(state.data, loader_label) == false then
@@ -251,7 +251,8 @@ function _emit_extern_thunks(state)
 
     native_base = stack_count * 8
     xmm_save_base = native_base + len(params) * 8
-    frame_min = xmm_save_base + 10 * 16
+    loader_handle_offset = xmm_save_base + 10 * 16
+    frame_min = loader_handle_offset + 8
     frame = frame_min
     while frame % 16 != 8 frame = frame + 1 end while
 
@@ -289,8 +290,16 @@ function _emit_extern_thunks(state)
 
     // Resolve through the declared library's handle. ELF symbol relocations
     // alone use one process-global namespace and cannot distinguish duplicate
-    // symbol names from different shared libraries.
+    // symbol names from different shared libraries. The shared slot uses
+    // 0=unresolved, 1=resolving, 2=failed and any other value as the pointer;
+    // one atomic owner performs libdl work while concurrent callers wait.
     external_patches = []
+    resolve_retry_label = thunk_label + "_resolve_retry"
+    resolve_claim_label = thunk_label + "_resolve_claim"
+    resolve_wait_label = thunk_label + "_resolve_wait"
+    resolve_symbol_failed_label = thunk_label + "_resolve_symbol_failed"
+    resolve_publish_failed_label = thunk_label + "_resolve_publish_failed"
+    fragment = a.mark(fragment, resolve_retry_label)
     fragment = a.emit(fragment, fromHex("488b05"))
     external_patches = external_patches + [[a.pos(fragment), loader_label]]
     fragment = a.emit(fragment, bytes(4, 0))
@@ -298,7 +307,22 @@ function _emit_extern_thunks(state)
     resolved_label = thunk_label + "_resolved"
     resolve_failed_label = thunk_label + "_resolve_failed"
     epilogue_label = thunk_label + "_epilogue"
-    fragment = a.jcc(fragment, "ne", resolved_label)
+    fragment = a.jcc(fragment, "e", resolve_claim_label)
+    fragment = a.cmp_r64_imm(fragment, "rax", 1)
+    fragment = a.jcc(fragment, "e", resolve_wait_label)
+    fragment = a.cmp_r64_imm(fragment, "rax", 2)
+    fragment = a.jcc(fragment, "e", resolve_failed_label)
+    fragment = a.jmp(fragment, resolved_label)
+    fragment = a.mark(fragment, resolve_wait_label)
+    fragment = a.emit(fragment, bytes([0xF3, 0x90]))
+    fragment = a.jmp(fragment, resolve_retry_label)
+    fragment = a.mark(fragment, resolve_claim_label)
+    fragment = a.emit(fragment, bytes([0x4C, 0x8D, 0x1D]))
+    external_patches = external_patches + [[a.pos(fragment), loader_label]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.mov_r32_imm32(fragment, "edx", 1)
+    fragment = a.lock_cmpxchg_membase_disp_r64(fragment, "r11", 0, "rdx")
+    fragment = a.jcc(fragment, "ne", resolve_retry_label)
     fragment = a.emit(fragment, fromHex("488d05"))
     external_patches = external_patches + [[a.pos(fragment), library_label]]
     fragment = a.emit(fragment, bytes(4, 0))
@@ -308,7 +332,8 @@ function _emit_extern_thunks(state)
     external_patches = external_patches + [[a.pos(fragment), "elfiat_runtime_dlopen"]]
     fragment = a.emit(fragment, bytes(4, 0))
     fragment = a.test_r64_r64(fragment, "rax", "rax")
-    fragment = a.jcc(fragment, "e", resolve_failed_label)
+    fragment = a.jcc(fragment, "e", resolve_publish_failed_label)
+    fragment = a.mov_membase_disp_r64(fragment, "rsp", loader_handle_offset, "rax")
     fragment = a.mov_r64_r64(fragment, "rdi", "rax")
     fragment = a.emit(fragment, fromHex("488d05"))
     external_patches = external_patches + [[a.pos(fragment), symbol_label]]
@@ -318,7 +343,7 @@ function _emit_extern_thunks(state)
     external_patches = external_patches + [[a.pos(fragment), "elfiat_runtime_dlsym"]]
     fragment = a.emit(fragment, bytes(4, 0))
     fragment = a.test_r64_r64(fragment, "rax", "rax")
-    fragment = a.jcc(fragment, "e", resolve_failed_label)
+    fragment = a.jcc(fragment, "e", resolve_symbol_failed_label)
     fragment = a.emit(fragment, fromHex("488905"))
     external_patches = external_patches + [[a.pos(fragment), loader_label]]
     fragment = a.emit(fragment, bytes(4, 0))
@@ -347,6 +372,17 @@ function _emit_extern_thunks(state)
     // result in RAX/XMM0. The common epilogue performs the flag-setting shift.
     fragment = a.mov_r32_imm32(fragment, "r11d", 0)
     fragment = a.jmp(fragment, epilogue_label)
+    fragment = a.mark(fragment, resolve_symbol_failed_label)
+    fragment = a.mov_r64_membase_disp(fragment, "rdi", "rsp", loader_handle_offset)
+    fragment = a.emit(fragment, bytes([0xFF, 0x15]))
+    external_patches = external_patches + [[a.pos(fragment), "elfiat_runtime_dlclose"]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.mark(fragment, resolve_publish_failed_label)
+    fragment = a.mov_r32_imm32(fragment, "eax", 2)
+    fragment = a.emit(fragment, fromHex("488905"))
+    external_patches = external_patches + [[a.pos(fragment), loader_label]]
+    fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.jmp(fragment, resolve_failed_label)
     fragment = a.mark(fragment, resolve_failed_label)
     fragment = a.mov_r32_imm32(fragment, "r11d", 1)
     fragment = a.mark(fragment, epilogue_label)

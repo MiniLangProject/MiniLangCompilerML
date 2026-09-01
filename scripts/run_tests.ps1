@@ -21,6 +21,9 @@ $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $PSCommandPath
 $Root = Split-Path -Parent $ScriptDir
+$script:ArtifactsBaseDir = ""
+$script:ArtifactOwnerToken = ""
+$script:ArtifactOwnerMarker = ""
 
 function Resolve-RepoPath {
   param([string]$Path)
@@ -97,6 +100,26 @@ function Invoke-NativeStep {
     ExitCode = $exitCode
     Seconds = $timer.Elapsed.TotalSeconds
   }
+}
+
+function Test-PathContainedBy {
+  # Compare complete path components instead of accepting sibling names that
+  # merely share a textual prefix with the intended parent directory.
+  param(
+    [string]$Path,
+    [string]$Parent
+  )
+  $fullPath = [System.IO.Path]::GetFullPath($Path).TrimEnd(
+    [System.IO.Path]::DirectorySeparatorChar,
+    [System.IO.Path]::AltDirectorySeparatorChar)
+  $fullParent = [System.IO.Path]::GetFullPath($Parent).TrimEnd(
+    [System.IO.Path]::DirectorySeparatorChar,
+    [System.IO.Path]::AltDirectorySeparatorChar)
+  if ([string]::Equals($fullPath, $fullParent, [System.StringComparison]::OrdinalIgnoreCase)) {
+    return $false
+  }
+  $prefix = $fullParent + [System.IO.Path]::DirectorySeparatorChar
+  return $fullPath.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
 }
 
 function Invoke-CompilerVersionCheck {
@@ -271,8 +294,14 @@ function Remove-TestArtifacts {
 
   if (Test-Path -LiteralPath $script:ResolvedArtifactsDir) {
     $fullArtifacts = [System.IO.Path]::GetFullPath($script:ResolvedArtifactsDir)
-    if ($fullArtifacts.StartsWith($Root, [System.StringComparison]::OrdinalIgnoreCase) -and
-        -not [string]::Equals($fullArtifacts, $Root, [System.StringComparison]::OrdinalIgnoreCase)) {
+    $markerMatches = $false
+    if (Test-Path -LiteralPath $script:ArtifactOwnerMarker -PathType Leaf) {
+      $markerValue = Get-Content -LiteralPath $script:ArtifactOwnerMarker -Raw
+      $markerMatches = [string]::Equals(
+        $markerValue.Trim(), $script:ArtifactOwnerToken,
+        [System.StringComparison]::Ordinal)
+    }
+    if ($markerMatches -and (Test-PathContainedBy $fullArtifacts $script:ArtifactsBaseDir)) {
       Remove-Item -LiteralPath $fullArtifacts -Recurse -Force
     }
   }
@@ -290,7 +319,13 @@ if ($LogPath -eq "") {
 }
 
 $Compiler = Resolve-RepoPath $Compiler
-$script:ResolvedArtifactsDir = Resolve-RepoPath $ArtifactsDir
+$script:ArtifactsBaseDir = Resolve-RepoPath $ArtifactsDir
+$script:ArtifactOwnerToken = [System.Guid]::NewGuid().ToString("N")
+# Each invocation owns a fresh child directory. The caller-selected parent is
+# never deleted, even when it already contains unrelated files or is outside
+# this repository.
+$script:ResolvedArtifactsDir = Join-Path $script:ArtifactsBaseDir ("run-" + $script:ArtifactOwnerToken)
+$script:ArtifactOwnerMarker = Join-Path $script:ResolvedArtifactsDir ".minilang-test-artifacts-owner"
 $script:ResolvedLogPath = Resolve-RepoPath $LogPath
 
 if (-not (Test-Path -LiteralPath $Compiler)) {
@@ -298,6 +333,7 @@ if (-not (Test-Path -LiteralPath $Compiler)) {
 }
 
 New-Item -ItemType Directory -Force -Path $script:ResolvedArtifactsDir | Out-Null
+Set-Content -LiteralPath $script:ArtifactOwnerMarker -Encoding ASCII -NoNewline -Value $script:ArtifactOwnerToken
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $script:ResolvedLogPath) | Out-Null
 Set-Content -LiteralPath $script:ResolvedLogPath -Encoding UTF8 -Value @(
   "MiniLang test run",
@@ -347,6 +383,7 @@ try {
       [pscustomobject]@{ Name = "Linux double out FFI"; Source = "linux_ffi_out_double.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux exact library spelling"; Source = "linux_ffi_whitespace_library.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux FFI resolution errors"; Source = "linux_ffi_resolution_error.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux concurrent FFI resolution"; Source = "linux_ffi_concurrent_resolution.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux float rounding carry"; Source = "linux_float_format.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared heap and threads"; Source = "thread_features.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux atomic Thread.Start"; Source = "thread_concurrent_start.ml"; RunArgs = @() },

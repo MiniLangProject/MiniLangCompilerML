@@ -45,10 +45,10 @@ function checkLinuxThunkLocalBranches()
       end if
     end for
   end if
-  // The thunk has one cached-resolution branch plus explicit failure branches
-  // after dlopen and dlsym. All three must be locally resolved.
-  if seen != 3 then
-    print "FAIL: Linux extern thunk resolver branch count"
+  // Five near branches cover claim/wait/cached failure plus dlopen/dlsym
+  // failure. The compare/exchange retry is intentionally a short branch.
+  if seen != 5 then
+    print "FAIL: Linux extern thunk resolver branch count expected=5 actual=" + seen
     failures = failures + 1
   end if
   return failures

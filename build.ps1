@@ -25,6 +25,7 @@ $script:CompilerIsPython = $false
 $script:PythonExe = ""
 $script:PythonPrefixArgs = @()
 $script:SelectedCompilerExitCode = 1
+$script:StageDir = ""
 
 function Resolve-BuildPath {
   # Resolve caller-supplied paths relative to this repository.
@@ -33,6 +34,27 @@ function Resolve-BuildPath {
     return [System.IO.Path]::GetFullPath($Path)
   }
   return [System.IO.Path]::GetFullPath((Join-Path $Root $Path))
+}
+
+function Test-PathContainedBy {
+  # Require a complete child path component; raw StartsWith checks also accept
+  # siblings such as "MiniLangCompilerML-backup".
+  param(
+    [string]$Path,
+    [string]$Parent
+  )
+  $fullPath = [System.IO.Path]::GetFullPath($Path).TrimEnd(
+    [System.IO.Path]::DirectorySeparatorChar,
+    [System.IO.Path]::AltDirectorySeparatorChar)
+  $fullParent = [System.IO.Path]::GetFullPath($Parent).TrimEnd(
+    [System.IO.Path]::DirectorySeparatorChar,
+    [System.IO.Path]::AltDirectorySeparatorChar)
+  if ([string]::Equals($fullPath, $fullParent, [System.StringComparison]::OrdinalIgnoreCase)) {
+    return $false
+  }
+  return $fullPath.StartsWith(
+    $fullParent + [System.IO.Path]::DirectorySeparatorChar,
+    [System.StringComparison]::OrdinalIgnoreCase)
 }
 
 function Resolve-CommandOrFile {
@@ -77,15 +99,15 @@ function Remove-CompilerObjects {
 }
 
 function Get-CompilerObjectDir {
-  # Constrain cleanup candidates to this repository or the system temp root.
+  # Only the private stage directory belongs to this invocation. Output-adjacent
+  # directories selected by a caller must never become recursive-delete targets.
   param([string]$ExePath)
   $outDir = Split-Path -Parent $ExePath
   $stem = [System.IO.Path]::GetFileNameWithoutExtension($ExePath)
   $objDir = Join-Path (Join-Path $outDir "tmp") $stem
   $full = [System.IO.Path]::GetFullPath($objDir)
-  $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
-  if ($full.StartsWith($Root, [System.StringComparison]::OrdinalIgnoreCase) -or
-      $full.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+  if (-not [string]::IsNullOrWhiteSpace($script:StageDir) -and
+      (Test-PathContainedBy $full $script:StageDir)) {
     return $full
   }
   return ""
@@ -171,8 +193,9 @@ $outDir = Split-Path -Parent $FinalOutput
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
 $baseName = [System.IO.Path]::GetFileNameWithoutExtension($FinalOutput)
-$stageToken = ("" + $PID + "." + (Get-Date -Format "yyyyMMddHHmmss"))
+$stageToken = ("" + $PID + "." + [System.Guid]::NewGuid().ToString("N"))
 $stageDir = Join-Path ([System.IO.Path]::GetTempPath()) ("mlc_build_" + $stageToken)
+$script:StageDir = $stageDir
 $stageOutput = Join-Path $stageDir ($baseName + ".next.exe")
 $replaceFinal = -not $NoReplace
 if ($NoReplace) {
@@ -243,9 +266,8 @@ if (-not (Test-Path -LiteralPath $stageOutput)) {
 }
 
 if (-not $SkipSmoke) {
-  $pidText = "" + $PID
-  $smokeSrc = Join-Path ([System.IO.Path]::GetTempPath()) ("mlc_build_smoke_" + $pidText + ".ml")
-  $smokeExe = Join-Path ([System.IO.Path]::GetTempPath()) ("mlc_build_smoke_" + $pidText + ".exe")
+  $smokeSrc = Join-Path $stageDir "smoke.ml"
+  $smokeExe = Join-Path $stageDir "smoke.exe"
   Set-Content -LiteralPath $smokeSrc -Encoding ASCII -Value @(
     'print "hello"',
     'x = 1',
@@ -299,9 +321,6 @@ if ($replaceFinal) {
 }
 
 Remove-CompilerObjects $stageOutput
-if ($replaceFinal) {
-  Remove-CompilerObjects $FinalOutput
-}
 if (-not $KeepObjects -and (Test-Path -LiteralPath $stageDir)) {
   Remove-Item -LiteralPath $stageDir -Recurse -Force -ErrorAction SilentlyContinue
 }

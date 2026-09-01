@@ -129,11 +129,21 @@ mkdir -p -- "$(dirname -- "$OUTPUT")"
 if [ "$REPLACE" -eq 0 ] && [ "$OUTPUT" = "$COMPILER" ]; then
   OUTPUT="$OUTPUT.next"
 fi
-mv -f -- "$STAGE_OUTPUT" "$OUTPUT"
 
+# Refuse before publishing the new compiler. This preserves the old output if
+# the caller asked to retain objects but already owns the destination folder.
+OBJECT_OUTPUT=
 if [ "$KEEP_OBJECTS" -eq 1 ] && [ -d "$STAGE_DIR/tmp" ]; then
   OBJECT_OUTPUT="$OUTPUT.objects"
-  rm -rf -- "$OBJECT_OUTPUT"
+  if [ -e "$OBJECT_OUTPUT" ]; then
+    printf 'Refusing to replace existing object directory: %s\n' "$OBJECT_OUTPUT" >&2
+    exit 2
+  fi
+fi
+
+mv -f -- "$STAGE_OUTPUT" "$OUTPUT"
+
+if [ -n "$OBJECT_OUTPUT" ]; then
   mv -- "$STAGE_DIR/tmp" "$OBJECT_OUTPUT"
 fi
 

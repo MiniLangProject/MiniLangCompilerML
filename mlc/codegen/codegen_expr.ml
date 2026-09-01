@@ -2876,6 +2876,8 @@ function _emit_known_float_binop(state, expr)
   return [state, true]
 end function
 
+// Emit binary operators, preserving left-to-right effects and routing dynamic
+// type/error cases through the same helpers used by the reference compiler.
 function _emit_expr_bin(state, expr)
   if t.ast_op(expr) == "and" then
     lid_and = _next_lid(state)
@@ -8914,6 +8916,8 @@ function _emit_extern_out_from_stack(state, abi_ty, stack_off, pos)
   return _emit_extern_ret_from_native(state, ty, "", pos)
 end function
 
+// Marshal one MiniLang call frame to the declared native ABI. Managed roots
+// remain published across the call and out-values are normalized on return.
 function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   threaded_native = state.native_threads_possible
   qn = ""

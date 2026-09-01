@@ -4567,6 +4567,8 @@ function _link_direct_patch_target(label_map, obj_index_map, source_obj_map, sou
   return t.fastmap_get(label_map, target, -1)
 end function
 
+// Stream one object's relocations into final section buffers. Private labels
+// stay object-relative; public/section/IAT targets resolve through shared maps.
 function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, obj_data_off, obj_bss_off, label_map, obj_index_map, obj_index_lists, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, image_base, buf, rdata_buf, data_buf, patch_index)
   raw = fs.readAllBytes(src_patch)
   if typeof(raw) == "error" then
@@ -5620,6 +5622,8 @@ function _link_mlo_linux_sections(obj_paths, output_exe, text_buf, rdata_buf, da
   return 0
 end function
 
+// Link canonical MLO fragments in input order while retaining only compact
+// label/patch metadata; this ordering is part of byte-for-byte parity.
 function _link_mlo_files(obj_paths, output_exe, subsystem)
   global _dump_labels_path
   global _link_patch_keepalive

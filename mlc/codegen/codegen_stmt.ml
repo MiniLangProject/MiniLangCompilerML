@@ -1341,6 +1341,8 @@ function _emit_struct_field_index_dispatch_local(state, field, struct_id_reg, ou
   return state
 end function
 
+// Emit one statement without changing source-order semantics. Nested control
+// flow owns its labels and must leave root/lock scopes balanced on every exit.
 function cg_emit_stmt(state, stmt)
   if typeof(stmt) != "struct" then return state end if
   k = stmt.node_kind
@@ -7055,6 +7057,8 @@ function _strpair_set(arr, key, value)
   return t.fastmap_set(mapv, key, value)
 end function
 
+// Collect declarations before emission so package qualification, stable IDs and
+// module initialization order agree with the Python reference frontend.
 function _collect_program_decls(state, stmts, prefix, current_file, file_prefixes, file_seen_nonpackage, next_sid, next_eid, in_ns)
   if typeof(stmts) != "array" or len(stmts) <= 0 then
     return [state, current_file, file_prefixes, file_seen_nonpackage, next_sid, next_eid]

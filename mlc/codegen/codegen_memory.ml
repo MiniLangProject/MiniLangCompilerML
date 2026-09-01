@@ -458,6 +458,8 @@ function emit_gc_pop_root_frame(state, root_rec_off)
   return state
 end function
 
+// Emit the shared-heap allocator, including the TLAB fast path and synchronized
+// refill/GC fallback. Every successful return owns exactly one initialized block.
 function emit_alloc_function(state)
   state = ensure_gc_data(state)
 
@@ -1101,6 +1103,8 @@ function emit_alloc_function(state)
   return state
 end function
 
+// Emit stop-the-world mark/sweep collection. Thread roots are published before
+// suspension and heap ownership remains held until sweep/shrink state is stable.
 function emit_gc_collect_function(state)
   state = ensure_gc_data(state)
   if typeof(state.rdata) == "struct" then
