@@ -728,12 +728,22 @@ function restoreObjects(pb, digest)
   state = fs.readAllText(state_path)
   if typeof(state) != "string" then return "" end if
   state_lines = s.split(state, "\n")
-  if len(state_lines) < 2 or s.trim(state_lines[0]) != digest then return "" end if
+  // Version two pairs every canonical filename with its bounded-memory content
+  // identity. Older name-only manifests are treated as misses and rebuilt.
+  if len(state_lines) < 4 or s.trim(state_lines[0]) != digest or s.trim(state_lines[1]) != "MLO-CACHE-2" then return "" end if
   expected_names = []
-  for si = 1 to len(state_lines) - 1
+  expected_ids = []
+  si = 2
+  while si + 1 < len(state_lines)
     expected_name = s.trim(state_lines[si])
-    if expected_name != "" then expected_names = expected_names + [expected_name] end if
-  end for
+    if expected_name == "" then break end if
+    expected_id = s.trim(state_lines[si + 1])
+    if expected_id == "" then return "" end if
+    expected_names = expected_names + [expected_name]
+    expected_ids = expected_ids + [expected_id]
+    si = si + 2
+  end while
+  if len(expected_names) <= 0 or len(expected_names) != len(expected_ids) then return "" end if
   names = fs.listDir(obj_dir)
   if typeof(names) != "array" then return "" end if
   mlo_names = []
@@ -752,6 +762,8 @@ function restoreObjects(pb, digest)
   if len(expected_names) != len(mlo_names) then return "" end if
   for ni = 0 to len(mlo_names) - 1
     if expected_names[ni] != mlo_names[ni] then return "" end if
+    actual_id = _file_content_id(_join(obj_dir, mlo_names[ni]))
+    if typeof(actual_id) != "string" or actual_id != expected_ids[ni] then return "" end if
   end for
   return obj_dir
 end function
@@ -831,14 +843,19 @@ function storeObjects(pb, digest, source_dir)
   copied_count = 0
   support_count = 0
   cached_names = []
+  cached_ids = []
   for i = 0 to len(names) - 1
     name = names[i]
     if typeof(name) != "string" or s.endsWith(s.toLowerAscii(name), ".mlo") == false then continue end if
     source_path = _join(source_dir, name)
     if fs.isFile(source_path) == false then continue end if
-    copied = fs.copyFile(source_path, _join(obj_dir, name), true)
+    destination_path = _join(obj_dir, name)
+    copied = fs.copyFile(source_path, destination_path, true)
     if typeof(copied) == "error" then return copied end if
+    content_id = _file_content_id(destination_path)
+    if typeof(content_id) == "error" then return content_id end if
     cached_names = cached_names + [name]
+    cached_ids = cached_ids + [content_id]
     copied_count = copied_count + 1
     if s.endsWith(s.toLowerAscii(name), "_support.mlo") then support_count = support_count + 1 end if
   end for
@@ -846,9 +863,9 @@ function storeObjects(pb, digest, source_dir)
 
   state_path = _join(obj_dir, "objects.state")
   state_tmp = state_path + "." + process.id() + ".tmp"
-  state_text = digest + "\n"
+  state_text = digest + "\nMLO-CACHE-2\n"
   for ni = 0 to len(cached_names) - 1
-    state_text = state_text + cached_names[ni] + "\n"
+    state_text = state_text + cached_names[ni] + "\n" + cached_ids[ni] + "\n"
   end for
   written = fs.writeAllText(state_tmp, state_text)
   if typeof(written) == "error" then return written end if

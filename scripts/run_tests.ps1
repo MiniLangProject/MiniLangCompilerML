@@ -276,22 +276,6 @@ function Test-LinuxRuntimeBlobLayout {
 function Remove-TestArtifacts {
   if ($KeepArtifacts) { return }
 
-  $rtPattern = Join-Path $Root "tests\_rt_*.exe"
-  Get-ChildItem -Path $rtPattern -ErrorAction SilentlyContinue | ForEach-Object {
-    $full = [System.IO.Path]::GetFullPath($_.FullName)
-    if ($full.StartsWith($Root, [System.StringComparison]::OrdinalIgnoreCase)) {
-      Remove-Item -LiteralPath $full -Force
-    }
-  }
-
-  $testsTmp = Join-Path $Root "tests\tmp"
-  if (Test-Path -LiteralPath $testsTmp) {
-    $fullTestsTmp = [System.IO.Path]::GetFullPath($testsTmp)
-    if ($fullTestsTmp.StartsWith($Root, [System.StringComparison]::OrdinalIgnoreCase)) {
-      Remove-Item -LiteralPath $fullTestsTmp -Recurse -Force
-    }
-  }
-
   if (Test-Path -LiteralPath $script:ResolvedArtifactsDir) {
     $fullArtifacts = [System.IO.Path]::GetFullPath($script:ResolvedArtifactsDir)
     $markerMatches = $false
@@ -439,7 +423,9 @@ try {
     throw "Test runner not found: $runnerExe"
   }
 
-  $runnerArgs = @($Compiler) + $effectiveCompilerArgs
+  $innerArtifacts = Join-Path $script:ResolvedArtifactsDir "inner"
+  New-Item -ItemType Directory -Force -Path $innerArtifacts | Out-Null
+  $runnerArgs = @($Compiler, $innerArtifacts) + $effectiveCompilerArgs
   $results += Invoke-NativeStep "run ML test harness" $runnerExe $runnerArgs
 
   $nativePrimitiveCases = @(

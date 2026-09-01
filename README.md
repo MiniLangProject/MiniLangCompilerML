@@ -687,15 +687,17 @@ boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
 Current audited Windows fixed point (2026-09-01): the Python bootstrap produced
-Stage 1 in 68.572 seconds, and Stage 1 produced the self-hosted Stage 2 in
-117.646 seconds. Both are byte-identical 66,314,240-byte images with SHA-256
-`9AAA804542149FB4665311AB90189073D0438D635636D5F7D32B62FBD72EF42B`.
-The complete inner harness passes 126/126 in 96.696 seconds; the full wrapper,
+Stage 1 in 92.286 seconds; self-hosted Stages 2 and 3 took 187.630 and 188.809
+seconds. All three are byte-identical 66,393,088-byte images with SHA-256
+`6000AAE0787F3A9B8C93B1206AEEE07D91B5F831ED11E0609A278BBD0212F780`.
+The complete inner harness passes 126/126 in 89.167 seconds; the full wrapper,
 including every Windows/Linux, FFI, GC, object-pipeline and relink gate, passes
-in 144.964 seconds. It also verifies the checked-in pthread blob layout.
-Focused thread-lifecycle, Linux `out double`, exact-library-identity and
-language-extension builds are byte-identical across both compilers and targets;
-the normal object-pipeline gates also pass.
+in 132.080 seconds. It also verifies the checked-in pthread blob layout.
+Focused thread-lifecycle, Linux `out double`, exact-library-identity,
+language-extension and standard-library builds are byte-identical across both
+compilers and targets; the normal object-pipeline gates also pass. The current
+standard-library images are 4,528,128-byte Windows PE and 4,493,296-byte Linux
+ELF files.
 The 8 GiB heap setting is virtual address-space reserve, not resident or
 committed memory. Earlier backend A/B measurements remain in the
 [2026-09-01 report](docs/COMPILER_BACKEND_HOTPATH_BENCHMARK_2026-09-01.md).

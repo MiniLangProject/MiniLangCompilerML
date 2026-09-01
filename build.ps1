@@ -205,9 +205,11 @@ if ($NoReplace) {
 }
 New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
 
-if (Test-Path -LiteralPath $stageOutput) {
-  Remove-Item -LiteralPath $stageOutput -Force
-}
+$smokeTimer = $null
+try {
+  if (Test-Path -LiteralPath $stageOutput) {
+    Remove-Item -LiteralPath $stageOutput -Force
+  }
 
 $entry = Join-Path $Root "mlc_win64.ml"
 $buildArgs = @(
@@ -320,9 +322,14 @@ if ($replaceFinal) {
   Move-Item -LiteralPath $stageOutput -Destination $FinalOutput -Force
 }
 
-Remove-CompilerObjects $stageOutput
-if (-not $KeepObjects -and (Test-Path -LiteralPath $stageDir)) {
-  Remove-Item -LiteralPath $stageDir -Recurse -Force -ErrorAction SilentlyContinue
+  Remove-CompilerObjects $stageOutput
+} finally {
+  # The GUID-named stage is owned exclusively by this invocation. Clean it on
+  # compile, smoke, publication and success paths alike unless the caller
+  # explicitly requested the retained MLO files for investigation.
+  if (-not $KeepObjects -and (Test-Path -LiteralPath $stageDir)) {
+    Remove-Item -LiteralPath $stageDir -Recurse -Force -ErrorAction SilentlyContinue
+  }
 }
 
 Write-Host ""

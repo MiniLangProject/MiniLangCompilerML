@@ -4,6 +4,8 @@ import mlc.tools as t
 
 extern function _wsystem(cmd as wstr) from "msvcrt.dll" returns int
 
+_test_artifact_root = ""
+
 function _test_fastmap_clear()
   name = "fastmap_generation_clear"
   mapv = t.fastmap_new(8)
@@ -140,6 +142,14 @@ function _path_join(a, b)
   return a + "\\" + b
 end function
 
+// Every generated source, image, listing and cache lives below the unique
+// directory supplied by the outer harness. Source files continue to resolve
+// through repo_root, but concurrent test runs never share writable paths.
+function _artifact_path(relative)
+  if typeof(_test_artifact_root) != "string" or _test_artifact_root == "" then return relative end if
+  return _path_join(_test_artifact_root, relative)
+end function
+
 function _repo_root_hint(compiler_path)
   if fs.exists("tests\\language_suite.ml") then
     return "."
@@ -189,7 +199,7 @@ end function
 
 function _test_adv(compiler_path, repo_root, name, src_rel, mode, local_flags, run_flags)
   src_abs = _path_join(repo_root, src_rel)
-  out_abs = _path_join(repo_root, "tests\\_rt_" + name + ".exe")
+  out_abs = _artifact_path("_rt_" + name + ".exe")
 
   if fs.exists(src_abs) == false then
     print "[FAIL] " + name + " (missing source: " + src_abs + ")"
@@ -238,7 +248,7 @@ end function
 
 function _test(compiler_path, repo_root, name, src_rel, mode, extra_flags)
   src_abs = _path_join(repo_root, src_rel)
-  out_abs = _path_join(repo_root, "tests\\_rt_" + name + ".exe")
+  out_abs = _artifact_path("_rt_" + name + ".exe")
   mode_flags = ""
   run_after_compile = true
   expect_compile_fail = false
@@ -287,12 +297,12 @@ end function
 
 function _test_project_manifest(compiler_path, repo_root)
   name = "project_manifest_cache"
-  manifest_abs = _path_join(repo_root, "build\\_rt_project_manifest.toml")
-  source_dir = _path_join(repo_root, "build\\tmp")
+  manifest_abs = _artifact_path("_rt_project_manifest.toml")
+  source_dir = _artifact_path("tmp")
   source_abs = _path_join(source_dir, "_rt_project_source.ml")
-  shared_abs = _path_join(repo_root, "build\\_rt_project_shared.ml")
-  output_abs = _path_join(repo_root, "build\\_rt_project_output.exe")
-  cache_abs = _path_join(repo_root, "build\\_rt_project_cache")
+  shared_abs = _artifact_path("_rt_project_shared.ml")
+  output_abs = _artifact_path("_rt_project_output.exe")
+  cache_abs = _artifact_path("_rt_project_cache")
   if fs.exists(cache_abs) and _wsystem("rmdir /s /q " + _q(cache_abs)) != 0 then
     print "[FAIL] " + name + " (could not reset cache fixture)"
     return false
@@ -405,6 +415,39 @@ function _test_project_manifest(compiler_path, repo_root)
     return false
   end if
 
+  // A complete filename manifest is insufficient when an individual object
+  // was damaged after publication. Its stored content identity must turn the
+  // next project build into a clean object-cache miss.
+  state_text = fs.readAllText(_path_join(cache_abs, "build.state"))
+  state_lines = s.split(state_text, "\n")
+  object_digest = s.trim(state_lines[0])
+  object_dir = _path_join(_path_join(cache_abs, "objects"), object_digest)
+  object_names = fs.listDir(object_dir)
+  damaged_object = ""
+  if typeof(object_names) == "array" then
+    for oi = 0 to len(object_names) - 1
+      object_name = object_names[oi]
+      if s.endsWith(s.toLowerAscii(object_name), ".mlo") then
+        candidate = _path_join(object_dir, object_name)
+        candidate_bytes = fs.readAllBytes(candidate)
+        if typeof(candidate_bytes) == "bytes" and len(candidate_bytes) > 16 then
+          candidate_bytes[len(candidate_bytes) - 1] = (candidate_bytes[len(candidate_bytes) - 1] + 1) & 255
+          if typeof(fs.writeAllBytes(candidate, candidate_bytes)) != "error" then damaged_object = candidate end if
+          break
+        end if
+      end if
+    end for
+  end if
+  cache_artifact = _path_join(cache_abs, "build." + object_digest + ".exe")
+  if damaged_object == "" or fs.delete(output_abs) == false or fs.delete(cache_artifact) == false then
+    print "[FAIL] " + name + " (could not prepare object-content corruption)"
+    return false
+  end if
+  if _wsystem(cmd) != 0 or _run_exe(output_abs, "") != 8 then
+    print "[FAIL] " + name + " (corrupt object cache was accepted)"
+    return false
+  end if
+
   // The deterministic MLO cache is an independent recovery layer. Removing
   // both executable copies must relink the exact cached objects without
   // parsing or regenerating code.
@@ -446,7 +489,7 @@ function _test_object_pipeline_trailing_include(compiler_path, repo_root)
   // passes one literal trailing slash to the parent compiler.
   include_cli = quote + include_path + slash + quote
   source_abs = _path_join(repo_root, "tests\\array_vector.ml")
-  output_abs = _path_join(repo_root, "build\\_rt_trailing_include.exe")
+  output_abs = _artifact_path("_rt_trailing_include.exe")
   cmd = "call " + _q(compiler_path) + " " + _q(source_abs) + " " + _q(output_abs) + " -I " + include_cli + " --object-pipeline"
   if _wsystem(cmd) != 0 then
     print "[FAIL] " + name + " (object-emission subprocess lost trailing include slash)"
@@ -526,9 +569,9 @@ end function
 function _test_pipeline_determinism(compiler_path, repo_root)
   name = "object_pipeline_determinism"
   src_abs = _path_join(repo_root, "tests\\codegen_optimizations.ml")
-  mono_abs = _path_join(repo_root, "build\\_rt_pipeline_mono.exe")
-  serial_abs = _path_join(repo_root, "build\\_rt_pipeline_serial.exe")
-  repeat_abs = _path_join(repo_root, "build\\_rt_pipeline_repeat.exe")
+  mono_abs = _artifact_path("_rt_pipeline_mono.exe")
+  serial_abs = _artifact_path("_rt_pipeline_serial.exe")
+  repeat_abs = _artifact_path("_rt_pipeline_repeat.exe")
   if _run_compile(compiler_path, src_abs, mono_abs, repo_root, "", "--no-object-pipeline") != 0 then
     print "[FAIL] " + name + " (monolithic compile failed)"
     return false
@@ -551,7 +594,7 @@ function _test_pipeline_determinism(compiler_path, repo_root)
   // The first length-prefixed field is the four-byte "MLO1" magic, so the
   // little-endian format version starts at byte offset eight. Version two
   // retains tagged target compatibility with existing object caches.
-  object_abs = _path_join(repo_root, "build\\tmp\\_rt_pipeline_repeat\\000_codegen_optimizations.mlo")
+  object_abs = _artifact_path("tmp\\_rt_pipeline_repeat\\000_codegen_optimizations.mlo")
   object_bytes = fs.readAllBytes(object_abs)
   if typeof(object_bytes) != "bytes" or len(object_bytes) < 12 or object_bytes[8] != 2 or object_bytes[9] != 0 or object_bytes[10] != 0 or object_bytes[11] != 0 then
     print "[FAIL] " + name + " (object pipeline did not emit the canonical MLO version)"
@@ -562,9 +605,9 @@ function _test_pipeline_determinism(compiler_path, repo_root)
     print "[FAIL] " + name + " (same-fragment text relocations were serialized instead of folded)"
     return false
   end if
-  auto_src = _path_join(repo_root, "build\\_rt_pipeline_auto.ml")
-  auto_abs = _path_join(repo_root, "build\\_rt_pipeline_auto.exe")
-  auto_mono_abs = _path_join(repo_root, "build\\_rt_pipeline_auto_mono.exe")
+  auto_src = _artifact_path("_rt_pipeline_auto.ml")
+  auto_abs = _artifact_path("_rt_pipeline_auto.exe")
+  auto_mono_abs = _artifact_path("_rt_pipeline_auto_mono.exe")
   auto_text = "function main(args)\n  return 0\nend function\n//" + s.repeat("x", 263000) + "\n"
   if typeof(fs.writeAllText(auto_src, auto_text)) == "error" then
     print "[FAIL] " + name + " (could not create automatic-selection fixture)"
@@ -582,7 +625,7 @@ function _test_pipeline_determinism(compiler_path, repo_root)
     print "[FAIL] " + name + " (automatic pipeline changed target bytes)"
     return false
   end if
-  auto_object_abs = _path_join(repo_root, "build\\tmp\\_rt_pipeline_auto\\000__rt_pipeline_auto.mlo")
+  auto_object_abs = _artifact_path("tmp\\_rt_pipeline_auto\\000__rt_pipeline_auto.mlo")
   if fs.exists(auto_object_abs) == false then
     print "[FAIL] " + name + " (large source did not select object pipeline)"
     return false
@@ -618,8 +661,8 @@ end function
 function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
   name = "codegen_optimizations"
   src_abs = _path_join(repo_root, "tests\\codegen_optimizations.ml")
-  out_abs = _path_join(repo_root, "tests\\_rt_codegen_optimizations.exe")
-  labels_abs = _path_join(repo_root, "tests\\_rt_codegen_optimizations.labels")
+  out_abs = _artifact_path("_rt_codegen_optimizations.exe")
+  labels_abs = _artifact_path("_rt_codegen_optimizations.labels")
   if fs.exists(src_abs) == false then
     print "[FAIL] " + name + " (missing source)"
     return false
@@ -733,8 +776,8 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
   end if
 
   small_src = _path_join(repo_root, "tests\\root_frame_small.ml")
-  small_out = _path_join(repo_root, "tests\\_rt_root_frame_small.exe")
-  small_labels_abs = _path_join(repo_root, "tests\\_rt_root_frame_small.labels")
+  small_out = _artifact_path("_rt_root_frame_small.exe")
+  small_labels_abs = _artifact_path("_rt_root_frame_small.labels")
   if fs.exists(small_out) then fs.delete(small_out) end if
   if fs.exists(small_labels_abs) then fs.delete(small_labels_abs) end if
   small_mode_flags = "--dump-labels " + _q(small_labels_abs)
@@ -757,8 +800,8 @@ end function
 function _test_tlab_shared_heap(compiler_path, repo_root, extra_flags)
   name = "tlab_shared_heap"
   src_abs = _path_join(repo_root, "tests\\tlab_shared_heap.ml")
-  out_abs = _path_join(repo_root, "tests\\_rt_tlab_shared_heap.exe")
-  labels_abs = _path_join(repo_root, "tests\\_rt_tlab_shared_heap.labels")
+  out_abs = _artifact_path("_rt_tlab_shared_heap.exe")
+  labels_abs = _artifact_path("_rt_tlab_shared_heap.labels")
   if fs.exists(out_abs) then fs.delete(out_abs) end if
   if fs.exists(labels_abs) then fs.delete(labels_abs) end if
 
@@ -778,14 +821,16 @@ function _test_tlab_shared_heap(compiler_path, repo_root, extra_flags)
 end function
 
 function main(args)
-  if typeof(args) != "array" or len(args) < 1 then
-    print "Usage: runtests.exe <compiler.exe> [extra compiler args...]"
-    print "Example: runtests.exe .\\bin\\mlc_selfhost.exe"
+  global _test_artifact_root
+  if typeof(args) != "array" or len(args) < 2 then
+    print "Usage: runtests.exe <compiler.exe> <artifact-dir> [extra compiler args...]"
+    print "Example: runtests.exe .\\bin\\mlc_selfhost.exe .\\build\\test-run"
     return 2
   end if
 
   compiler_path = args[0]
-  extra_flags = _join_extra_args(args, 1)
+  _test_artifact_root = args[1]
+  extra_flags = _join_extra_args(args, 2)
   compiler_gc_flags = extra_flags
   if compiler_gc_flags != "" then compiler_gc_flags = compiler_gc_flags + " " end if
   compiler_gc_flags = compiler_gc_flags + "--gc-limit 1m"

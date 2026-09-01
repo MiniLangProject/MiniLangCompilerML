@@ -8,9 +8,17 @@ All notable changes to the MiniLang compiler are documented here.
   failed lookups and closed handles after missing-symbol failures. Concurrent
   first calls no longer repeat `dlopen`/`dlsym` work or leak loader references.
 - Validated every public TCP/UDP port before 16-bit encoding and made Windows
-  TCP listeners and UDP binds exclusive by default; Linux retains
-  restart-friendly address reuse. Test/build cleanup now removes only
-  invocation-owned staging paths.
+  TCP listeners and ordinary UDP binds exclusive by default; explicit UDP
+  `setReuseAddress(true)` now clears the conflicting Winsock exclusivity option.
+  Serialized process-wide socket initialization/cleanup and added boundary,
+  duplicate-bind, explicit-reuse and concurrent-initialization regressions.
+- Isolated every compiled test artifact below its invocation-owned directory,
+  stopped deleting shared repository test paths and made `build.ps1` remove its
+  private GUID staging tree on compile, smoke and publication failures.
+- Versioned the incremental MLO object-cache manifest and recorded a bounded-
+  memory content identity for every object. Name-complete but corrupted caches
+  are now misses and are rebuilt; the project regression mutates an MLO byte to
+  verify that recovery path.
 - Made `Thread.Start` an atomic one-shot transition, preventing concurrent
   callers from launching the same thread object twice or overwriting its
   argument/handle state. `SetLogicalId` is atomic against that transition,
