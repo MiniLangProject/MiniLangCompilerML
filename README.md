@@ -1,7 +1,7 @@
 ﻿# MiniLang - Self-Hosted Compiler for Windows and Linux x64
 
-Current stable release: **1.1.0**. See the [changelog](CHANGELOG.md) and
-[release notes](RELEASE_NOTES_1.1.0.md).
+Current stable release: **1.2.0**. See the [changelog](CHANGELOG.md) and
+[release notes](RELEASE_NOTES_1.2.0.md).
 
 Supported native targets: **Windows x64 (PE32+)** and **Linux x64 (ELF64)**.
 
@@ -198,7 +198,7 @@ Common options:
   `--profile-compiler` and does not alter generated target bytes
 
 `.\build\mlc_win64.exe -version` and `--version` both print
-`MiniLang Compiler 1.1.0`. `.\build\mlc_win64.exe --help` prints a short usage
+`MiniLang Compiler 1.2.0`. `.\build\mlc_win64.exe --help` prints a short usage
 summary.
 
 Notes (current implementation):
@@ -332,8 +332,8 @@ not processed. Directives may be nested.
 
 The immutable target values are `TARGET_OS`, `TARGET_ARCH`, `TARGET_ABI`,
 `TARGET_FORMAT`, `POINTER_SIZE` and `MINILANG_VERSION`. Windows selects
-`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.1.0"`; Linux selects
-`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.1.0"`. No
+`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.0"`; Linux selects
+`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.0"`. No
 compiler-implementation value is exposed: the Python and self-hosted compilers
 must select the same source for identical inputs.
 

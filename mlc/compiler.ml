@@ -16,8 +16,8 @@ import mlc.data as d
 import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
 
-const COMPILER_VERSION = "1.1.0"
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.1.0"
+const COMPILER_VERSION = "1.2.0"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.0"
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 const AUTO_OBJECT_PIPELINE_SCORE = 262144
 const OBJECT_FUNCTION_BATCH_SIZE = 8

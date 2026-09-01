@@ -792,6 +792,7 @@ function main(args)
   if _test(compiler_path, repo_root, "winapi_extern_smoke", "tests\\winapi_extern_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_bytes_ptr_smoke", "tests\\native_bytes_ptr_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_raw_value_smoke", "tests\\native_raw_value_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "gc_interior_pointer_bounds", "tests\\gc_interior_pointer_bounds.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_callback_wndproc_smoke", "tests\\native_callback_wndproc_smoke.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "extern_out_runtime", "tests\\extern_out_runtime.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "defer_features", "tests\\defer_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

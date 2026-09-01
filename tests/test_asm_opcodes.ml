@@ -124,6 +124,36 @@ function checkAssemblerChunkBoundary()
   return 0
 end function
 
+function checkAssemblerMaterializedReuse()
+  builder = a.newAsmBuilder()
+  builder = a.emit8(builder, 0x11)
+  builder = a.emit8(builder, 0x22)
+  builder = a.materialize(builder)
+  builder = a.emit8(builder, 0x33)
+  raw = a.finalize(builder)
+  if typeof(raw) != "bytes" or len(raw) != 3 or raw[0] != 0x11 or raw[1] != 0x22 or raw[2] != 0x33 then
+    print "FAIL: assembler emission after materialization"
+    return 1
+  end if
+
+  patched = a.newAsmBuilder()
+  patched = a.jmp(patched, "done")
+  patched = a.nop(patched)
+  patched = a.mark(patched, "done")
+  patched = a.ret(patched)
+  patched = a.materialize(patched)
+  patched_raw = a.finalize(patched)
+  if typeof(patched_raw) != "bytes" or len(patched_raw) != 7 then
+    print "FAIL: assembler patch after materialization length"
+    return 1
+  end if
+  if patched_raw[0] != 0xE9 or patched_raw[1] != 1 or patched_raw[2] != 0 or patched_raw[3] != 0 or patched_raw[4] != 0 or patched_raw[5] != 0x90 or patched_raw[6] != 0xC3 then
+    print "FAIL: assembler patch after materialization bytes"
+    return 1
+  end if
+  return 0
+end function
+
 function checkCallAndHelperTracking()
   failures = 0
 
@@ -309,6 +339,7 @@ function main(args)
   failures = failures + checkDataLabelScale()
   failures = failures + checkChunkedIndexedRead()
   failures = failures + checkAssemblerChunkBoundary()
+  failures = failures + checkAssemblerMaterializedReuse()
   failures = failures + checkCallAndHelperTracking()
 
   if failures != 0 then return 6 end if

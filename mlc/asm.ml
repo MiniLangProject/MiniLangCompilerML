@@ -511,8 +511,41 @@ function _chunk_push(asm, chunk)
   return asm
 end function
 
+// Materialization releases the paged backing store to reduce compiler peak
+// memory. Recreate it lazily if a caller later resumes emission or patching.
+// This keeps materialize() reusable without retaining both representations.
+function _restore_materialized_chunks(asm)
+  if typeof(asm) != "struct" or asm.buf_valid == false then return asm end if
+  if typeof(asm.buf) != "bytes" or typeof(asm.size) != "int" or asm.size <= 0 then return asm end if
+  cs = asm.chunk_size
+  if typeof(cs) != "int" or cs <= 0 then cs = 65536 end if
+  want_chunks = asm.size >> 16
+  if (asm.size & 0xFFFF) != 0 then want_chunks = want_chunks + 1 end if
+  if _chunk_count(asm) >= want_chunks then return asm end if
+
+  asm.chunk_pages = []
+  asm.chunk_tail = []
+  src = 0
+  ci = 0
+  while src < asm.size
+    chunk = bytes(cs, 0)
+    take = asm.size - src
+    if take > cs then take = cs end if
+    copyBytes(chunk, 0, asm.buf, src, take)
+    asm = _chunk_push(asm, chunk)
+    asm.active_chunk = chunk
+    asm.active_chunk_index = ci
+    src = src + take
+    ci = ci + 1
+  end while
+  return asm
+end function
+
 function _ensure_capacity(asm, need)
   if need <= 0 then return asm end if
+  // Normal emission keeps buf_valid false, so the hot capacity path avoids a
+  // helper call unless a compact materialized snapshot is actually present.
+  if asm.buf_valid then asm = _restore_materialized_chunks(asm) end if
   cs = asm.chunk_size
   if typeof(cs) != "int" or cs <= 0 then
     cs = 65536
@@ -530,11 +563,13 @@ function _ensure_capacity(asm, need)
 end function
 
 function _set_chunk_byte(asm, idx, value)
+  asm = _ensure_capacity(asm, asm.size)
   ci = idx >> 16
   off = idx & 0xFFFF
   ch = _chunk_get(asm, ci)
   ch[off] = value & 0xFF
   asm = _chunk_set(asm, ci, ch)
+  asm.buf_valid = false
   return asm
 end function
 
@@ -614,7 +649,7 @@ end function
 function _emit8(asm, x)
   dst = asm.size
   need = dst + 1
-  if (dst & 0xFFFF) == 0 then
+  if asm.buf_valid or (dst & 0xFFFF) == 0 then
     asm = _ensure_capacity(asm, need)
   end if
   ci = dst >> 16
@@ -961,6 +996,7 @@ function finalize(asm)
   end if
   patches = get_patches(asm)
   if len(patches) > 0 then
+    asm = _ensure_capacity(asm, asm.size)
     asm.buf_valid = false
     for i = 0 to len(patches) - 1
       p = patches[i]
@@ -2590,6 +2626,7 @@ end function
 function _peephole_trim_tail(asm, n)
   if typeof(n) != "int" or n <= 0 then return asm end if
   if typeof(asm.size) != "int" or asm.size < n then return asm end if
+  asm = _ensure_capacity(asm, asm.size)
   asm.size = asm.size - n
   asm.buf_valid = false
   return asm
