@@ -91,19 +91,19 @@ function inline _scope_depth(state)
 end function
 
 function inline frame_count(frame)
-  if t.arr_vec_is(frame) then return t.arr_vec_count(frame) end if
+  if t.arr_vec_is(frame) then return t.arr_vec_count_trusted(frame) end if
   if typeof(frame) == "array" then return len(frame) end if
   return 0
 end function
 
 function inline frame_get(frame, idx)
-  if t.arr_vec_is(frame) then return t.arr_vec_get(frame, idx, void) end if
+  if t.arr_vec_is(frame) then return t.arr_vec_get_trusted(frame, idx, void) end if
   if typeof(frame) != "array" or typeof(idx) != "int" or idx < 0 or idx >= len(frame) then return void end if
   return frame[idx]
 end function
 
 function inline frame_set(frame, idx, value)
-  if t.arr_vec_is(frame) then return t.arr_vec_set(frame, idx, value) end if
+  if t.arr_vec_is(frame) then return t.arr_vec_set_trusted(frame, idx, value) end if
   if typeof(frame) == "array" and typeof(idx) == "int" and idx >= 0 and idx < len(frame) then frame[idx] = value end if
   return frame
 end function

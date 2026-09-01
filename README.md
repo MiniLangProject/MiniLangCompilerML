@@ -508,7 +508,15 @@ Notes:
   are O(1) rather than linear in the number of inferred locals.
   The paged writer appends little-endian 16-, 32- and 64-bit fields and UTF-8
   strings without allocating temporary byte objects; MLO serialization uses
-  the direct U32 and string paths for its actual wire fields.
+  the direct U32 and string paths for its actual wire fields. MLO reads decode
+  U32 values at the cursor and reuse one reader-local result pair. The
+  assembler caches its active 64 KiB byte chunk, and compiler vectors use
+  nominal checks plus validated trusted accessors. Standard-library `List`
+  growth and bulk conversion use native `copyArray`. Together these current
+  backend hot paths reduce the same-window fixed-point build by about 9.5%; the
+  implementation, rejected resolver experiment, hashes and measurements are
+  in the
+  [backend hot-path benchmark](docs/COMPILER_BACKEND_HOTPATH_BENCHMARK_2026-09-01.md).
   `--profile-compiler` reports aggregate batch setup, code generation and
   object serialization time. `--profile-compiler-batches` adds one diagnostic
   line per batch with its module/type prefix and does not change target bytes.
@@ -650,7 +658,7 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **111 passed, 0 failed**, plus all
+- Latest complete run for this revision: **131 recorded pass gates, 0 failed**, plus all
   outer Windows/Linux, object-pipeline, FFI, GC and byte-identity gates.
 
 ### Compiler parity and self-hosting
@@ -668,19 +676,19 @@ normal self-hosted path and the Python bootstrap. Exact hashes, test counts,
 boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
-Current audited Windows fixed point (2026-08-31): with a warm filesystem cache
-and fresh object directories, the Python bootstrap completed in 74.537 seconds.
-The measured self-hosted object build completed in 138.124 seconds and peaked
-at 792.1 MiB process-tree working set / 902.6 MiB private commit, compared with
-149.977 seconds and 1,728.3 / 1,830.3 MiB immediately before the retained
-modern-construct pass. Python Stage 1 and self-hosted Stages 2/3 are
-byte-identical 65,654,784-byte images with SHA-256
-`DF65FD5091ADEFA200F15BB5E3BABC127923BA41081F263993B2282F19965341`.
+Current audited Windows fixed point (2026-09-01): with a warm filesystem cache
+and fresh object directories, the Python bootstrap completed in 90.524 seconds
+under the current host load. A same-window self-hosted control took 169.959
+seconds; the retained backend completed in 153.763 seconds with identical
+diagnostics, a 9.53% reduction. Its sampled process-tree peak was 809.9 MiB
+working set / 907.1 MiB private commit. Python Stage 1 and self-hosted Stages
+2/3 are byte-identical 65,592,832-byte images with SHA-256
+`55F3E04FD9A44A81EFBBE3B67CCECE60D091383AF7697E707BD401FF9421D0E5`.
 Representative Python/self-hosted Windows PE and Linux ELF outputs are also
 byte-identical and run successfully. The 8 GiB heap setting is virtual
 address-space reserve, not resident or committed memory. Exact commands,
 phase timings and A/B decisions are in the
-[2026-08-31 report](docs/COMPILER_MODERN_CONSTRUCTS_BENCHMARK_2026-08-31.md).
+[2026-09-01 report](docs/COMPILER_BACKEND_HOTPATH_BENCHMARK_2026-09-01.md).
 
 #### Historical performance record
 

@@ -104,6 +104,26 @@ function checkChunkedIndexedRead()
   return failures
 end function
 
+function checkAssemblerChunkBoundary()
+  builder = a.newAsmBuilder()
+  for i = 0 to 65540
+    builder = a.emit8(builder, i & 0xFF)
+  end for
+  raw = a.finalize(builder)
+  if typeof(raw) != "bytes" or len(raw) != 65541 then
+    print "FAIL: assembler chunk-boundary length"
+    return 1
+  end if
+  probes = [0, 1, 65534, 65535, 65536, 65537, 65540]
+  for each idx in probes
+    if raw[idx] != (idx & 0xFF) then
+      print "FAIL: assembler chunk-boundary byte at " + idx
+      return 1
+    end if
+  end for
+  return 0
+end function
+
 function checkCallAndHelperTracking()
   failures = 0
 
@@ -288,6 +308,7 @@ function main(args)
   failures = failures + checkRDataLabelScale()
   failures = failures + checkDataLabelScale()
   failures = failures + checkChunkedIndexedRead()
+  failures = failures + checkAssemblerChunkBoundary()
   failures = failures + checkCallAndHelperTracking()
 
   if failures != 0 then return 6 end if

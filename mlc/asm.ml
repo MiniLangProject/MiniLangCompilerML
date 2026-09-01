@@ -38,6 +38,8 @@ struct AsmBuilder
   peephole_last_jump,
   record_calls,
   tracked_helper_map,
+  active_chunk,
+  active_chunk_index,
 end struct
 
 // Encoded general-purpose-register number, width and REX requirement.
@@ -86,7 +88,8 @@ end function
 // Create an empty assembler with production-sized page and index capacities.
 function newAsmBuilder()
   cs = 65536
-  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [bytes(cs, 0)], cs, false, [], [], t.fastmap_new(256), [], true, t.fastmap_new(256))
+  first_chunk = bytes(cs, 0)
+  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [first_chunk], cs, false, [], [], t.fastmap_new(256), [], true, t.fastmap_new(256), first_chunk, 0)
   return asm
 end function
 
@@ -458,6 +461,9 @@ function _chunk_count(asm)
 end function
 
 function _chunk_get(asm, idx)
+  if typeof(asm.active_chunk) == "bytes" and asm.active_chunk_index == idx then
+    return asm.active_chunk
+  end if
   pi = idx >> 8
   po = idx & 0xFF
   if pi < len(asm.chunk_pages) then
@@ -483,6 +489,8 @@ function _chunk_get(asm, idx)
 end function
 
 function _chunk_set(asm, idx, chunk)
+  asm.active_chunk = chunk
+  asm.active_chunk_index = idx
   pi = idx >> 8
   po = idx & 0xFF
   if pi < len(asm.chunk_pages) then
@@ -571,6 +579,8 @@ function _materialize_buffer(asm)
   asm.buf_valid = true
   asm.chunk_pages = []
   asm.chunk_tail = []
+  asm.active_chunk = bytes(0)
+  asm.active_chunk_index = -1
   _materialize_keepalive = 0
   return asm
 end function
@@ -609,40 +619,14 @@ function _emit8(asm, x)
   end if
   ci = dst >> 16
   off = dst & 0xFFFF
-  pi = ci >> 8
-  po = ci & 0xFF
-  wrote = false
-  if pi < len(asm.chunk_pages) then
-    pg = asm.chunk_pages[pi]
-    ch = pg[po]
-    ch[off] = x & 0xFF
-    pg[po] = ch
-    asm.chunk_pages[pi] = pg
-    wrote = true
-  else
-    ti = ci - (len(asm.chunk_pages) << 8)
-    if typeof(asm.chunk_tail) == "array" then
-      if ti >= 0 and ti < len(asm.chunk_tail) and typeof(asm.chunk_tail[ti]) == "bytes" then
-        ch2 = asm.chunk_tail[ti]
-        ch2[off] = x & 0xFF
-        asm.chunk_tail[ti] = ch2
-        wrote = true
-      end if
-    else
-      if typeof(asm.chunk_tail) == "struct" and typeof(asm.chunk_tail.data) == "array" then
-        tn = t.arr_chunk_tail_len(asm.chunk_tail)
-        if ti >= 0 and ti < tn and typeof(asm.chunk_tail.data[ti]) == "bytes" then
-          ch3 = asm.chunk_tail.data[ti]
-          ch3[off] = x & 0xFF
-          asm.chunk_tail.data[ti] = ch3
-          wrote = true
-        end if
-      end if
-    end if
+  ch = asm.active_chunk
+  if typeof(ch) != "bytes" or asm.active_chunk_index != ci then
+    ch = _chunk_get(asm, ci)
+    asm.active_chunk = ch
+    asm.active_chunk_index = ci
   end if
-  if wrote == false then
-    asm = _set_chunk_byte(asm, dst, x)
-  end if
+  ch[off] = x & 0xFF
+  asm.active_chunk = ch
   asm.size = need
   asm.buf_valid = false
   return asm

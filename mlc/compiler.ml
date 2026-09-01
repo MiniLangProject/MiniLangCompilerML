@@ -217,6 +217,7 @@ end struct
 struct ObjReader
   buf,
   pos,
+  u32_result,
 end struct
 
 _mem_probe_enabled = false
@@ -938,19 +939,26 @@ function _objbuf_finish(ob)
 end function
 
 function _objreader_new(buf)
-  return ObjReader(buf, 0)
+  // Reuse the hot two-value result for this reader. Every caller consumes the
+  // pair before issuing its next read, so MLO scans avoid allocating millions
+  // of transient [reader, value] arrays without introducing shared state.
+  return ObjReader(buf, 0, [0, 0])
 end function
 
 function _objreader_read_u32(rd)
-  if typeof(rd) != "struct" or typeof(rd.buf) != "bytes" then
+  if rd is not ObjReader or typeof(rd.buf) != "bytes" then
     return error(1, "invalid object reader")
   end if
   if rd.pos < 0 or rd.pos + 4 > len(rd.buf) then
     return error(1, "truncated object file")
   end if
-  v = _u32le_at(rd.buf, rd.pos)
+  p = rd.pos
+  v = rd.buf[p] | (rd.buf[p + 1] << 8) | (rd.buf[p + 2] << 16) | (rd.buf[p + 3] << 24)
   rd.pos = rd.pos + 4
-  return [rd, v]
+  result = rd.u32_result
+  result[0] = rd
+  result[1] = v
+  return result
 end function
 
 function _objreader_read_bytes(rd)

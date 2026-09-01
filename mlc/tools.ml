@@ -394,13 +394,11 @@ function ast_leaf_stats()
   return [_ast_leaf_count, _ast_leaf_cap, arr_vec_count(_ast_symbols), arr_vec_count(_ast_filenames), payload_bytes + packed_bytes + bin_bytes, _ast_bin_count, _ast_bin_cap, bin_bytes]
 end function
 
-// ArrayVector operations keep append-heavy planning tables capacity-backed.
-function arr_vec_is(value)
-  if typeof(value) != "struct" then return false end if
-  if typeof(try(value.data)) != "array" then return false end if
-  if typeof(try(value.size)) != "int" then return false end if
-  if typeof(try(value.cap)) != "int" then return false end if
-  return true
+// ArrayVector is compiler-internal and always created by arr_vec_new. A
+// nominal test avoids repeated guarded member probes on hot accesses while
+// still rejecting unrelated structs deterministically.
+function inline arr_vec_is(value) returns bool
+  return value is ArrayVector
 end function
 
 function arr_vec_new(initial_cap)
@@ -411,6 +409,12 @@ end function
 
 function arr_vec_count(vec)
   if arr_vec_is(vec) == false then return 0 end if
+  return mlc.tools.arr_vec_count_trusted(vec)
+end function
+
+// Trusted variants are used only after one nominal ArrayVector check. They
+// retain logical bounds handling but omit redundant shape validation.
+function inline arr_vec_count_trusted(vec) returns int
   n = vec.size
   if n < 0 then return 0 end if
   if n > len(vec.data) then return len(vec.data) end if
@@ -446,7 +450,11 @@ end function
 
 function arr_vec_get(vec, idx, defaultv)
   if arr_vec_is(vec) == false then return defaultv end if
-  n = arr_vec_count(vec)
+  return mlc.tools.arr_vec_get_trusted(vec, idx, defaultv)
+end function
+
+function inline arr_vec_get_trusted(vec, idx, defaultv)
+  n = mlc.tools.arr_vec_count_trusted(vec)
   if typeof(idx) != "int" or idx < 0 or idx >= n then return defaultv end if
   return _arr_unwrap_value(vec.data[idx])
 end function
@@ -454,7 +462,12 @@ end function
 function arr_vec_set(vec, idx, value)
   v = vec
   if arr_vec_is(v) == false then return v end if
-  n = arr_vec_count(v)
+  return mlc.tools.arr_vec_set_trusted(v, idx, value)
+end function
+
+function inline arr_vec_set_trusted(vec, idx, value)
+  v = vec
+  n = mlc.tools.arr_vec_count_trusted(v)
   if typeof(idx) != "int" or idx < 0 or idx >= n then return v end if
   v.data[idx] = _arr_wrap_value(value)
   return v
@@ -463,7 +476,7 @@ end function
 function arr_vec_push(vec, value)
   v = vec
   if arr_vec_is(v) == false then v = arr_vec_new(4) end if
-  n = arr_vec_count(v)
+  n = mlc.tools.arr_vec_count_trusted(v)
   if n >= v.cap or n >= len(v.data) then
     next_cap = v.cap << 1
     if next_cap < 4 then next_cap = 4 end if
@@ -504,7 +517,7 @@ function arr_vec_finish(vec)
     if typeof(vec) == "array" then return vec end if
     return []
   end if
-  n = arr_vec_count(vec)
+  n = mlc.tools.arr_vec_count_trusted(vec)
   if n <= 0 then return [] end if
   // Reuse the chunk-tail materializer: its fast path is one linear copy, and
   // its sentinel path is the language-supported way to retain actual void

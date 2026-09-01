@@ -1,5 +1,12 @@
 import mlc.tools as t
 
+// Same field names as the internal vector, but a different nominal type.
+struct VectorLookalike
+  data,
+  size,
+  cap,
+end struct
+
 function check(cond, message)
   if cond then return true end if
   print "[FAIL] " + message
@@ -16,6 +23,7 @@ function main(args)
   vec = t.arr_vec_push(vec, "tail")
 
   if check(t.arr_vec_is(vec), "vector type detection") == false then ok = false end if
+  if check(t.arr_vec_is(VectorLookalike([], 0, 0)) == false, "vector detection is nominal") == false then ok = false end if
   if check(t.arr_vec_count(vec) == 5002, "geometric growth count") == false then ok = false end if
   if check(t.arr_vec_get(vec, 0, -1) == 0, "first value") == false then ok = false end if
   if check(t.arr_vec_get(vec, 4097, -1) == 4097, "grown value") == false then ok = false end if
