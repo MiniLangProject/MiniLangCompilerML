@@ -275,9 +275,11 @@ try {
     $linuxCases = @(
       [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
       [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux FFI resolution errors"; Source = "linux_ffi_resolution_error.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux float rounding carry"; Source = "linux_float_format.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared heap and threads"; Source = "thread_features.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux atomic Thread.Start"; Source = "thread_concurrent_start.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux thread lifecycle races"; Source = "thread_lifecycle_races.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux managed thread pool"; Source = "thread_pool.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux standard library"; Source = "stdlib_unit_tests.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux threading standard library"; Source = "threading_stdlib.ml"; RunArgs = @() },

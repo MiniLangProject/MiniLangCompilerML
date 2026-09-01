@@ -2,6 +2,7 @@
 package mlc.linux_runtime
 import mlc.asm as a
 import mlc.data as d
+import mlc.tools as t
 import std.string as s
 
 struct RuntimeLabel
@@ -25,18 +26,18 @@ struct ThunkDestination
   value,
 end struct
 
+// Stable boundaries inside the checked-in syscall blob. The legacy thread
+// implementation is excluded as one named range and replaced below; keeping
+// these values together prevents unrelated slice/relocation magic numbers.
+const RUNTIME_EXIT_SYSCALL_OFFSET = 123
+const RUNTIME_LEGACY_THREAD_START = 497
+const RUNTIME_LEGACY_THREAD_END = 1361
+const RUNTIME_PTHREAD_CREATE_PATCH = 692
+const RUNTIME_PTHREAD_WAIT_PATCH = 1134
+const RUNTIME_PTHREAD_CLOSE_PATCH = 1385
+
 function _extern_dll_base(dll)
-  x = s.toLowerAscii("" + dll)
-  x = s.replaceAll(x, "\\", "/")
-  parts = s.split(x, "/")
-  if len(parts) > 0 then x = parts[len(parts) - 1] end if
-  if s.endsWith(x, ".dll") then x = s.substr(x, 0, len(x) - 4) end if
-  x = s.replaceAll(x, "-", "_")
-  x = s.replaceAll(x, " ", "_")
-  x = s.replaceAll(x, ".", "_")
-  while s.contains(x, "__") x = s.replaceAll(x, "__", "_") end while
-  if x == "" then x = "dll" end if
-  return x
+  return t.extern_library_label_token(dll)
 end function
 
 // Allocate writable slots that the Linux dynamic loader fills for externs.
@@ -163,12 +164,13 @@ function _runtime_blob_raw()
   return fromHex("83f9f60f840f00000083f9f50f8409000000b802000000c333c0c3b801000000c35756488bf9488bf2418bd0b8010000000f054885c00f880d000000418901b801000000e90200000033c05e5fc35756488bf9488bf2418bd033c00f054885c00f880d000000418901b801000000e90200000033c05e5fc38bf9b83c0000000f050f0b4585c0418bc081e0002000000f84500000005756488bf9488bf2418bc081e000100000ba0000000085c00f8405000000ba0300000041ba2200000049c7c0ffffffff4533c9b8090000000f054c8bd85e5f498bc34881f801f0ffff0f8327000000c35756488bf9488bf2ba03000000b80a0000000f054c8bd85e5f4d85db0f8504000000488bc1c333c0c35756488bf9488bf2ba04000000b81c0000000f0533d2b80a0000000f055e5fb801000000c3575685c90f850c000000b8180000000f05e90d00000033ff33f68bd1b8070000000f055e5fc3c70100000000c34c8bd1b8ba0000000f05448bc8418b4204413bc10f850b000000418b4208ffc041894208c333c0ba01000000f0410fb1120f840b000000f390b8180000000f05ebe345894a0441c7420801000000c34c8bd1b8ba0000000f05418b52043bd00f852b000000418b520883fa010f8e07000000ffca41895208c341c742080000000041c742040000000041c70200000000c3415441554156415757564d8be84d8bf14c8b7c246033ffbe00001000ba0300000041ba2200000049c7c0ffffffff4533c9b8090000000f054881f801f0ffff0f83800000004c8be0498db42400001000bf000f3501498bd44d8bd44533c0b8380000000f054885c00f841d0000004885c00f883f0000004189074d8bdc5e5f415f415e415d415c498bc3c3498d442440488bf0bf01100000b89e0000000f054883ec20498bce498bc5ffd0b83c00000033ff0f050f0b498bfcbe00001000b80b0000000f055e5f415f415e415d415c33c0c3415441554c8be1448bea418b042485c00f841e0000004585ed0f841c000000b901000000e847feffff4183fdff74db41ffcdebd633c0e905000000b802010000415d415cc35756488bf9be00001000b80b0000000f055e5f4833c04885c0b801000000c34154415541564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004c8be1448bea418b44240885c00f841e0000004585ed0f8450000000b901000000e8e5fcffff4183fdff74da41ffcdebd5418b44242085c00f851d000000498b3c2433f6ff150000000085c00f851000000041c74424200100000033c0e90f000000b8ffffffffe905000000b802010000f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a0000000415e415d415cc3415457564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004c8be1418b44240885c00f8543000000418b44242085c00f8514000000498b3c2433f6ff150000000085c00f8522000000498bfcbe00100000b80b0000000f054885c00f850a000000b801000000e90200000033c0f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a00000005e5f415cc3f20f10d0f20f5ed1660f3a0bd203f20f59d1f20f5cc2c353415441554156415756574d8be04d8be866480f7ec04c8bd849c1eb3f48c1e00148c1e80166480f6ec04d85db0f840800000041c645002d49ffc5f24c0f2cf04d8bfd4d85f60f850d00000041c645003049ffc5e945000000498bc64899bb0a00000048f7f383c2304188550049ffc54c8bf04d85f675e14d8bd74d8bdd49ffcb4d3bd30f8314000000418a02418a1341881241880349ffc249ffcbebe3f24c0f2cf0f2490f2acef20f5cc1b840420f00f2480f2ac8f20f59c1660f3a0bc000f24c0f2cf04981fe40420f000f85370000004d8bd549ffca418a0280f8390f851a00000041c602304d3bd777e841c6073141c645003049ffc5e95e00000080c001418802e9530000004d85f60f844a00000041c645002e49ffc541bfa0860100498bc6489949f7f783c0304188450049ffc54c8bf2498bc74899bb0a00000048f7f34c8bf84d85ff75d6418a45ff80f8300f850500000049ffcdebee41c6450000498bc45f5e415f415e415d415c5bc3b801000000c3b801000000c3b801000000c333c0c333c0c333c0c333c0c333c0c3")
 end function
 
-// The generated raw blob still contains the superseded pthread wait/close
-// fragment at bytes 807..1360. emit_runtime inserts the canonical pthread
-// implementation separately, so remove that historical range exactly once.
-function _runtime_blob()
+// Split the stable non-thread helpers around the complete superseded native
+// thread range. emit_runtime inserts the canonical pthread block between them.
+function _runtime_non_thread_parts()
   raw = _runtime_blob_raw()
-  return slice(raw, 0, 807) + slice(raw, 1361, len(raw) - 1361)
+  prefix = slice(raw, 0, RUNTIME_LEGACY_THREAD_START)
+  suffix = slice(raw, RUNTIME_LEGACY_THREAD_END, len(raw) - RUNTIME_LEGACY_THREAD_END)
+  return [prefix, suffix]
 end function
 
 // Generated pthread-backed replacement for the legacy CreateThread through
@@ -291,6 +293,8 @@ function _emit_extern_thunks(state)
     fragment = a.emit(fragment, bytes(4, 0))
     fragment = a.test_r64_r64(fragment, "rax", "rax")
     resolved_label = thunk_label + "_resolved"
+    resolve_failed_label = thunk_label + "_resolve_failed"
+    epilogue_label = thunk_label + "_epilogue"
     fragment = a.jcc(fragment, "ne", resolved_label)
     fragment = a.emit(fragment, fromHex("488d05"))
     external_patches = external_patches + [[a.pos(fragment), library_label]]
@@ -301,7 +305,7 @@ function _emit_extern_thunks(state)
     external_patches = external_patches + [[a.pos(fragment), "elfiat_runtime_dlopen"]]
     fragment = a.emit(fragment, bytes(4, 0))
     fragment = a.test_r64_r64(fragment, "rax", "rax")
-    fragment = a.jcc(fragment, "e", resolved_label)
+    fragment = a.jcc(fragment, "e", resolve_failed_label)
     fragment = a.mov_r64_r64(fragment, "rdi", "rax")
     fragment = a.emit(fragment, fromHex("488d05"))
     external_patches = external_patches + [[a.pos(fragment), symbol_label]]
@@ -310,6 +314,8 @@ function _emit_extern_thunks(state)
     fragment = a.emit(fragment, fromHex("ff15"))
     external_patches = external_patches + [[a.pos(fragment), "elfiat_runtime_dlsym"]]
     fragment = a.emit(fragment, bytes(4, 0))
+    fragment = a.test_r64_r64(fragment, "rax", "rax")
+    fragment = a.jcc(fragment, "e", resolve_failed_label)
     fragment = a.emit(fragment, fromHex("488905"))
     external_patches = external_patches + [[a.pos(fragment), loader_label]]
     fragment = a.emit(fragment, bytes(4, 0))
@@ -334,6 +340,13 @@ function _emit_extern_thunks(state)
     // relocation after the finished fragment is appended to the main image.
     call_patch_offset = a.pos(fragment) + 2
     fragment = a.emit(fragment, bytes([0xFF, 0x15, 0, 0, 0, 0]))
+    // Carry resolution failure to the caller in CF while retaining the native
+    // result in RAX/XMM0. The common epilogue performs the flag-setting shift.
+    fragment = a.mov_r32_imm32(fragment, "r11d", 0)
+    fragment = a.jmp(fragment, epilogue_label)
+    fragment = a.mark(fragment, resolve_failed_label)
+    fragment = a.mov_r32_imm32(fragment, "r11d", 1)
+    fragment = a.mark(fragment, epilogue_label)
 
     for i = 6 to 15
       fragment = a.movdqu_xmm_membase_disp(fragment, "xmm" + i, "rsp", xmm_save_base + (i - 6) * 16)
@@ -345,6 +358,7 @@ function _emit_extern_thunks(state)
     end if
     fragment = a.pop_reg(fragment, "rsi")
     fragment = a.pop_reg(fragment, "rdi")
+    fragment = a.shr_r32_imm8(fragment, "r11d", 1)
     fragment = a.ret(fragment)
     // The resolver path above introduces forward local branches. Fold those
     // fragment-owned patches before copying its bytes into the parent builder;
@@ -377,11 +391,14 @@ function emit_runtime(state)
   prepared = prepare_dynamic_imports(state)
   state = prepared.state
 
-  base_blob = _runtime_blob()
-  // Keep the stable syscall helpers before/after the thread range. Patch the
-  // ExitProcess syscall number (60 -> 231) and splice in the pthread runtime.
-  blob = slice(base_blob, 0, 123) + fromHex("e7000000") + slice(base_blob, 127, 370)
-  blob = blob + _pthread_runtime_blob() + slice(base_blob, 807, len(base_blob) - 807)
+  runtime_parts = _runtime_non_thread_parts()
+  prefix = runtime_parts[0]
+  suffix = runtime_parts[1]
+  // Patch ExitProcess from exit(60) to exit_group(231), then insert the one
+  // pthread implementation between the named non-thread portions.
+  blob = slice(prefix, 0, RUNTIME_EXIT_SYSCALL_OFFSET) + fromHex("e7000000")
+  blob = blob + slice(prefix, RUNTIME_EXIT_SYSCALL_OFFSET + 4, len(prefix) - RUNTIME_EXIT_SYSCALL_OFFSET - 4)
+  blob = blob + _pthread_runtime_blob() + suffix
   labels = _runtime_labels()
   blob_base = a.pos(state.asm)
   cursor = 0
@@ -395,9 +412,9 @@ function emit_runtime(state)
   end for
   if cursor < len(blob) then state.asm = a.emit(state.asm, slice(blob, cursor, len(blob) - cursor)) end if
   // These RIP-relative slots are resolved after the ELF data layout is known.
-  state.asm = a.add_patch(state.asm, blob_base + 692, "elfiat_runtime_pthread_create", "rip32")
-  state.asm = a.add_patch(state.asm, blob_base + 1134, "elfiat_runtime_pthread_join", "rip32")
-  state.asm = a.add_patch(state.asm, blob_base + 1385, "elfiat_runtime_pthread_join", "rip32")
+  state.asm = a.add_patch(state.asm, blob_base + RUNTIME_PTHREAD_CREATE_PATCH, "elfiat_runtime_pthread_create", "rip32")
+  state.asm = a.add_patch(state.asm, blob_base + RUNTIME_PTHREAD_WAIT_PATCH, "elfiat_runtime_pthread_join", "rip32")
+  state.asm = a.add_patch(state.asm, blob_base + RUNTIME_PTHREAD_CLOSE_PATCH, "elfiat_runtime_pthread_join", "rip32")
   state = _emit_extern_thunks(state)
   return state
 end function

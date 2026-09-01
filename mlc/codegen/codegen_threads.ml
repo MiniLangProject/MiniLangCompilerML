@@ -38,6 +38,10 @@ const THREAD_STOP_REQUESTED = 2
 const THREAD_COMPLETED = 3
 const THREAD_STOPPED = 4
 const THREAD_FAILED = 5
+// Private states used while publishing a native worker/configuration update.
+// Status() maps them to stable public strings rather than exposing new states.
+const THREAD_STARTING = 6
+const THREAD_CONFIGURING = 7
 
 // Collector-facing states used by cooperative stop-the-world coordination.
 const GC_THREAD_RUNNING = 0
@@ -624,17 +628,24 @@ function emit_thread_start_function(state)
   l_not_created = "thstart_not_created_" + lid
   l_wrong_arity = "thstart_wrong_arity_" + lid
   l_create_fail = "thstart_create_fail_" + lid
+  l_claim = "thstart_claim_" + lid
+  l_claimed = "thstart_claimed_" + lid
   l_done = "thstart_done_" + lid
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_ARITY)
   state.asm = a.cmp_r32_r32(state.asm, "eax", "r8d")
   state.asm = a.jcc(state.asm, "ne", l_wrong_arity)
-  // Claim the one-shot Thread object before publishing its argument. A plain
-  // load/store allowed two callers to overwrite the same handle and argument.
+  // Claim with a private state; Running is visible only after handle and id.
+  state.asm = a.mark(state.asm, l_claim)
   state.asm = a.mov_r32_imm32(state.asm, "eax", THREAD_CREATED)
-  state.asm = a.mov_r32_imm32(state.asm, "r11d", THREAD_RUNNING)
+  state.asm = a.mov_r32_imm32(state.asm, "r11d", THREAD_STARTING)
   state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "rcx", THREAD_STATUS, "r11d")
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CREATED)
+  state.asm = a.jcc(state.asm, "e", l_claimed)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CONFIGURING)
   state.asm = a.jcc(state.asm, "ne", l_not_created)
+  state.asm = a.emit(state.asm, fromHex("f390"))
+  state.asm = a.jmp(state.asm, l_claim)
+  state.asm = a.mark(state.asm, l_claimed)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STOP, 0, false)
   state.asm = a.mov_membase_disp_r64(state.asm, "rcx", THREAD_ARG, "rdx")
   state = _emit_managed_thread_count_delta(state, 1)
@@ -654,6 +665,7 @@ function emit_thread_start_function(state)
   state.asm = a.mov_membase_disp_r64(state.asm, "r11", THREAD_HANDLE, "rax")
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x40)
   state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_ID, "eax")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_STATUS, THREAD_RUNNING, false)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
   state.asm = a.jmp(state.asm, l_done)
   state.asm = a.mark(state.asm, l_create_fail)
@@ -698,9 +710,20 @@ function emit_thread_join_function(state)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x28, "rdx")
   lid = _new_label_id(state)
   l_false = "thjoin_false_" + lid
+  l_wait_handle = "thjoin_wait_handle_" + lid
+  l_have_published_state = "thjoin_have_published_state_" + lid
   l_done = "thjoin_done_" + lid
   state.asm = a.call(state.asm, "fn_gc_native_enter")
+  state.asm = a.mark(state.asm, l_wait_handle)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x20)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", THREAD_STATUS)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STARTING)
+  state.asm = a.jcc(state.asm, "ne", l_have_published_state)
+  state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
+  state.asm = a.mov_rax_rip_qword(state.asm, "iat_Sleep")
+  state.asm = a.call_rax(state.asm)
+  state.asm = a.jmp(state.asm, l_wait_handle)
+  state.asm = a.mark(state.asm, l_have_published_state)
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", THREAD_HANDLE)
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
   state.asm = a.jcc(state.asm, "e", l_false)
@@ -734,6 +757,8 @@ function emit_thread_alive_function(state)
   l_true = "thalive_true_" + lid
   l_done = "thalive_done_" + lid
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_STATUS)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STARTING)
+  state.asm = a.jcc(state.asm, "e", l_true)
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_RUNNING)
   state.asm = a.jcc(state.asm, "e", l_true)
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STOP_REQUESTED)
@@ -768,10 +793,13 @@ function emit_thread_set_logical_id_function(state)
   lid = _new_label_id(state)
   l_false = "thsetid_false_" + lid
   l_done = "thsetid_done_" + lid
-  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_STATUS)
+  state.asm = a.mov_r32_imm32(state.asm, "eax", THREAD_CREATED)
+  state.asm = a.mov_r32_imm32(state.asm, "r11d", THREAD_CONFIGURING)
+  state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "rcx", THREAD_STATUS, "r11d")
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CREATED)
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.mov_membase_disp_r64(state.asm, "rcx", THREAD_LOGICAL_ID, "rdx")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STATUS, THREAD_CREATED, false)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
   state.asm = a.jmp(state.asm, l_done)
   state.asm = a.mark(state.asm, l_false)
@@ -808,6 +836,10 @@ function emit_thread_status_function(state)
   lid = _new_label_id(state)
   l_done = "thstatus_done_" + lid
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_STATUS)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STARTING)
+  state.asm = a.jcc(state.asm, "e", "thstatus_1_" + lid)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CONFIGURING)
+  state.asm = a.jcc(state.asm, "e", "thstatus_0_" + lid)
   for status = 0 to len(names) - 1
     state.asm = a.cmp_r32_imm(state.asm, "eax", status)
     state.asm = a.jcc(state.asm, "e", "thstatus_" + status + "_" + lid)
@@ -836,13 +868,32 @@ function emit_thread_close_function(state)
   state.asm = a.jcc(state.asm, "e", l_false)
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STOP_REQUESTED)
   state.asm = a.jcc(state.asm, "e", l_false)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rcx", THREAD_HANDLE)
-  state.asm = a.test_r64_r64(state.asm, "rcx", "rcx")
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STARTING)
   state.asm = a.jcc(state.asm, "e", l_false)
+  // Take the handle atomically so concurrent Close() calls cannot both close
+  // it or clear the registered roots while another closer is still using it.
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rcx", THREAD_HANDLE)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "e", l_false)
+  state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.lock_cmpxchg_membase_disp_r64(state.asm, "rcx", THREAD_HANDLE, "rdx")
+  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x28, "rax")
+  // Terminal publication precedes the last native epilogue instructions. Do
+  // not clear the context until the operating system reports worker exit.
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.mov_rax_rip_qword(state.asm, "iat_WaitForSingleObject")
+  state.asm = a.call_rax(state.asm)
+  l_restore = "thclose_restore_" + lid
+  state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.jcc(state.asm, "ne", l_restore)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 0x28)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_CloseHandle")
   state.asm = a.call_rax(state.asm)
+  state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.jcc(state.asm, "e", l_restore)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_HANDLE, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_CODE, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_RESULT, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_ARG, t.enc_void(), true)
@@ -855,6 +906,11 @@ function emit_thread_close_function(state)
   end for
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
   state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_restore)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", 0x28)
+  state.asm = a.lock_cmpxchg_membase_disp_r64(state.asm, "r11", THREAD_HANDLE, "rdx")
   state.asm = a.mark(state.asm, l_false)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
   state.asm = a.mark(state.asm, l_done)
@@ -907,6 +963,19 @@ function emit_thread_entry_function(state)
   lid = _new_label_id(state)
   l_finish = "thentry_finish_" + lid
   l_finalize = "thentry_finalize_" + lid
+  l_wait_start = "thentry_wait_start_" + lid
+  l_start_published = "thentry_start_published_" + lid
+
+  // The worker can run before Start() has received and stored its handle.
+  state.asm = a.mark(state.asm, l_wait_start)
+  state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r12", THREAD_STATUS)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STARTING)
+  state.asm = a.jcc(state.asm, "ne", l_start_published)
+  state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
+  state.asm = a.mov_rax_rip_qword(state.asm, "iat_Sleep")
+  state.asm = a.call_rax(state.asm)
+  state.asm = a.jmp(state.asm, l_wait_start)
+  state.asm = a.mark(state.asm, l_start_published)
 
   state.asm = a.mov_rcx_imm32(state.asm, 0xFFFFFFF5)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_GetStdHandle")

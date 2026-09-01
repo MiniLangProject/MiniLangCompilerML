@@ -45,7 +45,9 @@ function checkLinuxThunkLocalBranches()
       end if
     end for
   end if
-  if seen != 2 then
+  // The thunk has one cached-resolution branch plus explicit failure branches
+  // after dlopen and dlsym. All three must be locally resolved.
+  if seen != 3 then
     print "FAIL: Linux extern thunk resolver branch count"
     failures = failures + 1
   end if
@@ -249,8 +251,8 @@ function main(args)
     print "FAIL: asm_opcodes_golden.json has no vectors field"
     return 4
   end if
-  if s.contains(txt, "\"count\": 228") == false then
-    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 228-vector set"
+  if s.contains(txt, "\"count\": 229") == false then
+    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 229-vector set"
     return 5
   end if
 

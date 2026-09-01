@@ -849,6 +849,7 @@ function main(args)
   if _test(compiler_path, repo_root, "global_function_rebind", "tests\\global_function_rebind.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_features", "tests\\thread_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "thread_concurrent_start", "tests\\thread_concurrent_start.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "thread_lifecycle_races", "tests\\thread_lifecycle_races.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test_tlab_shared_heap(compiler_path, repo_root, extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_back_to_back_safepoint", "tests\\gc_back_to_back_safepoint.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "threading_stdlib", "tests\\threading_stdlib.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

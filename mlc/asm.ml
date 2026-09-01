@@ -1703,6 +1703,21 @@ function lock_cmpxchg_membase_disp_r32(asm, base, disp, src)
   return asm
 end function
 
+function lock_cmpxchg_membase_disp_r64(asm, base, disp, src)
+  sreg = _rid_any(src)
+  b = _rid_any(base)
+  if sreg < 0 or b < 0 then return asm end if
+  enc = _encode_mem(sreg & 7, b, disp)
+  rex_r = 0
+  if sreg >= 8 then rex_r = 1 end if
+  asm = _emit8(asm, 0xF0)
+  asm = _emit_rex(asm, 1, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xB1)
+  asm = _emit(asm, enc.tail)
+  return asm
+end function
+
 function mov_r8_membase_disp(asm, dst, base, disp)
   if _is_r8_name(dst) == false then return error(1, "mov_r8_membase_disp requires an 8-bit dst register") end if
   d = _rid_any(dst)

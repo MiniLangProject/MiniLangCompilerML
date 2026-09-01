@@ -212,8 +212,11 @@ Notes (current implementation):
 - Linux images without external native imports are static. A source containing
   `extern function ... from "lib.so..."` gets a minimal dynamic ELF image using
   the x64 System V ABI and the glibc interpreter `/lib64/ld-linux-x86-64.so.2`.
-  Each source extern is resolved through its declared library handle, so equal
-  symbol names from different shared libraries keep distinct function slots.
+  Each source extern is resolved through its declared library handle. The full
+  UTF-8 library spelling is encoded into a collision-free slot key, so equal
+  basenames, punctuation variants and equal symbols in different paths remain
+  distinct. A missing module or symbol returns a catchable MiniLang `error`
+  instead of transferring control through a null loader slot.
 - Listing order is stable; PE header dumps are available only for Windows.
 - The compiler uses the shared MiniLang frontend for parsing (tokenizer/parser).
 
@@ -663,7 +666,7 @@ Notes:
 - `-CompilerArgs ...` appends additional compiler flags; `-NoDefaultCompilerArgs` disables the script's default heap/GC flags.
 - The test script runs the compiler hot-path concatenation guard before it
   builds the MiniLang test harness.
-- Latest complete run for this revision: **125/125 inner harness tests**, plus
+- Latest complete run for this revision: **126/126 inner harness tests**, plus
   all outer Windows/Linux, object-pipeline, FFI, GC and byte-identity gates.
 
 ### Compiler parity and self-hosting
@@ -683,13 +686,14 @@ boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
 Current audited Windows fixed point (2026-09-01): the Python bootstrap produced
-Stage 1 in 62.598 seconds, and Stage 1 produced the self-hosted Stage 2 in
-102.987 seconds. Both are byte-identical 65,826,816-byte images with SHA-256
-`1CBD04DB789A8CF19738DEE07B9D2F653851155642034F8B240CC8D80BC6F1D0`.
-The complete inner harness passes 125/125 in 83.271 seconds; the full wrapper,
+Stage 1 in 66.913 seconds, and Stage 1 produced the self-hosted Stage 2 in
+99.546 seconds. Both are byte-identical 65,977,344-byte images with SHA-256
+`39AD8309420B480EC550D057128E247C951862E4EA44C83F62B98B602C9FC5BC`.
+The complete inner harness passes 126/126 in 87.260 seconds; the full wrapper,
 including every Windows/Linux, FFI, GC, object-pipeline and relink gate, passes
-in 123.361 seconds. A targeted ten-case matrix is byte-identical across the
-Python, self-hosted monolithic and self-hosted `.mlo` paths on both targets.
+in 133.811 seconds. A targeted cross-compiler matrix covering thread lifecycle,
+Windows DLL identity, Linux startup and failed Linux FFI resolution is
+byte-identical on both targets; the normal object-pipeline gates also pass.
 The 8 GiB heap setting is virtual address-space reserve, not resident or
 committed memory. Earlier backend A/B measurements remain in the
 [2026-09-01 report](docs/COMPILER_BACKEND_HOTPATH_BENCHMARK_2026-09-01.md).
@@ -1677,7 +1681,8 @@ Thread methods:
 - `Stop()` atomically requests cooperative cancellation and returns whether a
   running thread changed to `StopRequested`.
 - `Join()` waits indefinitely; `Join(timeoutMs)` waits at most the given number
-  of milliseconds. Both return `true` only when the thread terminated.
+  of milliseconds. Both return `true` only when the thread terminated. A Join
+  racing Start waits for native-handle publication instead of failing early.
 - `Status()` returns `Created`, `Running`, `StopRequested`, `Completed`,
   `Stopped`, or `Failed`.
 - `IsAlive()` is true for `Running` and `StopRequested`.
@@ -1685,11 +1690,15 @@ Thread methods:
 - `LogicalId()` returns the user-defined logical id. `SetLogicalId(value)` can
   replace it while the thread is still in `Created`; the constructor's optional
   second argument sets the initial value. Logical ids do not change the native
-  operating-system thread id.
+  operating-system thread id. The update and Start's state claim are atomic
+  with respect to one another.
 - `Result()` returns the worker's result (`void` until it publishes one). Use
   `try(t.Result())` when a failed worker returned an `error` value.
-- `Close()` closes the native handle after termination. Status metadata remains
-  valid; its small control page is retained until process exit.
+- `Close()` closes the native handle after termination. Concurrent calls are
+  safe and exactly one can claim a live handle; cleanup also verifies that the
+  native worker has fully exited before clearing its registered roots. Status
+  metadata remains valid and its small control page is retained until process
+  exit.
 
 Worker helpers:
 

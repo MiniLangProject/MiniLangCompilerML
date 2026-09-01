@@ -2417,29 +2417,7 @@ function _imports_to_pe_imports(imports)
 end function
 
 function _dll_base(dll)
-  if typeof(dll) != "string" then return "dll" end if
-  x = s.toLowerAscii(s.replaceAll(dll, "\\", "/"))
-  parts = s.split(x, "/")
-  if typeof(parts) == "array" and len(parts) > 0 then
-    x = parts[len(parts) - 1]
-  end if
-  if _endsWith(x, ".dll") then
-    x = s.substr(x, 0, len(x) - 4)
-  end if
-  name = ""
-  for i = 0 to len(x) - 1
-    ch = x[i]
-    b = bytes(ch)
-    c = 0
-    if len(b) > 0 then c = b[0] end if
-    if (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or ch == "_" then
-      name = name + ch
-    else
-      name = name + "_"
-    end if
-  end for
-  if name == "" then name = "dll" end if
-  return name
+  return t.extern_library_label_token(s.toLowerAscii(s.trim("" + dll)))
 end function
 
 function _coerce_name(v)

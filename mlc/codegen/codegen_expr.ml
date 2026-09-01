@@ -8374,27 +8374,14 @@ function _contains_nested_fn(node)
   return false
 end function
 
-function _extern_dll_base(dll)
-  if typeof(dll) != "string" then return "dll" end if
-  x = s.toLowerAscii(dll)
-  x = s.replaceAll(x, "\\", "/")
-  parts = s.split(x, "/")
-  if len(parts) > 0 then x = parts[len(parts) - 1] end if
-  if s.endsWith(x, ".dll") then
-    x = s.substr(x, 0, len(x) - 4)
-  end if
-  x = s.replaceAll(x, "-", "_")
-  x = s.replaceAll(x, " ", "_")
-  x = s.replaceAll(x, ".", "_")
-  while s.contains(x, "__")
-    x = s.replaceAll(x, "__", "_")
-  end while
-  if x == "" then x = "dll" end if
-  return x
+function _extern_dll_base(dll, is_linux)
+  identity = "" + dll
+  if is_linux == false then identity = s.toLowerAscii(s.trim(identity)) end if
+  return t.extern_library_label_token(identity)
 end function
 
-function _extern_iat_label(dll, sym)
-  return "iat_" + _extern_dll_base(dll) + "_" + sym
+function _extern_iat_label(dll, sym, is_linux)
+  return "iat_" + _extern_dll_base(dll, is_linux) + "_" + sym
 end function
 
 function _emit_make_error_const(state, code, message)
@@ -9155,7 +9142,15 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
     end while
   end if
 
-  state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
+  state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym, state.is_linux_target))
+  if state.is_linux_target then
+    extern_resolved = "L_extern_resolved_" + _next_lid(state)
+    state.asm = a.jcc(state.asm, "ae", extern_resolved)
+    if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
+    state = _emit_make_error_const(state, c.ERR_EXTERN_CONVERSION, "Extern resolution failed: " + qn + " from " + dll + " symbol " + sym)
+    state.asm = a.jmp(state.asm, l_cleanup)
+    state.asm = a.mark(state.asm, extern_resolved)
+  end if
   if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
   if omitted > 0 then
     out_ok = "L_extern_out_ok_" + _next_lid(state)
@@ -9799,7 +9794,15 @@ function emit_extern_stubs(state)
       end for
     end if
 
-    state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym))
+    state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym, state.is_linux_target))
+    if state.is_linux_target then
+      extern_resolved = "lbl_extern_stub_resolved_" + _next_lid(state)
+      state.asm = a.jcc(state.asm, "ae", extern_resolved)
+      if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
+      state = _emit_make_error_const(state, c.ERR_EXTERN_CONVERSION, "Extern resolution failed: " + qn + " from " + dll + " symbol " + sym)
+      state.asm = a.jmp(state.asm, l_done)
+      state.asm = a.mark(state.asm, extern_resolved)
+    end if
     if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
     state = _emit_extern_ret_from_native(state, ret_ty, l_fail, pos)
     state.asm = a.jmp(state.asm, l_done)

@@ -3,6 +3,20 @@ package mlc.tools
 
 import mlc.constants as c
 
+// Encode the exact UTF-8 library spelling into a reversible assembler-label
+// token. Paths and punctuation must not collapse to one dynamic-import slot.
+function extern_library_label_token(library)
+  payload = bytes("" + library)
+  if len(payload) == 0 then return "lib_00" end if
+  digits = "0123456789abcdef"
+  output = "lib_"
+  for i = 0 to len(payload) - 1
+    value = payload[i]
+    output = output + digits[value >> 4] + digits[value & 15]
+  end for
+  return output
+end function
+
 // Copy immutable string payloads directly into paged byte buffers. MiniLang's
 // collector is non-moving, so both managed objects remain stable for the
 // duration of this synchronous native copy.
