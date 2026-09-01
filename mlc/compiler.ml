@@ -5127,9 +5127,32 @@ function collect_extern_structs(program)
   return _collect_extern_structs_walk(program, "", "", prefixes, [])
 end function
 
-// Validate supported ABI types, out parameters and native struct references.
+function _extern_physical_abi_class(ty, is_out)
+  // Keep the result defined even for partially populated declarations from an
+  // inactive platform branch. Validation reports those declarations elsewhere;
+  // it must never turn a missing field into a runtime stringification error.
+  result = "gpr"
+  if typeof(is_out) == "bool" and is_out then
+    result = "gpr"
+  else
+    normalized = ""
+    if typeof(ty) == "string" then normalized = s.toLowerAscii(s.trim(ty)) end if
+    if normalized == "void" or normalized == "none" then
+      result = "void"
+    else if normalized == "double" then
+      result = "xmm"
+    end if
+  end if
+  return result
+end function
+
+// Validate supported ABI types, out parameters, native struct references and
+// ABI compatibility of aliases that share one physical import slot/thunk.
 function validate_extern_sigs(extern_sigs, extern_struct_names)
   if typeof(extern_sigs) != "array" or len(extern_sigs) <= 0 then return "" end if
+  physical_keys = []
+  physical_abis = []
+  physical_names = []
   for si = 0 to len(extern_sigs) - 1
     sig = extern_sigs[si]
     if typeof(sig) != "struct" then continue end if
@@ -5161,10 +5184,65 @@ function validate_extern_sigs(extern_sigs, extern_struct_names)
         end if
       end for
     end if
-    ret_ty = sig.ret_ty
-    if typeof(ret_ty) != "string" or s.trim(ret_ty) == "" then ret_ty = "void" end if
+    // Start with a concrete string instead of first assigning a possibly
+    // absent field. That keeps the value valid for declarations without an
+    // explicit `returns` clause and for inactive platform declarations.
+    ret_ty = "void"
+    if typeof(try(sig.ret_ty)) == "string" then
+      candidate_ret_ty = sig.ret_ty
+      if s.trim(candidate_ret_ty) != "" then ret_ty = candidate_ret_ty end if
+    end if
     if _abi_return_type_supported(ret_ty) == false then
       return "extern function " + sig.qname + ": unsupported return type '" + ret_ty + "'"
+    end if
+    symbol_name = "" + try(sig.symbol_name)
+    if symbol_name == "" then symbol_name = "" + try(sig.name) end if
+    library_name = sig.dll
+    if _compile_target != "linux-x64" then library_name = s.toLowerAscii(s.trim(library_name)) end if
+    physical_key = len(library_name) + ":" + library_name + symbol_name
+    physical_abi = ""
+    if typeof(sig.params) == "array" and len(sig.params) > 0 then
+      for ai = 0 to len(sig.params) - 1
+        ap = sig.params[ai]
+        aty = ""
+        aout = false
+        if typeof(ap) == "struct" then
+          aty = "" + try(ap.ty)
+          aout = typeof(try(ap.is_out)) == "bool" and ap.is_out
+        else
+          aty = "" + ap
+        end if
+        if ai > 0 then physical_abi = physical_abi + "," end if
+        // Build the short ABI descriptor in place. Keeping these scalar values
+        // local also avoids retaining declaration objects during validation.
+        param_abi = "gpr"
+        if not aout and s.toLowerAscii(s.trim(aty)) == "double" then param_abi = "xmm" end if
+        physical_abi = physical_abi + param_abi
+      end for
+    end if
+    return_abi = "gpr"
+    normalized_return = s.toLowerAscii(s.trim(ret_ty))
+    if normalized_return == "void" or normalized_return == "none" then
+      return_abi = "void"
+    else if normalized_return == "double" then
+      return_abi = "xmm"
+    end if
+    physical_abi = physical_abi + "->" + return_abi
+    if len(physical_keys) > 0 then
+      for ki = 0 to len(physical_keys) - 1
+        if physical_keys[ki] == physical_key then
+          if physical_abis[ki] != physical_abi then
+            return "extern function " + sig.qname + ": incompatible ABI signature for native target '" + library_name + "' symbol '" + symbol_name + "' (already declared by " + physical_names[ki] + ")"
+          end if
+          physical_key = ""
+          break
+        end if
+      end for
+    end if
+    if physical_key != "" then
+      physical_keys = physical_keys + [physical_key]
+      physical_abis = physical_abis + [physical_abi]
+      physical_names = physical_names + [sig.qname]
     end if
   end for
   return ""

@@ -673,11 +673,12 @@ Notes:
 
 For identical source files, include roots and compiler options, the normal
 monolithic path of this compiler and the Python reference compiler emit
-byte-identical Windows PE and Linux ELF files. The current 25-program parity
+byte-identical Windows PE and Linux ELF files. A historical 25-program parity
 matrix covers the
 language/standard-library suites, GC stress, compiler-GC liveness,
 extern/native interop, global rebinding, native threads and managed thread
-pools; every pair matches by SHA-256.
+pools. Current revisions rerun the documented fixed point plus focused
+Windows/Linux parity and object-pipeline gates.
 
 The production self-build uses the MiniLang-only `.mlo` object pipeline. Its
 canonical layout is covered by automated byte-identity gates against both the
@@ -686,14 +687,15 @@ boundaries and reproduction commands are recorded in
 [COMPILER_PARITY.md](COMPILER_PARITY.md).
 
 Current audited Windows fixed point (2026-09-01): the Python bootstrap produced
-Stage 1 in 66.913 seconds, and Stage 1 produced the self-hosted Stage 2 in
-99.546 seconds. Both are byte-identical 65,977,344-byte images with SHA-256
-`39AD8309420B480EC550D057128E247C951862E4EA44C83F62B98B602C9FC5BC`.
-The complete inner harness passes 126/126 in 87.260 seconds; the full wrapper,
+Stage 1 in 62.889 seconds, and Stage 1 produced the self-hosted Stage 2 in
+94.116 seconds. Both are byte-identical 66,212,864-byte images with SHA-256
+`85937F6D1C327393E43C491803C7266A803BD29BA1D8DA7F8B68AEB96CCE9762`.
+The complete inner harness passes 126/126 in 87.760 seconds; the full wrapper,
 including every Windows/Linux, FFI, GC, object-pipeline and relink gate, passes
-in 133.811 seconds. A targeted cross-compiler matrix covering thread lifecycle,
-Windows DLL identity, Linux startup and failed Linux FFI resolution is
-byte-identical on both targets; the normal object-pipeline gates also pass.
+in 133.004 seconds. It also verifies the checked-in pthread blob layout.
+Focused thread-lifecycle, Linux `out double`, exact-library-identity and
+language-extension builds are byte-identical across both compilers and targets;
+the normal object-pipeline gates also pass.
 The 8 GiB heap setting is virtual address-space reserve, not resident or
 committed memory. Earlier backend A/B measurements remain in the
 [2026-09-01 report](docs/COMPILER_BACKEND_HOTPATH_BENCHMARK_2026-09-01.md).
@@ -1678,11 +1680,12 @@ Thread methods:
   thread once and returns `bool`; concurrent calls on the same object can
   produce only one worker. Its argument count must match the entry function's
   zero/one arity.
-- `Stop()` atomically requests cooperative cancellation and returns whether a
-  running thread changed to `StopRequested`.
+- `Stop()` atomically requests cooperative cancellation and returns whether an
+  alive thread changed to `StopRequested`, including the short startup-publication window.
 - `Join()` waits indefinitely; `Join(timeoutMs)` waits at most the given number
   of milliseconds. Both return `true` only when the thread terminated. A Join
-  racing Start waits for native-handle publication instead of failing early.
+  racing Start waits for native-handle publication instead of failing early;
+  concurrent joins on one object share a single native join operation safely.
 - `Status()` returns `Created`, `Running`, `StopRequested`, `Completed`,
   `Stopped`, or `Failed`.
 - `IsAlive()` is true for `Running` and `StopRequested`.
@@ -1697,8 +1700,8 @@ Thread methods:
 - `Close()` closes the native handle after termination. Concurrent calls are
   safe and exactly one can claim a live handle; cleanup also verifies that the
   native worker has fully exited before clearing its registered roots. Status
-  metadata remains valid and its small control page is retained until process
-  exit.
+  metadata remains valid until process exit. Stable control records are packed
+  into thread-safe 64-KiB arenas rather than consuming one OS page each.
 
 Worker helpers:
 
@@ -2763,7 +2766,8 @@ Notes:
 
 ## 14. extern
 
-The native compiler can generate PE imports from `extern` declarations.
+The native compiler generates Windows PE imports and library-specific,
+runtime-resolved Linux ELF import slots from `extern` declarations.
 
 
 ### extern function
@@ -2771,7 +2775,7 @@ The native compiler can generate PE imports from `extern` declarations.
 Syntax:
 
 ```ml
-extern function <Name>(<params...>) from "<dll>" [symbol "<exportedName>"] [returns <type>]
+extern function <Name>(<params...>) from "<library>" [symbol "<exportedName>"] [returns <type>]
 ```
 
 Parameter forms:
@@ -2801,9 +2805,14 @@ Supported return types:
 
 Notes:
 - Arity mismatches are a **compile error**.
+- Declarations that name the same physical library/symbol with incompatible
+  integer/floating-point ABI classes are a compile error; compatible aliases are allowed.
 - Type mismatches at runtime currently return `void` (no exceptions yet).
 - `wstr` arguments use a fixed temporary UTF-16 buffer. Very long strings may fail and return `void`.
-- If the DLL or symbol can't be resolved, Windows will usually refuse to start the program (loader error) because imports are resolved by the OS loader.
+- Windows imports are resolved by the PE loader, so a missing DLL or symbol
+  normally prevents startup. Linux preserves the exact `from` spelling,
+  resolves it through `dlopen`/`dlsym`, and returns a catchable MiniLang error
+  when the library or symbol is unavailable.
 
 Example: MessageBox
 

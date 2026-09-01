@@ -1704,6 +1704,8 @@ function lock_cmpxchg_membase_disp_r32(asm, base, disp, src)
 end function
 
 function lock_cmpxchg_membase_disp_r64(asm, base, disp, src)
+  // CMPXCHG implicitly compares RAX with the qword destination and returns the
+  // observed destination in RAX when the exchange does not occur.
   sreg = _rid_any(src)
   b = _rid_any(base)
   if sreg < 0 or b < 0 then return asm end if

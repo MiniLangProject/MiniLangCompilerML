@@ -30,6 +30,8 @@ const THREAD_TLAB_START = 176
 const THREAD_TLAB_CURSOR = 184
 const THREAD_TLAB_END = 192
 const THREAD_CONTEXT_SIZE = 200
+const THREAD_CONTEXT_STRIDE = 208
+const THREAD_CONTEXT_POOL_SIZE = 0x10000
 
 // Public lifecycle states stored in THREAD_STATUS.
 const THREAD_CREATED = 0
@@ -92,6 +94,12 @@ function ensure_thread_data(state)
   end if
   if d.data_has_label(state.data, "thread_contexts_head") == false then
     state.data = d.data_add_u64(state.data, "thread_contexts_head", 0)
+  end if
+  if d.data_has_label(state.data, "thread_context_pool_cursor") == false then
+    state.data = d.data_add_u64(state.data, "thread_context_pool_cursor", 0)
+  end if
+  if d.data_has_label(state.data, "thread_context_pool_end") == false then
+    state.data = d.data_add_u64(state.data, "thread_context_pool_end", 0)
   end if
   if d.data_has_label(state.data, "gc_requested") == false then
     state.data = d.data_add_u64(state.data, "gc_requested", 0)
@@ -561,23 +569,53 @@ end function
 
 // Allocate and initialize a managed Thread object without starting it.
 function emit_thread_new_function(state)
+  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
+  state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_thread_new")
   state.asm = a.sub_rsp_imm8(state.asm, 0x58)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x38, "rcx")
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x40, "rdx")
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x48, "r8")
+  lid = _new_label_id(state)
+  l_have_context = "thnew_have_context_" + lid
+  l_alloc_page = "thnew_alloc_page_" + lid
+  l_leave_fail = "thnew_leave_fail_" + lid
+  l_done = "thnew_done_" + lid
+  // Serialize the packed-arena cursor. A context consumes 208 bytes instead
+  // of a complete 4-KiB VirtualAlloc page while retaining a stable address.
+  state.asm = a.call(state.asm, "fn_heap_enter")
+  state.asm = a.mov_rax_rip_qword(state.asm, "thread_context_pool_cursor")
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "e", l_alloc_page)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+  state.asm = a.add_r64_imm(state.asm, "r11", THREAD_CONTEXT_STRIDE)
+  state.asm = a.mov_rax_rip_qword(state.asm, "thread_context_pool_end")
+  state.asm = a.cmp_r64_r64(state.asm, "r11", "rax")
+  state.asm = a.jcc(state.asm, "be", l_have_context)
+  state.asm = a.mark(state.asm, l_alloc_page)
   state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
-  state.asm = a.mov_r32_imm32(state.asm, "edx", THREAD_CONTEXT_SIZE)
+  state.asm = a.mov_r32_imm32(state.asm, "edx", THREAD_CONTEXT_POOL_SIZE)
   state.asm = a.mov_r8d_imm32(state.asm, 0x3000)
   state.asm = a.mov_r9d_imm32(state.asm, 0x04)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_VirtualAlloc")
   state.asm = a.call_rax(state.asm)
-  lid = _new_label_id(state)
-  l_done = "thnew_done_" + lid
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
-  state.asm = a.jcc(state.asm, "e", l_done)
+  state.asm = a.jcc(state.asm, "e", l_leave_fail)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+  state.asm = a.add_r64_imm(state.asm, "r11", THREAD_CONTEXT_POOL_SIZE)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+  state.asm = a.mov_rip_qword_rax(state.asm, "thread_context_pool_end")
+  state.asm = a.mov_r64_r64(state.asm, "r11", "r10")
+  state.asm = a.add_r64_imm(state.asm, "r11", THREAD_CONTEXT_STRIDE)
+  state.asm = a.mark(state.asm, l_have_context)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.mov_rip_qword_r11(state.asm, "thread_context_pool_cursor")
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x30, "rax")
+  state.asm = a.call(state.asm, "fn_heap_leave")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x30)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TYPE, c.OBJ_THREAD, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_STATUS, THREAD_CREATED, false)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x38)
@@ -612,6 +650,10 @@ function emit_thread_new_function(state)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_LeaveCriticalSection")
   state.asm = a.call_rax(state.asm)
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 0x30)
+  state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_leave_fail)
+  state.asm = a.call(state.asm, "fn_heap_leave")
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mark(state.asm, l_done)
   state.asm = a.add_rsp_imm8(state.asm, 0x58)
   state.asm = a.ret(state.asm)
@@ -634,7 +676,8 @@ function emit_thread_start_function(state)
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_ARITY)
   state.asm = a.cmp_r32_r32(state.asm, "eax", "r8d")
   state.asm = a.jcc(state.asm, "ne", l_wrong_arity)
-  // Claim with a private state; Running is visible only after handle and id.
+  // Claim with a private state. Stop() may publish a pending request while the
+  // native handle is being created because STARTING is publicly alive.
   state.asm = a.mark(state.asm, l_claim)
   state.asm = a.mov_r32_imm32(state.asm, "eax", THREAD_CREATED)
   state.asm = a.mov_r32_imm32(state.asm, "r11d", THREAD_STARTING)
@@ -665,7 +708,9 @@ function emit_thread_start_function(state)
   state.asm = a.mov_membase_disp_r64(state.asm, "r11", THREAD_HANDLE, "rax")
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", 0x40)
   state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_ID, "eax")
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_STATUS, THREAD_RUNNING, false)
+  state.asm = a.mov_r32_imm32(state.asm, "eax", THREAD_STARTING)
+  state.asm = a.mov_r32_imm32(state.asm, "edx", THREAD_RUNNING)
+  state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "r11", THREAD_STATUS, "edx")
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
   state.asm = a.jmp(state.asm, l_done)
   state.asm = a.mark(state.asm, l_create_fail)
@@ -686,12 +731,29 @@ function emit_thread_stop_function(state)
   state.asm = a.mark(state.asm, "fn_thread_stop")
   lid = _new_label_id(state)
   l_false = "thstop_false_" + lid
+  l_starting = "thstop_starting_" + lid
+  l_true = "thstop_true_" + lid
+  l_retry = "thstop_retry_" + lid
   l_done = "thstop_done_" + lid
+  state.asm = a.mark(state.asm, l_retry)
   state.asm = a.mov_r32_imm32(state.asm, "eax", THREAD_RUNNING)
   state.asm = a.mov_r32_imm32(state.asm, "edx", THREAD_STOP_REQUESTED)
   state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "rcx", THREAD_STATUS, "edx")
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_RUNNING)
-  state.asm = a.jcc(state.asm, "ne", l_false)
+  state.asm = a.jcc(state.asm, "e", l_true)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STARTING)
+  state.asm = a.jcc(state.asm, "e", l_starting)
+  state.asm = a.jmp(state.asm, l_false)
+  state.asm = a.mark(state.asm, l_starting)
+  state.asm = a.mov_r32_imm32(state.asm, "eax", THREAD_STARTING)
+  state.asm = a.mov_r32_imm32(state.asm, "edx", THREAD_STOP_REQUESTED)
+  state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "rcx", THREAD_STATUS, "edx")
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STARTING)
+  state.asm = a.jcc(state.asm, "e", l_true)
+  state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_RUNNING)
+  state.asm = a.jcc(state.asm, "e", l_retry)
+  state.asm = a.jmp(state.asm, l_false)
+  state.asm = a.mark(state.asm, l_true)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
   state.asm = a.jmp(state.asm, l_done)
   state.asm = a.mark(state.asm, l_false)
@@ -719,9 +781,18 @@ function emit_thread_join_function(state)
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", THREAD_STATUS)
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_STARTING)
   state.asm = a.jcc(state.asm, "ne", l_have_published_state)
-  state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
+  // Time spent awaiting handle publication consumes the caller's timeout.
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rsp", 0x28)
+  state.asm = a.test_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.jcc(state.asm, "e", l_false)
+  state.asm = a.mov_r32_imm32(state.asm, "ecx", 1)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_Sleep")
   state.asm = a.call_rax(state.asm)
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rsp", 0x28)
+  state.asm = a.cmp_r32_imm32(state.asm, "edx", -1)
+  state.asm = a.jcc(state.asm, "e", l_wait_handle)
+  state.asm = a.dec_r32(state.asm, "edx")
+  state.asm = a.mov_membase_disp_r32(state.asm, "rsp", 0x28, "edx")
   state.asm = a.jmp(state.asm, l_wait_handle)
   state.asm = a.mark(state.asm, l_have_published_state)
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r11", THREAD_HANDLE)
@@ -879,10 +950,10 @@ function emit_thread_close_function(state)
   state.asm = a.lock_cmpxchg_membase_disp_r64(state.asm, "rcx", THREAD_HANDLE, "rdx")
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x28, "rax")
-  // Terminal publication precedes the last native epilogue instructions. Do
-  // not clear the context until the operating system reports worker exit.
+  // Terminal publication precedes the last native epilogue instructions.
+  // Close owns the handle now, so wait before clearing roots or releasing it.
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
-  state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.mov_r32_imm32(state.asm, "edx", -1)
   state.asm = a.mov_rax_rip_qword(state.asm, "iat_WaitForSingleObject")
   state.asm = a.call_rax(state.asm)
   l_restore = "thclose_restore_" + lid
@@ -947,7 +1018,7 @@ function emit_thread_alloc_function(state)
   return state
 end function
 
-// Bridge the Win32 entrypoint to a managed callback and publish its result.
+// Bridge the target's native worker entrypoint to managed code and publish its result.
 function emit_thread_entry_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_managed_exit")

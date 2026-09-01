@@ -186,6 +186,70 @@ function Compare-BinaryArtifacts {
   }
 }
 
+function Test-LinuxRuntimeBlobLayout {
+  param([string]$Name)
+
+  $timer = [System.Diagnostics.Stopwatch]::StartNew()
+  $sourcePath = Join-Path $Root "mlc\linux_runtime.ml"
+  $source = Get-Content -LiteralPath $sourcePath -Raw
+  $rawMatch = [regex]::Match(
+    $source,
+    'function _runtime_blob_raw\(\)\s+.*?return fromHex\("([0-9a-f]+)"\)',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+  $pthreadMatch = [regex]::Match(
+    $source,
+    'function _pthread_runtime_blob\(\)\s+return fromHex\("([0-9a-f]+)"\)',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+  $passed = $rawMatch.Success -and $pthreadMatch.Success
+
+  $constant = @{}
+  foreach ($constantName in @(
+      "RUNTIME_LEGACY_THREAD_START", "RUNTIME_LEGACY_THREAD_END",
+      "RUNTIME_PTHREAD_CREATE_PATCH", "RUNTIME_PTHREAD_WAIT_PATCH",
+      "RUNTIME_PTHREAD_CLOSE_PATCH")) {
+    $match = [regex]::Match($source, "const $constantName = ([0-9]+)")
+    if (-not $match.Success) {
+      $passed = $false
+    } else {
+      $constant[$constantName] = [int]$match.Groups[1].Value
+    }
+  }
+
+  if ($passed) {
+    $rawBytes = $rawMatch.Groups[1].Value.Length / 2
+    $pthreadHex = $pthreadMatch.Groups[1].Value
+    $pthreadBytes = $pthreadHex.Length / 2
+    $start = $constant["RUNTIME_LEGACY_THREAD_START"]
+    $end = $constant["RUNTIME_LEGACY_THREAD_END"]
+    $finalBytes = $start + $pthreadBytes + ($rawBytes - $end)
+    $passed = ($rawBytes -eq 1785 -and $pthreadBytes -eq 1077 -and
+               $start -eq 497 -and $end -eq 1361 -and $finalBytes -eq 1998)
+
+    foreach ($patchName in @(
+        "RUNTIME_PTHREAD_CREATE_PATCH", "RUNTIME_PTHREAD_WAIT_PATCH",
+        "RUNTIME_PTHREAD_CLOSE_PATCH")) {
+      $relative = $constant[$patchName] - $start
+      if ($relative -lt 2 -or $relative + 3 -ge $pthreadBytes) {
+        $passed = $false
+        continue
+      }
+      $opcode = $pthreadHex.Substring(($relative - 2) * 2, 4)
+      if ($opcode -cne "ff15") { $passed = $false }
+    }
+  }
+
+  $timer.Stop()
+  $label = if ($passed) { "[PASS]" } else { "[FAIL]" }
+  $detail = "$label $Name"
+  Write-Host $detail
+  Write-LogLine $detail
+  return [pscustomobject]@{
+    Name = $Name
+    ExitCode = $(if ($passed) { 0 } else { 1 })
+    Seconds = $timer.Elapsed.TotalSeconds
+  }
+}
+
 function Remove-TestArtifacts {
   if ($KeepArtifacts) { return }
 
@@ -263,11 +327,16 @@ try {
   & $concatGuard
   if ($LASTEXITCODE -ne 0) { throw "Compiler hot-path concatenation guard failed." }
 
+  $results += Test-LinuxRuntimeBlobLayout "Linux pthread runtime blob layout"
   $results += Invoke-CompilerVersionCheck "compiler version CLI" $Compiler
   $invalidLinuxFfiOutput = Join-Path $script:ResolvedArtifactsDir "invalid-linux-ffi.elf"
   $invalidLinuxFfiArgs = @((Join-Path $Root "tests\linux_windows_ffi_error.ml"), $invalidLinuxFfiOutput,
                            "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
   $results += Invoke-ExpectedCompilerFailure "linux-x64 rejects Windows DLL imports" $Compiler $invalidLinuxFfiArgs "cannot be imported by the linux-x64 target"
+  $conflictingAbiOutput = Join-Path $script:ResolvedArtifactsDir "invalid-extern-abi.elf"
+  $conflictingAbiArgs = @((Join-Path $Root "tests\extern_abi_conflict.ml"), $conflictingAbiOutput,
+                          "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
+  $results += Invoke-ExpectedCompilerFailure "extern aliases reject incompatible native ABI signatures" $Compiler $conflictingAbiArgs "incompatible ABI signature"
 
   # Cross-compile representative static, dynamic-FFI and threaded Linux ELF
   # programs, then execute them through WSL on the Windows test host.
@@ -275,6 +344,8 @@ try {
     $linuxCases = @(
       [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
       [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux double out FFI"; Source = "linux_ffi_out_double.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux exact library spelling"; Source = "linux_ffi_whitespace_library.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux FFI resolution errors"; Source = "linux_ffi_resolution_error.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux float rounding carry"; Source = "linux_float_format.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared heap and threads"; Source = "thread_features.ml"; RunArgs = @() },

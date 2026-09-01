@@ -8380,6 +8380,15 @@ function _extern_dll_base(dll, is_linux)
   return t.extern_library_label_token(identity)
 end function
 
+// Out parameters always carry an address, even when their pointee is double.
+// Keep that pointer in the integer ABI class on every target.
+function _abi_param_is_double(abi_ty)
+  if typeof(abi_ty) == "struct" and typeof(try(abi_ty.is_out)) == "bool" and abi_ty.is_out then
+    return false
+  end if
+  return s.toLowerAscii(s.trim(_abi_ty_to_str(abi_ty))) == "double"
+end function
+
 function _extern_iat_label(dll, sym, is_linux)
   return "iat_" + _extern_dll_base(dll, is_linux) + "_" + sym
 end function
@@ -9009,6 +9018,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       return state
     end if
     pp = ps[i]
+    param_is_out = typeof(pp) == "struct" and typeof(try(pp.is_out)) == "bool" and pp.is_out
     if typeof(pp) == "struct" then
       aty = _coerce_name(pp.ty)
       if aty == "" then aty = _coerce_name(pp.type) end if
@@ -9024,7 +9034,11 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
     if aty_l == "wstr" or aty_l == "wstring" then
       wbuf = wpool[i % len(wpool)]
     end if
-    if aty_l == "double" then
+    if param_is_out then
+      // Explicit out arguments are tagged native addresses; omitted calls
+      // synthesize the same representation below.
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", state.call_temp_base + i * 8, "rax")
+    else if _abi_param_is_double(pp) then
       state = core.emit_to_double_xmm(state, 0, l_fail)
       state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", state.call_temp_base + i * 8, "xmm0")
     else
@@ -9056,7 +9070,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       if aty0 == "" then aty0 = _coerce_name(ps[0].type) end if
       if aty0 == "" then aty0 = _coerce_name(ps[0].abi_ty) end if
     end if
-    if s.toLowerAscii(s.trim(aty0)) == "double" then
+    if _abi_param_is_double(ps[0]) then
       state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", state.call_temp_base + 0 * 8)
     else
       state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", state.call_temp_base + 0 * 8)
@@ -9070,7 +9084,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       if aty1 == "" then aty1 = _coerce_name(ps[1].type) end if
       if aty1 == "" then aty1 = _coerce_name(ps[1].abi_ty) end if
     end if
-    if s.toLowerAscii(s.trim(aty1)) == "double" then
+    if _abi_param_is_double(ps[1]) then
       state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm1", "rsp", state.call_temp_base + 1 * 8)
     else
       state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", state.call_temp_base + 1 * 8)
@@ -9084,7 +9098,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       if aty2 == "" then aty2 = _coerce_name(ps[2].type) end if
       if aty2 == "" then aty2 = _coerce_name(ps[2].abi_ty) end if
     end if
-    if s.toLowerAscii(s.trim(aty2)) == "double" then
+    if _abi_param_is_double(ps[2]) then
       state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm2", "rsp", state.call_temp_base + 2 * 8)
     else
       state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", state.call_temp_base + 2 * 8)
@@ -9098,7 +9112,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
       if aty3 == "" then aty3 = _coerce_name(ps[3].type) end if
       if aty3 == "" then aty3 = _coerce_name(ps[3].abi_ty) end if
     end if
-    if s.toLowerAscii(s.trim(aty3)) == "double" then
+    if _abi_param_is_double(ps[3]) then
       state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm3", "rsp", state.call_temp_base + 3 * 8)
     else
       state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", state.call_temp_base + 3 * 8)
@@ -9134,7 +9148,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
         if sty == "" then sty = _coerce_name(ps[si].type) end if
         if sty == "" then sty = _coerce_name(ps[si].abi_ty) end if
       end if
-      if s.toLowerAscii(s.trim(sty)) != "double" then
+      if _abi_param_is_double(ps[si]) == false then
         state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
       end if
       state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20 + (si - 4) * 8, "rax")
@@ -9743,6 +9757,7 @@ function emit_extern_stubs(state)
       for ai2 = 0 to nargs - 1
         state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", tag_off + ai2 * 8)
         pp = params[ai2]
+        param_is_out = typeof(pp) == "struct" and typeof(try(pp.is_out)) == "bool" and pp.is_out
         aty = ""
         if typeof(pp) == "struct" then
           aty = _coerce_name(pp.ty)
@@ -9756,7 +9771,10 @@ function emit_extern_stubs(state)
         if aty_l == "wstr" or aty_l == "wstring" then
           wbuf = wpool[ai2 % len(wpool)]
         end if
-        if aty_l == "double" then
+        if param_is_out then
+          state.asm = a.sar_rax_imm8(state.asm, 3)
+          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", native_off + ai2 * 8, "rax")
+        else if aty_l == "double" then
           state = core.emit_to_double_xmm(state, 0, l_fail)
           state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", native_off + ai2 * 8, "xmm0")
         else
@@ -9780,7 +9798,7 @@ function emit_extern_stubs(state)
           if rty == "" then rty = _coerce_name(params[ri].type) end if
           if rty == "" then rty = _coerce_name(params[ri].abi_ty) end if
         end if
-        if s.toLowerAscii(s.trim(rty)) == "double" then
+        if _abi_param_is_double(params[ri]) then
           state.asm = a.movsd_xmm_membase_disp(state.asm, xregs[ri], "rsp", native_off + ri * 8)
         else
           state.asm = a.mov_r64_membase_disp(state.asm, regs[ri], "rsp", native_off + ri * 8)
