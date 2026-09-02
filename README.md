@@ -3,8 +3,8 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Language: MiniLang](https://img.shields.io/badge/written%20in-MiniLang-5b5bd6.svg)](.)
 
-Current stable release: **1.2.1**. See the [changelog](CHANGELOG.md) and
-[release notes](RELEASE_NOTES_1.2.1.md).
+Current stable release: **1.2.2**. See the [changelog](CHANGELOG.md) and
+[release notes](RELEASE_NOTES_1.2.2.md).
 
 Supported native targets: **Windows x64 (PE32+)** and **Linux x64 (ELF64)**.
 
@@ -202,7 +202,7 @@ Common options:
   `--profile-compiler` and does not alter generated target bytes
 
 `.\build\mlc_win64.exe -version` and `--version` both print
-`MiniLang Compiler 1.2.1`. `.\build\mlc_win64.exe --help` prints a short usage
+`MiniLang Compiler 1.2.2`. `.\build\mlc_win64.exe --help` prints a short usage
 summary.
 
 Notes (current implementation):
@@ -346,8 +346,8 @@ not processed. Directives may be nested.
 
 The immutable target values are `TARGET_OS`, `TARGET_ARCH`, `TARGET_ABI`,
 `TARGET_FORMAT`, `POINTER_SIZE` and `MINILANG_VERSION`. Windows selects
-`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.1"`; Linux selects
-`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.1"`. No
+`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.2"`; Linux selects
+`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.2"`. No
 compiler-implementation value is exposed: the Python and self-hosted compilers
 must select the same source for identical inputs.
 
@@ -839,6 +839,19 @@ commit. MiniQuake falls from 225.011 to 185.406 seconds and from 3,537.8 to
 are byte-identical. The complete harness is 110/110 and all Windows/Linux gates
 pass; see
 [the frontend-buffer report](docs/COMPILER_FRONTEND_BUFFER_BENCHMARK_2026-08-30.md).
+
+A MiniDoc-guided fixed-point call profile then exposed redundant lexical-frame
+fallback scans and binding-generation invalidation of otherwise stable package
+suffix searches. Complete scope indexes are now authoritative, while a
+pool-size-aware suffix cache preserves lexical shadowing and invalidates on
+symbol growth. Two same-source production self-builds improved from a
+132.208-second median to 72.323 seconds (45.30% less); sampled private and
+working-set peaks remained effectively unchanged. Python Stage 1 and
+self-hosted Stages 2 and 3 are byte-identical 66,487,808-byte 1.2.2 images with
+SHA-256
+`5C4AF305EAB1D825E6304A628FF43C9D1D1B9AE0100300B1DEBD4A4C4837E61A`.
+MiniDoc coverage remains 100% with zero strict warnings. See
+[the MiniDoc profile audit](docs/COMPILER_MINIDOC_PROFILE_AUDIT_2026-09-02.md).
 
 
 ---

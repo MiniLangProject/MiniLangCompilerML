@@ -76,3 +76,21 @@ runs unchanged on Windows and Linux.
 For Linux, add `--target linux-x64`, make the output executable and run it on
 an x64 Linux host. Record at least five fresh-process runs and compare medians;
 the benchmark validates every result before printing elapsed milliseconds.
+
+## Self-hosted compiler call profile
+
+`compiler_call_profile.ml` is a diagnostic entry point for finding runtime
+hotspots in the compiler itself. Build it with call instrumentation, then use
+the resulting compiler normally. Both the object-emitter child and coordinator
+print their non-zero counters after returning, prefixed with `[call-profile]`.
+
+```powershell
+python ..\MiniLangCompilerPy\mlc_win64.py .\benchmarks\compiler_call_profile.ml `
+  .\build\compiler_call_profile.exe -I . --profile-calls
+.\build\compiler_call_profile.exe .\tests\language_suite.ml `
+  .\build\profiled_suite.exe -I . --object-pipeline
+```
+
+Instrumentation is intentionally expensive and changes the compiler image. Use
+the counters only to rank helpers; take wall-time and memory baselines with the
+normal fixed-point compiler.

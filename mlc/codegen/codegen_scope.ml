@@ -522,21 +522,32 @@ function cg_next_binding_id(state)
   return state.binding_id
 end function
 
-/// Implements cg resolve binding.
-/// @param state Value supplied for `state`.
-/// @param name Name of the requested item.
+/// Resolve the nearest visible binding through the per-scope indexes. A complete index stack is authoritative; the linear frame scan remains only for partially constructed legacy/test states.
+/// @param state Code-generation state containing parallel scope and index stacks.
+/// @param name Identifier to resolve.
 function cg_resolve_binding(state, name)
   if typeof(name) != "string" then return 0 end if
+  ss = state.scope_stack
   sis = state.scope_index_stack
-  if typeof(sis) == "array" and len(sis) > 0 then
+  indexes_complete = typeof(ss) == "array" and typeof(sis) == "array" and len(ss) > 0 and len(sis) == len(ss)
+  if indexes_complete then
     si = len(sis) - 1
     while si >= 0
+      // Every production mutation updates both parallel stacks. Preserve the
+      // fallback below for malformed/legacy states containing a non-map slot.
+      if typeof(sis[si]) != "struct" then
+        indexes_complete = false
+        break
+      end if
       hit0 = t.fastmap_get(sis[si], name, 0)
       if typeof(hit0) == "struct" then return hit0 end if
       si = si - 1
     end while
+    // A miss in all complete indexes is conclusive. Scanning the corresponding
+    // frames made unresolved compiler names walk roughly 900 million bindings
+    // during one fixed-point build despite the indexes already proving absence.
+    if indexes_complete then return 0 end if
   end if
-  ss = state.scope_stack
   if typeof(ss) != "array" or len(ss) <= 0 then return 0 end if
   i = len(ss) - 1
   while i >= 0

@@ -885,7 +885,11 @@ function _pool_has_key(pool, key)
   return false
 end function
 
-/// Implements pool collect suffix.
+/// Append unique qualified names whose package prefix and final component match.
+/// @param pool Static symbol pool containing `[qualifiedName, value]` entries.
+/// @param prefix Required package prefix.
+/// @param suffix Required dotted final component.
+/// @param matches Matches already collected from preceding pools.
 /// @internal
 function _pool_collect_suffix(pool, prefix, suffix, matches)
   vals_out_b = t.arr_chunk_new(32)
@@ -911,7 +915,9 @@ function _pool_collect_suffix(pool, prefix, suffix, matches)
   return vals_out
 end function
 
-/// Implements qualify identifier.
+/// Resolve a source identifier against lexical bindings, aliases and static symbol pools.
+/// @param state Current code-generation state and qualification caches.
+/// @param name Source identifier to qualify.
 /// @internal
 function _qualify_identifier(state, name)
   if typeof(name) != "string" then return "" end if
@@ -984,14 +990,31 @@ function _qualify_identifier(state, name)
   pools = [state.user_functions, state.extern_sigs, state.struct_fields, state.enum_ids]
   if pkg_pref != "" then
     suffix = "." + n1
-    hits = []
-    for pi2 = 0 to len(pools) - 1
-      hits = _pool_collect_suffix(pools[pi2], pkg_pref, suffix, hits)
-    end for
-    if typeof(hits) == "array" and len(hits) == 1 then
-      out1 = hits[0]
-      state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, out1)
-      return out1
+    // The ordinary qualification key contains binding_id because lexical
+    // resolution changes while declarations are installed. Suffix discovery
+    // depends only on the four static symbol pools, so cache it separately by
+    // their sizes. Without this stable cache, every new binding invalidated the
+    // outer key and repeatedly rescanned hundreds of symbols.
+    suffix_cache_key = "@suffix|" + len(pools[0]) + "|" + len(pools[1]) + "|" + len(pools[2]) + "|" + len(pools[3]) + "|" + pkg_pref + "|" + suffix
+    suffix_cached = t.fastmap_get(state.qualify_cache, suffix_cache_key, void)
+    if typeof(suffix_cached) == "string" then
+      state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, suffix_cached)
+      return suffix_cached
+    end if
+    if typeof(suffix_cached) != "bool" then
+      hits = []
+      for pi2 = 0 to len(pools) - 1
+        hits = _pool_collect_suffix(pools[pi2], pkg_pref, suffix, hits)
+      end for
+      if typeof(hits) == "array" and len(hits) == 1 then
+        out1 = hits[0]
+        state.qualify_cache = t.fastmap_set(state.qualify_cache, suffix_cache_key, out1)
+        state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, out1)
+        return out1
+      end if
+      // Boolean false distinguishes a cached ambiguous/empty result from the
+      // void cache-miss sentinel. A changed pool size naturally uses a new key.
+      state.qualify_cache = t.fastmap_set(state.qualify_cache, suffix_cache_key, false)
     end if
   end if
 

@@ -35,9 +35,9 @@ import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
 
 /// Stores the compiler version.
-const COMPILER_VERSION = "1.2.1"
+const COMPILER_VERSION = "1.2.2"
 /// Stores the compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.1"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.2"
 /// Stores the direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Stores the auto object pipeline score.

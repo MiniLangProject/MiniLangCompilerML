@@ -2,6 +2,21 @@
 
 All notable changes to the MiniLang compiler are documented here.
 
+## 1.2.2 - 2026-09-02
+
+- Used the generated MiniDoc implementation map and a complete fixed-point call
+  profile to remove redundant lexical-frame fallback scans and cache stable
+  package-suffix resolution across binding generations. Recorded production
+  self-build median improved by 45.30% with effectively unchanged peak memory.
+- Added focused regressions for authoritative scope indexes, suffix-cache
+  invalidation, ambiguous names and later lexical shadowing, plus a reusable
+  compiler call-profile harness and usage documentation.
+- Regenerated the strict MiniDoc compiler reference and documented the full
+  profile, fixed-point, memory and cross-compiler compatibility results.
+- Hardened the shared Windows networking regression so candidate sockets stay
+  below the dynamic ephemeral range. This avoids false failures on hosts where
+  virtualization reserves long consecutive port ranges.
+
 ## 1.2.1 - 2026-09-02
 
 - Added explicit `///` declaration-comment handling to the self-hosted parser,

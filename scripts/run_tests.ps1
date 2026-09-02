@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.2.1"
+  $expected = "MiniLang Compiler 1.2.2"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -429,6 +429,8 @@ try {
   $results += Invoke-NativeStep "run ML test harness" $runnerExe $runnerArgs
 
   $nativePrimitiveCases = @(
+    [pscustomobject]@{ Name = "compiler scope indexes"; Source = "compiler_scope_index.ml" },
+    [pscustomobject]@{ Name = "compiler qualification cache"; Source = "compiler_qualification_cache.ml" },
     [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },
     [pscustomobject]@{ Name = "SIMD search differential"; Source = "simd_search.ml" },
     [pscustomobject]@{ Name = "platform crypto vectors"; Source = "crypto_cng.ml" },
