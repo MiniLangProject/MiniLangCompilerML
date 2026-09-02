@@ -1,5 +1,8 @@
 ﻿# MiniLang - Self-Hosted Compiler for Windows and Linux x64
 
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Language: MiniLang](https://img.shields.io/badge/written%20in-MiniLang-5b5bd6.svg)](.)
+
 Current stable release: **1.2.0**. See the [changelog](CHANGELOG.md) and
 [release notes](RELEASE_NOTES_1.2.0.md).
 
