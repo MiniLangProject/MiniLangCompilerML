@@ -1,4 +1,22 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Lowers statements and orchestrates whole-program planning and emission.
+//! Provides the mlc codegen codegen_stmt package.
+
 package mlc.codegen.codegen_stmt
 import std.string as s
 import mlc.asm as a
@@ -17,29 +35,31 @@ import mlc.codegen.codegen_threads as th
 // conservative for ordinary calls, but multi-thousand-function programs keep
 // AST entries alive across dozens of manual collections and exposed a stale
 // pointer in fn_typeof without this barrier.
+/// Stores the phase codegen keepalive compiler state.
 _phase_codegen_keepalive = 0
+/// Stores the module function entry index compiler state.
 _module_function_entry_index = 0
 
-// Typed arena for the immutable function-definition roots consumed by object
-// emission. The integer cursor is the NodeId; parallel byte/name/node columns
-// avoid allocating one two-element descriptor array per function.
+/// Typed arena for the immutable function-definition roots consumed by object emission. The integer cursor is the NodeId; parallel byte/name/node columns avoid allocating one two-element descriptor array per function.
 struct FunctionNodeArena
+  /// Stores the kinds member of `FunctionNodeArena`.
   kinds,
+  /// Stores the names member of `FunctionNodeArena`.
   names,
+  /// Stores the nodes member of `FunctionNodeArena`.
   nodes,
+  /// Stores the count member of `FunctionNodeArena`.
   count,
 end struct
 
-// Reusable per-codegen workspaces for the serial function-analysis pipeline.
-// The two fact maps remain distinct because both are live during body emission;
-// dependency, queue, promotion and traversal storage is reset between functions.
-// This backend phase is deliberately serial. Keeping the cache in one ordinary
-// array avoids adding a compiler-only struct shape to generated GC metadata.
-
+/// Reusable per-codegen workspaces for the serial function-analysis pipeline. The two fact maps remain distinct because both are live during body emission; dependency, queue, promotion and traversal storage is reset between functions. This backend phase is deliberately serial. Keeping the cache in one ordinary array avoids adding a compiler-only struct shape to generated GC metadata.
+/// @internal
 function _new_analysis_map(initial_cap)
   return t.fastmap_track_refs(t.fastmap_new(initial_cap))
 end function
 
+/// Creates new function analysis scratch.
+/// @internal
 function _new_function_analysis_scratch()
   return [
     t.arr_vec_new(256),
@@ -54,6 +74,8 @@ function _new_function_analysis_scratch()
   ]
 end function
 
+/// Implements prepare function analysis scratch.
+/// @internal
 function _prepare_function_analysis_scratch(value)
   scratch = value
   if typeof(scratch) != "array" or len(scratch) < 9 or t.arr_vec_is(scratch[0]) == false or t.arr_vec_is(scratch[7]) == false then
@@ -62,6 +84,8 @@ function _prepare_function_analysis_scratch(value)
   return scratch
 end function
 
+/// Releases or resets release analysis vector.
+/// @internal
 function _release_analysis_vector(value, initial_cap, retained_cap)
   v = value
   if t.arr_vec_is(v) == false then return t.arr_vec_new(initial_cap) end if
@@ -73,6 +97,8 @@ function _release_analysis_vector(value, initial_cap, retained_cap)
   return t.arr_vec_release_refs(v)
 end function
 
+/// Releases or resets release analysis map.
+/// @internal
 function _release_analysis_map(value, initial_cap, retained_cap)
   m = value
   if typeof(m) != "struct" or typeof(try(m.cap)) != "int" then return _new_analysis_map(initial_cap) end if
@@ -80,9 +106,8 @@ function _release_analysis_map(value, initial_cap, retained_cap)
   return t.fastmap_release_refs(m)
 end function
 
-// End one function-object batch by dropping all references owned by its
-// temporary analysis arena. Logical epoch resets alone are insufficient here:
-// the tracing GC still sees stale keys and values in inactive map slots.
+/// End one function-object batch by dropping all references owned by its temporary analysis arena. Logical epoch resets alone are insufficient here: the tracing GC still sees stale keys and values in inactive map slots.
+/// @internal
 function _release_function_analysis_scratch(value)
   scratch = _prepare_function_analysis_scratch(value)
   scratch[0] = _release_analysis_vector(scratch[0], 256, 16384)
@@ -97,9 +122,8 @@ function _release_function_analysis_scratch(value)
   return scratch
 end function
 
-// Keep a map's high-water capacity and advance its epoch in O(1). A later
-// insertion may still grow it, in which case the owning scratch field is
-// updated before the analysis returns.
+/// Keep a map's high-water capacity and advance its epoch in O(1). A later insertion may still grow it, in which case the owning scratch field is updated before the analysis returns.
+/// @internal
 function _reset_analysis_map(mapv, minimum_capacity)
   need = minimum_capacity
   if typeof(need) != "int" or need < 16 then need = 16 end if
@@ -109,6 +133,8 @@ function _reset_analysis_map(mapv, minimum_capacity)
   return _new_analysis_map(need)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _join_qname(prefix, name)
   if typeof(prefix) != "string" or prefix == "" then return name end if
   if prefix[len(prefix) - 1] == "." then
@@ -117,6 +143,8 @@ function inline _join_qname(prefix, name)
   return prefix + "." + name
 end function
 
+/// Implements inline.
+/// @internal
 function inline _coerce_name(v)
   tv = typeof(v)
   if tv == "string" then return v end if
@@ -131,6 +159,8 @@ function inline _coerce_name(v)
   return ""
 end function
 
+/// Implements inline.
+/// @internal
 function inline _fn_codegen_key(fn_node)
   if typeof(fn_node) != "struct" then return "" end if
   pos = 0
@@ -140,6 +170,8 @@ function inline _fn_codegen_key(fn_node)
   return file + "|" + pos + "|" + name
 end function
 
+/// Implements inline.
+/// @internal
 function inline _fn_codegen_name(state, fn_node)
   if typeof(fn_node) != "struct" then return "" end if
   key = _fn_codegen_key(fn_node)
@@ -150,6 +182,8 @@ function inline _fn_codegen_name(state, fn_node)
   return _coerce_name(fn_node.name)
 end function
 
+/// Updates set fn codegen name.
+/// @internal
 function _set_fn_codegen_name(state, fn_node, code_name)
   if typeof(fn_node) != "struct" then return state end if
   if typeof(code_name) != "string" or code_name == "" then return state end if
@@ -162,6 +196,8 @@ function _set_fn_codegen_name(state, fn_node, code_name)
   return state
 end function
 
+/// Implements mem probe.
+/// @internal
 function _mem_probe(state, tag)
   if typeof(state) != "struct" then return state end if
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) == false then return state end if
@@ -171,6 +207,8 @@ function _mem_probe(state, tag)
   return state
 end function
 
+/// Implements chunked len.
+/// @internal
 function _chunked_len(chunks, tail)
   n = 0
   if typeof(chunks) == "array" and len(chunks) > 0 then
@@ -183,6 +221,8 @@ function _chunked_len(chunks, tail)
   return n
 end function
 
+/// Implements heap cfg get any.
+/// @internal
 function _heap_cfg_get_any(state, key)
   cfg = 0
   if typeof(state) == "struct" then cfg = state.heap_config end if
@@ -199,18 +239,24 @@ function _heap_cfg_get_any(state, key)
   return 0
 end function
 
+/// Implements inline.
+/// @internal
 function inline _heap_cfg_get_int(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
   if typeof(v) == "int" then return v end if
   return defaultv
 end function
 
+/// Implements inline.
+/// @internal
 function inline _heap_cfg_get_bool(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
   if typeof(v) == "bool" then return v end if
   return defaultv
 end function
 
+/// Updates set user function.
+/// @internal
 function _set_user_function(state, qname, fn_node)
   arr = state.user_functions
   if t.arr_vec_is(arr) == false and typeof(arr) != "array" then arr = t.arr_vec_new(256) end if
@@ -264,6 +310,8 @@ function _set_user_function(state, qname, fn_node)
   return state
 end function
 
+/// Implements diag stmt loc.
+/// @internal
 function _diag_stmt_loc(st)
   if typeof(st) != "struct" then return "" end if
   fn = _coerce_name(try(st._filename))
@@ -273,6 +321,8 @@ function _diag_stmt_loc(st)
   return ""
 end function
 
+/// Implements user function get node.
+/// @internal
 function _user_function_get_node(state, qname)
   arr = state.user_functions
   count = 0
@@ -300,6 +350,8 @@ function _user_function_get_node(state, qname)
   return 0
 end function
 
+/// Implements user function keys sorted.
+/// @internal
 function _user_function_keys_sorted(state)
   keys_b = t.arr_chunk_new(128)
   arr = state.user_functions
@@ -320,6 +372,8 @@ function _user_function_keys_sorted(state)
   return _sort_names(t.arr_chunk_finish(keys_b))
 end function
 
+/// Implements nested function get by codegen name.
+/// @internal
 function _nested_function_get_by_codegen_name(state, code_name)
   arr = state.nested_user_functions
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
@@ -331,6 +385,8 @@ function _nested_function_get_by_codegen_name(state, code_name)
   return 0
 end function
 
+/// Implements nested function codegen names sorted.
+/// @internal
 function _nested_function_codegen_names_sorted(state)
   keys_b = t.arr_chunk_new(64)
   arr = state.nested_user_functions
@@ -344,6 +400,8 @@ function _nested_function_codegen_names_sorted(state)
   return _sort_names(t.arr_chunk_finish(keys_b))
 end function
 
+/// Implements prepare qualify cache.
+/// @internal
 function _prepare_qualify_cache(cache, min_cap)
   need = min_cap
   if typeof(need) != "int" or need <= 0 then need = 256 end if
@@ -361,6 +419,8 @@ function _prepare_qualify_cache(cache, min_cap)
   return t.fastmap_new(need)
 end function
 
+/// Releases or resets release emitted fn node.
+/// @internal
 function _release_emitted_fn_node(fn_node)
   if typeof(fn_node) != "struct" then return fn_node end if
   fn_node.body = []
@@ -375,6 +435,8 @@ function _release_emitted_fn_node(fn_node)
   return fn_node
 end function
 
+/// Releases or resets release emitted fn body.
+/// @internal
 function _release_emitted_fn_body(fn_node)
   if typeof(fn_node) != "struct" then return fn_node end if
   cached_uses_this = try(fn_node._ml_uses_this)
@@ -410,8 +472,11 @@ function _release_emitted_fn_body(fn_node)
   return fn_node
 end function
 
-// Release the bodies covered by one completed object fragment while keeping
-// stable function signatures in the semantic indexes used by later callers.
+/// Release the bodies covered by one completed object fragment while keeping stable function signatures in the semantic indexes used by later callers.
+/// @param state Value supplied for `state`.
+/// @param entries Value supplied for `entries`.
+/// @param start_index Value supplied for `start_index`.
+/// @param count Number of items to process.
 function release_emitted_function_entries(state, entries, start_index, count)
   total = function_entry_count(entries)
   if total <= 0 then return state end if
@@ -446,17 +511,23 @@ function release_emitted_function_entries(state, entries, start_index, count)
   return state
 end function
 
+/// Implements copy fn array field.
+/// @internal
 function _copy_fn_array_field(v)
   if typeof(v) == "array" then return v end if
   return []
 end function
 
+/// Implements copy fn map or array field.
+/// @internal
 function _copy_fn_map_or_array_field(v)
   if typeof(v) == "struct" then return v end if
   if typeof(v) == "array" then return v + [] end if
   return []
 end function
 
+/// Implements clone function node for emit.
+/// @internal
 function _clone_function_node_for_emit(fn_node)
   if typeof(fn_node) != "struct" then return fn_node end if
   return ml.FunctionDef(
@@ -491,6 +562,8 @@ function _clone_function_node_for_emit(fn_node)
   )
 end function
 
+/// Implements forget nested function by codegen name.
+/// @internal
 function _forget_nested_function_by_codegen_name(state, code_name)
   arr = state.nested_user_functions
   if typeof(arr) != "array" or len(arr) <= 0 then return state end if
@@ -506,7 +579,11 @@ function _forget_nested_function_by_codegen_name(state, code_name)
   return state
 end function
 
+/// Implements maybe phase gc.
+/// @internal
 function _maybe_phase_gc(state, tag, min_bytes)
+  /// Stores the phase codegen keepalive.
+  /// @internal
   global _phase_codegen_keepalive
   need = min_bytes
   if typeof(need) != "int" or need <= 0 then need = 256 << 20 end if
@@ -521,6 +598,8 @@ function _maybe_phase_gc(state, tag, min_bytes)
   return state
 end function
 
+/// Implements inline.
+/// @internal
 function inline _foreach_body(st)
   if typeof(st) == "struct" and typeof(st.body) == "array" then
     if typeof(st.iterable) != "void" and typeof(st.var) != "void" then
@@ -530,6 +609,8 @@ function inline _foreach_body(st)
   return 0
 end function
 
+/// Runs emit stmt list.
+/// @internal
 function _emit_stmt_list(state, stmt_seq_emit)
   emit_items = stmt_seq_emit
   if typeof(emit_items) != "array" or len(emit_items) <= 0 then return state end if
@@ -548,6 +629,8 @@ function _emit_stmt_list(state, stmt_seq_emit)
   return state
 end function
 
+/// Implements rdata label offset.
+/// @internal
 function _rdata_label_offset(rb, name)
   if typeof(rb) != "struct" then return -1 end if
   if typeof(rb.labels) != "array" or len(rb.labels) <= 0 then return -1 end if
@@ -561,14 +644,16 @@ function _rdata_label_offset(rb, name)
   return -1
 end function
 
+/// Implements for unroll budget take.
+/// @internal
 function _for_unroll_budget_take(budget)
   if typeof(budget) != "array" or len(budget) != 1 or budget[0] <= 0 then return false end if
   budget[0] = budget[0] - 1
   return true
 end function
 
-// Walk expression children only to enforce the same conservative shared
-// complexity budget as the reference compiler; this is not a semantic filter.
+/// Walk expression children only to enforce the same conservative shared complexity budget as the reference compiler; this is not a semantic filter.
+/// @internal
 function _for_unroll_expr_child_ok(child, budget)
   if typeof(child) == "array" then
     if len(child) > 0 then
@@ -582,6 +667,8 @@ function _for_unroll_expr_child_ok(child, budget)
   return _for_unroll_expr_ok(child, budget)
 end function
 
+/// Implements for unroll expr ok.
+/// @internal
 function _for_unroll_expr_ok(expr, budget)
   if t.ast_is_node(expr) == false or _coerce_name(t.ast_kind(expr)) == "" then return true end if
   if _for_unroll_budget_take(budget) == false then return false end if
@@ -601,6 +688,8 @@ function _for_unroll_expr_ok(expr, budget)
   return true
 end function
 
+/// Implements for unroll body ok budget.
+/// @internal
 function _for_unroll_body_ok_budget(stmts, loop_var, budget)
   if typeof(stmts) != "array" then return false end if
   n = len(stmts)
@@ -637,10 +726,14 @@ function _for_unroll_body_ok_budget(stmts, loop_var, budget)
   return true
 end function
 
+/// Implements for unroll body ok.
+/// @internal
 function _for_unroll_body_ok(stmts, loop_var)
   return _for_unroll_body_ok_budget(stmts, loop_var, [12])
 end function
 
+/// Implements for unroll values.
+/// @internal
 function _for_unroll_values(state, s)
   start_ex = s.start
   end_ex = s.end_expr
@@ -676,6 +769,8 @@ function _for_unroll_values(state, s)
   return vals
 end function
 
+/// Runs emit condition nonvoid guard.
+/// @internal
 function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   if exprmod._opt_type_base(exprmod._opt_expr_known_type(state, cond_expr)) == "bool" then return state end if
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
@@ -690,6 +785,8 @@ function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   return state
 end function
 
+/// Runs emit condition false jump.
+/// @internal
 function _emit_condition_false_jump(state, cond_expr, false_label)
   if exprmod._opt_type_base(exprmod._opt_expr_known_type(state, cond_expr)) == "bool" then
     lid_bool_fast = state.label_id
@@ -702,12 +799,18 @@ function _emit_condition_false_jump(state, cond_expr, false_label)
   return core.emit_jmp_if_false_rax(state, false_label)
 end function
 
+/// Represents defer collect result.
 struct DeferCollectResult
+  /// Stores the state member of `DeferCollectResult`.
   state,
+  /// Stores the builder member of `DeferCollectResult`.
   builder,
+  /// Stores the count member of `DeferCollectResult`.
   count,
 end struct
 
+/// Implements synchronized block has crossing exit.
+/// @internal
 function _synchronized_block_has_crossing_exit(stmts, break_depth, loop_depth)
   if typeof(stmts) != "array" or len(stmts) == 0 then return false end if
   for sci = 0 to len(stmts) - 1
@@ -754,6 +857,8 @@ function _synchronized_block_has_crossing_exit(stmts, break_depth, loop_depth)
   return false
 end function
 
+/// Implements collect defer walk.
+/// @internal
 function _collect_defer_walk(state, stmts, in_loop, builder, count)
   if typeof(stmts) != "array" or len(stmts) <= 0 then
     return DeferCollectResult(state, builder, count)
@@ -843,12 +948,16 @@ function _collect_defer_walk(state, stmts, in_loop, builder, count)
   return DeferCollectResult(state, builder, count)
 end function
 
+/// Implements collect defer sites.
+/// @internal
 function _collect_defer_sites(state, fn_node)
   b = t.arr_chunk_new(8)
   r = _collect_defer_walk(state, try(fn_node.body), false, b, 0)
   return [r.state, t.arr_chunk_finish(r.builder)]
 end function
 
+/// Implements defer static callee.
+/// @internal
 function _defer_static_callee(state, callee)
   if t.ast_is_node(callee) == false then return false end if
   k = _coerce_name(t.ast_kind(callee))
@@ -863,6 +972,8 @@ function _defer_static_callee(state, callee)
   return exprmod._qname_exists(state, qn)
 end function
 
+/// Runs emit defer registration.
+/// @internal
 function _emit_defer_registration(state, stmt)
   call = try(stmt.expr)
   args = try(call.args)
@@ -896,10 +1007,14 @@ function _emit_defer_registration(state, stmt)
   return state
 end function
 
+/// Implements defer capture node.
+/// @internal
 function _defer_capture_node(stmt, off)
   return ml.DeferredCapture("DeferredCapture", off, try(stmt._pos), try(stmt._filename))
 end function
 
+/// Implements defer replay call.
+/// @internal
 function _defer_replay_call(stmt)
   call = stmt.expr
   offs = stmt.offsets
@@ -918,6 +1033,8 @@ function _defer_replay_call(stmt)
   return ml.Call("Call", callee, t.arr_chunk_finish(ab), [], try(stmt._pos), try(stmt._filename))
 end function
 
+/// Runs emit defer cleanup.
+/// @internal
 function _emit_defer_cleanup(state, sites, ret_off)
   state.asm = a.mov_rsp_disp32_rax(state.asm, ret_off)
   old_sup = 0
@@ -961,6 +1078,8 @@ function _emit_defer_cleanup(state, sites, ret_off)
   return state
 end function
 
+/// Implements foreach store dword eax.
+/// @internal
 function _foreach_store_dword_eax(state, name)
   b = scope.cg_resolve_binding(state, name)
   if typeof(b) != "struct" then return state end if
@@ -974,6 +1093,8 @@ function _foreach_store_dword_eax(state, name)
   return state
 end function
 
+/// Implements foreach load dword eax.
+/// @internal
 function _foreach_load_dword_eax(state, name)
   b = scope.cg_resolve_binding(state, name)
   if typeof(b) != "struct" then return state end if
@@ -987,15 +1108,21 @@ function _foreach_load_dword_eax(state, name)
   return state
 end function
 
+/// Implements inline.
+/// @internal
 function inline _breakctx_make(kind, break_label, continue_label, break_depth, continue_depth)
   return [kind, break_label, continue_label, break_depth, continue_depth]
 end function
 
+/// Implements inline.
+/// @internal
 function inline _breakctx_kind(ctx)
   if typeof(ctx) == "array" and len(ctx) >= 1 and typeof(ctx[0]) == "string" then return ctx[0] end if
   return "loop"
 end function
 
+/// Implements inline.
+/// @internal
 function inline _breakctx_break_label(ctx)
   if typeof(ctx) == "array" then
     if len(ctx) >= 2 and typeof(ctx[0]) == "string" and typeof(ctx[1]) == "string" then return ctx[1] end if
@@ -1004,6 +1131,8 @@ function inline _breakctx_break_label(ctx)
   return ""
 end function
 
+/// Implements inline.
+/// @internal
 function inline _breakctx_continue_label(ctx)
   if typeof(ctx) == "array" then
     if len(ctx) >= 3 and typeof(ctx[0]) == "string" and typeof(ctx[2]) == "string" then return ctx[2] end if
@@ -1012,16 +1141,22 @@ function inline _breakctx_continue_label(ctx)
   return ""
 end function
 
+/// Implements inline.
+/// @internal
 function inline _breakctx_break_depth(ctx, fallback)
   if typeof(ctx) == "array" and len(ctx) >= 4 and typeof(ctx[3]) == "int" then return ctx[3] end if
   return fallback
 end function
 
+/// Implements inline.
+/// @internal
 function inline _breakctx_continue_depth(ctx, fallback)
   if typeof(ctx) == "array" and len(ctx) >= 5 and typeof(ctx[4]) == "int" then return ctx[4] end if
   return fallback
 end function
 
+/// Implements breakstack pop.
+/// @internal
 function _breakstack_pop(state)
   if typeof(state.break_stack) != "array" or len(state.break_stack) <= 0 then return state end if
   if len(state.break_stack) == 1 then
@@ -1036,6 +1171,8 @@ function _breakstack_pop(state)
   return state
 end function
 
+/// Runs emit switch stmt.
+/// @internal
 function _emit_switch_stmt(state, stmt)
   sid = state.label_id
   state.label_id = state.label_id + 1
@@ -1257,6 +1394,8 @@ function _emit_switch_stmt(state, stmt)
   return state
 end function
 
+/// Implements dotted name expr.
+/// @internal
 function _dotted_name_expr(ex)
   if t.ast_is_node(ex) == false then return "" end if
   if t.ast_kind(ex) == "Var" then
@@ -1272,6 +1411,8 @@ function _dotted_name_expr(ex)
   return ""
 end function
 
+/// Runs emit struct field index dispatch local.
+/// @internal
 function _emit_struct_field_index_dispatch_local(state, field, struct_id_reg, out_reg, ok_label, fail_label, tag)
   pairs_b = t.arr_chunk_new(32)
   arr = state.struct_fields
@@ -1341,8 +1482,9 @@ function _emit_struct_field_index_dispatch_local(state, field, struct_id_reg, ou
   return state
 end function
 
-// Emit one statement without changing source-order semantics. Nested control
-// flow owns its labels and must leave root/lock scopes balanced on every exit.
+/// Emit one statement without changing source-order semantics. Nested control flow owns its labels and must leave root/lock scopes balanced on every exit.
+/// @param state Value supplied for `state`.
+/// @param stmt Value supplied for `stmt`.
 function cg_emit_stmt(state, stmt)
   if typeof(stmt) != "struct" then return state end if
   k = stmt.node_kind
@@ -2685,30 +2827,36 @@ function cg_emit_stmt(state, stmt)
   return state
 end function
 
-// ------------------------------------------------------------
-// Compatibility wrappers (Python CodegenStmt parity)
-// ------------------------------------------------------------
-
+/// Compatibility wrappers (Python CodegenStmt parity).
+/// @internal
 function inline _is_node(n, kind)
   if t.ast_is_node(n) == false then return false end if
   if typeof(kind) == "string" and kind != "" then return t.ast_kind(n) == kind end if
   return t.ast_kind(n) != ""
 end function
 
+/// Implements inline.
+/// @internal
 function inline _is_stmt(st)
   return _is_node(st, 0)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _decl_st_file(st)
   return t.ast_filename(st)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _dotted_name(parts)
   if typeof(parts) == "string" then return parts end if
   if typeof(parts) != "array" or len(parts) <= 0 then return "" end if
   return s.join(parts, ".")
 end function
 
+/// Implements member qname.
+/// @internal
 function _member_qname(ex)
   if t.ast_is_node(ex) == false then return "" end if
   if t.ast_kind(ex) == "Var" and typeof(t.ast_name(ex)) == "string" then return t.ast_name(ex) end if
@@ -2720,22 +2868,32 @@ function _member_qname(ex)
   return ""
 end function
 
+/// Implements expr to qualname.
+/// @internal
 function _expr_to_qualname(state, ex)
   return exprmod._expr_to_qualname(state, ex)
 end function
 
+/// Implements flatten member chain.
+/// @internal
 function _flatten_member_chain(state, ex)
   return _expr_to_qualname(state, ex)
 end function
 
+/// Reports whether is constexpr unary.
+/// @internal
 function _is_constexpr_unary(op)
   return op == "-" or op == "~" or op == "not"
 end function
 
+/// Reports whether is constexpr binary.
+/// @internal
 function _is_constexpr_binary(op)
   return op == "or" or op == "and" or op == "|" or op == "^" or op == "&" or op == "==" or op == "!=" or op == ">" or op == "<" or op == ">=" or op == "<=" or op == "<<" or op == ">>" or op == "+" or op == "-" or op == "*" or op == "/" or op == "%"
 end function
 
+/// Reports whether is constexpr expr.
+/// @internal
 function _is_constexpr_expr(state, ex)
   if t.ast_is_node(ex) == false then return false end if
   k = t.ast_kind(ex)
@@ -2753,6 +2911,8 @@ function _is_constexpr_expr(state, ex)
   return false
 end function
 
+/// Implements collect constexpr refs.
+/// @internal
 function _collect_constexpr_refs(ex, vals)
   if typeof(vals) != "array" then vals =[] end if
   if t.ast_is_node(ex) == false then return vals end if
@@ -2781,6 +2941,8 @@ function _collect_constexpr_refs(ex, vals)
   return vals
 end function
 
+/// Implements resolve const binding for ref.
+/// @internal
 function _resolve_const_binding_for_ref(state, ref, node)
   if typeof(ref) != "string" then return 0 end if
   cands = exprmod._qname_with_prefixes(state, ref)
@@ -2793,6 +2955,8 @@ function _resolve_const_binding_for_ref(state, ref, node)
   return scope.cg_resolve_binding(state, ref)
 end function
 
+/// Creates build constexpr env.
+/// @internal
 function _build_constexpr_env(state, ex)
   refs = _collect_constexpr_refs(ex,[])
   env_b = t.arr_chunk_new(32)
@@ -2807,14 +2971,20 @@ function _build_constexpr_env(state, ex)
   return t.arr_chunk_finish(env_b)
 end function
 
+/// Implements eval constexpr.
+/// @internal
 function _eval_constexpr(state, ex, env)
   return exprmod.cg_expr_try_const_value(state, ex)
 end function
 
+/// Implements pyval to lit expr.
+/// @internal
 function _pyval_to_lit_expr(v)
   return v
 end function
 
+/// Updates set const binding value.
+/// @internal
 function _set_const_binding_value(state, b_or_name, pyv)
   if typeof(b_or_name) == "struct" and typeof(b_or_name.name) == "string" then
     return scope.cg_set_const_binding_value(state, b_or_name.name, pyv)
@@ -2825,16 +2995,22 @@ function _set_const_binding_value(state, b_or_name, pyv)
   return state
 end function
 
+/// Implements truthy.
+/// @internal
 function _truthy(v)
   return exprmod._opt_truthy(v)
 end function
 
+/// Implements opt try truthy.
+/// @internal
 function _opt_try_truthy(state, ex)
   r = exprmod.cg_expr_try_const_value(state, ex)
   if r.ok == false then return void end if
   return _truthy(r.value)
 end function
 
+/// Reports whether is foreach stmt.
+/// @internal
 function _is_foreach_stmt(st)
   if typeof(st) != "struct" then return false end if
   if typeof(st.node_kind) == "string" then
@@ -2844,10 +3020,14 @@ function _is_foreach_stmt(st)
   return false
 end function
 
+/// Implements foreach var name.
+/// @internal
 function _foreach_var_name(st)
   return _coerce_name(st.var)
 end function
 
+/// Implements foreach state names.
+/// @internal
 function _foreach_state_names(st)
   fid = "n_" + _foreach_var_name(st)
   if typeof(st) == "struct" then
@@ -2869,6 +3049,8 @@ function _foreach_state_names(st)
   return names
 end function
 
+/// Implements for state names.
+/// @internal
 function _for_state_names(st)
   fid = "n_" + _foreach_var_name(st)
   if typeof(st) == "struct" then
@@ -2886,6 +3068,8 @@ function _for_state_names(st)
   ]
 end function
 
+/// Implements opt try const int.
+/// @internal
 function _opt_try_const_int(state, ex)
   r = exprmod.cg_expr_try_const_value(state, ex)
   if r.ok == false then return void end if
@@ -2893,6 +3077,8 @@ function _opt_try_const_int(state, ex)
   return r.value
 end function
 
+/// Implements intflow map add.
+/// @internal
 function _intflow_map_add(items, name, value)
   if typeof(items) != "array" then items = [] end if
   if typeof(name) != "string" or name == "" then return items end if
@@ -2911,6 +3097,8 @@ function _intflow_map_add(items, name, value)
   return items + [[name, [value]]]
 end function
 
+/// Implements intflow map get.
+/// @internal
 function _intflow_map_get(items, name)
   if typeof(items) != "array" or len(items) <= 0 then return [] end if
   for i = 0 to len(items) - 1
@@ -2923,6 +3111,8 @@ function _intflow_map_get(items, name)
   return []
 end function
 
+/// Implements intflow const int.
+/// @internal
 function _intflow_const_int(state, ex)
   if t.ast_is_node(ex) == false then return [false, 0] end if
   cv = exprmod.cg_expr_try_const_value(state, ex)
@@ -2932,6 +3122,8 @@ function _intflow_const_int(state, ex)
   return [false, 0]
 end function
 
+/// Implements intflow expr is int.
+/// @internal
 function _intflow_expr_is_int(state, ex, known)
   if t.ast_is_node(ex) == false then return false end if
   cv = _intflow_const_int(state, ex)
@@ -2969,9 +3161,8 @@ function _intflow_expr_is_int(state, ex, known)
   return false
 end function
 
-// Collect the statement facts shared by integer inference, value-type flow and
-// local-register promotion in one deterministic traversal. These analyses used
-// to repeat the same function-sized walk independently.
+/// Collect the statement facts shared by integer inference, value-type flow and local-register promotion in one deterministic traversal. These analyses used to repeat the same function-sized walk independently.
+/// @internal
 function _collect_function_flow_inputs(fn_node, analysis_scratch)
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
   int_assignments = []
@@ -3135,6 +3326,8 @@ function _collect_function_flow_inputs(fn_node, analysis_scratch)
   return [int_assignments, value_assignments, direct_initializers, loop_bounds, loop_names, int_normal_names, value_normal_names, int_excluded, value_excluded, hot_names]
 end function
 
+/// Implements infer known int names.
+/// @internal
 function _infer_known_int_names(state, fn_node, flow_inputs, analysis_scratch)
   if typeof(fn_node) != "struct" then return [] end if
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
@@ -3209,6 +3402,8 @@ function _infer_known_int_names(state, fn_node, flow_inputs, analysis_scratch)
   return candidate_index
 end function
 
+/// Implements inline.
+/// @internal
 function inline _typeflow_base(type_name)
   if typeof(type_name) != "string" or type_name == "" then return "" end if
   for i = 0 to len(type_name) - 1
@@ -3217,6 +3412,8 @@ function inline _typeflow_base(type_name)
   return type_name
 end function
 
+/// Implements typeflow exact length.
+/// @internal
 function _typeflow_exact_length(type_name)
   if typeof(type_name) != "string" or type_name == "" then return -1 end if
   colon = -1
@@ -3232,6 +3429,8 @@ function _typeflow_exact_length(type_name)
   return parsed
 end function
 
+/// Implements typeflow get.
+/// @internal
 function _typeflow_get(items, name)
   if typeof(items) == "struct" then
     value = t.fastmap_get(items, name, "")
@@ -3246,6 +3445,8 @@ function _typeflow_get(items, name)
   return ""
 end function
 
+/// Implements typeflow set.
+/// @internal
 function _typeflow_set(items, name, value)
   if typeof(items) != "array" then items = [] end if
   if len(items) > 0 then
@@ -3260,6 +3461,8 @@ function _typeflow_set(items, name, value)
   return items + [[name, value]]
 end function
 
+/// Implements typeflow remove.
+/// @internal
 function _typeflow_remove(items, name)
   kept_items = []
   if typeof(items) != "array" or len(items) <= 0 then return kept_items end if
@@ -3270,6 +3473,8 @@ function _typeflow_remove(items, name)
   return kept_items
 end function
 
+/// Implements typeflow struct qname.
+/// @internal
 function _typeflow_struct_qname(state, callee)
   raw = _member_qname(callee)
   if raw == "" then return "" end if
@@ -3284,6 +3489,8 @@ function _typeflow_struct_qname(state, callee)
   return ""
 end function
 
+/// Implements typeflow expr type.
+/// @internal
 function _typeflow_expr_type(state, ex, known)
   if t.ast_is_node(ex) == false then return "" end if
   k = _coerce_name(t.ast_kind(ex))
@@ -3397,6 +3604,8 @@ function _typeflow_expr_type(state, ex, known)
   return ""
 end function
 
+/// Implements typeflow merge.
+/// @internal
 function _typeflow_merge(inferred)
   if typeof(inferred) != "array" or len(inferred) <= 0 then return "" end if
   first = inferred[0]
@@ -3419,6 +3628,8 @@ function _typeflow_merge(inferred)
   return ""
 end function
 
+/// Implements typeflow scan read expr.
+/// @internal
 function _typeflow_scan_read_expr(ex, tracked, initialized, read_before)
   if t.ast_is_node(ex) == false then return read_before end if
   k = _coerce_name(t.ast_kind(ex))
@@ -3447,6 +3658,8 @@ function _typeflow_scan_read_expr(ex, tracked, initialized, read_before)
   return read_before
 end function
 
+/// Implements typeflow scan read order.
+/// @internal
 function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, direct)
   stmt_count = 0
   stmt_vector = t.arr_vec_is(stmts)
@@ -3504,6 +3717,8 @@ function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, dir
   return [initialized, read_before]
 end function
 
+/// Implements typeflow dependency add.
+/// @internal
 function _typeflow_dependency_add(dependents, dependency, owner)
   if dependency == "" or owner == "" then return dependents end if
   owners = t.fastmap_get(dependents, dependency, [])
@@ -3515,8 +3730,8 @@ function _typeflow_dependency_add(dependents, dependency, owner)
   return dependents
 end function
 
-// Build reverse variable dependencies once so fixed-point propagation only
-// revisits facts affected by a change instead of rescanning every candidate.
+/// Build reverse variable dependencies once so fixed-point propagation only revisits facts affected by a change instead of rescanning every candidate.
+/// @internal
 function _typeflow_scan_expr_dependencies(dependents, owner, ex)
   if t.ast_is_node(ex) == false then return dependents end if
   k = _coerce_name(t.ast_kind(ex))
@@ -3543,6 +3758,8 @@ function _typeflow_scan_expr_dependencies(dependents, owner, ex)
   return dependents
 end function
 
+/// Implements infer known value types.
+/// @internal
 function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   if typeof(fn_node) != "struct" then return [] end if
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
@@ -3679,8 +3896,8 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   return facts_index
 end function
 
-// Collect only assignment targets inside loops. Scanning statements rather
-// than every expression keeps this analysis cheap on compiler-sized programs.
+/// Collect only assignment targets inside loops. Scanning statements rather than every expression keeps this analysis cheap on compiler-sized programs.
+/// @internal
 function _promotion_scan_stmts(hot_names, stmts, loop_depth)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return hot_names end if
   for each st in stmts
@@ -3724,9 +3941,8 @@ function _promotion_scan_stmts(hot_names, stmts, loop_depth)
   return hot_names
 end function
 
-// Mirror at most two unique, proven immediate-only locals in Win64 nonvolatile
-// XMM registers. Pointer-like, boxed, captured and ambiguous bindings stay on
-// the canonical stack path so no GC root can disappear into a register.
+/// Mirror at most two unique, proven immediate-only locals in Win64 nonvolatile XMM registers. Pointer-like, boxed, captured and ambiguous bindings stay on the canonical stack path so no GC root can disappear into a register.
+/// @internal
 function _select_promoted_local_registers(state, fn_node, known_types, shared_hot_names, analysis_scratch)
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
   hot_names = shared_hot_names
@@ -3770,6 +3986,8 @@ function _select_promoted_local_registers(state, fn_node, known_types, shared_ho
   return [state, assigned]
 end function
 
+/// Implements fast target add.
+/// @internal
 function _fast_target_add(items, name, expr)
   if name == "" then return items end if
   if typeof(items) != "array" then items = [] end if
@@ -3777,6 +3995,8 @@ function _fast_target_add(items, name, expr)
   return items + [[name, expr]]
 end function
 
+/// Implements fast index scan expr.
+/// @internal
 function _fast_index_scan_expr(ex, index_name, targets)
   if t.ast_is_node(ex) == false then return targets end if
   k = _coerce_name(t.ast_kind(ex))
@@ -3802,6 +4022,8 @@ function _fast_index_scan_expr(ex, index_name, targets)
   return targets
 end function
 
+/// Implements fast index scan loop.
+/// @internal
 function _fast_index_scan_loop(loop_node, index_name)
   targets = []
   mutated = []
@@ -3836,6 +4058,8 @@ function _fast_index_scan_loop(loop_node, index_name)
   return [targets, mutated]
 end function
 
+/// Implements for end proves index bounds.
+/// @internal
 function _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, start_value)
   end_ex = try(loop_node.end_expr)
   end_cv = _intflow_const_int(state, end_ex)
@@ -3852,6 +4076,8 @@ function _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, 
   return t.ast_kind(arg) == "Var" and _coerce_name(t.ast_name(arg)) == target_name
 end function
 
+/// Implements for index hoist plans.
+/// @internal
 function _for_index_hoist_plans(state, loop_node, index_binding)
   if state.in_function == false or typeof(index_binding) != "struct" then return [] end if
   index_name = _coerce_name(try(loop_node.var))
@@ -3885,6 +4111,8 @@ function _for_index_hoist_plans(state, loop_node, index_binding)
   return plans
 end function
 
+/// Implements opt emit known setindex.
+/// @internal
 function _opt_emit_known_setindex(state, stmt, plan)
   kind = plan[0]
   base_slot = plan[1]
@@ -4002,6 +4230,8 @@ function _opt_emit_known_setindex(state, stmt, plan)
   return state
 end function
 
+/// Implements inline ref resolve.
+/// @internal
 function _inline_ref_resolve(state, ex, owner, inline_names)
   hits = []
   raw = _member_qname(ex)
@@ -4035,6 +4265,8 @@ function _inline_ref_resolve(state, ex, owner, inline_names)
   return hits
 end function
 
+/// Implements inline scan expr uses.
+/// @internal
 function _inline_scan_expr_uses(state, ex, owner, inline_names, address_taken)
   if t.ast_is_node(ex) == false then return address_taken end if
   k = _coerce_name(t.ast_kind(ex))
@@ -4086,6 +4318,8 @@ function _inline_scan_expr_uses(state, ex, owner, inline_names, address_taken)
   return address_taken
 end function
 
+/// Implements inline scan stmt uses.
+/// @internal
 function _inline_scan_stmt_uses(state, stmts, owner, inline_names, address_taken)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return address_taken end if
   for si = 0 to len(stmts) - 1
@@ -4144,6 +4378,8 @@ function _inline_scan_stmt_uses(state, stmts, owner, inline_names, address_taken
   return address_taken
 end function
 
+/// Implements analyze inline only functions.
+/// @internal
 function _analyze_inline_only_functions(state, program)
   // Native-body pruning is deliberately disabled. A source-level address scan
   // cannot prove imported aliases, callable objects and late post-budget
@@ -4209,14 +4445,20 @@ function _analyze_inline_only_functions(state, program)
   return kept
 end function
 
+/// Implements owner for.
+/// @internal
 function _owner_for(st)
   return _st_file(st)
 end function
 
+/// Implements tag ns.
+/// @internal
 function _tag_ns(ns, name)
   return _join_qname(ns, name)
 end function
 
+/// Implements pref is method prefix.
+/// @internal
 function _pref_is_method_prefix(state, pref)
   if typeof(pref) != "string" then return false end if
   if pref == "" then return false end if
@@ -4236,6 +4478,8 @@ function _pref_is_method_prefix(state, pref)
   return false
 end function
 
+/// Reports whether has reserved segment.
+/// @internal
 function _has_reserved_segment(state, name)
   if typeof(name) != "string" then return false end if
   parts = s.split(name, ".")
@@ -4251,6 +4495,8 @@ function _has_reserved_segment(state, name)
   return false
 end function
 
+/// Implements collect decls.
+/// @internal
 function _collect_decls(program)
   vals_b = t.arr_chunk_new(64)
   if typeof(program) != "array" or len(program) <= 0 then return t.arr_chunk_finish(vals_b) end if
@@ -4264,6 +4510,8 @@ function _collect_decls(program)
   return t.arr_chunk_finish(vals_b)
 end function
 
+/// Implements resolve global target.
+/// @internal
 function _resolve_global_target(state, name)
   if typeof(name) != "string" then return "" end if
   pref = state.current_qname_prefix
@@ -4276,6 +4524,8 @@ function _resolve_global_target(state, name)
   return _join_qname(state.current_file_prefix, name)
 end function
 
+/// Implements qname parent prefix.
+/// @internal
 function _qname_parent_prefix(qn)
   if typeof(qn) != "string" then return "" end if
   if qn == "" then return "" end if
@@ -4287,6 +4537,8 @@ function _qname_parent_prefix(qn)
   return s.substr(qn, 0, dot + 1)
 end function
 
+/// Implements resolve global target scan.
+/// @internal
 function _resolve_global_target_scan(state, raw, qpref, fpref)
   raw2 = _coerce_name(raw)
   if raw2 == "" then return "" end if
@@ -4332,9 +4584,8 @@ function _resolve_global_target_scan(state, raw, qpref, fpref)
   return raw2
 end function
 
-// Append nested statements directly to an existing capacity-backed worklist.
-// Keeping the parser field order here preserves analysis determinism without
-// materializing and repeatedly concatenating a temporary child array.
+/// Append nested statements directly to an existing capacity-backed worklist. Keeping the parser field order here preserves analysis determinism without materializing and repeatedly concatenating a temporary child array.
+/// @internal
 function _scan_stmt_children_into(worklist, st)
   stack = worklist
   if typeof(st) != "struct" then return stack end if
@@ -4379,6 +4630,8 @@ function _scan_stmt_children_into(worklist, st)
   return stack
 end function
 
+/// Implements scan stmt for global decls lifo.
+/// @internal
 function _scan_stmt_for_global_decls_lifo(state, st, qpref, fpref)
   if typeof(st) != "struct" then return state end if
 
@@ -4456,6 +4709,8 @@ function _scan_stmt_for_global_decls_lifo(state, st, qpref, fpref)
   return state
 end function
 
+/// Implements scan function for global decls.
+/// @internal
 function _scan_function_for_global_decls(state, fn_node)
   if typeof(fn_node) != "struct" then return state end if
 
@@ -4481,6 +4736,8 @@ function _scan_function_for_global_decls(state, fn_node)
   return state
 end function
 
+/// Implements walk stmt into.
+/// @internal
 function _walk_stmt_into(st, vals_b)
   b = vals_b
   if typeof(b) != "struct" then b = t.arr_chunk_new(64) end if
@@ -4514,6 +4771,8 @@ function _walk_stmt_into(st, vals_b)
   return b
 end function
 
+/// Implements walk stmt.
+/// @internal
 function _walk_stmt(st, vals)
   vals_b = t.arr_chunk_new(64)
   if typeof(vals) == "array" and len(vals) > 0 then
@@ -4523,6 +4782,8 @@ function _walk_stmt(st, vals)
   return t.arr_chunk_finish(vals_b)
 end function
 
+/// Implements tag ns prefix.
+/// @internal
 function _tag_ns_prefix(node, pref)
   if typeof(node) == "struct" and typeof(pref) == "string" then
     node._ml_ns_prefix = pref
@@ -4530,6 +4791,8 @@ function _tag_ns_prefix(node, pref)
   return node
 end function
 
+/// Implements flatten runtime inner.
+/// @internal
 function _flatten_runtime_inner(state, stmts, prefix, current_file)
   vals_out_b = t.arr_chunk_new(64)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return t.arr_chunk_finish(vals_out_b) end if
@@ -4642,10 +4905,14 @@ function _flatten_runtime_inner(state, stmts, prefix, current_file)
   return t.arr_chunk_finish(vals_out_b)
 end function
 
+/// Implements flatten runtime.
+/// @internal
 function _flatten_runtime(state, value)
   return _flatten_runtime_inner(state, value, "", "")
 end function
 
+/// Implements group program by file.
+/// @internal
 function _group_program_by_file(program)
   vals =[]
   if typeof(program) != "array" or len(program) <= 0 then return vals end if
@@ -4668,6 +4935,8 @@ function _group_program_by_file(program)
   return vals
 end function
 
+/// Implements inline.
+/// @internal
 function inline _arr_has(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
@@ -4676,12 +4945,16 @@ function inline _arr_has(arr, value)
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _arr_add_unique(arr, value)
   if typeof(arr) != "array" then arr = [] end if
   if _arr_has(arr, value) then return arr end if
   return arr + [value]
 end function
 
+/// Implements arr remove value.
+/// @internal
 function _arr_remove_value(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return [] end if
   vals_b = t.arr_chunk_new(32)
@@ -4691,6 +4964,8 @@ function _arr_remove_value(arr, value)
   return t.arr_chunk_finish(vals_b)
 end function
 
+/// Implements arr union.
+/// @internal
 function _arr_union(a, b)
   vals_out = []
   if typeof(a) == "array" and len(a) > 0 then
@@ -4706,16 +4981,22 @@ function _arr_union(a, b)
   return vals_out
 end function
 
+/// Implements inline.
+/// @internal
 function inline _name_set_new(initial_cap)
   return t.fastmap_new(initial_cap)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _name_set_size(setv)
   if typeof(setv) == "struct" then return t.fastmap_size(setv) end if
   if typeof(setv) == "array" then return len(setv) end if
   return 0
 end function
 
+/// Implements name set to array.
+/// @internal
 function _name_set_to_array(setv)
   if typeof(setv) == "array" then return setv end if
   out_b = t.arr_chunk_new(32)
@@ -4733,12 +5014,16 @@ function _name_set_to_array(setv)
   return t.arr_chunk_finish(out_b)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _name_set_has(setv, value)
   if typeof(value) != "string" or value == "" then return false end if
   if typeof(setv) == "struct" then return t.fastmap_has(setv, value) end if
   return _arr_has(setv, value)
 end function
 
+/// Implements name set add.
+/// @internal
 function _name_set_add(setv, value)
   if typeof(value) != "string" or value == "" then
     if typeof(setv) == "struct" or typeof(setv) == "array" then return setv end if
@@ -4749,6 +5034,8 @@ function _name_set_add(setv, value)
   return _arr_add_unique(setv, value)
 end function
 
+/// Implements name set remove.
+/// @internal
 function _name_set_remove(setv, value)
   if typeof(value) != "string" or value == "" then return setv end if
   if typeof(setv) == "struct" then
@@ -4767,6 +5054,8 @@ function _name_set_remove(setv, value)
   return _arr_remove_value(setv, value)
 end function
 
+/// Implements name set union.
+/// @internal
 function _name_set_union(a, b)
   if typeof(a) != "struct" and typeof(b) != "struct" then return _arr_union(a, b) end if
   outv = _name_set_new((_name_set_size(a) + _name_set_size(b)) * 2 + 16)
@@ -4785,6 +5074,8 @@ function _name_set_union(a, b)
   return outv
 end function
 
+/// Implements inline.
+/// @internal
 function inline _map_int_get(arr, key, defaultv)
   if typeof(arr) == "struct" then
     v0 = t.fastmap_get(arr, key, defaultv)
@@ -4806,6 +5097,8 @@ function inline _map_int_get(arr, key, defaultv)
   return defaultv
 end function
 
+/// Implements map int set.
+/// @internal
 function _map_int_set(arr, key, value)
   if typeof(arr) == "struct" then return t.fastmap_set(arr, key, value) end if
   if typeof(arr) != "array" then arr = [] end if
@@ -4821,12 +5114,16 @@ function _map_int_set(arr, key, value)
   return arr + [[key, value]]
 end function
 
+/// Implements map int items.
+/// @internal
 function _map_int_items(arr)
   if typeof(arr) == "struct" then return t.fastmap_items(arr) end if
   if typeof(arr) == "array" then return arr end if
   return []
 end function
 
+/// Implements string gt.
+/// @internal
 function _string_gt(a, b)
   if typeof(a) != "string" or typeof(b) != "string" then return false end if
   ab = bytes(a)
@@ -4844,6 +5141,8 @@ function _string_gt(a, b)
   return an > bn
 end function
 
+/// Implements sort names.
+/// @internal
 function _sort_names(vals)
   if typeof(vals) == "struct" then vals = _name_set_to_array(vals) end if
   if typeof(vals) != "array" or len(vals) <= 1 then return vals end if
@@ -4912,6 +5211,8 @@ function _sort_names(vals)
   return t.arr_chunk_finish(unique_b)
 end function
 
+/// Implements func global mapped name.
+/// @internal
 function _func_global_mapped_name(state, name)
   if typeof(state.func_global_map_index) == "struct" then
     mapped0 = t.fastmap_get(state.func_global_map_index, name, "")
@@ -4927,6 +5228,8 @@ function _func_global_mapped_name(state, name)
   return ""
 end function
 
+/// Implements id label pair id.
+/// @internal
 function _id_label_pair_id(it)
   if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "int" then
     return it[0]
@@ -4937,6 +5240,8 @@ function _id_label_pair_id(it)
   return -1
 end function
 
+/// Implements sort id label pairs.
+/// @internal
 function _sort_id_label_pairs(vals)
   if typeof(vals) != "array" or len(vals) <= 1 then return vals end if
   n = len(vals)
@@ -4996,6 +5301,8 @@ function _sort_id_label_pairs(vals)
   return arr
 end function
 
+/// Implements analysis register local decl.
+/// @internal
 function _analysis_register_local_decl(state, decl_node, name)
   nm = _coerce_name(name)
   if nm == "" then return state end if
@@ -5025,6 +5332,8 @@ function _analysis_register_local_decl(state, decl_node, name)
   return state
 end function
 
+/// Implements analysis register fresh local decl.
+/// @internal
 function _analysis_register_fresh_local_decl(state, decl_node, name)
   nm = _coerce_name(name)
   if nm == "" then return state end if
@@ -5037,6 +5346,8 @@ function _analysis_register_fresh_local_decl(state, decl_node, name)
   return state
 end function
 
+/// Implements analysis mark current binding boxed.
+/// @internal
 function _analysis_mark_current_binding_boxed(state, name)
   nm = _coerce_name(name)
   if nm == "" then return state end if
@@ -5068,6 +5379,8 @@ function _analysis_mark_current_binding_boxed(state, name)
   return state
 end function
 
+/// Implements analysis member target.
+/// @internal
 function _analysis_member_target(ex)
   if typeof(ex) != "struct" then return 0 end if
   t0 = try(ex.target)
@@ -5077,6 +5390,8 @@ function _analysis_member_target(ex)
   return 0
 end function
 
+/// Implements analysis call callee.
+/// @internal
 function _analysis_call_callee(ex)
   if typeof(ex) != "struct" then return 0 end if
   c0 = try(ex.callee)
@@ -5086,6 +5401,8 @@ function _analysis_call_callee(ex)
   return 0
 end function
 
+/// Implements analysis call args.
+/// @internal
 function _analysis_call_args(ex)
   if typeof(ex) != "struct" then return [] end if
   aa = try(ex.args)
@@ -5093,6 +5410,8 @@ function _analysis_call_args(ex)
   return []
 end function
 
+/// Implements analysis for end expr.
+/// @internal
 function _analysis_for_end_expr(st)
   if typeof(st) != "struct" then return 0 end if
   e1 = try(st.end_expr)
@@ -5100,6 +5419,8 @@ function _analysis_for_end_expr(st)
   return 0
 end function
 
+/// Implements analysis builtin has.
+/// @internal
 function _analysis_builtin_has(name)
   nm = _coerce_name(name)
   if nm == "" then return false end if
@@ -5124,6 +5445,8 @@ function _analysis_builtin_has(name)
   return exprmod._builtin_label(nm) != ""
 end function
 
+/// Implements analysis known callable name.
+/// @internal
 function _analysis_known_callable_name(state, name)
   nm = _coerce_name(name)
   if nm == "" then return false end if
@@ -5134,11 +5457,15 @@ function _analysis_known_callable_name(state, name)
   return false
 end function
 
+/// Implements analysis is type query name.
+/// @internal
 function _analysis_is_type_query_name(name)
   nm = _coerce_name(name)
   return nm == "typeof" or nm == "typeName"
 end function
 
+/// Implements analysis scan expr.
+/// @internal
 function _analysis_scan_expr(state, ex, allow_func_ident)
   if t.ast_is_node(ex) == false then return state end if
   nk = _coerce_name(t.ast_kind(ex))
@@ -5307,6 +5634,8 @@ function _analysis_scan_expr(state, ex, allow_func_ident)
   return state
 end function
 
+/// Implements analysis scan stmt.
+/// @internal
 function _analysis_scan_stmt(state, st)
   if typeof(st) != "struct" then return state end if
   k = _coerce_name(try(st.node_kind))
@@ -5495,6 +5824,8 @@ function _analysis_scan_stmt(state, st)
   return state
 end function
 
+/// Implements analysis scan block.
+/// @internal
 function _analysis_scan_block(state, stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return state end if
   n = len(stmts)
@@ -5505,6 +5836,8 @@ function _analysis_scan_block(state, stmts)
   return state
 end function
 
+/// Implements analysis prepare function.
+/// @internal
 function _analysis_prepare_function(state, fn_node)
   boxed_names = fn_node._ml_boxed
   if typeof(boxed_names) != "array" then boxed_names = [] end if
@@ -5631,6 +5964,8 @@ function _analysis_prepare_function(state, fn_node)
   return state
 end function
 
+/// Implements closure expr reads.
+/// @internal
 function _closure_expr_reads(ex, used)
   if typeof(used) != "array" and typeof(used) != "struct" then used = _name_set_new(64) end if
   if t.ast_is_node(ex) == false then return used end if
@@ -5711,6 +6046,8 @@ function _closure_expr_reads(ex, used)
   return used
 end function
 
+/// Implements closure collect locals walk.
+/// @internal
 function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
   if typeof(locals_set) != "array" and typeof(locals_set) != "struct" then locals_set = _name_set_new(64) end if
   if typeof(globals_decl) != "array" and typeof(globals_decl) != "struct" then globals_decl = _name_set_new(32) end if
@@ -5823,6 +6160,8 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
   return [locals_set, globals_decl, nested]
 end function
 
+/// Implements closure collect locals and nested.
+/// @internal
 function _closure_collect_locals_and_nested(fn_node)
   locals_set = _name_set_new(32)
   globals_decl = _name_set_new(16)
@@ -5842,6 +6181,8 @@ function _closure_collect_locals_and_nested(fn_node)
   return _closure_collect_locals_walk(body, locals_set, globals_decl, nested)
 end function
 
+/// Implements closure collect uses.
+/// @internal
 function _closure_collect_uses(stmts)
   used = _name_set_new(64)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return used end if
@@ -5965,6 +6306,8 @@ function _closure_collect_uses(stmts)
   return used
 end function
 
+/// Implements closure collect writes.
+/// @internal
 function _closure_collect_writes(fn_node)
   written = _name_set_new(64)
   stmts = fn_node
@@ -6033,6 +6376,8 @@ function _closure_collect_writes(fn_node)
   return written
 end function
 
+/// Implements note reads.
+/// @internal
 function _note_reads(read_before, written_yet, names)
   if typeof(read_before) != "array" and typeof(read_before) != "struct" then read_before = _name_set_new(64) end if
   if typeof(written_yet) != "array" and typeof(written_yet) != "struct" then written_yet = _name_set_new(32) end if
@@ -6048,6 +6393,8 @@ function _note_reads(read_before, written_yet, names)
   return read_before
 end function
 
+/// Implements closure collect rbfw walk.
+/// @internal
 function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
   if typeof(read_before) != "array" and typeof(read_before) != "struct" then read_before = _name_set_new(64) end if
   if typeof(written_yet) != "array" and typeof(written_yet) != "struct" then written_yet = _name_set_new(32) end if
@@ -6221,6 +6568,8 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
   return [read_before, written_yet]
 end function
 
+/// Implements closure collect read before first write.
+/// @internal
 function _closure_collect_read_before_first_write(stmts, params_set)
   written_yet = _name_set_new(32)
   if typeof(params_set) == "struct" then params_set = _name_set_to_array(params_set) end if
@@ -6235,6 +6584,8 @@ function _closure_collect_read_before_first_write(stmts, params_set)
   return res[0]
 end function
 
+/// Implements closure owner for.
+/// @internal
 function _closure_owner_for(nf, depth)
   if depth <= 0 then return 0 end if
   cur = nf._ml_parent_fn
@@ -6247,6 +6598,8 @@ function _closure_owner_for(nf, depth)
   return cur
 end function
 
+/// Implements closure analyze function rec.
+/// @internal
 function _closure_analyze_function_rec(state, fn_node, outer_scopes)
   if typeof(fn_node) != "struct" then return [state, [], fn_node] end if
   if typeof(outer_scopes) != "array" then outer_scopes = [] end if
@@ -6368,11 +6721,15 @@ function _closure_analyze_function_rec(state, fn_node, outer_scopes)
   return [state, t.arr_chunk_finish(found_b), fn_node]
 end function
 
+/// Implements closure analyze function.
+/// @internal
 function _closure_analyze_function(state, fn_node)
   res = _closure_analyze_function_rec(state, fn_node, [])
   return res[0]
 end function
 
+/// Implements closure analyze program.
+/// @internal
 function _closure_analyze_program(state, program)
   nested_all_b = t.arr_chunk_new(64)
   ufs = state.user_functions
@@ -6417,6 +6774,8 @@ function _closure_analyze_program(state, program)
   return state
 end function
 
+/// Implements closure collect all functions.
+/// @internal
 function _closure_collect_all_functions(state, nested_fns)
   allf_b = t.arr_chunk_new(64)
   ufs = state.user_functions
@@ -6442,6 +6801,8 @@ function _closure_collect_all_functions(state, nested_fns)
   return t.arr_chunk_finish(allf_b)
 end function
 
+/// Implements closure assign env layout.
+/// @internal
 function _closure_assign_env_layout(state, nested_fns)
   if typeof(nested_fns) != "array" then nested_fns = state.nested_user_functions end if
   if typeof(nested_fns) != "array" then nested_fns = [] end if
@@ -6571,10 +6932,14 @@ function _closure_assign_env_layout(state, nested_fns)
   return state
 end function
 
+/// Implements inline.
+/// @internal
 function inline _as_name(v)
   return _coerce_name(v)
 end function
 
+/// Implements closure declare capture bindings.
+/// @internal
 function _closure_declare_capture_bindings(state, fn_node)
   if typeof(fn_node) != "struct" then return state end if
   caps = fn_node._ml_captures
@@ -6642,10 +7007,15 @@ function _closure_declare_capture_bindings(state, fn_node)
   return state
 end function
 
+/// Runs emit stmt.
+/// @param state Value supplied for `state`.
+/// @param st Value supplied for `st`.
 function emit_stmt(state, st)
   return cg_emit_stmt(state, st)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _user_function_has(state, qname)
   if typeof(state.user_function_index) == "struct" then
     idx0 = t.fastmap_get(state.user_function_index, qname, -1)
@@ -6684,6 +7054,8 @@ function inline _user_function_has(state, qname)
   return false
 end function
 
+/// Implements expr uses this.
+/// @internal
 function _expr_uses_this(ex)
   if typeof(ex) == "array" then
     if len(ex) <= 0 then return false end if
@@ -6757,6 +7129,8 @@ function _expr_uses_this(ex)
   return false
 end function
 
+/// Implements stmt uses this.
+/// @internal
 function _stmt_uses_this(st)
   if typeof(st) == "array" then
     if len(st) <= 0 then return false end if
@@ -6903,6 +7277,8 @@ function _stmt_uses_this(st)
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _named_array_get(arr, key)
   if typeof(arr) == "struct" then return t.fastmap_get(arr, key, 0) end if
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
@@ -6918,6 +7294,8 @@ function inline _named_array_get(arr, key)
   return 0
 end function
 
+/// Implements named array set.
+/// @internal
 function _named_array_set(arr, key, values)
   if typeof(arr) == "struct" then return t.fastmap_set(arr, key, values) end if
   if typeof(arr) != "array" then arr =[] end if
@@ -6937,6 +7315,8 @@ function _named_array_set(arr, key, values)
   return arr + [[key, values]]
 end function
 
+/// Implements inline.
+/// @internal
 function inline _named_int_get(arr, key, defaultv)
   if typeof(arr) == "struct" then
     v0 = t.fastmap_get(arr, key, defaultv)
@@ -6958,6 +7338,8 @@ function inline _named_int_get(arr, key, defaultv)
   return defaultv
 end function
 
+/// Implements named int set.
+/// @internal
 function _named_int_set(arr, key, value)
   if typeof(arr) == "struct" then return t.fastmap_set(arr, key, value) end if
   if typeof(arr) != "array" then arr =[] end if
@@ -6977,6 +7359,8 @@ function _named_int_set(arr, key, value)
   return arr + [[key, value]]
 end function
 
+/// Implements next struct id.
+/// @internal
 function _next_struct_id(state)
   mx = 0
   arr = state.struct_ids
@@ -6991,6 +7375,8 @@ function _next_struct_id(state)
   return mx + 1
 end function
 
+/// Implements next enum id.
+/// @internal
 function _next_enum_id(state)
   mx = 0
   arr = state.enum_ids
@@ -7005,10 +7391,14 @@ function _next_enum_id(state)
   return mx + 1
 end function
 
+/// Implements inline.
+/// @internal
 function inline _st_file(st)
   return t.ast_filename(st)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _has_dot_name(name)
   if typeof(name) != "string" then return false end if
   for i = 0 to len(name) - 1
@@ -7017,6 +7407,8 @@ function inline _has_dot_name(name)
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _strpair_get(arr, key)
   if typeof(arr) == "struct" then
     v0 = t.fastmap_get(arr, key, "")
@@ -7038,6 +7430,8 @@ function inline _strpair_get(arr, key)
   return ""
 end function
 
+/// Implements strpair set.
+/// @internal
 function _strpair_set(arr, key, value)
   mapv = arr
   if typeof(mapv) != "struct" then
@@ -7057,8 +7451,8 @@ function _strpair_set(arr, key, value)
   return t.fastmap_set(mapv, key, value)
 end function
 
-// Collect declarations before emission so package qualification, stable IDs and
-// module initialization order agree with the Python reference frontend.
+/// Collect declarations before emission so package qualification, stable IDs and module initialization order agree with the Python reference frontend.
+/// @internal
 function _collect_program_decls(state, stmts, prefix, current_file, file_prefixes, file_seen_nonpackage, next_sid, next_eid, in_ns)
   if typeof(stmts) != "array" or len(stmts) <= 0 then
     return [state, current_file, file_prefixes, file_seen_nonpackage, next_sid, next_eid]
@@ -7444,6 +7838,8 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
   return [state, cur_file, file_prefixes, file_seen_nonpackage, next_sid, next_eid]
 end function
 
+/// Implements fn arity map.
+/// @internal
 function _fn_arity_map(state)
   vals =[]
   arr = state.user_functions
@@ -7464,6 +7860,8 @@ function _fn_arity_map(state)
   return vals
 end function
 
+/// Implements member chain name.
+/// @internal
 function _member_chain_name(ex)
   if t.ast_is_node(ex) == false then return "" end if
   if t.ast_kind(ex) == "Var" then
@@ -7478,6 +7876,8 @@ function _member_chain_name(ex)
   return ""
 end function
 
+/// Implements check expr semantics.
+/// @internal
 function _check_expr_semantics(state, ex, fn_arities)
   if t.ast_is_node(ex) == false then return state end if
   k = t.ast_kind(ex)
@@ -7566,6 +7966,8 @@ function _check_expr_semantics(state, ex, fn_arities)
   return state
 end function
 
+/// Implements check stmt semantics.
+/// @internal
 function _check_stmt_semantics(state, st, fn_arities)
   if typeof(st) != "struct" then return state end if
   k = st.node_kind
@@ -7772,6 +8174,8 @@ function _check_stmt_semantics(state, st, fn_arities)
   return state
 end function
 
+/// Implements check program semantics.
+/// @internal
 function _check_program_semantics(state, program)
   fn_arities = _fn_arity_map(state)
   if typeof(program) != "array" or len(program) <= 0 then return state end if
@@ -7781,6 +8185,8 @@ function _check_program_semantics(state, program)
   return state
 end function
 
+/// Implements binding global label.
+/// @internal
 function _binding_global_label(state, qname)
   b = scope.resolve_binding(state, qname)
   if typeof(b) == "struct" and b.kind == "global" and typeof(b.label) == "string" and b.label != "" then
@@ -7789,6 +8195,8 @@ function _binding_global_label(state, qname)
   return ""
 end function
 
+/// Implements ensure global binding label.
+/// @internal
 function _ensure_global_binding_label(state, qname, decl_node)
   lbl = _binding_global_label(state, qname)
   if lbl != "" then return [state, lbl] end if
@@ -7797,6 +8205,8 @@ function _ensure_global_binding_label(state, qname, decl_node)
   return [state, lbl]
 end function
 
+/// Implements declare top level global bindings.
+/// @internal
 function _declare_top_level_global_bindings(state, program)
   if typeof(program) != "array" or len(program) <= 0 then return state end if
   for i = 0 to len(program) - 1
@@ -7817,6 +8227,8 @@ function _declare_top_level_global_bindings(state, program)
   return state
 end function
 
+/// Implements declare object top level global bindings.
+/// @internal
 function _declare_object_top_level_global_bindings(state, program)
   // Function objects are emitted from independent state clones. Predeclare
   // every module-level storage slot on the shared base state so those clones
@@ -7842,6 +8254,8 @@ function _declare_object_top_level_global_bindings(state, program)
   return state
 end function
 
+/// Implements precompute top level const bindings.
+/// @internal
 function _precompute_top_level_const_bindings(state, program)
   if typeof(program) != "array" or len(program) <= 0 then return state end if
 
@@ -7886,6 +8300,8 @@ function _precompute_top_level_const_bindings(state, program)
   return state
 end function
 
+/// Implements builtin specs.
+/// @internal
 function _builtin_specs()
   return [
     ["len", 1, 1, "fn_builtin_len"],
@@ -7938,6 +8354,8 @@ function _builtin_specs()
   ]
 end function
 
+/// Implements reindex named array.
+/// @internal
 function _reindex_named_array(arr, cap_hint)
   cap = cap_hint
   if typeof(cap) != "int" or cap < 64 then cap = 64 end if
@@ -7962,6 +8380,8 @@ function _reindex_named_array(arr, cap_hint)
   return idx
 end function
 
+/// Implements reindex named int.
+/// @internal
 function _reindex_named_int(arr, cap_hint)
   cap = cap_hint
   if typeof(cap) != "int" or cap < 64 then cap = 64 end if
@@ -7988,6 +8408,8 @@ function _reindex_named_int(arr, cap_hint)
   return idx
 end function
 
+/// Implements reindex extern sigs.
+/// @internal
 function _reindex_extern_sigs(arr, cap_hint)
   cap = cap_hint
   if typeof(cap) != "int" or cap < 64 then cap = 64 end if
@@ -8002,6 +8424,8 @@ function _reindex_extern_sigs(arr, cap_hint)
   return idx
 end function
 
+/// Implements reindex aliases.
+/// @internal
 function _reindex_aliases(arr, cap_hint)
   cap = cap_hint
   if typeof(cap) != "int" or cap < 32 then cap = 32 end if
@@ -8026,6 +8450,8 @@ function _reindex_aliases(arr, cap_hint)
   return idx
 end function
 
+/// Implements rebuild lookup indexes.
+/// @internal
 function _rebuild_lookup_indexes(state)
   n_sf = 0
   if typeof(state.struct_fields) == "array" then n_sf = len(state.struct_fields) end if
@@ -8055,6 +8481,8 @@ function _rebuild_lookup_indexes(state)
   return state
 end function
 
+/// Implements all function entries.
+/// @internal
 function _all_function_entries(state)
   uf_names = _user_function_keys_sorted(state)
   nested_names = _nested_function_codegen_names_sorted(state)
@@ -8087,12 +8515,17 @@ function _all_function_entries(state)
   return FunctionNodeArena(kinds, names, nodes, total)
 end function
 
+/// Implements function entry count.
+/// @param entries Value supplied for `entries`.
 function function_entry_count(entries)
   if typeof(entries) == "struct" and typeof(try(entries.count)) == "int" then return entries.count end if
   if typeof(entries) == "array" then return len(entries) end if
   return 0
 end function
 
+/// Implements function entry name.
+/// @param entries Value supplied for `entries`.
+/// @param node_id Value supplied for `node_id`.
 function function_entry_name(entries, node_id)
   if typeof(node_id) != "int" or node_id < 0 then return "" end if
   if typeof(entries) == "struct" and typeof(try(entries.names)) == "array" then
@@ -8106,6 +8539,9 @@ function function_entry_name(entries, node_id)
   return ""
 end function
 
+/// Implements function entry node.
+/// @param entries Value supplied for `entries`.
+/// @param node_id Value supplied for `node_id`.
 function function_entry_node(entries, node_id)
   if typeof(node_id) != "int" or node_id < 0 then return 0 end if
   if typeof(entries) == "struct" and typeof(try(entries.nodes)) == "array" then
@@ -8114,13 +8550,14 @@ function function_entry_node(entries, node_id)
   return 0
 end function
 
-// Expose the canonical monolithic function order to the object writer.  The
-// .mlo pipeline must partition this sequence without regrouping it by module;
-// regrouping changes both native code layout and first-use constant order.
+/// Expose the canonical monolithic function order to the object writer. The .mlo pipeline must partition this sequence without regrouping it by module; regrouping changes both native code layout and first-use constant order.
+/// @param state Value supplied for `state`.
 function all_function_entries(state)
   return _all_function_entries(state)
 end function
 
+/// Implements program main name.
+/// @internal
 function _program_main_name(state)
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
     for i = 0 to len(state.user_functions) - 1
@@ -8133,6 +8570,8 @@ function _program_main_name(state)
   return ""
 end function
 
+/// Runs emit program module inits all.
+/// @internal
 function _emit_program_module_inits_all(state, module_init_recs)
   if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
     for mri = 0 to len(module_init_recs) - 1
@@ -8145,7 +8584,11 @@ function _emit_program_module_inits_all(state, module_init_recs)
   return state
 end function
 
+/// Runs emit program functions all.
+/// @internal
 function _emit_program_functions_all(state)
+  /// Stores the phase codegen keepalive.
+  /// @internal
   global _phase_codegen_keepalive
   entries = _all_function_entries(state)
   analysis_scratch = _new_function_analysis_scratch()
@@ -8191,6 +8634,8 @@ function _emit_program_functions_all(state)
   return state
 end function
 
+/// Releases or resets clear program function state.
+/// @internal
 function _clear_program_function_state(state)
   state.user_functions = []
   state.nested_user_functions = []
@@ -8202,7 +8647,11 @@ function _clear_program_function_state(state)
   return state
 end function
 
+/// Runs emit program via objects.
+/// @internal
 function _emit_program_via_objects(state, program)
+  /// Stores the phase codegen keepalive.
+  /// @internal
   global _phase_codegen_keepalive
   prep = prepare_program_for_objects(state, program)
   if typeof(prep) != "array" or len(prep) < 3 then return state end if
@@ -8228,10 +8677,15 @@ function _emit_program_via_objects(state, program)
   return state
 end function
 
+/// Runs emit program.
+/// @param state Value supplied for `state`.
+/// @param program Value supplied for `program`.
 function emit_program(state, program)
   return _emit_program_via_objects(state, program)
 end function
 
+/// Implements static obj label for global name.
+/// @internal
 function _static_obj_label_for_global_name(state, name)
   nm = _coerce_name(name)
   if nm == "" then return "" end if
@@ -8246,6 +8700,8 @@ function _static_obj_label_for_global_name(state, name)
   return ""
 end function
 
+/// Implements builtin code label for name.
+/// @internal
 function _builtin_code_label_for_name(state, name)
   nm = _coerce_name(name)
   if nm == "" then return "" end if
@@ -8260,6 +8716,8 @@ function _builtin_code_label_for_name(state, name)
   return ""
 end function
 
+/// Runs emit static global slot initializers from globals.
+/// @internal
 function _emit_static_global_slot_initializers_from_globals(state)
   if typeof(state.globals) != "array" or len(state.globals) <= 0 then return state end if
   for gi = 0 to len(state.globals) - 1
@@ -8281,6 +8739,8 @@ function _emit_static_global_slot_initializers_from_globals(state)
   return state
 end function
 
+/// Runs emit static callable objects.
+/// @internal
 function _emit_static_callable_objects(state)
   state.function_static_obj_labels = []
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
@@ -8453,6 +8913,8 @@ function _emit_static_callable_objects(state)
   return state
 end function
 
+/// Creates build module init recs.
+/// @internal
 function _build_module_init_recs(state, program)
   module_init_recs_b = t.arr_chunk_new(64)
   cur_mod_file = ""
@@ -8497,6 +8959,8 @@ function _build_module_init_recs(state, program)
   return [state, t.arr_chunk_finish(module_init_recs_b)]
 end function
 
+/// Implements expr uses native threads.
+/// @internal
 function _expr_uses_native_threads(ex)
   if t.ast_is_node(ex) == false then return false end if
   nk = _coerce_name(t.ast_kind(ex))
@@ -8537,6 +9001,8 @@ function _expr_uses_native_threads(ex)
   return false
 end function
 
+/// Implements stmts use native threads.
+/// @internal
 function _stmts_use_native_threads(stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return false end if
   for each st_nt in stmts
@@ -8592,6 +9058,9 @@ function _stmts_use_native_threads(stmts)
   return false
 end function
 
+/// Implements prepare program for objects.
+/// @param state Value supplied for `state`.
+/// @param program Value supplied for `program`.
 function prepare_program_for_objects(state, program)
   // Imported modules are part of program, so this closed-program scan safely
   // removes TLS/GC polling and heap synchronization when Thread is unreachable.
@@ -8867,6 +9336,11 @@ function prepare_program_for_objects(state, program)
   return [state, module_init_recs, max_call_args_main]
 end function
 
+/// Runs emit entry object.
+/// @param state Value supplied for `state`.
+/// @param module_init_recs Value supplied for `module_init_recs`.
+/// @param max_call_args_main Value supplied for `max_call_args_main`.
+/// @param main_name Value supplied for `main_name`.
 function emit_entry_object(state, module_init_recs, max_call_args_main, main_name)
   out_stack_args = max_call_args_main - 4
   if out_stack_args < 0 then out_stack_args = 0 end if
@@ -9003,6 +9477,8 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
   return state
 end function
 
+/// Implements module file eq.
+/// @internal
 function _module_file_eq(a, b)
   aa = _coerce_name(a)
   bb = _coerce_name(b)
@@ -9010,6 +9486,9 @@ function _module_file_eq(a, b)
   return aa == bb
 end function
 
+/// Runs emit module init object.
+/// @param state Value supplied for `state`.
+/// @param module_rec Value supplied for `module_rec`.
 function emit_module_init_object(state, module_rec)
   if typeof(module_rec) != "array" or len(module_rec) < 5 then return state end if
   mfile = _coerce_name(module_rec[0])
@@ -9176,6 +9655,8 @@ function emit_module_init_object(state, module_rec)
   return state
 end function
 
+/// Implements module function entry index add.
+/// @internal
 function _module_function_entry_index_add(index, module_file, entry)
   if typeof(index) != "struct" then index = t.fastmap_new(128) end if
   mfile = _coerce_name(module_file)
@@ -9186,7 +9667,11 @@ function _module_function_entry_index_add(index, module_file, entry)
   return t.fastmap_set(index, mfile, bucket)
 end function
 
+/// Implements rebuild module function entry index.
+/// @internal
 function _rebuild_module_function_entry_index(state)
+  /// Stores the module function entry index.
+  /// @internal
   global _module_function_entry_index
   index = t.fastmap_new(128)
 
@@ -9214,7 +9699,12 @@ function _rebuild_module_function_entry_index(state)
   return state
 end function
 
+/// Implements module function entries.
+/// @param state Value supplied for `state`.
+/// @param module_file Value supplied for `module_file`.
 function module_function_entries(state, module_file)
+  /// Stores the module function entry index.
+  /// @internal
   global _module_function_entry_index
   if typeof(_module_function_entry_index) == "struct" then
     cached = t.fastmap_get(_module_function_entry_index, _coerce_name(module_file), 0)
@@ -9244,6 +9734,12 @@ function module_function_entries(state, module_file)
   return t.arr_chunk_finish(entries_b)
 end function
 
+/// Runs emit module function entries.
+/// @param state Value supplied for `state`.
+/// @param entries Value supplied for `entries`.
+/// @param start_index Value supplied for `start_index`.
+/// @param count Number of items to process.
+/// @param analysis_scratch Value supplied for `analysis_scratch`.
 function emit_module_function_entries(state, entries, start_index, count, analysis_scratch)
   total = function_entry_count(entries)
   if total <= 0 then return state end if
@@ -9278,11 +9774,18 @@ function emit_module_function_entries(state, entries, start_index, count, analys
   return state
 end function
 
+/// Runs emit module functions.
+/// @param state Value supplied for `state`.
+/// @param module_file Value supplied for `module_file`.
 function emit_module_functions(state, module_file)
   entries = module_function_entries(state, module_file)
   return emit_module_function_entries(state, entries, 0, function_entry_count(entries), _new_function_analysis_scratch())
 end function
 
+/// Runs emit user function.
+/// @param state Value supplied for `state`.
+/// @param fn_node Value supplied for `fn_node`.
+/// @param analysis_scratch Value supplied for `analysis_scratch`.
 function emit_user_function(state, fn_node, analysis_scratch)
   // Function emission preserves four coupled invariants: parameters live in
   // the root lexical scope, first writes own stable declaration-site slots,
@@ -9925,6 +10428,9 @@ function emit_user_function(state, fn_node, analysis_scratch)
   return state
 end function
 
+/// Updates add.
+/// @param arr Value supplied for `arr`.
+/// @param value Value to process.
 function add(arr, value)
   if typeof(arr) != "array" then return [value] end if
   if len(arr) <= 0 then return [value] end if
@@ -9934,10 +10440,16 @@ function add(arr, value)
   return arr +[value]
 end function
 
+/// Implements analyze read var.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function analyze_read_var(state, name)
   return state
 end function
 
+/// Implements analyze write var.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function analyze_write_var(state, name)
   nm = _coerce_name(name)
   if nm == "" then return state end if
@@ -9947,6 +10459,9 @@ function analyze_write_var(state, name)
   return scope.cg_declare_binding(state, qn, "local", false, 0, 0, 0)
 end function
 
+/// Implements analyze expr.
+/// @param state Value supplied for `state`.
+/// @param ex Value supplied for `ex`.
 function analyze_expr(state, ex)
   if t.ast_is_node(ex) == false then return state end if
   nk = _coerce_name(t.ast_kind(ex))
@@ -9983,6 +10498,9 @@ function analyze_expr(state, ex)
   return state
 end function
 
+/// Implements analyze block.
+/// @param state Value supplied for `state`.
+/// @param stmts Value supplied for `stmts`.
 function analyze_block(state, stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return state end if
   for i = 0 to len(stmts) - 1
@@ -9995,18 +10513,28 @@ function analyze_block(state, stmts)
   return state
 end function
 
+/// Implements expr.
+/// @param state Value supplied for `state`.
+/// @param ex Value supplied for `ex`.
 function expr(state, ex)
   return analyze_expr(state, ex)
 end function
 
+/// Implements expr reads.
+/// @param ex Value supplied for `ex`.
 function expr_reads(ex)
   return _collect_constexpr_refs(ex,[])
 end function
 
+/// Implements note reads.
+/// @param state Value supplied for `state`.
+/// @param names Value supplied for `names`.
 function note_reads(state, names)
   return state
 end function
 
+/// Implements struct methods any has.
+/// @internal
 function _struct_methods_any_has(state, mname)
   if mname == "" then return false end if
   items = state.struct_methods
@@ -10022,11 +10550,16 @@ function _struct_methods_any_has(state, mname)
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _max_calls_int(a, b)
   if a > b then return a end if
   return b
 end function
 
+/// Implements max calls expr.
+/// @param state Value supplied for `state`.
+/// @param ex Value supplied for `ex`.
 function max_calls_expr(state, ex)
   if t.ast_is_node(ex) == false then return 0 end if
   nk = _coerce_name(t.ast_kind(ex))
@@ -10085,6 +10618,9 @@ function max_calls_expr(state, ex)
   return 0
 end function
 
+/// Implements max calls stmts.
+/// @param state Value supplied for `state`.
+/// @param stmts Value supplied for `stmts`.
 function max_calls_stmts(state, stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return 0 end if
   m = 0
@@ -10214,6 +10750,9 @@ function max_calls_stmts(state, stmts)
   return m
 end function
 
+/// Implements stmt list.
+/// @param state Value supplied for `state`.
+/// @param stmts Value supplied for `stmts`.
 function stmt_list(state, stmts)
   return _emit_stmt_list(state, stmts)
 end function

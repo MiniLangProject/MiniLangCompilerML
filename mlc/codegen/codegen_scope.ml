@@ -1,56 +1,102 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Tracks lexical bindings, shadowing, captures and stack/root-frame slots.
+//! Provides the mlc codegen codegen_scope package.
+
 package mlc.codegen.codegen_scope
 import mlc.asm as a
 import mlc.constants as c
 import mlc.data as d
 import mlc.tools as t
 
-// One resolved variable binding, including storage, capture and const metadata.
-// promoted_xmm is an optional nonvolatile register mirror; the stack slot stays
-// authoritative so GC metadata, diagnostics and native interop remain stable.
+/// One resolved variable binding, including storage, capture and const metadata. promoted_xmm is an optional nonvolatile register mirror; the stack slot stays authoritative so GC metadata, diagnostics and native interop remain stable.
 struct VarBinding
+  /// Stores the id member of `VarBinding`.
   id,
+  /// Stores the name member of `VarBinding`.
   name,
+  /// Stores the kind member of `VarBinding`.
   kind,
+  /// Stores the label member of `VarBinding`.
   label,
+  /// Stores the offset member of `VarBinding`.
   offset,
+  /// Stores the depth member of `VarBinding`.
   depth,
+  /// Stores the boxed member of `VarBinding`.
   boxed,
+  /// Stores the capture depth member of `VarBinding`.
   capture_depth,
+  /// Stores the capture index member of `VarBinding`.
   capture_index,
+  /// Stores the decl node member of `VarBinding`.
   decl_node,
+  /// Stores the is const member of `VarBinding`.
   is_const,
+  /// Stores the const expr member of `VarBinding`.
   const_expr,
+  /// Stores the const initialized member of `VarBinding`.
   const_initialized,
+  /// Stores the const value py member of `VarBinding`.
   const_value_py,
+  /// Stores the const value encoded member of `VarBinding`.
   const_value_encoded,
+  /// Stores the const value label member of `VarBinding`.
   const_value_label,
+  /// Stores the promoted xmm member of `VarBinding`.
   promoted_xmm,
 end struct
 
-// Compact immutable-signature binding for function/struct/builtin/extern
-// objects. These globals can be rebound at runtime but never participate in
-// constexpr initialization, so retaining five const-evaluation fields per
-// callable only inflates the compiler's permanent root scope.
+/// Compact immutable-signature binding for function/struct/builtin/extern objects. These globals can be rebound at runtime but never participate in constexpr initialization, so retaining five const-evaluation fields per callable only inflates the compiler's permanent root scope.
 struct CallableBinding
+  /// Stores the id member of `CallableBinding`.
   id,
+  /// Stores the name member of `CallableBinding`.
   name,
+  /// Stores the kind member of `CallableBinding`.
   kind,
+  /// Stores the label member of `CallableBinding`.
   label,
+  /// Stores the offset member of `CallableBinding`.
   offset,
+  /// Stores the depth member of `CallableBinding`.
   depth,
+  /// Stores the boxed member of `CallableBinding`.
   boxed,
+  /// Stores the capture depth member of `CallableBinding`.
   capture_depth,
+  /// Stores the capture index member of `CallableBinding`.
   capture_index,
+  /// Stores the decl node member of `CallableBinding`.
   decl_node,
+  /// Stores the is const member of `CallableBinding`.
   is_const,
+  /// Stores the promoted xmm member of `CallableBinding`.
   promoted_xmm,
 end struct
 
+/// Reports whether a character is an ASCII digit.
+/// @internal
 function inline _is_ascii_digit(ch)
   return ch == "0" or ch == "1" or ch == "2" or ch == "3" or ch == "4" or ch == "5" or ch == "6" or ch == "7" or ch == "8" or ch == "9"
 end function
 
+/// Implements inline.
+/// @internal
 function inline _is_ascii_alpha(ch)
   if ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f" or ch == "g" or ch == "h" or ch == "i" or ch == "j" or ch == "k" or ch == "l" or ch == "m" then return true end if
   if ch == "n" or ch == "o" or ch == "p" or ch == "q" or ch == "r" or ch == "s" or ch == "t" or ch == "u" or ch == "v" or ch == "w" or ch == "x" or ch == "y" or ch == "z" then return true end if
@@ -59,6 +105,8 @@ function inline _is_ascii_alpha(ch)
   return false
 end function
 
+/// Implements sanitize ident.
+/// @internal
 function _sanitize_ident(name)
   raw = _coerce_name(name)
   if typeof(raw) != "string" then return "v" end if
@@ -85,29 +133,43 @@ function _sanitize_ident(name)
   return sanitized
 end function
 
+/// Implements inline.
+/// @internal
 function inline _scope_depth(state)
   if typeof(state.scope_stack) != "array" then return 0 end if
   return len(state.scope_stack) - 1
 end function
 
+/// Returns the number of bindings stored in a compiler frame.
+/// @param frame Value supplied for `frame`.
 function inline frame_count(frame)
   if t.arr_vec_is(frame) then return t.arr_vec_count_trusted(frame) end if
   if typeof(frame) == "array" then return len(frame) end if
   return 0
 end function
 
+/// Returns one binding from a compiler frame.
+/// @param frame Value supplied for `frame`.
+/// @param idx Value supplied for `idx`.
 function inline frame_get(frame, idx)
   if t.arr_vec_is(frame) then return t.arr_vec_get_trusted(frame, idx, void) end if
   if typeof(frame) != "array" or typeof(idx) != "int" or idx < 0 or idx >= len(frame) then return void end if
   return frame[idx]
 end function
 
+/// Updates one binding in a compiler frame.
+/// @param frame Value supplied for `frame`.
+/// @param idx Value supplied for `idx`.
+/// @param value Value to process.
 function inline frame_set(frame, idx, value)
   if t.arr_vec_is(frame) then return t.arr_vec_set_trusted(frame, idx, value) end if
   if typeof(frame) == "array" and typeof(idx) == "int" and idx >= 0 and idx < len(frame) then frame[idx] = value end if
   return frame
 end function
 
+/// Appends a binding to a compiler frame.
+/// @param frame Value supplied for `frame`.
+/// @param value Value to process.
 function inline frame_push(frame, value)
   f = frame
   if t.arr_vec_is(f) == false then
@@ -116,12 +178,16 @@ function inline frame_push(frame, value)
   return t.arr_vec_push(f, value)
 end function
 
+/// Materializes the live bindings from a compiler frame.
+/// @param frame Value supplied for `frame`.
 function inline frame_finish(frame)
   if t.arr_vec_is(frame) then return t.arr_vec_finish(frame) end if
   if typeof(frame) == "array" then return frame end if
   return []
 end function
 
+/// Implements inline.
+/// @internal
 function inline _frame_last_binding(frame, name)
   n = frame_count(frame)
   if n <= 0 then return 0 end if
@@ -136,6 +202,8 @@ function inline _frame_last_binding(frame, name)
   return 0
 end function
 
+/// Implements inline.
+/// @internal
 function inline _heap_cfg_get_any(state, key)
   cfg = try(state.heap_cfg)
   if typeof(cfg) != "array" or len(cfg) <= 0 then return 0 end if
@@ -151,12 +219,16 @@ function inline _heap_cfg_get_any(state, key)
   return 0
 end function
 
+/// Implements inline.
+/// @internal
 function inline _heap_cfg_get_bool(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
   if typeof(v) == "bool" then return v end if
   return defaultv
 end function
 
+/// Implements drop last frame.
+/// @internal
 function _drop_last_frame(arr)
   if typeof(arr) != "array" then return [[]] end if
   n = len(arr)
@@ -172,6 +244,8 @@ function _drop_last_frame(arr)
   return outv
 end function
 
+/// Implements inline.
+/// @internal
 function inline _is_reserved_identifier(state, name)
   rs = state.reserved_identifiers
   if typeof(rs) != "array" then return false end if
@@ -182,6 +256,8 @@ function inline _is_reserved_identifier(state, name)
   return false
 end function
 
+/// Updates append unique.
+/// @internal
 function _append_unique(items, value)
   if t.arr_vec_is(items) then
     n = t.arr_vec_count(items)
@@ -201,6 +277,8 @@ function _append_unique(items, value)
   return items +[value]
 end function
 
+/// Implements inline.
+/// @internal
 function inline _arr_has(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
@@ -209,6 +287,8 @@ function inline _arr_has(arr, value)
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _map_int_get(arr, key, defaultv)
   if typeof(arr) == "struct" then
     v0 = t.fastmap_get(arr, key, defaultv)
@@ -228,6 +308,8 @@ function inline _map_int_get(arr, key, defaultv)
   return defaultv
 end function
 
+/// Implements inline.
+/// @internal
 function inline _name_has_dot(name)
   if typeof(name) != "string" then return false end if
   if name == "" then return false end if
@@ -237,6 +319,8 @@ function inline _name_has_dot(name)
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _decl_node_key(node)
   if typeof(node) == "void" then return "void" end if
   if typeof(node) == "string" then return node end if
@@ -276,6 +360,8 @@ function inline _decl_node_key(node)
   return "" + node
 end function
 
+/// Implements inline.
+/// @internal
 function inline _func_global_lookup(arr, name)
   if typeof(arr) == "struct" then
     v0 = t.fastmap_get(arr, name, "")
@@ -295,6 +381,8 @@ function inline _func_global_lookup(arr, name)
   return ""
 end function
 
+/// Reports whether has data label.
+/// @internal
 function _has_data_label(labels, name)
   if typeof(labels) != "array" or len(labels) <= 0 then return false end if
   for i = 0 to len(labels) - 1
@@ -304,6 +392,8 @@ function _has_data_label(labels, name)
   return false
 end function
 
+/// Runs emit make error const.
+/// @internal
 function _emit_make_error_const(state, code, message)
   err_code = 0
   if typeof(code) == "int" then err_code = code end if
@@ -340,11 +430,15 @@ function _emit_make_error_const(state, code, message)
   return state
 end function
 
+/// Creates new label id.
+/// @param state Value supplied for `state`.
 function new_label_id(state)
   state.label_id = state.label_id + 1
   return state.label_id
 end function
 
+/// Implements cg scope setup.
+/// @param state Value supplied for `state`.
 function cg_scope_setup(state)
   state.scope_stack = [t.arr_vec_new(256)]
   state.scope_declared = [t.arr_vec_new(256)]
@@ -366,10 +460,14 @@ function cg_scope_setup(state)
   return state
 end function
 
+/// Implements cg scope depth.
+/// @param state Value supplied for `state`.
 function cg_scope_depth(state)
   return _scope_depth(state)
 end function
 
+/// Implements cg scope enter.
+/// @param state Value supplied for `state`.
 function cg_scope_enter(state)
   if typeof(state.scope_stack) != "array" then
     state.scope_stack = [t.arr_vec_new(16)]
@@ -390,6 +488,9 @@ function cg_scope_enter(state)
   return state
 end function
 
+/// Implements cg scope leave.
+/// @param state Value supplied for `state`.
+/// @param emit_cleanup Value supplied for `emit_cleanup`.
 function cg_scope_leave(state, emit_cleanup)
   if typeof(state.scope_stack) != "array" or len(state.scope_stack) <= 1 then return state end if
   if typeof(state.scope_declared) != "array" or len(state.scope_declared) <= 1 then return state end if
@@ -414,11 +515,16 @@ function cg_scope_leave(state, emit_cleanup)
   return state
 end function
 
+/// Implements cg next binding id.
+/// @param state Value supplied for `state`.
 function cg_next_binding_id(state)
   state.binding_id = state.binding_id + 1
   return state.binding_id
 end function
 
+/// Implements cg resolve binding.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function cg_resolve_binding(state, name)
   if typeof(name) != "string" then return 0 end if
   sis = state.scope_index_stack
@@ -441,6 +547,9 @@ function cg_resolve_binding(state, name)
   return 0
 end function
 
+/// Implements cg resolve binding for write.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function cg_resolve_binding_for_write(state, name)
   if typeof(name) != "string" then return 0 end if
   // Match the Python backend: an explicit `global x` inside a packaged or
@@ -473,6 +582,8 @@ function cg_resolve_binding_for_write(state, name)
   return b
 end function
 
+/// Implements declare in current scope.
+/// @internal
 function _declare_in_current_scope(state, b)
   sd = state.scope_declared
   ss = state.scope_stack
@@ -513,6 +624,14 @@ function _declare_in_current_scope(state, b)
   return state
 end function
 
+/// Implements cg declare binding.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param kind Value supplied for `kind`.
+/// @param is_const Value supplied for `is_const`.
+/// @param const_expr Value supplied for `const_expr`.
+/// @param const_value_py Value supplied for `const_value_py`.
+/// @param decl_node Value supplied for `decl_node`.
 function cg_declare_binding(state, name, kind, is_const, const_expr, const_value_py, decl_node)
   if typeof(name) != "string" then return state end if
   if name == "" then return state end if
@@ -592,6 +711,10 @@ function cg_declare_binding(state, name, kind, is_const, const_expr, const_value
   return state
 end function
 
+/// Implements cg set const binding value.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param pyv Value supplied for `pyv`.
 function cg_set_const_binding_value(state, name, pyv)
   if typeof(name) != "string" then return state end if
   ss = state.scope_stack
@@ -658,6 +781,10 @@ function cg_set_const_binding_value(state, name, pyv)
   return state
 end function
 
+/// Implements cg precompute const binding value.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param pyv Value supplied for `pyv`.
 function cg_precompute_const_binding_value(state, name, pyv)
   // Record a fixed-point constexpr result without allocating .rdata yet.
   // Materialization is intentionally deferred to declaration/first use so
@@ -699,22 +826,26 @@ function cg_precompute_const_binding_value(state, name, pyv)
   return state
 end function
 
-// ------------------------------------------------------------
-// Compatibility wrappers (Python CodegenScope parity)
-// ------------------------------------------------------------
-
+/// Compatibility wrappers (Python CodegenScope parity).
+/// @param state Value supplied for `state`.
 function scope_setup(state)
   return cg_scope_setup(state)
 end function
 
+/// Implements scope depth.
+/// @param state Value supplied for `state`.
 function scope_depth(state)
   return cg_scope_depth(state)
 end function
 
+/// Implements scope global slots.
+/// @param state Value supplied for `state`.
 function scope_global_slots(state)
   return frame_finish(state.global_slots)
 end function
 
+/// Implements coerce name.
+/// @internal
 function _coerce_name(name)
   tv = typeof(name)
   if tv == "string" then return name end if
@@ -729,6 +860,8 @@ function _coerce_name(name)
   return ""
 end function
 
+/// Reports whether is ident.
+/// @param s Value supplied for `s`.
 function is_ident(s)
   if typeof(s) != "string" then return false end if
   if s == "" then return false end if
@@ -743,6 +876,8 @@ function is_ident(s)
   return true
 end function
 
+/// Implements accept.
+/// @param s Value supplied for `s`.
 function accept(s)
   if typeof(s) != "string" or s == "" then return false end if
   if is_ident(s) == false then return false end if
@@ -751,6 +886,9 @@ function accept(s)
   return true
 end function
 
+/// Implements search.
+/// @param obj Value supplied for `obj`.
+/// @param depth Value supplied for `depth`.
 function search(obj, depth)
   if depth < 0 or typeof(obj) == "void" then return 0 end if
   if typeof(obj) == "string" then
@@ -790,34 +928,53 @@ function search(obj, depth)
   return 0
 end function
 
+/// Updates push scope.
+/// @param state Value supplied for `state`.
 function push_scope(state)
   return cg_scope_enter(state)
 end function
 
+/// Implements pop scope.
+/// @param state Value supplied for `state`.
+/// @param emit_cleanup Value supplied for `emit_cleanup`.
 function pop_scope(state, emit_cleanup)
   return cg_scope_leave(state, emit_cleanup)
 end function
 
+/// Implements next binding id.
+/// @internal
 function _next_binding_id(state)
   return cg_next_binding_id(state)
 end function
 
+/// Implements decl key.
+/// @internal
 function _decl_key(node, name)
   return _coerce_name(name) + "|" + _decl_node_key(node)
 end function
 
+/// Implements resolve binding.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function resolve_binding(state, name)
   return cg_resolve_binding(state, _coerce_name(name))
 end function
 
+/// Implements resolve binding for write.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function resolve_binding_for_write(state, name)
   return cg_resolve_binding_for_write(state, _coerce_name(name))
 end function
 
+/// Updates add binding to current scope.
+/// @internal
 function _add_binding_to_current_scope(state, b)
   return _declare_in_current_scope(state, b)
 end function
 
+/// Implements check reserved ident.
+/// @internal
 function _check_reserved_ident(state, name, decl_node)
   nm = _coerce_name(name)
   if _is_reserved_identifier(state, nm) then
@@ -827,11 +984,23 @@ function _check_reserved_ident(state, name, decl_node)
   return true
 end function
 
+/// Implements declare global binding.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param decl_node Value supplied for `decl_node`.
+/// @param is_const Value supplied for `is_const`.
+/// @param const_expr Value supplied for `const_expr`.
 function declare_global_binding(state, name, decl_node, is_const, const_expr)
   nm = _coerce_name(name)
   return cg_declare_binding(state, nm, "global", is_const, const_expr, void, decl_node)
 end function
 
+/// Implements declare global binding root.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param decl_node Value supplied for `decl_node`.
+/// @param is_const Value supplied for `is_const`.
+/// @param const_expr Value supplied for `const_expr`.
 function declare_global_binding_root(state, name, decl_node, is_const, const_expr)
   nm = _coerce_name(name)
   if nm == "" then return state end if
@@ -922,6 +1091,10 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   return state
 end function
 
+/// Implements declare callable binding root.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param decl_node Value supplied for `decl_node`.
 function declare_callable_binding_root(state, name, decl_node)
   nm = _coerce_name(name)
   if nm == "" then return state end if
@@ -969,6 +1142,11 @@ function declare_callable_binding_root(state, name, decl_node)
   return state
 end function
 
+/// Implements declare const binding root deferred.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param decl_node Value supplied for `decl_node`.
+/// @param const_expr Value supplied for `const_expr`.
 function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
   // Forward constexpr evaluation needs the binding before runtime emission,
   // but allocating its .data slot here would move every constant ahead of
@@ -1042,6 +1220,9 @@ function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
   return state
 end function
 
+/// Implements materialize global binding root.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function materialize_global_binding_root(state, name)
   // Allocate a deferred global slot exactly when its declaration is reached.
   nm = _coerce_name(name)
@@ -1106,11 +1287,22 @@ function materialize_global_binding_root(state, name)
   return state
 end function
 
+/// Implements declare local binding.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param decl_node Value supplied for `decl_node`.
+/// @param is_const Value supplied for `is_const`.
+/// @param const_expr Value supplied for `const_expr`.
 function declare_local_binding(state, name, decl_node, is_const, const_expr)
   nm = _coerce_name(name)
   return cg_declare_binding(state, nm, "local", is_const, const_expr, void, decl_node)
 end function
 
+/// Implements declare fresh binding.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param decl_node Value supplied for `decl_node`.
+/// @param kind Value supplied for `kind`.
 function declare_fresh_binding(state, name, decl_node, kind)
   nm = _coerce_name(name)
   if nm == "" then return state end if
@@ -1139,6 +1331,11 @@ function declare_fresh_binding(state, name, decl_node, kind)
   return declare_global_binding(state, nm, decl_node, false, 0)
 end function
 
+/// Implements bind param.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param offset Zero-based starting offset.
+/// @param decl_node Value supplied for `decl_node`.
 function bind_param(state, name, offset, decl_node)
   nm = _coerce_name(name)
   state = cg_declare_binding(state, nm, "param", false, 0, 0, decl_node)
@@ -1171,6 +1368,11 @@ function bind_param(state, name, offset, decl_node)
   return state
 end function
 
+/// Implements register decl site binding.
+/// @param state Value supplied for `state`.
+/// @param node Value supplied for `node`.
+/// @param name Name of the requested item.
+/// @param binding Value supplied for `binding`.
 function register_decl_site_binding(state, node, name, binding)
   if typeof(state.decl_site_bindings) != "struct" then
     state.decl_site_bindings = t.fastmap_new(128)
@@ -1180,6 +1382,10 @@ function register_decl_site_binding(state, node, name, binding)
   return state
 end function
 
+/// Implements ensure binding for write.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param decl_node Value supplied for `decl_node`.
 function ensure_binding_for_write(state, name, decl_node)
   nm = _coerce_name(name)
   if nm == "" then return state end if
@@ -1218,6 +1424,9 @@ function ensure_binding_for_write(state, name, decl_node)
   return declare_global_binding(state, nm, decl_node, false, 0)
 end function
 
+/// Runs emit cleanup bindings.
+/// @param state Value supplied for `state`.
+/// @param bindings Value supplied for `bindings`.
 function emit_cleanup_bindings(state, bindings)
   count = frame_count(bindings)
   if count <= 0 then return state end if
@@ -1240,6 +1449,9 @@ function emit_cleanup_bindings(state, bindings)
   return state
 end function
 
+/// Runs emit cleanup to depth.
+/// @param state Value supplied for `state`.
+/// @param target_depth Value supplied for `target_depth`.
 function emit_cleanup_to_depth(state, target_depth)
   if typeof(target_depth) != "int" then target_depth = 0 end if
   if target_depth < 0 then target_depth = 0 end if
@@ -1258,6 +1470,8 @@ function emit_cleanup_to_depth(state, target_depth)
   return state
 end function
 
+/// Runs emit module init dependency error.
+/// @internal
 function _emit_module_init_dependency_error(state, target_name, target_file, target_state, node)
   state_txt = "not initialized"
   if target_state == 1 then state_txt = "initializing" end if
@@ -1273,6 +1487,8 @@ function _emit_module_init_dependency_error(state, target_name, target_file, tar
   return state
 end function
 
+/// Implements maybe emit module init guard for global read.
+/// @internal
 function _maybe_emit_module_init_guard_for_global_read(state, binding, target_name, node)
   if typeof(state._module_init_active) != "bool" or state._module_init_active == false then return state end if
   owner_map = state._global_owner_file
@@ -1302,6 +1518,9 @@ function _maybe_emit_module_init_guard_for_global_read(state, binding, target_na
   return state
 end function
 
+/// Runs emit load var scoped.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function emit_load_var_scoped(state, name)
   nm = _coerce_name(name)
   target = nm
@@ -1433,6 +1652,10 @@ function emit_load_var_scoped(state, name)
   return state
 end function
 
+/// Runs emit store var scoped.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param node Value supplied for `node`.
 function emit_store_var_scoped(state, name, node)
   nm = _coerce_name(name)
   target = nm
@@ -1564,6 +1787,9 @@ function emit_store_var_scoped(state, name, node)
   return state
 end function
 
+/// Runs emit store existing global.
+/// @param state Value supplied for `state`.
+/// @param binding Value supplied for `binding`.
 function emit_store_existing_global(state, binding)
   nm = _coerce_name(binding)
   b = resolve_binding(state, nm)
@@ -1583,6 +1809,8 @@ function emit_store_existing_global(state, binding)
   return state
 end function
 
+/// Implements analysis reset function.
+/// @param state Value supplied for `state`.
 function analysis_reset_function(state)
   state.decl_site_bindings = t.fastmap_new(128)
   state.function_locals = t.arr_vec_new(32)
@@ -1593,6 +1821,9 @@ function analysis_reset_function(state)
   return state
 end function
 
+/// Implements analysis layout function locals.
+/// @param state Value supplied for `state`.
+/// @param base_offset Value supplied for `base_offset`.
 function analysis_layout_function_locals(state, base_offset)
   off = 0
   if typeof(base_offset) != "int" then base_offset = 0 end if
@@ -1617,6 +1848,10 @@ function analysis_layout_function_locals(state, base_offset)
   return state
 end function
 
+/// Implements declare function global.
+/// @param state Value supplied for `state`.
+/// @param local_name Value supplied for `local_name`.
+/// @param qualified_name Value supplied for `qualified_name`.
 function declare_function_global(state, local_name, qualified_name)
   ln = _coerce_name(local_name)
   qn = _coerce_name(qualified_name)

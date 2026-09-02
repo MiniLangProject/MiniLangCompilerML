@@ -1,64 +1,115 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Deterministic PE32+ layout, import table and executable writer.
+//! Provides the mlc pe package.
+
 package mlc.pe
 import mlc.tools as t
 
+/// Stores the kernel32.
 const KERNEL32 = "kernel32.dll"
+/// Stores the msvcrt.
 const MSVCRT = "msvcrt.dll"
 
+/// Stores the image scn cnt code.
 const IMAGE_SCN_CNT_CODE = 0x00000020
+/// Stores the image scn cnt initialized data.
 const IMAGE_SCN_CNT_INITIALIZED_DATA = 0x00000040
+/// Stores the image scn cnt uninitialized data.
 const IMAGE_SCN_CNT_UNINITIALIZED_DATA = 0x00000080
 
-// One fully laid-out PE section and its file/image coordinates.
+/// One fully laid-out PE section and its file/image coordinates.
 struct PESection
+  /// Stores the name member of `PESection`.
   name,
+  /// Stores the data member of `PESection`.
   data,
+  /// Stores the characteristics member of `PESection`.
   characteristics,
+  /// Stores the virt addr member of `PESection`.
   virt_addr,
+  /// Stores the virt size member of `PESection`.
   virt_size,
+  /// Stores the raw addr member of `PESection`.
   raw_addr,
+  /// Stores the raw size member of `PESection`.
   raw_size,
 end struct
 
-// Mutable PE32+ image plan populated before final serialization.
+/// Mutable PE32+ image plan populated before final serialization.
 struct PEBuilder
+  /// Stores the image base member of `PEBuilder`.
   image_base,
+  /// Stores the section alignment member of `PEBuilder`.
   section_alignment,
+  /// Stores the file alignment member of `PEBuilder`.
   file_alignment,
+  /// Stores the sections member of `PEBuilder`.
   sections,
+  /// Stores the entry rva member of `PEBuilder`.
   entry_rva,
+  /// Stores the import rva member of `PEBuilder`.
   import_rva,
+  /// Stores the import size member of `PEBuilder`.
   import_size,
+  /// Stores the subsystem member of `PEBuilder`.
   subsystem,
 end struct
 
-// Small name/value record used by deterministic lookup tables.
+/// Small name/value record used by deterministic lookup tables.
 struct NamedInt
+  /// Stores the name member of `NamedInt`.
   name,
+  /// Stores the value member of `NamedInt`.
   value,
 end struct
 
-// Imported DLL name and its ordered function list.
+/// Imported DLL name and its ordered function list.
 struct ImportDll
+  /// Stores the dll member of `ImportDll`.
   dll,
+  /// Stores the funcs member of `ImportDll`.
   funcs,
 end struct
 
-// Resolved import-address-table RVA for one native symbol.
+/// Resolved import-address-table RVA for one native symbol.
 struct IatSymbol
+  /// Stores the dll member of `IatSymbol`.
   dll,
+  /// Stores the func member of `IatSymbol`.
   func,
+  /// Stores the rva member of `IatSymbol`.
   rva,
 end struct
 
-// Serialized import section plus directory and symbol metadata.
+/// Serialized import section plus directory and symbol metadata.
 struct IdataResult
+  /// Stores the data member of `IdataResult`.
   data,
+  /// Stores the import dir rva member of `IdataResult`.
   import_dir_rva,
+  /// Stores the idata total size member of `IdataResult`.
   idata_total_size,
+  /// Stores the iat symbols member of `IdataResult`.
   iat_symbols,
 end struct
 
+/// Implements bytes from array.
+/// @internal
 function _bytes_from_array(arr)
   b = bytes(len(arr), 0)
   if len(arr) <= 0 then return b end if
@@ -68,21 +119,29 @@ function _bytes_from_array(arr)
   return b
 end function
 
+/// Implements bytes pad to.
+/// @internal
 function _bytes_pad_to(b, size)
   if len(b) >= size then return b end if
   return b + bytes(size - len(b), 0)
 end function
 
+/// Implements bytes ljust.
+/// @internal
 function _bytes_ljust(b, size)
   return _bytes_pad_to(b, size)
 end function
 
+/// Implements bytes write at.
+/// @internal
 function _bytes_write_at(dst, offset, src)
   if len(src) <= 0 then return dst end if
   copyBytes(dst, offset, src, 0, len(src))
   return dst
 end function
 
+/// Implements named get.
+/// @internal
 function _named_get(arr, name, default_value)
   if typeof(arr) == "struct" then
     return t.fastmap_get(arr, name, default_value)
@@ -94,6 +153,8 @@ function _named_get(arr, name, default_value)
   return default_value
 end function
 
+/// Implements named set.
+/// @internal
 function _named_set(arr, name, value)
   mapv = arr
   if typeof(mapv) != "struct" then
@@ -110,6 +171,8 @@ function _named_set(arr, name, value)
   return t.fastmap_set(mapv, name, value)
 end function
 
+/// Implements imports get funcs.
+/// @internal
 function _imports_get_funcs(imports, dll)
   if len(imports) <= 0 then return [] end if
   for i = 0 to len(imports) - 1
@@ -120,6 +183,8 @@ function _imports_get_funcs(imports, dll)
   return []
 end function
 
+/// Implements section name bytes.
+/// @internal
 function _section_name_bytes(name)
   nm = bytes(name)
   if len(nm) >= 8 then
@@ -128,6 +193,8 @@ function _section_name_bytes(name)
   return _bytes_ljust(nm, 8)
 end function
 
+/// Implements next section raw addr.
+/// @internal
 function _next_section_raw_addr(pe)
   if len(pe.sections) <= 0 then
     return 0
@@ -136,6 +203,8 @@ function _next_section_raw_addr(pe)
   return last.raw_addr + last.raw_size
 end function
 
+/// Returns find section by name.
+/// @internal
 function _find_section_by_name(pe, name)
   if len(pe.sections) <= 0 then return 0 end if
   for i = 0 to len(pe.sections) - 1
@@ -146,7 +215,7 @@ function _find_section_by_name(pe, name)
   return 0
 end function
 
-// Create a Windows x64 image plan with stable alignment defaults.
+/// Create a Windows x64 image plan with stable alignment defaults.
 function newPEBuilder()
   return PEBuilder(
   0x140000000,
@@ -160,14 +229,19 @@ function newPEBuilder()
 )
 end function
 
-// Append one section; layout() assigns its addresses later.
+/// Append one section; layout() assigns its addresses later.
+/// @param pe Value supplied for `pe`.
+/// @param name Name of the requested item.
+/// @param data Data to process.
+/// @param characteristics Value supplied for `characteristics`.
 function add_section(pe, name, data, characteristics)
   sec = PESection(name, data, characteristics, 0, 0, 0, 0)
   pe.sections = pe.sections +[sec]
   return pe
 end function
 
-// Assign deterministic virtual and file offsets to every section.
+/// Assign deterministic virtual and file offsets to every section.
+/// @param pe Value supplied for `pe`.
 function layout(pe)
   dos_stub = 0x80
   pe_sig = 4
@@ -197,7 +271,8 @@ function layout(pe)
   return pe
 end function
 
-// Serialize headers and aligned section payloads into the final PE bytes.
+/// Serialize headers and aligned section payloads into the final PE bytes.
+/// @param pe Value supplied for `pe`.
 function build(pe)
   pe = layout(pe)
 
@@ -347,7 +422,9 @@ function build(pe)
   return image
 end function
 
-// Build a deterministic .idata section and resolved IAT symbol table.
+/// Build a deterministic .idata section and resolved IAT symbol table.
+/// @param imports Value supplied for `imports`.
+/// @param base_rva Value supplied for `base_rva`.
 function build_idata(imports, base_rva)
   dlls_b = t.arr_chunk_new(32)
   if len(imports) > 0 then

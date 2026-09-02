@@ -1,4 +1,22 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // TOML project manifests and content-validated incremental build metadata.
+//! Provides the mlc project package.
+
 package mlc.project
 
 import std.fs as fs
@@ -11,47 +29,80 @@ import std.checksum.crc32c as crc32c
 import mlc.tools as t
 
 #if TARGET_OS == "windows"
+/// Returns get full path name w.
+/// @internal
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" returns u32
+/// Returns get file attributes w.
+/// @internal
 extern function GetFileAttributesW(path as wstr) from "kernel32.dll" returns u32
+/// Creates create directory w.
+/// @internal
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" returns bool
+/// Implements move file ex w.
+/// @internal
 extern function MoveFileExW(source as wstr, destination as wstr, flags as u32) from "kernel32.dll" returns bool
 #else
+/// Implements project mkdir.
+/// @internal
 extern function _project_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
+/// Implements project stat.
+/// @internal
 extern function _project_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
+/// Implements project lstat.
+/// @internal
 extern function _project_lstat(path as cstr, info as bytes) from "libc.so.6" symbol "lstat" returns i32
+/// Implements project chmod.
+/// @internal
 extern function _project_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
+/// Implements project rename.
+/// @internal
 extern function _project_rename(source as cstr, destination as cstr) from "libc.so.6" symbol "rename" returns i32
 #endif
 
-// Expanded project configuration carried through compilation and caching.
+/// Expanded project configuration carried through compilation and caching.
 struct ProjectBuild
+  /// Stores the manifest member of `ProjectBuild`.
   manifest,
+  /// Stores the cache dir member of `ProjectBuild`.
   cache_dir,
+  /// Stores the incremental member of `ProjectBuild`.
   incremental,
+  /// Stores the expanded args member of `ProjectBuild`.
   expanded_args,
 end struct
 
-// Success/error envelope for command-line manifest expansion.
+/// Success/error envelope for command-line manifest expansion.
 struct ProjectExpansion
+  /// Stores the ok member of `ProjectExpansion`.
   ok,
+  /// Stores the args member of `ProjectExpansion`.
   args,
+  /// Stores the project member of `ProjectExpansion`.
   project,
+  /// Stores the message member of `ProjectExpansion`.
   message,
 end struct
 
-// Two-lane deterministic hash state used for cache fingerprints.
+/// Two-lane deterministic hash state used for cache fingerprints.
 struct ProjectHash
+  /// Stores the a member of `ProjectHash`.
   a,
+  /// Stores the b member of `ProjectHash`.
   b,
 end struct
 
-// Capacity-backed, indexed state for one recursive source-tree traversal.
+/// Capacity-backed, indexed state for one recursive source-tree traversal.
 struct ProjectFileCollector
+  /// Stores the files member of `ProjectFileCollector`.
   files,
+  /// Stores the seen files member of `ProjectFileCollector`.
   seen_files,
+  /// Stores the seen dirs member of `ProjectFileCollector`.
   seen_dirs,
 end struct
 
+/// Implements dirname.
+/// @internal
 function _dirname(path)
   if typeof(path) != "string" then return "." end if
   i = len(path) - 1
@@ -65,6 +116,8 @@ function _dirname(path)
   return "."
 end function
 
+/// Implements join.
+/// @internal
 function _join(a, b)
   if typeof(a) != "string" or a == "" or a == "." then return b end if
   if typeof(b) != "string" or b == "" then return a end if
@@ -76,6 +129,8 @@ function _join(a, b)
 #endif
 end function
 
+/// Reports whether is abs.
+/// @internal
 function _is_abs(path)
   if typeof(path) != "string" then return false end if
   if len(path) >= 2 and path[1] == ":" then return true end if
@@ -83,6 +138,8 @@ function _is_abs(path)
   return len(path) >= 1 and (path[0] == "\\" or path[0] == "/")
 end function
 
+/// Implements abspath.
+/// @internal
 function _abspath(path)
 #if TARGET_OS == "linux"
   if _is_abs(path) then return _canon_linux(path) end if
@@ -99,7 +156,8 @@ function _abspath(path)
 #endif
 end function
 
-// Normalize a POSIX path lexically so output paths need not exist yet.
+/// Normalize a POSIX path lexically so output paths need not exist yet.
+/// @internal
 function _canon_linux(path)
   if typeof(path) != "string" or path == "" then return "." end if
   absolute = path[0] == "/"
@@ -127,11 +185,15 @@ function _canon_linux(path)
   return tail
 end function
 
+/// Implements relative path.
+/// @internal
 function _relative_path(base, value)
   if _is_abs(value) then return _abspath(value) end if
   return _abspath(_join(base, value))
 end function
 
+/// Implements ensure dir.
+/// @internal
 function _ensure_dir(path)
   if typeof(path) != "string" or path == "" or path == "." then return true end if
   if fs.exists(path) then return fs.isDir(path) end if
@@ -147,6 +209,8 @@ function _ensure_dir(path)
   return fs.isDir(path)
 end function
 
+/// Implements unquote.
+/// @internal
 function _unquote(value)
   value = s.trim(value)
   if len(value) < 2 or value[0] != "\"" or value[len(value) - 1] != "\"" then return error(1, "expected quoted string") end if
@@ -156,6 +220,8 @@ function _unquote(value)
   return value
 end function
 
+/// Returns parse string array.
+/// @internal
 function _parse_string_array(value)
   value = s.trim(value)
   if len(value) < 2 or value[0] != "[" or value[len(value) - 1] != "]" then return error(1, "expected array of strings") end if
@@ -198,10 +264,14 @@ function _parse_string_array(value)
   return t.arr_vec_finish(result_items)
 end function
 
+/// Reports whether is known key.
+/// @internal
 function _is_known_key(key)
   return key == "entry" or key == "input" or key == "output" or key == "include" or key == "import_paths" or key == "subsystem" or key == "target" or key == "object_pipeline" or key == "incremental" or key == "cache_dir" or key == "compiler_args"
 end function
 
+/// Implements valid define name.
+/// @internal
 function _valid_define_name(name)
   if typeof(name) != "string" or len(name) <= 0 then return false end if
   first = bytes(name[0])[0]
@@ -215,6 +285,8 @@ function _valid_define_name(name)
   return true
 end function
 
+/// Implements valid define value.
+/// @internal
 function _valid_define_value(value)
   value = s.trim(value)
   if value == "true" or value == "false" then return true end if
@@ -231,7 +303,8 @@ function _valid_define_value(value)
   return c >= 48 and c <= 57
 end function
 
-// Replace --project arguments with validated ordinary compiler arguments.
+/// Replace --project arguments with validated ordinary compiler arguments.
+/// @param args Command-line or call arguments.
 function expandArgs(args)
   if typeof(args) != "array" or len(args) < 1 or args[0] != "--project" then
     return ProjectExpansion(true, args, void, "")
@@ -341,12 +414,16 @@ function expandArgs(args)
   return ProjectExpansion(true, expanded, pb, "")
 end function
 
+/// Reports whether hash byte.
+/// @internal
 function _hash_byte(h, value)
   h.a = ((h.a ^ value) * 16777619) & 0xFFFFFFFF
   h.b = ((h.b + value + 1) * 2246822519) & 0xFFFFFFFF
   return h
 end function
 
+/// Reports whether hash bytes.
+/// @internal
 function _hash_bytes(h, value)
   if typeof(value) != "bytes" then return h end if
   if len(value) <= 0 then return h end if
@@ -356,12 +433,15 @@ function _hash_bytes(h, value)
   return h
 end function
 
+/// Reports whether hash text.
+/// @internal
 function _hash_text(h, value)
   if typeof(value) != "string" then value = "" + value end if
   return _hash_bytes(h, bytes(value))
 end function
 
-// Windows paths are case-insensitive; POSIX paths must retain exact spelling.
+/// Windows paths are case-insensitive; POSIX paths must retain exact spelling.
+/// @internal
 function _path_key(path)
 #if TARGET_OS == "linux"
   return path
@@ -370,10 +450,8 @@ function _path_key(path)
 #endif
 end function
 
-// Broad source-root discovery deliberately does not descend into directory
-// links. This matches Python Path.rglob(), bounds traversal, and prevents a
-// junction/symlink cycle from manufacturing endlessly different lexical paths.
-// Explicitly imported files still follow their exact path in the second pass.
+/// Broad source-root discovery deliberately does not descend into directory links. This matches Python Path.rglob(), bounds traversal, and prevents a junction/symlink cycle from manufacturing endlessly different lexical paths. Explicitly imported files still follow their exact path in the second pass.
+/// @internal
 function _is_directory_link(path)
 #if TARGET_OS == "windows"
   attributes = GetFileAttributesW(path)
@@ -387,9 +465,8 @@ function _is_directory_link(path)
 #endif
 end function
 
-// Collect every MiniLang source below a root once. Indexed directory/file sets
-// make overlapping include roots linear instead of repeatedly deduplicating
-// immutable arrays.
+/// Collect every MiniLang source below a root once. Indexed directory/file sets make overlapping include roots linear instead of repeatedly deduplicating immutable arrays.
+/// @internal
 function _collect_ml_files_inner(path, excluded, collector, follow_directory_link)
   if typeof(path) != "string" or path == "" then return collector end if
   // fingerprint() makes every root absolute before traversal. Children joined
@@ -420,12 +497,16 @@ function _collect_ml_files_inner(path, excluded, collector, follow_directory_lin
   return collector
 end function
 
+/// Implements collect ml files.
+/// @internal
 function _collect_ml_files(path, excluded, collector)
   // An explicitly configured root may itself be a link; only links discovered
   // below that root are skipped, matching Path.rglob's root behavior.
   return _collect_ml_files_inner(path, excluded, collector, true)
 end function
 
+/// Updates append unique path.
+/// @internal
 function _append_unique_path(paths, path)
 #if TARGET_OS == "linux"
   key = path
@@ -444,13 +525,16 @@ function _append_unique_path(paths, path)
   return paths + [path]
 end function
 
+/// Implements project word char.
+/// @internal
 function _project_word_char(source, index)
   if index < 0 or index >= len(source) then return false end if
   value = bytes(source[index])[0]
   return (value >= 65 and value <= 90) or (value >= 97 and value <= 122) or (value >= 48 and value <= 57) or value == 95
 end function
 
-// Advance past whitespace and comments between the import keyword and path.
+/// Advance past whitespace and comments between the import keyword and path.
+/// @internal
 function _skip_import_trivia(source, index)
   i = index
   while i < len(source)
@@ -478,6 +562,8 @@ function _skip_import_trivia(source, index)
   return i
 end function
 
+/// Implements skip project string.
+/// @internal
 function _skip_project_string(source, index)
   i = index + 1
   while i < len(source)
@@ -491,9 +577,8 @@ function _skip_project_string(source, index)
   return len(source)
 end function
 
-// Extract quoted import paths without treating strings or comments as source.
-// False positives would only make the cache more conservative; misses could
-// return stale code, so comments between the keyword and path are supported.
+/// Extract quoted import paths without treating strings or comments as source. False positives would only make the cache more conservative; misses could return stale code, so comments between the keyword and path are supported.
+/// @internal
 function _quoted_import_paths(source)
   result = t.arr_vec_new(16)
   i = 0
@@ -527,6 +612,8 @@ function _quoted_import_paths(source)
   return t.arr_vec_finish(result)
 end function
 
+/// Implements collector add import file.
+/// @internal
 function _collector_add_import_file(collector, path, excluded)
   absolute = _abspath(path)
   key = _path_key(absolute)
@@ -544,9 +631,8 @@ function _collector_add_import_file(collector, path, excluded)
   return collector
 end function
 
-// Broad root traversal covers inactive package imports. This second pass
-// follows quoted imports recursively so absolute and parent-relative imports
-// outside those roots also participate in the exact cache fingerprint.
+/// Broad root traversal covers inactive package imports. This second pass follows quoted imports recursively so absolute and parent-relative imports outside those roots also participate in the exact cache fingerprint.
+/// @internal
 function _collect_import_dependencies(collector, include_dirs, excluded)
   scan_index = 0
   while scan_index < t.arr_vec_count(collector.files)
@@ -573,6 +659,8 @@ function _collect_import_dependencies(collector, include_dirs, excluded)
   return collector
 end function
 
+/// Implements hex32.
+/// @internal
 function _hex32(value)
   digits = "0123456789ABCDEF"
   hex_value = ""
@@ -584,6 +672,8 @@ function _hex32(value)
   return hex_value
 end function
 
+/// Implements string less.
+/// @internal
 function _string_less(left, right)
 #if TARGET_OS == "linux"
   left_bytes = bytes(left)
@@ -603,13 +693,14 @@ function _string_less(left, right)
   return len(left_bytes) < len(right_bytes)
 end function
 
+/// Implements project u32le.
+/// @internal
 function _project_u32le(value, offset)
   return value[offset] | (value[offset + 1] << 8) | (value[offset + 2] << 16) | (value[offset + 3] << 24)
 end function
 
-// Two native CRC polynomials plus the exact length provide a fast bounded-
-// memory content identity. Native checksum instructions avoid interpreting
-// every byte in MiniLang when hashing the 50+ MiB compiler executable.
+/// Two native CRC polynomials plus the exact length provide a fast bounded- memory content identity. Native checksum instructions avoid interpreting every byte in MiniLang when hashing the 50+ MiB compiler executable.
+/// @internal
 function _file_content_id_with_buffer(path, buffer)
   if typeof(buffer) != "bytes" or len(buffer) <= 0 then return error(1, "invalid cache hash buffer") end if
   file = fileio.openRead(path)
@@ -636,12 +727,14 @@ function _file_content_id_with_buffer(path, buffer)
   return count + ":" + _hex32(ieee) + ":" + _hex32(castagnoli)
 end function
 
-// Single-artifact callers retain the simple API; object-set validation reuses
-// one scratch buffer across every file to avoid one 1-MiB allocation per MLO.
+/// Single-artifact callers retain the simple API; object-set validation reuses one scratch buffer across every file to avoid one 1-MiB allocation per MLO.
+/// @internal
 function _file_content_id(path)
   return _file_content_id_with_buffer(path, bytes(1048576, 0))
 end function
 
+/// Implements valid project digest.
+/// @internal
 function _valid_project_digest(value)
   if typeof(value) != "string" or len(value) != 16 then return false end if
   for i = 0 to len(value) - 1
@@ -651,12 +744,14 @@ function _valid_project_digest(value)
   return true
 end function
 
+/// Implements cache artifact path.
+/// @internal
 function _cache_artifact_path(pb, digest)
   return _join(pb.cache_dir, "build." + digest + ".exe")
 end function
 
-// std.fs.copyFile intentionally copies bytes only. Cache artifacts additionally
-// retain their POSIX mode so a native Linux cache hit remains executable.
+/// Std.fs.copyFile intentionally copies bytes only. Cache artifacts additionally retain their POSIX mode so a native Linux cache hit remains executable.
+/// @internal
 function _copy_file_preserve_mode(source_path, destination_path)
   copied = fs.copyFile(source_path, destination_path, true)
   if typeof(copied) == "error" then return copied end if
@@ -669,9 +764,10 @@ function _copy_file_preserve_mode(source_path, destination_path)
   return true
 end function
 
-// Hash the manifest, effective arguments and all broad-root/imported sources.
-// The broad set is intentionally conservative: changing a currently inactive
-// conditional import must still invalidate the cache.
+/// Hash the manifest, effective arguments and all broad-root/imported sources. The broad set is intentionally conservative: changing a currently inactive conditional import must still invalidate the cache.
+/// @param pb Value supplied for `pb`.
+/// @param input_path Value supplied for `input_path`.
+/// @param include_dirs Value supplied for `include_dirs`.
 function fingerprint(pb, input_path, include_dirs)
   h = ProjectHash(2166136261, 3266489917)
   h = _hash_text(h, "MiniLang-project-cache-v2")
@@ -726,7 +822,10 @@ function fingerprint(pb, input_path, include_dirs)
   return _hex32(h.a) + _hex32(h.b)
 end function
 
-// Restore only a checksum-validated artifact from the requested generation.
+/// Restore only a checksum-validated artifact from the requested generation.
+/// @param pb Value supplied for `pb`.
+/// @param digest Value supplied for `digest`.
+/// @param output_path Value supplied for `output_path`.
 function restore(pb, digest, output_path)
   if typeof(pb) != "struct" or pb.incremental == false then return false end if
   state_path = _join(pb.cache_dir, "build.state")
@@ -745,13 +844,15 @@ function restore(pb, digest, output_path)
   return typeof(copied) != "error"
 end function
 
+/// Implements object cache dir.
+/// @internal
 function _object_cache_dir(pb, digest)
   return _join(_join(pb.cache_dir, "objects"), digest)
 end function
 
-// Return a complete immutable MLO set for this exact project fingerprint.
-// Publication metadata is written last, so a crashed population is always a
-// miss and can never feed a partial directory to the linker.
+/// Return a complete immutable MLO set for this exact project fingerprint. Publication metadata is written last, so a crashed population is always a miss and can never feed a partial directory to the linker.
+/// @param pb Value supplied for `pb`.
+/// @param digest Value supplied for `digest`.
 function restoreObjects(pb, digest)
   if typeof(pb) != "struct" or pb.incremental == false then return "" end if
   obj_dir = _object_cache_dir(pb, digest)
@@ -801,7 +902,8 @@ function restoreObjects(pb, digest)
   return obj_dir
 end function
 
-// Atomically update the cached artifact and its validation metadata.
+/// Atomically update the cached artifact and its validation metadata.
+/// @internal
 function _atomic_replace(source_path, destination_path)
 #if TARGET_OS == "windows"
   // REPLACE_EXISTING | WRITE_THROUGH publishes the completed temporary file
@@ -813,6 +915,10 @@ function _atomic_replace(source_path, destination_path)
   return error(1, "failed to atomically publish cache file")
 end function
 
+/// Updates store.
+/// @param pb Value supplied for `pb`.
+/// @param digest Value supplied for `digest`.
+/// @param output_path Value supplied for `output_path`.
 function store(pb, digest, output_path)
   if typeof(pb) != "struct" or pb.incremental == false then return true end if
   if _ensure_dir(pb.cache_dir) == false then return error(1, "failed to create project cache directory") end if
@@ -847,8 +953,10 @@ function store(pb, digest, output_path)
   return true
 end function
 
-// Populate the flat per-fingerprint object directory and publish its state
-// marker only after every object copy succeeds.
+/// Populate the flat per-fingerprint object directory and publish its state marker only after every object copy succeeds.
+/// @param pb Value supplied for `pb`.
+/// @param digest Value supplied for `digest`.
+/// @param source_dir Value supplied for `source_dir`.
 function storeObjects(pb, digest, source_dir)
   if typeof(pb) != "struct" or pb.incremental == false then return true end if
   if fs.isDir(source_dir) == false then return error(1, "object source directory does not exist") end if
@@ -906,7 +1014,8 @@ function storeObjects(pb, digest, source_dir)
   return _atomic_replace(state_tmp, state_path)
 end function
 
-// Create the parent directory required by a configured output path.
+/// Create the parent directory required by a configured output path.
+/// @param output_path Value supplied for `output_path`.
 function ensureOutputDirectory(output_path)
   return _ensure_dir(_dirname(output_path))
 end function

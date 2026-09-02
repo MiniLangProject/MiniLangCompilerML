@@ -1,28 +1,57 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Source loading, line mapping and parser integration for compiler clients.
+//! Provides the mlc frontend package.
+
 package mlc.frontend
 import std.fs as fs
 import mlc.minilang_parser as parser
 import mlc.tools as t
 
-// Source text, parsed program and normalized diagnostics returned together.
+/// Source text, parsed program and normalized diagnostics returned together.
 struct FrontendParseResult
+  /// Stores the source member of `FrontendParseResult`.
   source,
+  /// Stores the program member of `FrontendParseResult`.
   program,
+  /// Stores the errors member of `FrontendParseResult`.
   errors,
 end struct
 
+/// Implements inline.
+/// @internal
 function inline _is_space_byte(ch)
   return ch == 32 or ch == 9 or ch == 10 or ch == 13
 end function
 
+/// Implements inline.
+/// @internal
 function inline _is_digit_byte(ch)
   return ch >= 48 and ch <= 57
 end function
 
+/// Implements inline.
+/// @internal
 function inline _is_alnum_byte(ch)
   return (ch >= 48 and ch <= 57) or (ch >= 65 and ch <= 90) or (ch >= 97 and ch <= 122)
 end function
 
+/// Implements normalize frontend error.
+/// @internal
 function _normalize_frontend_error(err, fallback_path)
   if typeof(err) != "struct" then
     return err
@@ -44,6 +73,8 @@ function _normalize_frontend_error(err, fallback_path)
   return parser.newParseError(err.message, p, fallback_path)
 end function
 
+/// Implements normalize frontend errors.
+/// @internal
 function _normalize_frontend_errors(errors, fallback_path)
   if typeof(errors) != "array" or len(errors) <= 0 then
     return []
@@ -60,10 +91,8 @@ function _normalize_frontend_errors(errors, fallback_path)
   return t.arr_chunked_finish(chunks, tail)
 end function
 
-// Normalize comments/newlines while preserving source offsets for diagnostics.
-// Operate on one capacity-backed UTF-8 byte buffer: the previous character-
-// string builder allocated one managed string and one array slot per source
-// byte, which dominated frontend memory on large self-hosted compilations.
+/// Normalize comments/newlines while preserving source offsets for diagnostics. Operate on one capacity-backed UTF-8 byte buffer: the previous character- string builder allocated one managed string and one array slot per source byte, which dominated frontend memory on large self-hosted compilations.
+/// @param src Value supplied for `src`.
 function normalize_code_for_tokenizer(src)
   if typeof(src) != "string" then
     return ""
@@ -182,7 +211,8 @@ function normalize_code_for_tokenizer(src)
   return decoded
 end function
 
-// Load and parse one file, returning syntax failures in the result record.
+/// Load and parse one file, returning syntax failures in the result record.
+/// @param path Path to operate on.
 function parse_program(path)
   r = fs.readAllText(path)
   if typeof(r) == "error" then
@@ -200,14 +230,17 @@ function parse_program(path)
   return FrontendParseResult(code, prog,[])
 end function
 
-// Report frontend availability; the self-host build links it statically.
+/// Report frontend availability; the self-host build links it statically.
+/// @param path Path to operate on.
 function load_minilang_frontend(path)
   // The self-hosted port links the parser statically, so we return the
   // equivalent "loaded successfully" result instead of probing the filesystem.
   return true
 end function
 
-// Parse one file while collecting up to max_errors syntax diagnostics.
+/// Parse one file while collecting up to max_errors syntax diagnostics.
+/// @param path Path to operate on.
+/// @param max_errors Value supplied for `max_errors`.
 function parse_program_keepgoing(path, max_errors)
   r = fs.readAllText(path)
   if typeof(r) == "error" then

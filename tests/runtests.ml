@@ -890,6 +890,7 @@ function main(args)
   if _test(compiler_path, repo_root, "compiler_ast_leaf_arena", "tests\\compiler_ast_leaf_arena.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "compiler_frontend_normalize", "tests\\compiler_frontend_normalize.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_suite", "tests\\language_suite.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "declaration_comments", "tests\\declaration_comments.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_extensions", "tests\\language_extensions.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_performance_features", "tests\\language_performance_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_async_variadic", "tests\\language_async_variadic.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

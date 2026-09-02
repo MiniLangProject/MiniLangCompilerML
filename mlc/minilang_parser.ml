@@ -1,42 +1,77 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Tokenizer, AST records and recursive-descent parser for MiniLang syntax.
+//! Provides the mlc minilang_parser package.
+
 package mlc.minilang_parser
 import std.string as s
 import std.string_builder as sb
 import mlc.tools as t
 
 #if TARGET_OS == "windows"
+/// Returns parse strtod.
+/// @internal
 extern function _parse_strtod(text as cstr, endptr as ptr) from "msvcrt.dll" symbol "strtod" returns double
 #else
+/// Returns parse strtod.
+/// @internal
 extern function _parse_strtod(text as cstr, endptr as ptr) from "libc.so.6" symbol "strtod" returns double
 #endif
 
-// Parser failure with absolute source offset and originating filename.
+/// Parser failure with absolute source offset and originating filename.
 struct ParseError
+  /// Stores the message member of `ParseError`.
   message,
+  /// Stores the pos member of `ParseError`.
   pos,
+  /// Stores the filename member of `ParseError`.
   filename,
 end struct
 
-// Lexical token preserving raw value and absolute source offset.
+/// Lexical token preserving raw value and absolute source offset.
 struct Token
+  /// Stores the kind member of `Token`.
   kind,
+  /// Stores the value member of `Token`.
   value,
+  /// Stores the pos member of `Token`.
   pos,
 end struct
 
-// Structure-of-arrays token arena. Parser cursors are integer IDs; kinds use
-// one byte and positions/text IDs use packed u32 columns. Identifier, keyword
-// and operator spellings are module-local symbols instead of per-token strings.
+/// Structure-of-arrays token arena. Parser cursors are integer IDs; kinds use one byte and positions/text IDs use packed u32 columns. Identifier, keyword and operator spellings are module-local symbols instead of per-token strings.
 struct TokenArena
+  /// Stores the kinds member of `TokenArena`.
   kinds,
+  /// Stores the value ids member of `TokenArena`.
   value_ids,
+  /// Stores the positions member of `TokenArena`.
   positions,
+  /// Stores the texts member of `TokenArena`.
   texts,
+  /// Stores the text index member of `TokenArena`.
   text_index,
+  /// Stores the count member of `TokenArena`.
   count,
+  /// Stores the cap member of `TokenArena`.
   cap,
 end struct
 
+/// Converts tok text part.
+/// @internal
 function _tok_text_part(v)
   tv = typeof(v)
   if tv == "string" then return v end if
@@ -47,6 +82,8 @@ function _tok_text_part(v)
   return "<value>"
 end function
 
+/// Converts tok desc.
+/// @internal
 function _tok_desc(tok)
   k = _tok_kind(tok)
   v = _tok_value(tok)
@@ -54,485 +91,828 @@ function _tok_desc(tok)
   return _tok_text_part(k) + ":" + _tok_text_part(v)
 end function
 
-// Capacity-backed parser list tail used to avoid repeated array concatenation.
+/// Capacity-backed parser list tail used to avoid repeated array concatenation.
 struct ParserChunkTail
+  /// Stores the data member of `ParserChunkTail`.
   data,
+  /// Stores the used member of `ParserChunkTail`.
   used,
+  /// Stores the cap member of `ParserChunkTail`.
   cap,
 end struct
 
-// Internal marker that distinguishes spare capacity from a real void element.
+/// Internal marker that distinguishes spare capacity from a real void element.
 struct ParserChunkVoidSentinel
+  /// Stores the tag member of `ParserChunkVoidSentinel`.
   tag,
 end struct
 
-// Expression AST. Every node carries source coordinates for later diagnostics.
+/// Expression AST. Every node carries source coordinates for later diagnostics.
 struct Num
+  /// Stores the node kind member of `Num`.
   node_kind,
+  /// Stores the value member of `Num`.
   value,
+  /// Stores the pos member of `Num`.
   _pos,
+  /// Stores the filename member of `Num`.
   _filename,
 end struct
 
+/// Represents str.
 struct Str
+  /// Stores the node kind member of `Str`.
   node_kind,
+  /// Stores the value member of `Str`.
   value,
+  /// Stores the pos member of `Str`.
   _pos,
+  /// Stores the filename member of `Str`.
   _filename,
 end struct
 
+/// Represents bool.
 struct Bool
+  /// Stores the node kind member of `Bool`.
   node_kind,
+  /// Stores the value member of `Bool`.
   value,
+  /// Stores the pos member of `Bool`.
   _pos,
+  /// Stores the filename member of `Bool`.
   _filename,
 end struct
 
+/// Represents void lit.
 struct VoidLit
+  /// Stores the node kind member of `VoidLit`.
   node_kind,
+  /// Stores the pos member of `VoidLit`.
   _pos,
+  /// Stores the filename member of `VoidLit`.
   _filename,
 end struct
 
+/// Represents var.
 struct Var
+  /// Stores the node kind member of `Var`.
   node_kind,
+  /// Stores the name member of `Var`.
   name,
+  /// Stores the pos member of `Var`.
   _pos,
+  /// Stores the filename member of `Var`.
   _filename,
 end struct
 
+/// Represents array lit.
 struct ArrayLit
+  /// Stores the node kind member of `ArrayLit`.
   node_kind,
+  /// Stores the items member of `ArrayLit`.
   items,
   // Internal-only marker: a proven non-escaping variadic tail may live in the
   // caller's rooted expression stack instead of allocating a heap array.
+  /// Stores the stack variadic member of `ArrayLit`.
   stack_variadic,
+  /// Stores the pos member of `ArrayLit`.
   _pos,
+  /// Stores the filename member of `ArrayLit`.
   _filename,
 end struct
 
+/// Represents unary.
 struct Unary
+  /// Stores the node kind member of `Unary`.
   node_kind,
+  /// Stores the op member of `Unary`.
   op,
+  /// Stores the right member of `Unary`.
   right,
+  /// Stores the pos member of `Unary`.
   _pos,
+  /// Stores the filename member of `Unary`.
   _filename,
 end struct
 
+/// Represents bin.
 struct Bin
+  /// Stores the node kind member of `Bin`.
   node_kind,
+  /// Stores the left member of `Bin`.
   left,
+  /// Stores the op member of `Bin`.
   op,
+  /// Stores the right member of `Bin`.
   right,
+  /// Stores the pos member of `Bin`.
   _pos,
+  /// Stores the filename member of `Bin`.
   _filename,
 end struct
 
+/// Represents is type.
 struct IsType
+  /// Stores the node kind member of `IsType`.
   node_kind,
+  /// Stores the expr member of `IsType`.
   expr,
+  /// Stores the type name member of `IsType`.
   type_name,
+  /// Stores the negated member of `IsType`.
   negated,
+  /// Stores the pos member of `IsType`.
   _pos,
+  /// Stores the filename member of `IsType`.
   _filename,
 end struct
 
-// Runtime guard inserted at explicitly annotated type boundaries.
+/// Runtime guard inserted at explicitly annotated type boundaries.
 struct TypeGuard
+  /// Stores the node kind member of `TypeGuard`.
   node_kind,
+  /// Stores the expr member of `TypeGuard`.
   expr,
+  /// Stores the type name member of `TypeGuard`.
   type_name,
+  /// Stores the optional member of `TypeGuard`.
   optional,
+  /// Stores the pos member of `TypeGuard`.
   _pos,
+  /// Stores the filename member of `TypeGuard`.
   _filename,
 end struct
 
-// Lazy void coalescing (`left ?? right`).
+/// Lazy void coalescing (`left ?? right`).
 struct Coalesce
+  /// Stores the node kind member of `Coalesce`.
   node_kind,
+  /// Stores the left member of `Coalesce`.
   left,
+  /// Stores the right member of `Coalesce`.
   right,
+  /// Stores the pos member of `Coalesce`.
   _pos,
+  /// Stores the filename member of `Coalesce`.
   _filename,
 end struct
 
+/// Represents call.
 struct Call
+  /// Stores the node kind member of `Call`.
   node_kind,
+  /// Stores the callee member of `Call`.
   callee,
+  /// Stores the args member of `Call`.
   args,
+  /// Stores the arg names member of `Call`.
   arg_names,
+  /// Stores the pos member of `Call`.
   _pos,
+  /// Stores the filename member of `Call`.
   _filename,
 end struct
 
+/// Represents index.
 struct Index
+  /// Stores the node kind member of `Index`.
   node_kind,
+  /// Stores the target member of `Index`.
   target,
+  /// Stores the index member of `Index`.
   index,
+  /// Stores the pos member of `Index`.
   _pos,
+  /// Stores the filename member of `Index`.
   _filename,
 end struct
 
+/// Represents member.
 struct Member
+  /// Stores the node kind member of `Member`.
   node_kind,
+  /// Stores the target member of `Member`.
   target,
+  /// Stores the name member of `Member`.
   name,
+  /// Stores the pos member of `Member`.
   _pos,
+  /// Stores the filename member of `Member`.
   _filename,
 end struct
 
-// Void-safe member access (`value?.member`).
+/// Void-safe member access (`value?.member`).
 struct SafeMember
+  /// Stores the node kind member of `SafeMember`.
   node_kind,
+  /// Stores the target member of `SafeMember`.
   target,
+  /// Stores the name member of `SafeMember`.
   name,
+  /// Stores the pos member of `SafeMember`.
   _pos,
+  /// Stores the filename member of `SafeMember`.
   _filename,
 end struct
 
-// Parser-only anonymous function lowered to an ordinary nested closure.
+/// Parser-only anonymous function lowered to an ordinary nested closure.
 struct Lambda
+  /// Stores the node kind member of `Lambda`.
   node_kind,
+  /// Stores the params member of `Lambda`.
   params,
+  /// Stores the body member of `Lambda`.
   body,
+  /// Stores the param types member of `Lambda`.
   param_types,
+  /// Stores the param optional member of `Lambda`.
   param_optional,
+  /// Stores the param defaults member of `Lambda`.
   param_defaults,
+  /// Stores the variadic index member of `Lambda`.
   variadic_index,
+  /// Stores the return type member of `Lambda`.
   return_type,
+  /// Stores the return optional member of `Lambda`.
   return_optional,
+  /// Stores the pos member of `Lambda`.
   _pos,
+  /// Stores the filename member of `Lambda`.
   _filename,
 end struct
 
-// Compiler-internal expression used while emitting deferred calls.
+/// Compiler-internal expression used while emitting deferred calls.
 struct DeferredCapture
+  /// Stores the node kind member of `DeferredCapture`.
   node_kind,
+  /// Stores the offset member of `DeferredCapture`.
   offset,
+  /// Stores the pos member of `DeferredCapture`.
   _pos,
+  /// Stores the filename member of `DeferredCapture`.
   _filename,
 end struct
 
-// Statement/declaration AST shared by analysis and code generation.
+/// Statement/declaration AST shared by analysis and code generation.
 struct Import
+  /// Stores the node kind member of `Import`.
   node_kind,
+  /// Stores the path member of `Import`.
   path,
+  /// Stores the alias member of `Import`.
   alias,
+  /// Stores the module member of `Import`.
   module,
+  /// Stores the pos member of `Import`.
   _pos,
+  /// Stores the filename member of `Import`.
   _filename,
 end struct
 
+/// Represents namespace decl.
 struct NamespaceDecl
+  /// Stores the node kind member of `NamespaceDecl`.
   node_kind,
+  /// Stores the name member of `NamespaceDecl`.
   name,
+  /// Stores the pos member of `NamespaceDecl`.
   _pos,
+  /// Stores the filename member of `NamespaceDecl`.
   _filename,
 end struct
 
+/// Represents namespace def.
 struct NamespaceDef
+  /// Stores the node kind member of `NamespaceDef`.
   node_kind,
+  /// Stores the name member of `NamespaceDef`.
   name,
+  /// Stores the body member of `NamespaceDef`.
   body,
+  /// Stores the pos member of `NamespaceDef`.
   _pos,
+  /// Stores the filename member of `NamespaceDef`.
   _filename,
 end struct
 
+/// Represents print.
 struct Print
+  /// Stores the node kind member of `Print`.
   node_kind,
+  /// Stores the expr member of `Print`.
   expr,
+  /// Stores the pos member of `Print`.
   _pos,
+  /// Stores the filename member of `Print`.
   _filename,
 end struct
 
+/// Represents assign.
 struct Assign
+  /// Stores the node kind member of `Assign`.
   node_kind,
+  /// Stores the name member of `Assign`.
   name,
+  /// Stores the expr member of `Assign`.
   expr,
+  /// Stores the declared type member of `Assign`.
   declared_type,
+  /// Stores the declared optional member of `Assign`.
   declared_optional,
+  /// Stores the pos member of `Assign`.
   _pos,
+  /// Stores the filename member of `Assign`.
   _filename,
 end struct
 
+/// Represents synchronized decl.
 struct SynchronizedDecl
+  /// Stores the node kind member of `SynchronizedDecl`.
   node_kind,
+  /// Stores the name member of `SynchronizedDecl`.
   name,
+  /// Stores the expr member of `SynchronizedDecl`.
   expr,
+  /// Stores the pos member of `SynchronizedDecl`.
   _pos,
+  /// Stores the filename member of `SynchronizedDecl`.
   _filename,
 end struct
 
+/// Represents synchronized block.
 struct SynchronizedBlock
+  /// Stores the node kind member of `SynchronizedBlock`.
   node_kind,
+  /// Stores the lock member of `SynchronizedBlock`.
   lock,
+  /// Stores the body member of `SynchronizedBlock`.
   body,
+  /// Stores the cleanup member of `SynchronizedBlock`.
   cleanup,
+  /// Stores the pos member of `SynchronizedBlock`.
   _pos,
+  /// Stores the filename member of `SynchronizedBlock`.
   _filename,
 end struct
 
+/// Represents set member.
 struct SetMember
+  /// Stores the node kind member of `SetMember`.
   node_kind,
+  /// Stores the obj member of `SetMember`.
   obj,
+  /// Stores the field member of `SetMember`.
   field,
+  /// Stores the expr member of `SetMember`.
   expr,
+  /// Stores the pos member of `SetMember`.
   _pos,
+  /// Stores the filename member of `SetMember`.
   _filename,
 end struct
 
+/// Represents set index.
 struct SetIndex
+  /// Stores the node kind member of `SetIndex`.
   node_kind,
+  /// Stores the target member of `SetIndex`.
   target,
+  /// Stores the index member of `SetIndex`.
   index,
+  /// Stores the expr member of `SetIndex`.
   expr,
+  /// Stores the pos member of `SetIndex`.
   _pos,
+  /// Stores the filename member of `SetIndex`.
   _filename,
 end struct
 
+/// Represents const decl.
 struct ConstDecl
+  /// Stores the node kind member of `ConstDecl`.
   node_kind,
+  /// Stores the name member of `ConstDecl`.
   name,
+  /// Stores the expr member of `ConstDecl`.
   expr,
+  /// Stores the pos member of `ConstDecl`.
   _pos,
+  /// Stores the filename member of `ConstDecl`.
   _filename,
 end struct
 
+/// Represents expr stmt.
 struct ExprStmt
+  /// Stores the node kind member of `ExprStmt`.
   node_kind,
+  /// Stores the expr member of `ExprStmt`.
   expr,
+  /// Stores the pos member of `ExprStmt`.
   _pos,
+  /// Stores the filename member of `ExprStmt`.
   _filename,
 end struct
 
+/// Represents function def.
 struct FunctionDef
+  /// Stores the node kind member of `FunctionDef`.
   node_kind,
+  /// Stores the name member of `FunctionDef`.
   name,
+  /// Stores the params member of `FunctionDef`.
   params,
+  /// Stores the body member of `FunctionDef`.
   body,
+  /// Stores the is static member of `FunctionDef`.
   is_static,
+  /// Stores the is inline member of `FunctionDef`.
   is_inline,
+  /// Stores the is synchronized member of `FunctionDef`.
   is_synchronized,
+  /// Stores the param types member of `FunctionDef`.
   param_types,
+  /// Stores the param optional member of `FunctionDef`.
   param_optional,
+  /// Stores the param defaults member of `FunctionDef`.
   param_defaults,
+  /// Stores the variadic index member of `FunctionDef`.
   variadic_index,
+  /// Stores the return type member of `FunctionDef`.
   return_type,
+  /// Stores the return optional member of `FunctionDef`.
   return_optional,
+  /// Stores the is async member of `FunctionDef`.
   is_async,
+  /// Stores the is iterator member of `FunctionDef`.
   is_iterator,
+  /// Stores the ml locals member of `FunctionDef`.
   _ml_locals,
+  /// Stores the ml globals declared member of `FunctionDef`.
   _ml_globals_declared,
+  /// Stores the ml captures member of `FunctionDef`.
   _ml_captures,
+  /// Stores the ml capture depth member of `FunctionDef`.
   _ml_capture_depth,
+  /// Stores the ml nested functions member of `FunctionDef`.
   _ml_nested_functions,
+  /// Stores the ml parent fn member of `FunctionDef`.
   _ml_parent_fn,
+  /// Stores the ml boxed member of `FunctionDef`.
   _ml_boxed,
+  /// Stores the ml env slots member of `FunctionDef`.
   _ml_env_slots,
+  /// Stores the ml env index member of `FunctionDef`.
   _ml_env_index,
+  /// Stores the ml capture index member of `FunctionDef`.
   _ml_capture_index,
+  /// Stores the ml env hop member of `FunctionDef`.
   _ml_env_hop,
+  /// Stores the pos member of `FunctionDef`.
   _pos,
+  /// Stores the filename member of `FunctionDef`.
   _filename,
 end struct
 
+/// Represents return.
 struct Return
+  /// Stores the node kind member of `Return`.
   node_kind,
+  /// Stores the expr member of `Return`.
   expr,
+  /// Stores the pos member of `Return`.
   _pos,
+  /// Stores the filename member of `Return`.
   _filename,
 end struct
 
+/// Represents yield.
 struct Yield
+  /// Stores the node kind member of `Yield`.
   node_kind,
+  /// Stores the expr member of `Yield`.
   expr,
+  /// Stores the pos member of `Yield`.
   _pos,
+  /// Stores the filename member of `Yield`.
   _filename,
 end struct
 
+/// Represents defer.
 struct Defer
+  /// Stores the node kind member of `Defer`.
   node_kind,
+  /// Stores the expr member of `Defer`.
   expr,
+  /// Stores the site id member of `Defer`.
   site_id,
+  /// Stores the offsets member of `Defer`.
   offsets,
+  /// Stores the capture kind member of `Defer`.
   capture_kind,
+  /// Stores the pos member of `Defer`.
   _pos,
+  /// Stores the filename member of `Defer`.
   _filename,
 end struct
 
+/// Represents if.
 struct If
+  /// Stores the node kind member of `If`.
   node_kind,
+  /// Stores the cond member of `If`.
   cond,
+  /// Stores the then body member of `If`.
   then_body,
+  /// Stores the elifs member of `If`.
   elifs,
+  /// Stores the else body member of `If`.
   else_body,
+  /// Stores the pos member of `If`.
   _pos,
+  /// Stores the filename member of `If`.
   _filename,
 end struct
 
+/// Represents while.
 struct While
+  /// Stores the node kind member of `While`.
   node_kind,
+  /// Stores the cond member of `While`.
   cond,
+  /// Stores the body member of `While`.
   body,
+  /// Stores the pos member of `While`.
   _pos,
+  /// Stores the filename member of `While`.
   _filename,
 end struct
 
+/// Represents for.
 struct For
+  /// Stores the node kind member of `For`.
   node_kind,
+  /// Stores the var member of `For`.
   var,
+  /// Stores the start member of `For`.
   start,
+  /// Stores the end expr member of `For`.
   end_expr,
+  /// Stores the body member of `For`.
   body,
+  /// Stores the pos member of `For`.
   _pos,
+  /// Stores the filename member of `For`.
   _filename,
 end struct
 
+/// Represents for each.
 struct ForEach
+  /// Stores the node kind member of `ForEach`.
   node_kind,
+  /// Stores the var member of `ForEach`.
   var,
+  /// Stores the iterable member of `ForEach`.
   iterable,
+  /// Stores the body member of `ForEach`.
   body,
+  /// Stores the pos member of `ForEach`.
   _pos,
+  /// Stores the filename member of `ForEach`.
   _filename,
 end struct
 
+/// Represents break.
 struct Break
+  /// Stores the node kind member of `Break`.
   node_kind,
+  /// Stores the count member of `Break`.
   count,
+  /// Stores the pos member of `Break`.
   _pos,
+  /// Stores the filename member of `Break`.
   _filename,
 end struct
 
+/// Represents continue.
 struct Continue
+  /// Stores the node kind member of `Continue`.
   node_kind,
+  /// Stores the pos member of `Continue`.
   _pos,
+  /// Stores the filename member of `Continue`.
   _filename,
 end struct
 
+/// Represents global decl.
 struct GlobalDecl
+  /// Stores the node kind member of `GlobalDecl`.
   node_kind,
+  /// Stores the names member of `GlobalDecl`.
   names,
+  /// Stores the pos member of `GlobalDecl`.
   _pos,
+  /// Stores the filename member of `GlobalDecl`.
   _filename,
 end struct
 
+/// Represents do while.
 struct DoWhile
+  /// Stores the node kind member of `DoWhile`.
   node_kind,
+  /// Stores the body member of `DoWhile`.
   body,
+  /// Stores the cond member of `DoWhile`.
   cond,
+  /// Stores the pos member of `DoWhile`.
   _pos,
+  /// Stores the filename member of `DoWhile`.
   _filename,
 end struct
 
+/// Represents switch case.
 struct SwitchCase
+  /// Stores the node kind member of `SwitchCase`.
   node_kind,
+  /// Stores the kind member of `SwitchCase`.
   kind,
+  /// Stores the values member of `SwitchCase`.
   values,
+  /// Stores the range start member of `SwitchCase`.
   range_start,
+  /// Stores the range end member of `SwitchCase`.
   range_end,
+  /// Stores the body member of `SwitchCase`.
   body,
+  /// Stores the pos member of `SwitchCase`.
   _pos,
+  /// Stores the filename member of `SwitchCase`.
   _filename,
 end struct
 
+/// Represents switch.
 struct Switch
+  /// Stores the node kind member of `Switch`.
   node_kind,
+  /// Stores the expr member of `Switch`.
   expr,
+  /// Stores the cases member of `Switch`.
   cases,
+  /// Stores the default body member of `Switch`.
   default_body,
+  /// Stores the pos member of `Switch`.
   _pos,
+  /// Stores the filename member of `Switch`.
   _filename,
 end struct
 
+/// Represents struct def.
 struct StructDef
+  /// Stores the node kind member of `StructDef`.
   node_kind,
+  /// Stores the name member of `StructDef`.
   name,
+  /// Stores the fields member of `StructDef`.
   fields,
+  /// Stores the methods member of `StructDef`.
   methods,
+  /// Stores the field types member of `StructDef`.
   field_types,
+  /// Stores the field optional member of `StructDef`.
   field_optional,
+  /// Stores the interfaces member of `StructDef`.
   interfaces,
+  /// Stores the extern field types member of `StructDef`.
   _extern_field_types,
+  /// Stores the pos member of `StructDef`.
   _pos,
+  /// Stores the filename member of `StructDef`.
   _filename,
 end struct
 
-// Compile-time structural contract with no runtime representation.
+/// Compile-time structural contract with no runtime representation.
 struct InterfaceDef
+  /// Stores the node kind member of `InterfaceDef`.
   node_kind,
+  /// Stores the name member of `InterfaceDef`.
   name,
+  /// Stores the methods member of `InterfaceDef`.
   methods,
+  /// Stores the pos member of `InterfaceDef`.
   _pos,
+  /// Stores the filename member of `InterfaceDef`.
   _filename,
 end struct
 
-// Compact parser results for rich parameter and call-argument lists.
+/// Compact parser results for rich parameter and call-argument lists.
 struct ParameterList
+  /// Stores the names member of `ParameterList`.
   names,
+  /// Stores the types member of `ParameterList`.
   types,
+  /// Stores the optionals member of `ParameterList`.
   optionals,
+  /// Stores the defaults member of `ParameterList`.
   defaults,
+  /// Stores the variadic index member of `ParameterList`.
   variadic_index,
 end struct
 
+/// Represents call arguments.
 struct CallArguments
+  /// Stores the values member of `CallArguments`.
   values,
+  /// Stores the names member of `CallArguments`.
   names,
 end struct
 
+/// Represents enum def.
 struct EnumDef
+  /// Stores the node kind member of `EnumDef`.
   node_kind,
+  /// Stores the name member of `EnumDef`.
   name,
+  /// Stores the variants member of `EnumDef`.
   variants,
+  /// Stores the values member of `EnumDef`.
   values,
+  /// Stores the pos member of `EnumDef`.
   _pos,
+  /// Stores the filename member of `EnumDef`.
   _filename,
 end struct
 
+/// Represents extern param.
 struct ExternParam
+  /// Stores the node kind member of `ExternParam`.
   node_kind,
+  /// Stores the name member of `ExternParam`.
   name,
+  /// Stores the ty member of `ExternParam`.
   ty,
+  /// Stores the is out member of `ExternParam`.
   is_out,
 end struct
 
+/// Represents extern function def.
 struct ExternFunctionDef
+  /// Stores the node kind member of `ExternFunctionDef`.
   node_kind,
+  /// Stores the name member of `ExternFunctionDef`.
   name,
+  /// Stores the params member of `ExternFunctionDef`.
   params,
+  /// Stores the dll member of `ExternFunctionDef`.
   dll,
+  /// Stores the symbol name member of `ExternFunctionDef`.
   symbol_name,
+  /// Stores the ret ty member of `ExternFunctionDef`.
   ret_ty,
+  /// Stores the pos member of `ExternFunctionDef`.
   _pos,
+  /// Stores the filename member of `ExternFunctionDef`.
   _filename,
 end struct
 
+/// Represents parse keep result.
 struct ParseKeepResult
+  /// Stores the program member of `ParseKeepResult`.
   program,
+  /// Stores the errors member of `ParseKeepResult`.
   errors,
 end struct
 
-// One typed value available while evaluating conditional-compilation directives.
+/// One typed value available while evaluating conditional-compilation directives.
 struct CompileValue
+  /// Stores the name member of `CompileValue`.
   name,
+  /// Stores the value member of `CompileValue`.
   value,
 end struct
 
-// Mutable state for one nested #if/#elif/#else group.
+/// Mutable state for one nested #if/#elif/#else group.
 struct CompileFrame
+  /// Stores the parent active member of `CompileFrame`.
   parent_active,
+  /// Stores the active member of `CompileFrame`.
   active,
+  /// Stores the taken member of `CompileFrame`.
   taken,
+  /// Stores the else seen member of `CompileFrame`.
   else_seen,
+  /// Stores the pos member of `CompileFrame`.
   pos,
 end struct
 
+/// Stores the compile external values compiler state.
 _compile_external_values = []
+/// Stores the compile target os compiler state.
 _compile_target_os = "windows"
+/// Stores the compile target abi compiler state.
 _compile_target_abi = "win64"
+/// Stores the compile target format compiler state.
 _compile_target_format = "pe"
 
+/// Stores the keywords compiler state.
 _keywords =[
 "print", "if", "then", "else", "end", "while", "loop", "true", "false", "and", "or", "not",
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
@@ -541,20 +921,30 @@ _keywords =[
 "interface", "implements", "iterator", "yield", "async", "await"
 ]
 
+/// Creates new token.
+/// @param kind Value supplied for `kind`.
+/// @param value Value to process.
+/// @param pos Value supplied for `pos`.
 function newToken(kind, value, pos)
   return Token(kind, value, pos)
 end function
 
+/// Creates new parse error.
+/// @param message Value supplied for `message`.
+/// @param pos Value supplied for `pos`.
+/// @param filename Value supplied for `filename`.
 function newParseError(message, pos, filename)
   return ParseError(message, pos, filename)
 end function
 
-// Keep compiler-internal closure fields centralized when surface syntax creates
-// ordinary, lambda, iterator or async functions.
+/// Keep compiler-internal closure fields centralized when surface syntax creates ordinary, lambda, iterator or async functions.
+/// @internal
 function _new_function_node(name, params, body, is_static, is_inline, is_synchronized, param_types, param_optional, param_defaults, variadic_index, return_type, return_optional, is_async, is_iterator, pos, filename)
   return FunctionDef("FunctionDef", name, params, body, is_static, is_inline, is_synchronized, param_types, param_optional, param_defaults, variadic_index, return_type, return_optional, is_async, is_iterator, [], [], [], [], [], 0, [], [], [], [], false, pos, filename)
 end function
 
+/// Implements substr.
+/// @internal
 function _substr(text, start, length)
   if typeof(text) != "string" then return "" end if
   if start < 0 then start = 0 end if
@@ -562,35 +952,49 @@ function _substr(text, start, length)
   return s.substr(text, start, length)
 end function
 
+/// Implements char code.
+/// @internal
 function _charCode(ch)
   b = bytes(ch)
   if len(b) <= 0 then return -1 end if
   return b[0]
 end function
 
+/// Reports whether is digit.
+/// @internal
 function _isDigit(ch)
   c = _charCode(ch)
   return c >= 48 and c <= 57
 end function
 
+/// Reports whether is hex digit.
+/// @internal
 function _isHexDigit(ch)
   c = _charCode(ch)
   return (c >= 48 and c <= 57) or(c >= 65 and c <= 70) or(c >= 97 and c <= 102)
 end function
 
+/// Reports whether is alpha.
+/// @internal
 function _isAlpha(ch)
   c = _charCode(ch)
   return (c >= 65 and c <= 90) or(c >= 97 and c <= 122)
 end function
 
+/// Reports whether is ident start.
+/// @internal
 function _isIdentStart(ch as string) returns bool
   return _isAlpha(ch) or ch == "_"
 end function
 
+/// Reports whether is ident part.
+/// @internal
 function _isIdentPart(ch as string) returns bool
   return _isIdentStart(ch) or _isDigit(ch)
 end function
 
+/// Reports whether is keyword.
+/// @internal
 function _isKeyword(word)
   for i = 0 to len(_keywords) - 1
     if _keywords[i] == word then
@@ -600,27 +1004,45 @@ function _isKeyword(word)
   return false
 end function
 
+/// Implements unknown char.
+/// @internal
 function _unknownChar(code, pos)
   return ParseError("Unknown character: '" + _substr(code, pos, 10) + "'", pos, "")
 end function
 
-// Compact discriminants stored in the token arena's byte kind column.
+/// Compact discriminants stored in the token arena's byte kind column.
 const TK_NL = 1
+/// Stores the tk number.
 const TK_NUMBER = 2
+/// Stores the tk string.
 const TK_STRING = 3
+/// Stores the tk kw.
 const TK_KW = 4
+/// Stores the tk ident.
 const TK_IDENT = 5
+/// Stores the tk op.
 const TK_OP = 6
+/// Stores the tk dot.
 const TK_DOT = 7
+/// Stores the tk lparen.
 const TK_LPAREN = 8
+/// Stores the tk rparen.
 const TK_RPAREN = 9
+/// Stores the tk lbrack.
 const TK_LBRACK = 10
+/// Stores the tk rbrack.
 const TK_RBRACK = 11
+/// Stores the tk comma.
 const TK_COMMA = 12
+/// Stores the tk semi.
 const TK_SEMI = 13
+/// Stores the tk eof.
 const TK_EOF = 14
+/// Stores the parser chunk void sentinel compiler state.
 _parser_chunk_void_sentinel = ParserChunkVoidSentinel(0x50A9)
 
+/// Returns parser chunk wrap value.
+/// @internal
 function _parser_chunk_wrap_value(value)
   if typeof(value) == "void" then
     return _parser_chunk_void_sentinel
@@ -628,6 +1050,8 @@ function _parser_chunk_wrap_value(value)
   return value
 end function
 
+/// Returns parser chunk unwrap value.
+/// @internal
 function _parser_chunk_unwrap_value(value)
   if typeof(value) == "struct" and value == _parser_chunk_void_sentinel then
     return
@@ -638,12 +1062,16 @@ function _parser_chunk_unwrap_value(value)
   return value
 end function
 
+/// Returns parser chunk tail new.
+/// @internal
 function _parser_chunk_tail_new(cap)
   ccap = cap
   if typeof(ccap) != "int" or ccap <= 0 then ccap = 64 end if
   return ParserChunkTail(array(ccap, 0), 0, ccap)
 end function
 
+/// Returns parser chunk tail from array.
+/// @internal
 function _parser_chunk_tail_from_array(arr, cap)
   t = _parser_chunk_tail_new(cap)
   if typeof(arr) != "array" or len(arr) <= 0 then return t end if
@@ -656,6 +1084,8 @@ function _parser_chunk_tail_from_array(arr, cap)
   return t
 end function
 
+/// Returns parser chunk tail len.
+/// @internal
 function _parser_chunk_tail_len(tail)
   if typeof(tail) == "array" then return len(tail) end if
   if typeof(tail) != "struct" then return 0 end if
@@ -667,6 +1097,8 @@ function _parser_chunk_tail_len(tail)
   return n
 end function
 
+/// Returns parser chunk tail to array.
+/// @internal
 function _parser_chunk_tail_to_array(tail)
   if typeof(tail) == "array" then return tail end if
   if typeof(tail) != "struct" or typeof(tail.data) != "array" then return [] end if
@@ -701,6 +1133,8 @@ function _parser_chunk_tail_to_array(tail)
   return outv
 end function
 
+/// Implements chunked push.
+/// @internal
 function _chunked_push(chunks, tail, value, cap)
   if typeof(chunks) != "array" then chunks = [] end if
   ccap = cap
@@ -725,6 +1159,8 @@ function _chunked_push(chunks, tail, value, cap)
   return [chunks, t]
 end function
 
+/// Implements chunked merge balanced.
+/// @internal
 function _chunked_merge_balanced(chunks)
   if typeof(chunks) != "array" then return [] end if
   if len(chunks) <= 0 then return [] end if
@@ -755,6 +1191,8 @@ function _chunked_merge_balanced(chunks)
   return outv
 end function
 
+/// Implements chunked merge with tail.
+/// @internal
 function _chunked_merge_with_tail(chunks, tail_arr)
   total = 0
   if typeof(tail_arr) == "array" then total = len(tail_arr) end if
@@ -785,6 +1223,8 @@ function _chunked_merge_with_tail(chunks, tail_arr)
   return outv
 end function
 
+/// Implements chunked finish.
+/// @internal
 function _chunked_finish(chunks, tail)
   if typeof(chunks) != "array" then chunks = [] end if
   tail_arr = _parser_chunk_tail_to_array(tail)
@@ -794,6 +1234,8 @@ function _chunked_finish(chunks, tail)
   return _chunked_merge_balanced(chunks)
 end function
 
+/// Converts token kind name.
+/// @internal
 function _token_kind_name(kind_id)
   if kind_id == TK_NL then return "NL" end if
   if kind_id == TK_NUMBER then return "NUMBER" end if
@@ -812,6 +1254,8 @@ function _token_kind_name(kind_id)
   return ""
 end function
 
+/// Converts token arena new.
+/// @internal
 function _token_arena_new(source_len)
   // Typical MiniLang modules use about 0.21-0.31 tokens per source byte.
   // Three eighths leaves headroom for the densest compiler modules without
@@ -821,6 +1265,8 @@ function _token_arena_new(source_len)
   return TokenArena(bytes(cap, 0), bytes(cap * 4, 0), bytes(cap * 4, 0), t.arr_vec_new(256), t.fastmap_new(256), 0, cap)
 end function
 
+/// Converts token u32 write.
+/// @internal
 function _token_u32_write(buf, index, value)
   off = index << 2
   buf[off] = value & 0xFF
@@ -829,19 +1275,27 @@ function _token_u32_write(buf, index, value)
   buf[off + 3] = (value >> 24) & 0xFF
 end function
 
+/// Implements inline.
+/// @internal
 function inline _token_u32_read(buf, index)
   off = index << 2
   return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24)
 end function
 
+/// Converts token pos write.
+/// @internal
 function _token_pos_write(buf, index, value)
   _token_u32_write(buf, index, value)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _token_pos_read(buf, index)
   return _token_u32_read(buf, index)
 end function
 
+/// Converts token text store.
+/// @internal
 function _token_text_store(arena, kind, value)
   // Fixed punctuation is reconstructed from the kind and needs no pool slot.
   if kind == TK_NL or kind == TK_DOT or kind == TK_LPAREN or kind == TK_RPAREN then return [arena, 0] end if
@@ -862,6 +1316,8 @@ function _token_text_store(arena, kind, value)
   return [arena, id]
 end function
 
+/// Implements inline.
+/// @internal
 function inline _token_fixed_value(kind)
   if kind == TK_NL then return "\\n" end if
   if kind == TK_DOT then return "." end if
@@ -874,6 +1330,8 @@ function inline _token_fixed_value(kind)
   return ""
 end function
 
+/// Converts token arena grow.
+/// @internal
 function _token_arena_grow(arena)
   next_cap = arena.cap << 1
   next_kinds = bytes(next_cap, 0)
@@ -891,6 +1349,8 @@ function _token_arena_grow(arena)
   return arena
 end function
 
+/// Converts token push.
+/// @internal
 function _token_push(arena, tail, kind, value, pos)
   a = arena
   if a.count >= a.cap then a = _token_arena_grow(a) end if
@@ -905,6 +1365,8 @@ function _token_push(arena, tail, kind, value, pos)
   return [a, tail]
 end function
 
+/// Converts tokenize.
+/// @param code Source code to process.
 function tokenize(code)
   if typeof(code) != "string" then
     return ParseError("tokenize expects source string, got " + _tok_text_part(code), 0, "")
@@ -926,6 +1388,17 @@ function tokenize(code)
       token_chunks = app[0]
       token_tail = app[1]
       i = i + 1
+      continue
+    end if
+
+    // MiniDoc consumes declaration comments from the original source. Keep an
+    // explicit branch for `///` so the syntax is part of the language contract,
+    // while leaving documentation text out of the executable AST.
+    if ch == "/" and i + 2 < n and code[i + 1] == "/" and code[i + 2] == "/" then
+      i = i + 3
+      while i < n and code[i] != "\n"
+        i = i + 1
+      end while
       continue
     end if
 
@@ -1130,6 +1603,8 @@ function tokenize(code)
   return token_chunks
 end function
 
+/// Implements repeat.
+/// @internal
 function _repeat(text, n)
   // MiniLang's inclusive `for` range also visits descending bounds. An empty
   // physical line must therefore bypass the loop so directive pruning keeps
@@ -1142,6 +1617,8 @@ function _repeat(text, n)
   return rep
 end function
 
+/// Implements line col.
+/// @internal
 function _line_col(source, pos)
   if pos < 0 then pos = 0 end if
   if pos > len(source) then pos = len(source) end if
@@ -1158,6 +1635,12 @@ function _line_col(source, pos)
   return [line, col]
 end function
 
+/// Converts format error.
+/// @param source Source value to process.
+/// @param filename Value supplied for `filename`.
+/// @param pos Value supplied for `pos`.
+/// @param message Value supplied for `message`.
+/// @param kind Value supplied for `kind`.
 function format_error(source, filename, pos, message, kind)
   if pos < 0 then pos = 0 end if
   if pos > len(source) then pos = len(source) end if
@@ -1180,35 +1663,60 @@ function format_error(source, filename, pos, message, kind)
   return kind + ": " + message + "\n" +"  at " + filename + ":" + line_no + ":" + col_no + "\n" +"  " + line_text + "\n" +"  " + caret
 end function
 
+/// Stores the tokens compiler state.
 _tokens =[]
+/// Stores the i compiler state.
 _i = 0
+/// Stores the source compiler state.
 _source = ""
+/// Stores the filename compiler state.
 _filename = ""
+/// Stores the last error compiler state.
 _last_error = 0
+/// Stores the has last error compiler state.
 _has_last_error = false
+/// Stores the func depth compiler state.
 _func_depth = 0
+/// Stores the ns depth compiler state.
 _ns_depth = 0
+/// Stores the seen package compiler state.
 _seen_package = false
+/// Stores the seen nonpackage toplevel stmt compiler state.
 _seen_nonpackage_toplevel_stmt = false
+/// Stores the collect errors compiler state.
 _collect_errors = false
+/// Stores the max errors compiler state.
 _max_errors = 50
+/// Stores the errors compiler state.
 _errors =[]
 
+/// Implements inline.
+/// @internal
 function inline _token_count(tokens)
   return tokens.count
 end function
 
+/// Implements inline.
+/// @internal
 function inline _tok_kind_id(tok)
+  /// Stores the tokens.
+  /// @internal
   global _tokens
   if typeof(tok) == "int" and tok >= 0 and tok < _tokens.count then return _tokens.kinds[tok] end if
   return TK_EOF
 end function
 
+/// Converts tok kind.
+/// @internal
 function _tok_kind(tok)
   return _token_kind_name(_tok_kind_id(tok))
 end function
 
+/// Implements inline.
+/// @internal
 function inline _tok_value(tok)
+  /// Stores the tokens.
+  /// @internal
   global _tokens
   if typeof(tok) == "int" and tok >= 0 and tok < _tokens.count then
     kind = _tokens.kinds[tok]
@@ -1219,31 +1727,51 @@ function inline _tok_value(tok)
   return
 end function
 
+/// Implements inline.
+/// @internal
 function inline _tok_pos(tok)
+  /// Stores the tokens.
+  /// @internal
   global _tokens
   if typeof(tok) == "int" and tok >= 0 and tok < _tokens.count then return _token_pos_read(_tokens.positions, tok) end if
   return 0
 end function
 
+/// Updates set error.
+/// @internal
 function _set_error(message, pos)
+  /// Stores the last error.
+  /// @internal
   global _last_error, _has_last_error, _filename
   if _has_last_error then return end if
   _last_error = ParseError(message, pos, _filename)
   _has_last_error = true
 end function
 
+/// Releases or resets clear error.
+/// @internal
 function _clear_error()
+  /// Stores the last error.
+  /// @internal
   global _last_error, _has_last_error
   _last_error = 0
   _has_last_error = false
 end function
 
+/// Reports whether has error.
+/// @internal
 function _has_error()
+  /// Stores the has last error.
+  /// @internal
   global _has_last_error
   return _has_last_error
 end function
 
+/// Releases or resets reset.
+/// @internal
 function _reset(tokens, source, filename, collect_errors, max_errors)
+  /// Stores the tokens.
+  /// @internal
   global _tokens, _i, _source, _filename, _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _collect_errors, _max_errors, _errors
   _tokens = tokens
   _i = 0
@@ -1259,7 +1787,11 @@ function _reset(tokens, source, filename, collect_errors, max_errors)
   _clear_error()
 end function
 
+/// Implements peek.
+/// @internal
 function _peek()
+  /// Stores the tokens.
+  /// @internal
   global _tokens, _i
   count = _token_count(_tokens)
   if count <= 0 then return -1 end if
@@ -1267,7 +1799,11 @@ function _peek()
   return _i
 end function
 
+/// Implements peek2.
+/// @internal
 function _peek2()
+  /// Stores the tokens.
+  /// @internal
   global _tokens, _i
   count = _token_count(_tokens)
   if count <= 0 then return -1 end if
@@ -1275,13 +1811,19 @@ function _peek2()
   return count - 1
 end function
 
+/// Implements advance.
+/// @internal
 function _advance()
+  /// Stores the tokens.
+  /// @internal
   global _tokens, _i
   t = _peek()
   if _i < _token_count(_tokens) then _i = _i + 1 end if
   return t
 end function
 
+/// Implements match kind.
+/// @internal
 function _match_kind(kind)
   t = _peek()
   if _tok_kind_id(t) != kind then return false end if
@@ -1289,6 +1831,8 @@ function _match_kind(kind)
   return true
 end function
 
+/// Implements match value.
+/// @internal
 function _match_value(kind, value)
   t = _peek()
   if _tok_kind_id(t) != kind then return false end if
@@ -1297,6 +1841,8 @@ function _match_value(kind, value)
   return true
 end function
 
+/// Implements expect kind.
+/// @internal
 function _expect_kind(kind)
   t = _peek()
   if _tok_kind_id(t) != kind then
@@ -1306,6 +1852,8 @@ function _expect_kind(kind)
   return _advance()
 end function
 
+/// Implements expect value.
+/// @internal
 function _expect_value(kind, value)
   t = _peek()
   if _tok_kind_id(t) != kind or _tok_value(t) != value then
@@ -1315,11 +1863,15 @@ function _expect_value(kind, value)
   return _advance()
 end function
 
+/// Implements skip newlines.
+/// @internal
 function _skip_newlines()
   while _match_kind(TK_NL)
   end while
 end function
 
+/// Implements hex value.
+/// @internal
 function _hex_value(ch)
   c = _charCode(ch)
   if c >= 48 and c <= 57 then return c - 48 end if
@@ -1328,6 +1880,8 @@ function _hex_value(ch)
   return -1
 end function
 
+/// Implements char from code.
+/// @internal
 function _charFromCode(v)
   // Build the UTF-8 sequence used by MiniLang strings. This also keeps \x
   // escapes above ASCII aligned with Python's chr(...).encode("utf-8").
@@ -1358,6 +1912,8 @@ function _charFromCode(v)
   return d
 end function
 
+/// Returns decode string raw.
+/// @internal
 function _decode_string_raw(raw, pos)
   // Preserve UTF-8 bytes while decoding escapes into one geometrically grown
   // buffer. Repeated immutable concatenation made long literals quadratic.
@@ -1426,7 +1982,11 @@ function _decode_string_raw(raw, pos)
   return decoded.toString()
 end function
 
+/// Implements peek3.
+/// @internal
 function _peek3()
+  /// Stores the tokens.
+  /// @internal
   global _tokens, _i
   count = _token_count(_tokens)
   if count <= 0 then return -1 end if
@@ -1434,6 +1994,8 @@ function _peek3()
   return count - 1
 end function
 
+/// Returns decode string token.
+/// @internal
 function _decode_string_token(tok)
   if _tok_kind_id(tok) != TK_STRING then
     _set_error("Expect STRING literal", _tok_pos(tok))
@@ -1444,6 +2006,8 @@ function _decode_string_token(tok)
   return _decode_string_raw(raw, _tok_pos(tok))
 end function
 
+/// Returns parse base int.
+/// @internal
 function _parse_base_int(raw, start_index, base)
   v = 0
   for i = start_index to len(raw) - 1
@@ -1454,6 +2018,8 @@ function _parse_base_int(raw, start_index, base)
   return v
 end function
 
+/// Returns parse int literal.
+/// @internal
 function _parse_int_literal(raw)
   if _substr(raw, 0, 2) == "0x" or _substr(raw, 0, 2) == "0X" then
     return _parse_base_int(raw, 2, 16)
@@ -1464,12 +2030,16 @@ function _parse_int_literal(raw)
   return toNumber(raw)
 end function
 
+/// Returns parse float literal.
+/// @internal
 function _parse_float_literal(raw)
   // Use the CRT's correctly-rounded binary64 conversion. The generic
   // MiniLang toFloat() parser can differ by one ULP for long decimals.
   return _parse_strtod(raw, void)
 end function
 
+/// Implements precedence.
+/// @internal
 function _precedence(op)
   if op == "??" then return 0 end if
   if op == "or" then return 1 end if
@@ -1485,6 +2055,8 @@ function _precedence(op)
   return -1
 end function
 
+/// Returns parse expr list.
+/// @internal
 function _parse_expr_list(end_kind)
   items_chunks = []
   items_tail = []
@@ -1509,6 +2081,8 @@ function _parse_expr_list(end_kind)
   return _chunked_finish(items_chunks, items_tail)
 end function
 
+/// Returns parse primary.
+/// @internal
 function _parse_primary()
   tok = _peek()
 
@@ -1627,6 +2201,8 @@ function _parse_primary()
   _set_error("Unexpected expression: " + _tok_desc(tok), _tok_pos(tok))
 end function
 
+/// Returns parse type ref.
+/// @internal
 function _parse_type_ref()
   tok = _peek()
   if _tok_kind_id(tok) != TK_IDENT and _tok_kind_id(tok) != TK_KW then
@@ -1643,6 +2219,8 @@ function _parse_type_ref()
   return [name, optional]
 end function
 
+/// Returns parse parameter list.
+/// @internal
 function _parse_parameter_list()
   names_chunks = []
   names_tail = []
@@ -1722,6 +2300,8 @@ function _parse_parameter_list()
   return ParameterList(names, _chunked_finish(types_chunks, types_tail), _chunked_finish(optional_chunks, optional_tail), _chunked_finish(defaults_chunks, defaults_tail), variadic_index)
 end function
 
+/// Returns parse call arguments.
+/// @internal
 function _parse_call_arguments()
   values_chunks = []
   values_tail = []
@@ -1761,6 +2341,8 @@ function _parse_call_arguments()
   return CallArguments(_chunked_finish(values_chunks, values_tail), _chunked_finish(names_chunks, names_tail))
 end function
 
+/// Implements match number has dot.
+/// @internal
 function _match_number_has_dot(text)
   if len(text) <= 0 then return false end if
   for i = 0 to len(text) - 1
@@ -1769,6 +2351,8 @@ function _match_number_has_dot(text)
   return false
 end function
 
+/// Reports whether contains dot.
+/// @internal
 function _containsDot(text)
   if len(text) <= 0 then return false end if
   for i = 0 to len(text) - 1
@@ -1777,6 +2361,8 @@ function _containsDot(text)
   return false
 end function
 
+/// Returns parse postfix.
+/// @internal
 function _parse_postfix()
   expr = _parse_primary()
   if _has_error() then return end if
@@ -1827,6 +2413,8 @@ function _parse_postfix()
   return expr
 end function
 
+/// Returns parse unary.
+/// @internal
 function _parse_unary()
   t = _peek()
   if _tok_kind_id(t) == TK_OP and _tok_value(t) == "-" then
@@ -1865,6 +2453,8 @@ function _parse_unary()
   return _parse_postfix()
 end function
 
+/// Reports whether canonical type name.
+/// @internal
 function _canonical_type_name(raw_ty)
   if raw_ty == "integer" then return "int" end if
   if raw_ty == "boolean" then return "bool" end if
@@ -1872,10 +2462,14 @@ function _canonical_type_name(raw_ty)
   return raw_ty
 end function
 
+/// Reports whether is allowed type name.
+/// @internal
 function _is_allowed_type_name(ty)
   return ty == "int" or ty == "float" or ty == "bool" or ty == "string" or ty == "array" or ty == "bytes" or ty == "function" or ty == "struct" or ty == "enum" or ty == "error" or ty == "thread" or ty == "void" or ty == "unknown"
 end function
 
+/// Returns parse expr.
+/// @internal
 function _parse_expr(min_prec)
   left = _parse_unary()
   if _has_error() then return end if
@@ -1950,6 +2544,8 @@ function _parse_expr(min_prec)
   return left
 end function
 
+/// Returns parse ident list.
+/// @internal
 function _parse_ident_list(end_kind)
   items_chunks = []
   items_tail = []
@@ -1974,6 +2570,8 @@ function _parse_ident_list(end_kind)
   return _chunked_finish(items_chunks, items_tail)
 end function
 
+/// Implements skip stmt seps.
+/// @internal
 function _skip_stmt_seps()
   while true
     if _match_kind(TK_NL) then continue end if
@@ -1982,6 +2580,8 @@ function _skip_stmt_seps()
   end while
 end function
 
+/// Implements expect block nl.
+/// @internal
 function _expect_block_nl()
   if _match_kind(TK_NL) or _match_kind(TK_SEMI) then
     _skip_stmt_seps()
@@ -1989,11 +2589,15 @@ function _expect_block_nl()
   end if
 end function
 
+/// Reports whether is end of.
+/// @internal
 function _is_end_of(what)
   next_kind = _tok_kind_id(_peek2())
   return _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "end" and (next_kind == TK_KW or next_kind == TK_IDENT) and _tok_value(_peek2()) == what
 end function
 
+/// Implements expect end of.
+/// @internal
 function _expect_end_of(what)
   _expect_value(TK_KW, "end")
   if _has_error() then return end if
@@ -2006,6 +2610,8 @@ function _expect_end_of(what)
   _advance()
 end function
 
+/// Returns parse dotted name.
+/// @internal
 function _parse_dotted_name()
   t = _expect_kind(TK_IDENT)
   if _has_error() then return end if
@@ -2018,7 +2624,11 @@ function _parse_dotted_name()
   return out_name
 end function
 
+/// Implements peek non nl.
+/// @internal
 function _peek_non_nl()
+  /// Stores the tokens.
+  /// @internal
   global _tokens, _i
   j = _i
   while j < _token_count(_tokens) and _tok_kind_id(j) == TK_NL
@@ -2030,6 +2640,8 @@ function _peek_non_nl()
   return j
 end function
 
+/// Returns parse extern param.
+/// @internal
 function _parse_extern_param()
   is_out = false
   if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "out" then
@@ -2055,6 +2667,8 @@ function _parse_extern_param()
   return ExternParam("ExternParam", 0, first, is_out)
 end function
 
+/// Returns parse extern param list.
+/// @internal
 function _parse_extern_param_list(end_kind)
   items_chunks = []
   items_tail = []
@@ -2079,7 +2693,11 @@ function _parse_extern_param_list(end_kind)
   return _chunked_finish(items_chunks, items_tail)
 end function
 
+/// Returns parse namespace def.
+/// @internal
 function _parse_namespace_def(start_pos)
+  /// Stores the ns depth.
+  /// @internal
   global _ns_depth, _func_depth
   _expect_value(TK_KW, "namespace")
   if _has_error() then return end if
@@ -2196,6 +2814,8 @@ function _parse_namespace_def(start_pos)
   return NamespaceDef("NamespaceDef", ns_name, _chunked_finish(body_chunks, body_tail), start_pos, _filename)
 end function
 
+/// Returns parse block until end.
+/// @internal
 function _parse_block_until_end(end_type, start_pos)
   stmts_chunks = []
   stmts_tail = []
@@ -2229,6 +2849,8 @@ function _parse_block_until_end(end_type, start_pos)
   return _chunked_finish(stmts_chunks, stmts_tail)
 end function
 
+/// Reports whether contains.
+/// @internal
 function _contains(arr, value)
   if len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
@@ -2237,14 +2859,22 @@ function _contains(arr, value)
   return false
 end function
 
+/// Implements record error.
+/// @internal
 function _record_error(err)
+  /// Stores the errors.
+  /// @internal
   global _errors, _max_errors
   if typeof(err) != "struct" then return end if
   if len(_errors) >= _max_errors then return end if
   _errors = _errors +[err]
 end function
 
+/// Implements sync stmt.
+/// @internal
 function _sync_stmt(stop_keywords, end_type)
+  /// Stores the i.
+  /// @internal
   global _i
   start_i = _i
   while true
@@ -2278,6 +2908,8 @@ function _sync_stmt(stop_keywords, end_type)
   end while
 end function
 
+/// Reports whether is case value continuation start.
+/// @internal
 function _is_case_value_continuation_start(tok)
   if _tok_kind_id(tok) == TK_NUMBER or _tok_kind_id(tok) == TK_STRING or _tok_kind_id(tok) == TK_LPAREN or _tok_kind_id(tok) == TK_LBRACK then
     return true
@@ -2291,6 +2923,8 @@ function _is_case_value_continuation_start(tok)
   return false
 end function
 
+/// Returns parse block until.
+/// @internal
 function _parse_block_until(stop_keywords, end_type, start_pos)
   stmts_chunks = []
   stmts_tail = []
@@ -2330,7 +2964,11 @@ function _parse_block_until(stop_keywords, end_type, start_pos)
   return _chunked_finish(stmts_chunks, stmts_tail)
 end function
 
+/// Returns parse stmt.
+/// @internal
 function _parse_stmt()
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt
   t = _peek()
   start_pos = _tok_pos(t)
@@ -2433,7 +3071,11 @@ function _parse_stmt()
   _set_error("Unknown statement: " + _tok_desc(t), start_pos)
 end function
 
+/// Returns parse stmt package.
+/// @internal
 function _parse_stmt_package(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth > 0 or _ns_depth > 0 then
     _set_error("'package' is only allowed at top level", _tok_pos(t))
@@ -2454,12 +3096,20 @@ function _parse_stmt_package(start_pos, t)
   return NamespaceDecl("NamespaceDecl", name, start_pos, _filename)
 end function
 
+/// Returns parse stmt namespace.
+/// @internal
 function _parse_stmt_namespace(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   return _parse_namespace_def(start_pos)
 end function
 
+/// Returns parse stmt import.
+/// @internal
 function _parse_stmt_import(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth > 0 or _ns_depth > 0 then
     _set_error("'import' is only allowed at top level", _tok_pos(t))
@@ -2487,7 +3137,11 @@ function _parse_stmt_import(start_pos, t)
   return Import("Import", path, alias, module_name, start_pos, _filename)
 end function
 
+/// Returns parse stmt const.
+/// @internal
 function _parse_stmt_const(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   n = _expect_kind(TK_IDENT)
@@ -2499,7 +3153,11 @@ function _parse_stmt_const(start_pos, t)
   return ConstDecl("ConstDecl", _tok_value(n), e, start_pos, _filename)
 end function
 
+/// Returns parse stmt synchronized.
+/// @internal
 function _parse_stmt_synchronized(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   if _match_kind(TK_LPAREN) then
@@ -2523,7 +3181,11 @@ function _parse_stmt_synchronized(start_pos, t)
   return SynchronizedDecl("SynchronizedDecl", _tok_value(n), e, start_pos, _filename)
 end function
 
+/// Returns parse stmt print.
+/// @internal
 function _parse_stmt_print(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   e = _parse_expr(0)
@@ -2531,7 +3193,11 @@ function _parse_stmt_print(start_pos, t)
   return Print("Print", e, start_pos, _filename)
 end function
 
+/// Returns parse stmt break.
+/// @internal
 function _parse_stmt_break(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   if _tok_kind_id(_peek()) == TK_NUMBER and not _match_number_has_dot(_tok_value(_peek())) then
@@ -2544,13 +3210,21 @@ function _parse_stmt_break(start_pos, t)
   return Break("Break", 1, start_pos, _filename)
 end function
 
+/// Returns parse stmt continue.
+/// @internal
 function _parse_stmt_continue(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   return Continue("Continue", start_pos, _filename)
 end function
 
+/// Returns parse stmt global.
+/// @internal
 function _parse_stmt_global(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth <= 0 then
     _set_error("'global' is only allowed inside functions", _tok_pos(t))
@@ -2577,7 +3251,11 @@ function _parse_stmt_global(start_pos, t)
   return GlobalDecl("GlobalDecl", _chunked_finish(names_chunks, names_tail), start_pos, _filename)
 end function
 
+/// Returns parse stmt return.
+/// @internal
 function _parse_stmt_return(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   nxt = _peek()
@@ -2592,7 +3270,11 @@ function _parse_stmt_return(start_pos, t)
   return Return("Return", e, start_pos, _filename)
 end function
 
+/// Returns parse stmt yield.
+/// @internal
 function _parse_stmt_yield(start_pos, tok)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth
   if _func_depth <= 0 then _set_error("'yield' is only allowed inside iterator functions", start_pos) return end if
   _advance()
@@ -2608,7 +3290,11 @@ function _parse_stmt_yield(start_pos, tok)
   return Yield("Yield", value, start_pos, _filename)
 end function
 
+/// Returns parse stmt defer.
+/// @internal
 function _parse_stmt_defer(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth <= 0 then
     _set_error("'defer' is only allowed inside functions", _tok_pos(t))
@@ -2624,7 +3310,11 @@ function _parse_stmt_defer(start_pos, t)
   return Defer("Defer", e, -1, [], "", start_pos, _filename)
 end function
 
+/// Returns parse stmt extern.
+/// @internal
 function _parse_stmt_extern(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth > 0 then
     _set_error("'extern' is only allowed at top-level / inside namespace", _tok_pos(t))
@@ -2714,7 +3404,11 @@ function _parse_stmt_extern(start_pos, t)
   return ExternFunctionDef("ExternFunctionDef", _tok_value(nm), params, dll, sym_name, ret_ty, start_pos, _filename)
 end function
 
+/// Returns parse stmt interface.
+/// @internal
 function _parse_stmt_interface(start_pos, tok)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth
   if _func_depth > 0 then _set_error("'interface' is only allowed at declaration scope", start_pos) return end if
   _advance()
@@ -2760,7 +3454,11 @@ function _parse_stmt_interface(start_pos, tok)
   return InterfaceDef("InterfaceDef", _tok_value(name_tok), _chunked_finish(methods_chunks, methods_tail), start_pos, _filename)
 end function
 
+/// Returns parse stmt struct.
+/// @internal
 function _parse_stmt_struct(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   nm = _expect_kind(TK_IDENT)
@@ -2918,7 +3616,11 @@ function _parse_stmt_struct(start_pos, t)
   )
 end function
 
+/// Returns parse stmt enum.
+/// @internal
 function _parse_stmt_enum(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   nm = _expect_kind(TK_IDENT)
@@ -2989,7 +3691,11 @@ function _parse_stmt_enum(start_pos, t)
   )
 end function
 
+/// Returns parse stmt function.
+/// @internal
 function _parse_stmt_function(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   prefix = _tok_value(t)
   is_async = prefix == "async"
@@ -3043,8 +3749,14 @@ function _parse_stmt_function(start_pos, t)
   return _new_function_node(_tok_value(nm), parsed.names, body, false, is_inline, is_synchronized, parsed.types, parsed.optionals, parsed.defaults, parsed.variadic_index, return_type, return_optional, is_async, is_iterator, start_pos, _filename)
 end function
 
+/// Returns parse stmt loop.
+/// @internal
 function _parse_stmt_loop(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  /// Stores the i.
+  /// @internal
   global _i
   _advance()
   _expect_block_nl()
@@ -3090,7 +3802,11 @@ function _parse_stmt_loop(start_pos, t)
   end while
 end function
 
+/// Returns parse stmt switch.
+/// @internal
 function _parse_stmt_switch(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   block_kind = _tok_value(t)
   _advance()
@@ -3181,7 +3897,11 @@ function _parse_stmt_switch(start_pos, t)
   return Switch("Switch", ex, _chunked_finish(cases_chunks, cases_tail), default_body, start_pos, _filename)
 end function
 
+/// Returns parse stmt if.
+/// @internal
 function _parse_stmt_if(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   cond = _parse_expr(0)
@@ -3219,7 +3939,11 @@ function _parse_stmt_if(start_pos, t)
   return If("If", cond, then_body, _chunked_finish(elifs_chunks, elifs_tail), else_body, start_pos, _filename)
 end function
 
+/// Returns parse stmt while.
+/// @internal
 function _parse_stmt_while(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   cond = _parse_expr(0)
@@ -3232,7 +3956,11 @@ function _parse_stmt_while(start_pos, t)
   return While("While", cond, body, start_pos, _filename)
 end function
 
+/// Returns parse stmt for.
+/// @internal
 function _parse_stmt_for(start_pos, t)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
   if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "each" then
@@ -3268,7 +3996,11 @@ function _parse_stmt_for(start_pos, t)
   return For("For", _tok_value(vn), st, en, body, start_pos, _filename)
 end function
 
+/// Returns parse stmt ident.
+/// @internal
 function _parse_stmt_ident(start_pos, first_tok)
+  /// Stores the func depth.
+  /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   expr = _parse_postfix()
   if _has_error() then return end if
@@ -3311,7 +4043,11 @@ function _parse_stmt_ident(start_pos, first_tok)
 end function
 
 
+/// Returns parse stmt recover.
+/// @internal
 function _parse_stmt_recover(stop_keywords, end_type)
+  /// Stores the i.
+  /// @internal
   global _i
   start_i = _i
   st = _parse_stmt()
@@ -3328,6 +4064,8 @@ function _parse_stmt_recover(stop_keywords, end_type)
   return st
 end function
 
+/// Implements replace dots with slash.
+/// @internal
 function _replaceDotsWithSlash(name)
   if len(name) <= 0 then return "" end if
   slash_name = ""
@@ -3341,6 +4079,9 @@ function _replaceDotsWithSlash(name)
   return slash_name
 end function
 
+/// Returns parse expression.
+/// @param source Source value to process.
+/// @param filename Value supplied for `filename`.
 function parse_expression(source, filename)
   toks = tokenize(source)
   if typeof(toks) == "struct" and typeof(try(toks.message)) == "string" then
@@ -3358,10 +4099,14 @@ function parse_expression(source, filename)
   return e
 end function
 
+/// Runs compile is error.
+/// @internal
 function _compile_is_error(value)
   return typeof(value) == "struct" and typeof(try(value.message)) == "string" and typeof(try(value.pos)) == "int"
 end function
 
+/// Runs compile valid name.
+/// @internal
 function _compile_valid_name(name)
   if typeof(name) != "string" or len(name) <= 0 or _isIdentStart(name[0]) == false then return false end if
   if len(name) > 1 then
@@ -3372,16 +4117,22 @@ function _compile_valid_name(name)
   return true
 end function
 
+/// Runs compile value type.
+/// @internal
 function _compile_value_type(value)
   ty = typeof(value)
   if ty == "bool" or ty == "int" or ty == "string" then return ty end if
   return ""
 end function
 
+/// Runs compile is predefined.
+/// @internal
 function _compile_is_predefined(name)
   return name == "TARGET_OS" or name == "TARGET_ARCH" or name == "TARGET_ABI" or name == "TARGET_FORMAT" or name == "POINTER_SIZE" or name == "MINILANG_VERSION"
 end function
 
+/// Runs compile env find.
+/// @internal
 function _compile_env_find(env, name)
   if typeof(env) != "array" or len(env) <= 0 then return -1 end if
   for i = 0 to len(env) - 1
@@ -3390,16 +4141,22 @@ function _compile_env_find(env, name)
   return -1
 end function
 
+/// Runs compile env has.
+/// @internal
 function _compile_env_has(env, name)
   return _compile_env_find(env, name) >= 0
 end function
 
+/// Runs compile env get.
+/// @internal
 function _compile_env_get(env, name)
   idx = _compile_env_find(env, name)
   if idx < 0 then return void end if
   return env[idx].value
 end function
 
+/// Runs compile env set.
+/// @internal
 function _compile_env_set(env, name, value)
   idx = _compile_env_find(env, name)
   if idx >= 0 then
@@ -3411,6 +4168,8 @@ function _compile_env_set(env, name, value)
   return env + [CompileValue(name, value)]
 end function
 
+/// Runs compile predefined values.
+/// @internal
 function _compile_predefined_values()
   return [
     CompileValue("TARGET_OS", _compile_target_os),
@@ -3418,14 +4177,21 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.2.0")
+    CompileValue("MINILANG_VERSION", "1.2.1")
   ]
 end function
 
-// Select immutable values for subsequent source parses.
+/// Select immutable values for subsequent source parses.
+/// @param target Value supplied for `target`.
 function set_compile_target(target)
+  /// Stores the compile target os.
+  /// @internal
   global _compile_target_os
+  /// Stores the compile target abi.
+  /// @internal
   global _compile_target_abi
+  /// Stores the compile target format.
+  /// @internal
   global _compile_target_format
   normalized = s.toLowerAscii(s.trim("" + target))
   if normalized == "windows-x64" or normalized == "windows" or normalized == "win64" then
@@ -3443,12 +4209,16 @@ function set_compile_target(target)
   return ParseError("unsupported target: " + normalized, 0, "<command-line>")
 end function
 
+/// Runs compile node pos.
+/// @internal
 function _compile_node_pos(expr, base_pos)
   p = t.ast_pos(expr)
   if typeof(p) != "int" then p = 0 end if
   return base_pos + p
 end function
 
+/// Runs compile string compare.
+/// @internal
 function _compile_string_compare(left, right)
   left_bytes = bytes(left)
   right_bytes = bytes(right)
@@ -3465,6 +4235,8 @@ function _compile_string_compare(left, right)
   return 0
 end function
 
+/// Runs compile eval node.
+/// @internal
 function _compile_eval_node(expr, env, filename, base_pos)
   if t.ast_is_node(expr) == false then return ParseError("unsupported compile-time expression", base_pos, filename) end if
   kind = t.ast_kind(expr)
@@ -3567,6 +4339,8 @@ function _compile_eval_node(expr, env, filename, base_pos)
   return ParseError("unsupported compile-time expression", pos, filename)
 end function
 
+/// Runs compile eval.
+/// @internal
 function _compile_eval(text, env, filename, base_pos)
   expr = parse_expression(text, filename)
   if _compile_is_error(expr) then
@@ -3576,6 +4350,8 @@ function _compile_eval(text, env, filename, base_pos)
   return _compile_eval_node(expr, env, filename, base_pos)
 end function
 
+/// Runs compile numeric text.
+/// @internal
 function _compile_numeric_text(raw)
   if typeof(raw) != "string" or len(raw) <= 0 then return false end if
   i = 0
@@ -3586,6 +4362,8 @@ function _compile_numeric_text(raw)
   return _isDigit(raw[i])
 end function
 
+/// Runs compile parse cli value.
+/// @internal
 function _compile_parse_cli_value(raw)
   raw = s.trim(raw)
   if raw == "true" then return true end if
@@ -3602,8 +4380,11 @@ function _compile_parse_cli_value(raw)
   return raw
 end function
 
-// Install command-line/project values. Later -D occurrences override earlier ones.
+/// Install command-line/project values. Later -D occurrences override earlier ones.
+/// @param specs Value supplied for `specs`.
 function set_compile_defines(specs)
+  /// Stores the compile external values.
+  /// @internal
   global _compile_external_values
   values = []
   if typeof(specs) != "array" then specs = [] end if
@@ -3631,10 +4412,14 @@ function set_compile_defines(specs)
   return true
 end function
 
+/// Runs compile external has.
+/// @internal
 function _compile_external_has(name)
   return _compile_env_has(_compile_external_values, name)
 end function
 
+/// Runs compile ltrim index.
+/// @internal
 function _compile_ltrim_index(line)
   i = 0
   while i < len(line) and (line[i] == " " or line[i] == "\t")
@@ -3643,6 +4428,8 @@ function _compile_ltrim_index(line)
   return i
 end function
 
+/// Runs compile split command.
+/// @internal
 function _compile_split_command(body)
   body = s.trim(body)
   i = 0
@@ -3653,6 +4440,8 @@ function _compile_split_command(body)
   return [command, s.trim(_substr(body, i, len(body) - i))]
 end function
 
+/// Runs compile block comment state.
+/// @internal
 function _compile_block_comment_state(line, in_block)
   i = 0
   in_string = false
@@ -3693,11 +4482,15 @@ function _compile_block_comment_state(line, in_block)
   return in_block
 end function
 
+/// Runs compile frames active.
+/// @internal
 function _compile_frames_active(frames)
   if typeof(frames) != "array" or len(frames) <= 0 then return true end if
   return frames[len(frames) - 1].active
 end function
 
+/// Runs compile frames pop.
+/// @internal
 function _compile_frames_pop(frames)
   if typeof(frames) != "array" or len(frames) <= 1 then return [] end if
   kept = []
@@ -3707,6 +4500,8 @@ function _compile_frames_pop(frames)
   return kept
 end function
 
+/// Runs compile argument pos.
+/// @internal
 function _compile_argument_pos(line, argument, line_start, hash_col)
   if argument == "" then return line_start + hash_col end if
   p = s.indexOf(line, argument, 0)
@@ -3714,6 +4509,8 @@ function _compile_argument_pos(line, argument, line_start, hash_col)
   return line_start + p
 end function
 
+/// Runs compile option parts.
+/// @internal
 function _compile_option_parts(argument, filename, argument_pos)
   eq = s.indexOf(argument, "=", 0)
   if typeof(eq) != "int" or eq <= 0 or eq + 1 >= len(argument) then
@@ -3733,6 +4530,8 @@ function _compile_option_parts(argument, filename, argument_pos)
   return [name, declared_type, value_text]
 end function
 
+/// Runs compile maybe has directive.
+/// @internal
 function _compile_maybe_has_directive(code)
   search_from = 0
   while search_from < len(code)
@@ -3748,7 +4547,9 @@ function _compile_maybe_has_directive(code)
   return false
 end function
 
-// Evaluate line-oriented directives and retain every original byte offset.
+/// Evaluate line-oriented directives and retain every original byte offset.
+/// @param code Source code to process.
+/// @param filename Value supplied for `filename`.
 function preprocess_compile_directives(code, filename)
   if typeof(code) != "string" then return "" end if
   if _compile_maybe_has_directive(code) == false then return code end if
@@ -3888,40 +4689,66 @@ function preprocess_compile_directives(code, filename)
   return s.join(t.arr_chunked_finish(chunks, tail), "")
 end function
 
+/// Stores the language serial compiler state.
 _language_serial = 0
+/// Stores the language needs await compiler state.
 _language_needs_await = false
+/// Stores the language needs select compiler state.
 _language_needs_select = false
+/// Stores the language needs async pool compiler state.
 _language_needs_async_pool = false
+/// Stores the language async pool name compiler state.
 _language_async_pool_name = "__ml_async_pool_global"
+/// Stores the language await pos compiler state.
 _language_await_pos = 0
+/// Stores the language await file compiler state.
 _language_await_file = ""
+/// Stores the language select pos compiler state.
 _language_select_pos = 0
+/// Stores the language select file compiler state.
 _language_select_file = ""
+/// Stores the language failure compiler state.
 _language_failure = ""
 
+/// Implements lang fail.
+/// @internal
 function _lang_fail(message)
+  /// Stores the language failure.
+  /// @internal
   global _language_failure
   if _language_failure == "" then _language_failure = message end if
 end function
 
+/// Implements lang fresh.
+/// @internal
 function _lang_fresh(stem)
+  /// Stores the language serial.
+  /// @internal
   global _language_serial
   _language_serial = _language_serial + 1
   return "__ml_" + stem + "_" + _language_serial
 end function
 
+/// Implements lang var.
+/// @internal
 function _lang_var(name, node)
   return t.ast_leaf_new("Var", name, t.ast_pos(node), t.ast_filename(node))
 end function
 
+/// Implements lang num.
+/// @internal
 function _lang_num(value, node)
   return t.ast_leaf_new("Num", value, t.ast_pos(node), t.ast_filename(node))
 end function
 
+/// Implements lang void.
+/// @internal
 function _lang_void(node)
   return t.ast_leaf_new("VoidLit", 0, t.ast_pos(node), t.ast_filename(node))
 end function
 
+/// Implements lang call.
+/// @internal
 function _lang_call(name, args, node)
   // Calls introduced after source-line annotation intentionally have no own
   // line, matching the Python lowerer. Their surrounding source statement
@@ -3929,6 +4756,8 @@ function _lang_call(name, args, node)
   return Call("Call", _lang_var(name, node), args, [], t.ast_pos(node), "__ml_generated__")
 end function
 
+/// Implements lang guard returns.
+/// @internal
 function _lang_guard_returns(body, return_type, return_optional)
   if typeof(return_type) != "string" or typeof(body) != "array" then return body end if
   if len(body) <= 0 then return body end if
@@ -3976,6 +4805,8 @@ function _lang_guard_returns(body, return_type, return_optional)
   return body
 end function
 
+/// Implements lang apply parameter contracts.
+/// @internal
 function _lang_apply_parameter_contracts(fn)
   guards = []
   if typeof(fn.params) == "array" and len(fn.params) > 0 then
@@ -3998,13 +4829,19 @@ function _lang_apply_parameter_contracts(fn)
   return fn
 end function
 
+/// Implements lang apply contracts.
+/// @internal
 function _lang_apply_contracts(fn)
   fn = _lang_apply_parameter_contracts(fn)
   if fn.is_iterator == false then fn.body = _lang_guard_returns(fn.body, fn.return_type, fn.return_optional) end if
   return fn
 end function
 
+/// Implements lang lower expr.
+/// @internal
 function _lang_lower_expr(expr, prelude)
+  /// Stores the language needs await.
+  /// @internal
   global _language_needs_await, _language_needs_select, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file
   if t.ast_is_node(expr) == false then return [expr, prelude] end if
   kind = t.ast_kind(expr)
@@ -4095,6 +4932,8 @@ function _lang_lower_expr(expr, prelude)
   return [expr, prelude]
 end function
 
+/// Implements lang iterator append.
+/// @internal
 function _lang_iterator_append(yield_stmt, fn, names)
   buf = names[0]
   count = names[1]
@@ -4122,6 +4961,8 @@ function _lang_iterator_append(yield_stmt, fn, names)
   return [grow_if, store, count_assign]
 end function
 
+/// Implements lang rewrite yields.
+/// @internal
 function _lang_rewrite_yields(body, fn, names)
   if typeof(body) != "array" or len(body) <= 0 then return [] end if
   result_items = []
@@ -4165,6 +5006,8 @@ function _lang_rewrite_yields(body, fn, names)
   return result_items
 end function
 
+/// Implements lang lower iterator.
+/// @internal
 function _lang_lower_iterator(fn)
   if fn.is_async then _lang_fail("A function cannot be both async and iterator") return fn end if
   suffix = _lang_fresh("iter")
@@ -4188,22 +5031,29 @@ function _lang_lower_iterator(fn)
   return fn
 end function
 
-// Mutable construction state for a lazy iterator's pull-closure state machine.
-// Integer state IDs keep suspension/resumption explicit and avoid materializing
-// yielded elements in an intermediate array.
+/// Mutable construction state for a lazy iterator's pull-closure state machine. Integer state IDs keep suspension/resumption explicit and avoid materializing yielded elements in an intermediate array.
 struct LazyIteratorState
+  /// Stores the fn member of `LazyIteratorState`.
   fn,
+  /// Stores the state name member of `LazyIteratorState`.
   state_name,
+  /// Stores the blocks member of `LazyIteratorState`.
   blocks,
+  /// Stores the persistent member of `LazyIteratorState`.
   persistent,
+  /// Stores the globals declared member of `LazyIteratorState`.
   globals_declared,
 end struct
 
+/// Implements lang add unique.
+/// @internal
 function _lang_add_unique(items, value)
   if _contains(items, value) == false then items = items + [value] end if
   return items
 end function
 
+/// Implements lang sort strings.
+/// @internal
 function _lang_sort_strings(items)
   result = []
   if typeof(items) != "array" then return result end if
@@ -4228,11 +5078,15 @@ function _lang_sort_strings(items)
   return result
 end function
 
+/// Implements lang lazy reserve.
+/// @internal
 function _lang_lazy_reserve(state)
   state.blocks = state.blocks + [[]]
   return [state, len(state.blocks) - 1]
 end function
 
+/// Implements lang lazy jump.
+/// @internal
 function _lang_lazy_jump(state, target, node)
   generated_file = "__ml_generated__"
   target_node = t.ast_leaf_new("Num", target, 0, generated_file)
@@ -4240,6 +5094,8 @@ function _lang_lazy_jump(state, target, node)
   return [assign_state, Continue("Continue", 0, generated_file)]
 end function
 
+/// Implements lang lazy contains yield.
+/// @internal
 function _lang_lazy_contains_yield(st)
   kind = t.ast_kind(st)
   if kind == "Yield" then return true end if
@@ -4294,6 +5150,8 @@ function _lang_lazy_contains_yield(st)
   return false
 end function
 
+/// Implements lang lazy collect names.
+/// @internal
 function _lang_lazy_collect_names(state, body)
   if typeof(body) != "array" or len(body) <= 0 then return state end if
   for i = 0 to len(body) - 1
@@ -4338,6 +5196,8 @@ function _lang_lazy_collect_names(state, body)
   return state
 end function
 
+/// Implements lang lazy compile seq.
+/// @internal
 function _lang_lazy_compile_seq(state, body, cont, break_target, continue_target)
   current = cont
   if typeof(body) != "array" or len(body) <= 0 then return [state, current] end if
@@ -4511,6 +5371,8 @@ function _lang_lazy_compile_seq(state, body, cont, break_target, continue_target
   return [state, current]
 end function
 
+/// Implements lang lower lazy iterator.
+/// @internal
 function _lang_lower_lazy_iterator(fn)
   if fn.is_async then _lang_fail("A function cannot be both async and iterator") return fn end if
   state_name = _lang_fresh("lazy_state")
@@ -4550,7 +5412,11 @@ function _lang_lower_lazy_iterator(fn)
   return fn
 end function
 
+/// Implements lang lower async.
+/// @internal
 function _lang_lower_async(fn)
+  /// Stores the language needs async pool.
+  /// @internal
   global _language_needs_async_pool, _language_async_pool_name
   impl_name = _lang_fresh("async_impl")
   entry_name = _lang_fresh("async_entry")
@@ -4583,7 +5449,11 @@ function _lang_lower_async(fn)
   return [impl, entry, wrapper]
 end function
 
+/// Implements lang await helper.
+/// @internal
 function _lang_await_helper()
+  /// Stores the language await pos.
+  /// @internal
   global _language_await_pos, _language_await_file
   node = _new_function_node("__ml_await", ["value"], [], false, false, false, [], [], [], -1, 0, false, false, false, _language_await_pos, _language_await_file)
   value = _lang_var("value", node)
@@ -4597,7 +5467,11 @@ function _lang_await_helper()
   return node
 end function
 
+/// Implements lang select helper.
+/// @internal
 function _lang_select_helper()
+  /// Stores the language select pos.
+  /// @internal
   global _language_select_pos, _language_select_file
   node = _new_function_node("__ml_select", ["handles"], [], false, false, false, [], [], [], -1, 0, false, false, false, _language_select_pos, _language_select_file)
   handles = _lang_var("handles", node)
@@ -4624,6 +5498,8 @@ function _lang_select_helper()
   return node
 end function
 
+/// Implements lang lower stmt.
+/// @internal
 function _lang_lower_stmt(st, function_depth)
   kind = t.ast_kind(st)
   prelude = []
@@ -4758,6 +5634,8 @@ function _lang_lower_stmt(st, function_depth)
   return prelude + [st]
 end function
 
+/// Implements lang lower block.
+/// @internal
 function _lang_lower_block(body, function_depth)
   if typeof(body) != "array" or len(body) <= 0 then return [] end if
   chunks = []
@@ -4775,10 +5653,16 @@ function _lang_lower_block(body, function_depth)
   return _chunked_finish(chunks, tail)
 end function
 
+/// Stores the language interfaces compiler state.
 _language_interfaces = []
+/// Stores the language structs compiler state.
 _language_structs = []
 
+/// Implements lang collect contracts.
+/// @internal
 function _lang_collect_contracts(body, prefix)
+  /// Stores the language interfaces.
+  /// @internal
   global _language_interfaces, _language_structs
   if typeof(body) != "array" or len(body) <= 0 then return end if
   for i = 0 to len(body) - 1
@@ -4794,6 +5678,8 @@ function _lang_collect_contracts(body, prefix)
   end for
 end function
 
+/// Implements lang find interface.
+/// @internal
 function _lang_find_interface(raw_name, prefix)
   if len(_language_interfaces) <= 0 then return void end if
   local_name = prefix + raw_name
@@ -4813,6 +5699,8 @@ function _lang_find_interface(raw_name, prefix)
   return unique
 end function
 
+/// Implements lang interface signature matches.
+/// @internal
 function _lang_interface_signature_matches(required, actual)
   if try(actual.is_static) == true then return false end if
   if len(actual.params) != len(required.params) or actual.variadic_index != required.variadic_index then return false end if
@@ -4835,7 +5723,11 @@ function _lang_interface_signature_matches(required, actual)
   return true
 end function
 
+/// Implements lang validate interfaces.
+/// @internal
 function _lang_validate_interfaces(program)
+  /// Stores the language interfaces.
+  /// @internal
   global _language_interfaces, _language_structs
   _language_interfaces = []
   _language_structs = []
@@ -4870,6 +5762,8 @@ function _lang_validate_interfaces(program)
   return ""
 end function
 
+/// Implements lang remove interfaces.
+/// @internal
 function _lang_remove_interfaces(body)
   if typeof(body) != "array" or len(body) <= 0 then return [] end if
   result_items = []
@@ -4882,7 +5776,11 @@ function _lang_remove_interfaces(body)
   return result_items
 end function
 
+/// Implements prepare language features.
+/// @param program Value supplied for `program`.
 function prepare_language_features(program)
+  /// Stores the language serial.
+  /// @internal
   global _language_serial, _language_needs_await, _language_needs_select, _language_needs_async_pool, _language_async_pool_name, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file, _language_failure
   _language_serial = 0
   _language_needs_await = false
@@ -4918,6 +5816,9 @@ function prepare_language_features(program)
   return helpers + lowered
 end function
 
+/// Returns parse program.
+/// @param source Source value to process.
+/// @param filename Value supplied for `filename`.
 function parse_program(source, filename)
   toks = tokenize(source)
   if typeof(toks) == "struct" and typeof(try(toks.message)) == "string" then
@@ -4942,6 +5843,10 @@ function parse_program(source, filename)
   return _chunked_finish(stmts_chunks, stmts_tail)
 end function
 
+/// Returns parse program keepgoing.
+/// @param source Source value to process.
+/// @param filename Value supplied for `filename`.
+/// @param max_errors Value supplied for `max_errors`.
 function parse_program_keepgoing(source, filename, max_errors)
   toks = tokenize(source)
   if typeof(toks) == "struct" and typeof(try(toks.message)) == "string" then

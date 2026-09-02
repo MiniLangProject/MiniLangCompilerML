@@ -1,4 +1,22 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Owns shared backend state, labels, helper tracking and call emission.
+//! Provides the mlc codegen codegen_core package.
+
 package mlc.codegen.codegen_core
 import mlc.asm as a
 import mlc.data as d
@@ -11,153 +29,284 @@ import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_builtins_alloc as bal
 import mlc.codegen.codegen_threads as th
 
-// Complete mutable state threaded through every backend emission function.
-// Collection fields use indexed/capacity-backed representations on hot paths.
+/// Complete mutable state threaded through every backend emission function. Collection fields use indexed/capacity-backed representations on hot paths.
 struct CgState
+  /// Stores the source member of `CgState`.
   source,
+  /// Stores the filename member of `CgState`.
   filename,
+  /// Stores the import aliases member of `CgState`.
   import_aliases,
+  /// Stores the extern sigs member of `CgState`.
   extern_sigs,
+  /// Stores the extern abi structs member of `CgState`.
   extern_abi_structs,
+  /// Stores the extern structs member of `CgState`.
   extern_structs,
+  /// Stores the heap config member of `CgState`.
   heap_config,
+  /// Stores the call profile member of `CgState`.
   call_profile,
+  /// Stores the trace calls member of `CgState`.
   trace_calls,
+  /// Stores the mem probe member of `CgState`.
   mem_probe,
+  /// Stores the imports member of `CgState`.
   imports,
+  /// Stores the asm member of `CgState`.
   asm,
+  /// Stores the data member of `CgState`.
   data,
+  /// Stores the bss member of `CgState`.
   bss,
+  /// Stores the rdata member of `CgState`.
   rdata,
+  /// Stores the var slots member of `CgState`.
   var_slots,
+  /// Stores the break stack member of `CgState`.
   break_stack,
+  /// Stores the struct fields member of `CgState`.
   struct_fields,
+  /// Stores the struct field types member of `CgState`.
   struct_field_types,
+  /// Stores the struct ids member of `CgState`.
   struct_ids,
+  /// Stores the enum variants member of `CgState`.
   enum_variants,
+  /// Stores the enum ids member of `CgState`.
   enum_ids,
+  /// Stores the value enum values member of `CgState`.
   value_enum_values,
+  /// Stores the reserved identifiers member of `CgState`.
   reserved_identifiers,
+  /// Stores the label id member of `CgState`.
   label_id,
+  /// Stores the used helpers member of `CgState`.
   used_helpers,
+  /// Stores the emitted helpers member of `CgState`.
   emitted_helpers,
+  /// Stores the scope stack member of `CgState`.
   scope_stack,
+  /// Stores the scope declared member of `CgState`.
   scope_declared,
+  /// Stores the binding id member of `CgState`.
   binding_id,
+  /// Stores the global slots member of `CgState`.
   global_slots,
+  /// Stores the globals member of `CgState`.
   globals,
+  /// Stores the in function member of `CgState`.
   in_function,
+  /// Stores the func globals member of `CgState`.
   func_globals,
+  /// Stores the func global map member of `CgState`.
   func_global_map,
+  /// Stores the function locals member of `CgState`.
   function_locals,
+  /// Stores the current qname prefix member of `CgState`.
   current_qname_prefix,
+  /// Stores the current file prefix member of `CgState`.
   current_file_prefix,
+  /// Stores the file prefix map member of `CgState`.
   file_prefix_map,
+  /// Stores the typename struct by id member of `CgState`.
   typename_struct_by_id,
+  /// Stores the typename struct by qname member of `CgState`.
   typename_struct_by_qname,
+  /// Stores the typename enum by id member of `CgState`.
   typename_enum_by_id,
+  /// Stores the typename enum by qname member of `CgState`.
   typename_enum_by_qname,
+  /// Stores the user functions member of `CgState`.
   user_functions,
+  /// Stores the nested user functions member of `CgState`.
   nested_user_functions,
+  /// Stores the struct methods member of `CgState`.
   struct_methods,
+  /// Stores the struct static methods member of `CgState`.
   struct_static_methods,
+  /// Stores the function global labels member of `CgState`.
   function_global_labels,
+  /// Stores the struct global labels member of `CgState`.
   struct_global_labels,
+  /// Stores the builtin specs member of `CgState`.
   builtin_specs,
+  /// Stores the builtin global labels member of `CgState`.
   builtin_global_labels,
+  /// Stores the extern global labels member of `CgState`.
   extern_global_labels,
+  /// Stores the extern stub labels member of `CgState`.
   extern_stub_labels,
+  /// Stores the function static obj labels member of `CgState`.
   function_static_obj_labels,
+  /// Stores the struct static obj labels member of `CgState`.
   struct_static_obj_labels,
+  /// Stores the builtin static obj labels member of `CgState`.
   builtin_static_obj_labels,
+  /// Stores the extern static obj labels member of `CgState`.
   extern_static_obj_labels,
+  /// Stores the diagnostics member of `CgState`.
   diagnostics,
+  /// Stores the call total count member of `CgState`.
   call_total_count,
+  /// Stores the call indirect count member of `CgState`.
   call_indirect_count,
+  /// Stores the callprof entries member of `CgState`.
   callprof_entries,
+  /// Stores the callprof index member of `CgState`.
   callprof_index,
+  /// Stores the callprof name labels member of `CgState`.
   callprof_name_labels,
+  /// Stores the callprof n member of `CgState`.
   callprof_n,
+  /// Stores the is windows subsystem member of `CgState`.
   is_windows_subsystem,
+  /// Stores the func ret label member of `CgState`.
   func_ret_label,
+  /// Stores the func frame size member of `CgState`.
   func_frame_size,
+  /// Stores the errprop suppression member of `CgState`.
   errprop_suppression,
+  /// Stores the errprop sync depth member of `CgState`.
   errprop_sync_depth,
+  /// Stores the dbg line starts member of `CgState`.
   dbg_line_starts,
+  /// Stores the expr temp base member of `CgState`.
   expr_temp_base,
+  /// Stores the expr temp top member of `CgState`.
   expr_temp_top,
+  /// Stores the current fn boxed names member of `CgState`.
   current_fn_boxed_names,
+  /// Stores the current fn env index member of `CgState`.
   current_fn_env_index,
+  /// Stores the current env root off member of `CgState`.
   current_env_root_off,
+  /// Stores the scope index stack member of `CgState`.
   scope_index_stack,
+  /// Stores the scope declared index stack member of `CgState`.
   scope_declared_index_stack,
+  /// Stores the func global map index member of `CgState`.
   func_global_map_index,
+  /// Stores the user function index member of `CgState`.
   user_function_index,
+  /// Stores the function codegen name map member of `CgState`.
   function_codegen_name_map,
+  /// Stores the analysis mode member of `CgState`.
   analysis_mode,
+  /// Stores the qualify cache member of `CgState`.
   qualify_cache,
+  /// Stores the struct fields index member of `CgState`.
   struct_fields_index,
+  /// Stores the struct ids index member of `CgState`.
   struct_ids_index,
+  /// Stores the enum variants index member of `CgState`.
   enum_variants_index,
+  /// Stores the enum ids index member of `CgState`.
   enum_ids_index,
+  /// Stores the struct methods index member of `CgState`.
   struct_methods_index,
+  /// Stores the struct static methods index member of `CgState`.
   struct_static_methods_index,
+  /// Stores the extern sig index member of `CgState`.
   extern_sig_index,
+  /// Stores the import alias index member of `CgState`.
   import_alias_index,
+  /// Stores the call temp base member of `CgState`.
   call_temp_base,
+  /// Stores the expr temp max member of `CgState`.
   expr_temp_max,
+  /// Stores the current root rec off member of `CgState`.
   _current_root_rec_off,
+  /// Stores the current root static qwords member of `CgState`.
   _current_root_static_qwords,
+  /// Stores the expr temp reg order member of `CgState`.
   _expr_temp_reg_order,
+  /// Stores the expr temp reg live member of `CgState`.
   _expr_temp_reg_live,
+  /// Stores the expr temp reg live by reg member of `CgState`.
   _expr_temp_reg_live_by_reg,
+  /// Stores the expr temp reg reserved member of `CgState`.
   _expr_temp_reg_reserved,
+  /// Stores the cold block stack member of `CgState`.
   _cold_block_stack,
+  /// Stores the inline param stack member of `CgState`.
   _inline_param_stack,
+  /// Stores the inline call stack member of `CgState`.
   _inline_call_stack,
+  /// Stores the inline emitted bytes member of `CgState`.
   _inline_emitted_bytes,
+  /// Stores the max inline call args global member of `CgState`.
   max_inline_call_args_global,
+  /// Stores the known int names member of `CgState`.
   known_int_names,
+  /// Stores the known value types member of `CgState`.
   known_value_types,
+  /// Stores the loop index fast stack member of `CgState`.
   loop_index_fast_stack,
+  /// Stores the inline only functions member of `CgState`.
   inline_only_functions,
+  /// Stores the pruned inline functions member of `CgState`.
   pruned_inline_functions,
+  /// Stores the ext widebuf labels member of `CgState`.
   ext_widebuf_labels,
+  /// Stores the decl site bindings member of `CgState`.
   decl_site_bindings,
+  /// Stores the function local ids member of `CgState`.
   function_local_ids,
+  /// Stores the module init active member of `CgState`.
   _module_init_active,
+  /// Stores the module init active file member of `CgState`.
   _module_init_active_file,
+  /// Stores the global owner file member of `CgState`.
   _global_owner_file,
+  /// Stores the module init status labels member of `CgState`.
   _module_init_status_labels,
+  /// Stores the native threads possible member of `CgState`.
   native_threads_possible,
+  /// Stores the synchronized globals member of `CgState`.
   synchronized_globals,
+  /// Stores the target member of `CgState`.
   target,
+  /// Stores the is linux target member of `CgState`.
   is_linux_target,
 end struct
 
-// Compatibility lookup records used where older compiler images pass arrays.
+/// Compatibility lookup records used where older compiler images pass arrays.
 struct NamedArray
+  /// Stores the key member of `NamedArray`.
   key,
+  /// Stores the values member of `NamedArray`.
   values,
 end struct
 
+/// Represents named int.
 struct NamedInt
+  /// Stores the key member of `NamedInt`.
   key,
+  /// Stores the value member of `NamedInt`.
   value,
 end struct
 
+/// Represents named any.
 struct NamedAny
+  /// Stores the key member of `NamedAny`.
   key,
+  /// Stores the value member of `NamedAny`.
   value,
 end struct
 
-// Spill slot/register pair that keeps a tagged expression value GC-visible.
+/// Spill slot/register pair that keeps a tagged expression value GC-visible.
 struct ExprValueTemp
+  /// Stores the off member of `ExprValueTemp`.
   off,
+  /// Stores the reg member of `ExprValueTemp`.
   reg,
+  /// Stores the dirty member of `ExprValueTemp`.
   dirty,
 end struct
 
+/// Updates append unique.
+/// @internal
 function _append_unique(vals, v)
   if typeof(vals) != "array" then return [v] end if
   if len(vals) > 0 then
@@ -168,6 +317,8 @@ function _append_unique(vals, v)
   return vals +[v]
 end function
 
+/// Implements expr temp named get.
+/// @internal
 function _expr_temp_named_get(entries, key, defaultv)
   if typeof(entries) != "array" or len(entries) <= 0 then return defaultv end if
   for i = 0 to len(entries) - 1
@@ -177,6 +328,8 @@ function _expr_temp_named_get(entries, key, defaultv)
   return defaultv
 end function
 
+/// Implements expr temp named set.
+/// @internal
 function _expr_temp_named_set(entries, key, value)
   if typeof(entries) != "array" then entries = [] end if
   if len(entries) > 0 then
@@ -191,6 +344,8 @@ function _expr_temp_named_set(entries, key, value)
   return entries +[NamedAny(key, value)]
 end function
 
+/// Implements expr temp named remove.
+/// @internal
 function _expr_temp_named_remove(entries, key)
   if typeof(entries) != "array" or len(entries) <= 0 then return [] end if
   outv = []
@@ -202,29 +357,41 @@ function _expr_temp_named_remove(entries, key)
   return outv
 end function
 
+/// Implements expr temp live by reg get.
+/// @internal
 function _expr_temp_live_by_reg_get(state, reg)
   return _expr_temp_named_get(state._expr_temp_reg_live_by_reg, reg, 0)
 end function
 
+/// Implements expr temp live by reg set.
+/// @internal
 function _expr_temp_live_by_reg_set(state, reg, tmp)
   state._expr_temp_reg_live_by_reg = _expr_temp_named_set(state._expr_temp_reg_live_by_reg, reg, tmp)
   return state
 end function
 
+/// Implements expr temp live by reg remove.
+/// @internal
 function _expr_temp_live_by_reg_remove(state, reg)
   state._expr_temp_reg_live_by_reg = _expr_temp_named_remove(state._expr_temp_reg_live_by_reg, reg)
   return state
 end function
 
+/// Implements expr temp reserved get.
+/// @internal
 function _expr_temp_reserved_get(state, reg)
   return _expr_temp_named_get(state._expr_temp_reg_reserved, reg, 0)
 end function
 
+/// Implements expr temp reserved set.
+/// @internal
 function _expr_temp_reserved_set(state, reg, value)
   state._expr_temp_reg_reserved = _expr_temp_named_set(state._expr_temp_reg_reserved, reg, value)
   return state
 end function
 
+/// Implements expr temp reserved dec.
+/// @internal
 function _expr_temp_reserved_dec(state, reg)
   cnt = _expr_temp_reserved_get(state, reg)
   if typeof(cnt) != "int" then cnt = 0 end if
@@ -236,6 +403,8 @@ function _expr_temp_reserved_dec(state, reg)
   return state
 end function
 
+/// Implements sync expr temp root count.
+/// @internal
 function _sync_expr_temp_root_count(state)
   rec_off = state._current_root_rec_off
   if typeof(rec_off) != "int" or rec_off < 0 then return state end if
@@ -248,6 +417,8 @@ function _sync_expr_temp_root_count(state)
   return state
 end function
 
+/// Implements sync asm before call live.
+/// @internal
 function _sync_asm_before_call_live(state)
   if typeof(state.asm) == "struct" then
     state.asm.before_call_live_temps = state._expr_temp_reg_live
@@ -255,6 +426,8 @@ function _sync_asm_before_call_live(state)
   return state
 end function
 
+/// Implements imports get funcs.
+/// @internal
 function _imports_get_funcs(imports, dll)
   if typeof(imports) != "array" or len(imports) <= 0 then return [] end if
   for i = 0 to len(imports) - 1
@@ -267,6 +440,8 @@ function _imports_get_funcs(imports, dll)
   return []
 end function
 
+/// Implements imports set funcs.
+/// @internal
 function _imports_set_funcs(imports, dll, funcs)
   if typeof(imports) != "array" then imports = [] end if
   for i = 0 to len(imports) - 1
@@ -279,6 +454,8 @@ function _imports_set_funcs(imports, dll, funcs)
   return imports +[NamedArray(dll, funcs)]
 end function
 
+/// Implements seed rdata.
+/// @internal
 function _seed_rdata(cg)
   cg.rdata = d.rdata_add_bytes(cg.rdata, "nl", bytes("\n"))
   cg.rdata = d.rdata_add_str_nl(cg.rdata, "true_s", "true", true)
@@ -337,6 +514,8 @@ function _seed_rdata(cg)
   return cg
 end function
 
+/// Implements seed data.
+/// @internal
 function _seed_data(cg)
   cg.data = d.data_add_u64(cg.data, "dbg_loc_script", t.enc_void())
   cg.data = d.data_add_u64(cg.data, "dbg_loc_func", t.enc_void())
@@ -384,6 +563,14 @@ function _seed_data(cg)
   return cg
 end function
 
+/// Implements cg core new.
+/// @param source Source value to process.
+/// @param filename Value supplied for `filename`.
+/// @param import_aliases Value supplied for `import_aliases`.
+/// @param extern_sigs Value supplied for `extern_sigs`.
+/// @param extern_structs Value supplied for `extern_structs`.
+/// @param target Value supplied for `target`.
+/// @param heap_config Value supplied for `heap_config`.
 function cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target, heap_config)
   base_imports =[
   NamedArray("kernel32.dll", ["GetStdHandle", "ReadFile", "WriteFile", "WriteConsoleW", "MultiByteToWideChar", "SetConsoleOutputCP", "FreeConsole", "ExitProcess", "VirtualAlloc", "VirtualFree", "GetCommandLineW", "LocalFree", "WideCharToMultiByte", "CreateThread", "WaitForSingleObject", "CloseHandle", "Sleep", "InitializeCriticalSection", "EnterCriticalSection", "LeaveCriticalSection"]),
@@ -517,18 +704,20 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   return cg
 end function
 
+/// Implements cg core init.
+/// @param state Value supplied for `state`.
 function cg_core_init(state)
   return state
 end function
 
-// ------------------------------------------------------------
-// Python CodegenCore API compatibility surface
-// ------------------------------------------------------------
-
+/// Python CodegenCore API compatibility surface.
+/// @internal
 function __init__(state)
   return cg_core_init(state)
 end function
 
+/// Implements pretty script.
+/// @internal
 function _pretty_script(state, p)
   if typeof(p) != "string" or p == "" then return "<script>" end if
   rp = s.replaceAll(p, "\\", "/")
@@ -564,6 +753,8 @@ function _pretty_script(state, p)
   return rp
 end function
 
+/// Implements track call label.
+/// @internal
 function _track_call_label(state, lbl)
   if typeof(lbl) != "string" or lbl == "" then return state end if
   if _is_internal_helper_label(lbl) == false then return state end if
@@ -571,15 +762,23 @@ function _track_call_label(state, lbl)
   return state
 end function
 
+/// Implements in function.
+/// @param state Value supplied for `state`.
 function in_function(state)
   return state.in_function
 end function
 
+/// Creates new label id.
+/// @param state Value supplied for `state`.
 function new_label_id(state)
   state.label_id = state.label_id + 1
   return state.label_id
 end function
 
+/// Updates add import symbol.
+/// @param state Value supplied for `state`.
+/// @param dll Value supplied for `dll`.
+/// @param sym Value supplied for `sym`.
 function add_import_symbol(state, dll, sym)
   if typeof(dll) != "string" or dll == "" then return state end if
   if typeof(sym) != "string" or sym == "" then return state end if
@@ -589,6 +788,8 @@ function add_import_symbol(state, dll, sym)
   return state
 end function
 
+/// Implements import string gt.
+/// @internal
 function _import_string_gt(a, b)
   if typeof(a) != "string" or typeof(b) != "string" then return false end if
   ab = bytes(a)
@@ -606,6 +807,8 @@ function _import_string_gt(a, b)
   return an > bn
 end function
 
+/// Implements import pair gt.
+/// @internal
 function _import_pair_gt(a, b)
   if typeof(a) != "array" or len(a) < 2 then return false end if
   if typeof(b) != "array" or len(b) < 2 then return false end if
@@ -621,6 +824,8 @@ function _import_pair_gt(a, b)
   return _import_string_gt(ad, bd)
 end function
 
+/// Implements sort import pairs.
+/// @internal
 function _sort_import_pairs(pairs)
   if typeof(pairs) != "array" or len(pairs) <= 1 then return pairs end if
   arr = pairs
@@ -637,6 +842,8 @@ function _sort_import_pairs(pairs)
   return arr
 end function
 
+/// Updates add extern imports.
+/// @internal
 function _add_extern_imports(state)
   xs = state.extern_sigs
   if typeof(xs) != "array" or len(xs) <= 0 then return state end if
@@ -675,10 +882,14 @@ function _add_extern_imports(state)
   return state
 end function
 
+/// Implements pos.
+/// @internal
 function _pos(node)
   return t.ast_pos(node)
 end function
 
+/// Implements source for dbg filename.
+/// @internal
 function _source_for_dbg_filename(state, filename)
   if typeof(filename) == "string" and filename != "" then
     sources = state.dbg_line_starts
@@ -696,6 +907,8 @@ function _source_for_dbg_filename(state, filename)
   return ""
 end function
 
+/// Implements line from pos.
+/// @internal
 function _line_from_pos(state, pos, filename)
   source = _source_for_dbg_filename(state, filename)
   if typeof(pos) != "int" then return 0 end if
@@ -732,6 +945,8 @@ function _line_from_pos(state, pos, filename)
   return line
 end function
 
+/// Implements flatten member chain as qualname.
+/// @internal
 function _flatten_member_chain_as_qualname(expr)
   if t.ast_is_node(expr) == false then return 0 end if
   if t.ast_kind(expr) == "Var" and typeof(t.ast_name(expr)) == "string" then
@@ -745,6 +960,8 @@ function _flatten_member_chain_as_qualname(expr)
   return 0
 end function
 
+/// Implements apply import alias.
+/// @internal
 function _apply_import_alias(state, qname)
   if typeof(qname) != "string" then return qname end if
   dot = -1
@@ -784,11 +1001,15 @@ function _apply_import_alias(state, qname)
   return qname
 end function
 
+/// Implements current file package prefix.
+/// @internal
 function _current_file_package_prefix(state)
   if typeof(state.current_file_prefix) == "string" then return state.current_file_prefix end if
   return ""
 end function
 
+/// Implements current function prefix.
+/// @internal
 function _current_function_prefix(state)
   if typeof(state.current_qname_prefix) == "string" and state.current_qname_prefix != "" then
     return state.current_qname_prefix
@@ -796,6 +1017,8 @@ function _current_function_prefix(state)
   return _current_file_package_prefix(state)
 end function
 
+/// Implements qualify identifier.
+/// @internal
 function _qualify_identifier(state, name, node, kind)
   if typeof(name) != "string" then return name end if
   has_dot = false
@@ -813,6 +1036,9 @@ function _qualify_identifier(state, name, node, kind)
   return _apply_import_alias(state, name)
 end function
 
+/// Creates alloc expr temps.
+/// @param state Value supplied for `state`.
+/// @param size Value supplied for `size`.
 function alloc_expr_temps(state, size)
   sz = size
   if typeof(sz) != "int" then sz = 0 end if
@@ -843,6 +1069,9 @@ function alloc_expr_temps(state, size)
   return off
 end function
 
+/// Releases or resets free expr temps.
+/// @param state Value supplied for `state`.
+/// @param size Value supplied for `size`.
 function free_expr_temps(state, size)
   sz = size
   if typeof(sz) != "int" then sz = 0 end if
@@ -866,6 +1095,9 @@ function free_expr_temps(state, size)
   return state
 end function
 
+/// Releases or resets release expr temps.
+/// @param state Value supplied for `state`.
+/// @param size Value supplied for `size`.
 function release_expr_temps(state, size)
   sz = size
   if typeof(sz) != "int" then sz = 0 end if
@@ -887,6 +1119,8 @@ function release_expr_temps(state, size)
   return state
 end function
 
+/// Implements spill live expr value temps.
+/// @internal
 function _spill_live_expr_value_temps(state)
   if typeof(state._expr_temp_reg_live) != "array" or len(state._expr_temp_reg_live) <= 0 then return state end if
   for i = 0 to len(state._expr_temp_reg_live) - 1
@@ -900,6 +1134,9 @@ function _spill_live_expr_value_temps(state)
   return state
 end function
 
+/// Implements reserve expr temp regs.
+/// @param state Value supplied for `state`.
+/// @param regs Value supplied for `regs`.
 function reserve_expr_temp_regs(state, regs)
   if typeof(regs) != "array" or len(regs) <= 0 then return state end if
   for i = 0 to len(regs) - 1
@@ -931,6 +1168,9 @@ function reserve_expr_temp_regs(state, regs)
   return state
 end function
 
+/// Releases or resets release expr temp regs.
+/// @param state Value supplied for `state`.
+/// @param regs Value supplied for `regs`.
 function release_expr_temp_regs(state, regs)
   if typeof(regs) != "array" or len(regs) <= 0 then return state end if
   for i = 0 to len(regs) - 1
@@ -941,6 +1181,9 @@ function release_expr_temp_regs(state, regs)
   return state
 end function
 
+/// Creates alloc expr value temp.
+/// @param state Value supplied for `state`.
+/// @param prefer_reg Value supplied for `prefer_reg`.
 function alloc_expr_value_temp(state, prefer_reg)
   if typeof(prefer_reg) != "bool" then prefer_reg = true end if
   off = alloc_expr_temps(state, 8)
@@ -967,6 +1210,9 @@ function alloc_expr_value_temp(state, prefer_reg)
   return tmp
 end function
 
+/// Implements expr value temp store rax.
+/// @param state Value supplied for `state`.
+/// @param tmp Value supplied for `tmp`.
 function expr_value_temp_store_rax(state, tmp)
   if typeof(tmp) != "struct" then return state end if
   if typeof(tmp.reg) == "string" and tmp.reg != "" then
@@ -978,6 +1224,10 @@ function expr_value_temp_store_rax(state, tmp)
   return state
 end function
 
+/// Implements expr value temp store reg.
+/// @param state Value supplied for `state`.
+/// @param tmp Value supplied for `tmp`.
+/// @param reg Value supplied for `reg`.
 function expr_value_temp_store_reg(state, tmp, reg)
   if typeof(tmp) != "struct" then return state end if
   if typeof(reg) != "string" then reg = "" end if
@@ -991,6 +1241,10 @@ function expr_value_temp_store_reg(state, tmp, reg)
   return state
 end function
 
+/// Implements expr value temp load.
+/// @param state Value supplied for `state`.
+/// @param dst Value supplied for `dst`.
+/// @param tmp Value supplied for `tmp`.
 function expr_value_temp_load(state, dst, tmp)
   if typeof(tmp) != "struct" then return state end if
   if typeof(dst) != "string" then dst = "rax" end if
@@ -1004,6 +1258,9 @@ function expr_value_temp_load(state, dst, tmp)
   return state
 end function
 
+/// Implements expr value temp offset.
+/// @param state Value supplied for `state`.
+/// @param tmp Value supplied for `tmp`.
 function expr_value_temp_offset(state, tmp)
   if typeof(tmp) != "struct" then return 0 end if
   if typeof(tmp) == "struct" and typeof(tmp.reg) == "string" and tmp.reg != "" and tmp.dirty then
@@ -1013,6 +1270,9 @@ function expr_value_temp_offset(state, tmp)
   return tmp.off
 end function
 
+/// Releases or resets free expr value temp.
+/// @param state Value supplied for `state`.
+/// @param tmp Value supplied for `tmp`.
 function free_expr_value_temp(state, tmp)
   if typeof(tmp) != "struct" then return state end if
   out_live = []
@@ -1034,12 +1294,16 @@ function free_expr_value_temp(state, tmp)
   return state
 end function
 
+/// Updates push cold block scope.
+/// @param state Value supplied for `state`.
 function push_cold_block_scope(state)
   if typeof(state._cold_block_stack) != "array" then state._cold_block_stack = [] end if
   state._cold_block_stack = state._cold_block_stack +[t.arr_chunk_new(64)]
   return state
 end function
 
+/// Implements cold block frame items.
+/// @internal
 function _cold_block_frame_items(frame)
   if typeof(frame) == "struct" and typeof(frame.chunks) == "array" then
     return t.arr_chunk_finish(frame)
@@ -1048,6 +1312,8 @@ function _cold_block_frame_items(frame)
   return []
 end function
 
+/// Implements pop cold block scope.
+/// @param state Value supplied for `state`.
 function pop_cold_block_scope(state)
   if typeof(state._cold_block_stack) != "array" or len(state._cold_block_stack) <= 0 then return [] end if
   outv = _cold_block_frame_items(state._cold_block_stack[len(state._cold_block_stack) - 1])
@@ -1063,6 +1329,10 @@ function pop_cold_block_scope(state)
   return outv
 end function
 
+/// Implements defer cold block.
+/// @param state Value supplied for `state`.
+/// @param label Value supplied for `label`.
+/// @param emitter Value supplied for `emitter`.
 function defer_cold_block(state, label, emitter)
   if typeof(state._cold_block_stack) != "array" or len(state._cold_block_stack) <= 0 then return false end if
   if typeof(label) != "string" or label == "" then return false end if
@@ -1082,6 +1352,8 @@ function defer_cold_block(state, label, emitter)
   return true
 end function
 
+/// Runs emit deferred cold blocks.
+/// @param state Value supplied for `state`.
 function emit_deferred_cold_blocks(state)
   if typeof(state._cold_block_stack) != "array" or len(state._cold_block_stack) <= 0 then return state end if
   frame_idx = len(state._cold_block_stack) - 1
@@ -1100,17 +1372,27 @@ function emit_deferred_cold_blocks(state)
   return state
 end function
 
+/// Implements ensure var.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
 function ensure_var(state, name)
   if typeof(name) != "string" then return "" end if
   return name
 end function
 
+/// Implements core error.
+/// @param state Value supplied for `state`.
+/// @param msg Value supplied for `msg`.
+/// @param node Value supplied for `node`.
 function core_error(state, msg, node)
   if typeof(msg) != "string" then msg = "" + msg end if
   state.diagnostics = state.diagnostics + [msg]
   return msg
 end function
 
+/// Runs emit dbg line.
+/// @param state Value supplied for `state`.
+/// @param node Value supplied for `node`.
 function emit_dbg_line(state, node)
   if t.ast_is_node(node) and t.ast_filename(node) == "__ml_generated__" then return state end if
   ln = 0
@@ -1147,20 +1429,34 @@ function emit_dbg_line(state, node)
   return state
 end function
 
+/// Runs emit load var.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param node Value supplied for `node`.
 function emit_load_var(state, name, node)
   return scope.emit_load_var_scoped(state, name)
 end function
 
+/// Runs emit store var.
+/// @param state Value supplied for `state`.
+/// @param name Name of the requested item.
+/// @param node Value supplied for `node`.
 function emit_store_var(state, name, node)
   return scope.emit_store_var_scoped(state, name, node)
 end function
 
+/// Runs emit writefile.
+/// @param state Value supplied for `state`.
+/// @param buf_label Value supplied for `buf_label`.
+/// @param length Number of elements or bytes to process.
 function emit_writefile(state, buf_label, length)
   state.asm = a.lea_rdx_rip(state.asm, buf_label)
   state.asm = a.mov_r8d_imm32(state.asm, length)
   return emit_writefile_ptr_len(state)
 end function
 
+/// Runs emit writefile ptr len.
+/// @param state Value supplied for `state`.
 function emit_writefile_ptr_len(state)
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rbx")
   state.asm = a.lea_r9_rip(state.asm, "bytesWritten")
@@ -1170,6 +1466,8 @@ function emit_writefile_ptr_len(state)
   return state
 end function
 
+/// Runs emit writefile ptr len stderr.
+/// @param state Value supplied for `state`.
 function emit_writefile_ptr_len_stderr(state)
   state.asm = a.mov_r64_r64(state.asm, "r10", "rdx")
   state.asm = a.mov_r32_r32(state.asm, "r11d", "r8d")
@@ -1187,12 +1485,18 @@ function emit_writefile_ptr_len_stderr(state)
   return state
 end function
 
+/// Runs emit writefile stderr.
+/// @param state Value supplied for `state`.
+/// @param buf_label Value supplied for `buf_label`.
+/// @param length Number of elements or bytes to process.
 function emit_writefile_stderr(state, buf_label, length)
   state.asm = a.lea_rdx_rip(state.asm, buf_label)
   state.asm = a.mov_r8d_imm32(state.asm, length)
   return emit_writefile_ptr_len_stderr(state)
 end function
 
+/// Runs emit normalize xmm0 to value.
+/// @param state Value supplied for `state`.
 function emit_normalize_xmm0_to_value(state)
   lid = new_label_id(state)
   l_int = "norm_int_" + lid
@@ -1225,6 +1529,8 @@ function emit_normalize_xmm0_to_value(state)
   return state
 end function
 
+/// Runs emit force xmm0 to float value.
+/// @param state Value supplied for `state`.
 function emit_force_xmm0_to_float_value(state)
   lid = new_label_id(state)
   l_box = "forcef_box_" + lid
@@ -1244,6 +1550,10 @@ function emit_force_xmm0_to_float_value(state)
   return state
 end function
 
+/// Runs emit to double xmm.
+/// @param state Value supplied for `state`.
+/// @param xmm Value supplied for `xmm`.
+/// @param fail_label Value supplied for `fail_label`.
 function emit_to_double_xmm(state, xmm, fail_label)
   lid = new_label_id(state)
   l_int = "todbl_int_" + lid
@@ -1296,6 +1606,9 @@ function emit_to_double_xmm(state, xmm, fail_label)
   return state
 end function
 
+/// Runs emit jmp if false rax.
+/// @param state Value supplied for `state`.
+/// @param false_label Value supplied for `false_label`.
 function emit_jmp_if_false_rax(state, false_label)
   lid = new_label_id(state)
   l_int = "truthy_int_" + lid
@@ -1367,14 +1680,22 @@ function emit_jmp_if_false_rax(state, false_label)
   return state
 end function
 
+/// Runs emit struct field index dispatch.
+/// @param state Value supplied for `state`.
+/// @param field Value supplied for `field`.
 function emit_struct_field_index_dispatch(state, field)
   return 0
 end function
 
+/// Runs emit struct field dispatch.
+/// @param state Value supplied for `state`.
+/// @param field Value supplied for `field`.
 function emit_struct_field_dispatch(state, field)
   return 0
 end function
 
+/// Releases or resets reset helper tracking.
+/// @param state Value supplied for `state`.
 function reset_helper_tracking(state)
   state.used_helpers = []
   state.emitted_helpers = []
@@ -1383,6 +1704,8 @@ function reset_helper_tracking(state)
   return state
 end function
 
+/// Implements starts with.
+/// @internal
 function _starts_with(text, prefix)
   if typeof(text) != "string" then return false end if
   if typeof(prefix) != "string" then return false end if
@@ -1394,6 +1717,8 @@ function _starts_with(text, prefix)
   return true
 end function
 
+/// Implements arr contains.
+/// @internal
 function _arr_contains(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
@@ -1402,6 +1727,8 @@ function _arr_contains(arr, value)
   return false
 end function
 
+/// Implements str less ascii.
+/// @internal
 function _str_less_ascii(a, b)
   if typeof(a) != "string" then a = "" + a end if
   if typeof(b) != "string" then b = "" + b end if
@@ -1420,6 +1747,8 @@ function _str_less_ascii(a, b)
   return na < nb
 end function
 
+/// Reports whether is internal helper label.
+/// @internal
 function _is_internal_helper_label(lbl)
   if _starts_with(lbl, "fn_") == false then return false end if
   if _starts_with(lbl, "fn_user_") then return false end if
@@ -1429,6 +1758,8 @@ function _is_internal_helper_label(lbl)
   return true
 end function
 
+/// Implements helper supported.
+/// @internal
 function _helper_supported(lbl)
   if lbl == "fn_cpu_init" then return true end if
   if lbl == "fn_runtime_cpu_features" then return true end if
@@ -1545,6 +1876,8 @@ function _helper_supported(lbl)
   return false
 end function
 
+/// Runs emit helper by label group0.
+/// @internal
 function _emit_helper_by_label_group0(state, lbl)
   if lbl == "fn_cpu_init" then return rt.emit_cpu_init_function(state) end if
   if lbl == "fn_runtime_cpu_features" then return rt.emit_runtime_cpu_features_function(state) end if
@@ -1596,6 +1929,8 @@ function _emit_helper_by_label_group0(state, lbl)
   return state
 end function
 
+/// Runs emit helper by label group1.
+/// @internal
 function _emit_helper_by_label_group1(state, lbl)
   if lbl == "fn_bytes_startswith" then return rt.emit_bytes_startswith_function(state) end if
   if lbl == "fn_bytes_endswith" then return rt.emit_bytes_endswith_function(state) end if
@@ -1610,6 +1945,8 @@ function _emit_helper_by_label_group1(state, lbl)
   return state
 end function
 
+/// Runs emit helper by label group2.
+/// @internal
 function _emit_helper_by_label_group2(state, lbl)
   if lbl == "fn_string_endswith" then return bal.emit_string_endswith_function(state) end if
   if lbl == "fn_string_repeat" then return bal.emit_string_repeat_function(state) end if
@@ -1624,6 +1961,8 @@ function _emit_helper_by_label_group2(state, lbl)
   return state
 end function
 
+/// Runs emit helper by label group3.
+/// @internal
 function _emit_helper_by_label_group3(state, lbl)
   if lbl == "fn_string_join" then return bal.emit_string_join_function(state) end if
   if lbl == "fn_bytes_eq" then return bal.emit_bytes_eq_function(state) end if
@@ -1638,6 +1977,8 @@ function _emit_helper_by_label_group3(state, lbl)
   return state
 end function
 
+/// Runs emit helper by label group4.
+/// @internal
 function _emit_helper_by_label_group4(state, lbl)
   if lbl == "fn_typeName" then return rt.emit_typeName_function(state) end if
   if lbl == "fn_int_to_dec" then return rt.emit_int_to_dec_function(state) end if
@@ -1652,6 +1993,8 @@ function _emit_helper_by_label_group4(state, lbl)
   return state
 end function
 
+/// Runs emit helper by label group5.
+/// @internal
 function _emit_helper_by_label_group5(state, lbl)
   if lbl == "fn_builtin_input" then return rt.emit_builtin_input_function(state) end if
   if lbl == "fn_builtin_copyBytes" then return rt.emit_builtin_copyBytes_function(state) end if
@@ -1667,6 +2010,8 @@ function _emit_helper_by_label_group5(state, lbl)
   return state
 end function
 
+/// Runs emit helper by label group6.
+/// @internal
 function _emit_helper_by_label_group6(state, lbl)
   if lbl == "fn_callStats" then return rt.emit_callStats_function(state) end if
   if lbl == "fn_heap_count" then return mem.emit_heap_count_function(state) end if
@@ -1679,6 +2024,8 @@ function _emit_helper_by_label_group6(state, lbl)
   return state
 end function
 
+/// Runs emit helper by label other.
+/// @internal
 function _emit_helper_by_label_other(state, lbl)
   if lbl == "fn_input" then return bal.emit_input_function(state) end if
   if lbl == "fn_scan_nul_bytes" then return rt.emit_scan_nul_bytes_function(state) end if
@@ -1689,6 +2036,8 @@ function _emit_helper_by_label_other(state, lbl)
   return state
 end function
 
+/// Runs emit helper by label.
+/// @internal
 function _emit_helper_by_label(state, lbl)
   rank = _helper_rank(lbl)
   if rank < 47 then return _emit_helper_by_label_group0(state, lbl) end if
@@ -1701,6 +2050,8 @@ function _emit_helper_by_label(state, lbl)
   return _emit_helper_by_label_other(state, lbl)
 end function
 
+/// Implements helper rank.
+/// @internal
 function _helper_rank(lbl)
   ordered = [
     "fn_cpu_init", "fn_runtime_cpu_features", "fn_runtime_cpu_active_features",
@@ -1735,6 +2086,8 @@ function _helper_rank(lbl)
   return 1 << 20
 end function
 
+/// Implements collect pending helpers.
+/// @internal
 function _collect_pending_helpers(state, emitted_index)
   vals = []
   pending_index = t.fastmap_new(512)
@@ -1766,6 +2119,8 @@ function _collect_pending_helpers(state, emitted_index)
   return vals
 end function
 
+/// Runs emit used helpers.
+/// @param state Value supplied for `state`.
 function emit_used_helpers(state)
   if typeof(state.emitted_helpers) != "array" then state.emitted_helpers = [] end if
 

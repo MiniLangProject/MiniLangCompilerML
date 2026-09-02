@@ -1,4 +1,22 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Public facade that combines the self-hosted backend modules.
+//! Provides the mlc codegen codegen package.
+
 package mlc.codegen.codegen
 import mlc.asm as a
 import mlc.constants as c
@@ -12,13 +30,14 @@ import mlc.codegen.codegen_scope as scope
 import mlc.data as d
 import mlc.tools as t
 
-// Facade module that mirrors the Python `Codegen` composition surface.
-// The actual implementation still lives in the mixin-style modules; this file
-// only wires construction and program emission together.
+/// Facade module that mirrors the Python `Codegen` composition surface. The actual implementation still lives in the mixin-style modules; this file only wires construction and program emission together.
 struct Codegen
+  /// Stores the state member of `Codegen`.
   state,
 end struct
 
+/// Implements arr has.
+/// @internal
 function _arr_has(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
@@ -27,6 +46,8 @@ function _arr_has(arr, value)
   return false
 end function
 
+/// Implements named array set.
+/// @internal
 function _named_array_set(arr, key, values)
   if typeof(arr) != "array" then arr = [] end if
   for i = 0 to len(arr) - 1
@@ -39,6 +60,8 @@ function _named_array_set(arr, key, values)
   return arr + [core.NamedArray(key, values)]
 end function
 
+/// Implements named int set.
+/// @internal
 function _named_int_set(arr, key, value)
   if typeof(arr) != "array" then arr = [] end if
   for i = 0 to len(arr) - 1
@@ -51,6 +74,8 @@ function _named_int_set(arr, key, value)
   return arr + [core.NamedInt(key, value)]
 end function
 
+/// Implements enable call profile metadata.
+/// @param cg Value supplied for `cg`.
 function enable_call_profile_metadata(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -67,6 +92,8 @@ function enable_call_profile_metadata(cg)
   return cg
 end function
 
+/// Implements copy bytes.
+/// @internal
 function _copy_bytes(buf)
   if typeof(buf) != "bytes" then return bytes(0) end if
   out_buf = bytes(len(buf), 0)
@@ -76,11 +103,15 @@ function _copy_bytes(buf)
   return out_buf
 end function
 
+/// Implements copy array.
+/// @internal
 function _copy_array(arr)
   if typeof(arr) != "array" then return [] end if
   return arr + []
 end function
 
+/// Implements copy frame stack.
+/// @internal
 function _copy_frame_stack(frames)
   if typeof(frames) != "array" then return [[]] end if
   out_b = t.arr_chunk_new(8)
@@ -101,6 +132,8 @@ function _copy_frame_stack(frames)
   return outv
 end function
 
+/// Implements copy fastmap stack.
+/// @internal
 function _copy_fastmap_stack(frames)
   if typeof(frames) != "array" then return [t.fastmap_new(128)] end if
   out_b = t.arr_chunk_new(8)
@@ -119,6 +152,8 @@ function _copy_fastmap_stack(frames)
   return outv
 end function
 
+/// Implements copy fastmap.
+/// @internal
 function _copy_fastmap(mapv)
   if typeof(mapv) != "struct" then return t.fastmap_new(16) end if
   if typeof(mapv.keys) != "array" or typeof(mapv.values) != "array" or typeof(mapv.used) != "bytes" then
@@ -138,6 +173,8 @@ function _copy_fastmap(mapv)
   return out_map
 end function
 
+/// Implements copy data builder.
+/// @internal
 function _copy_data_builder(db)
   out_db = d.newDataBuilder()
   if typeof(db) != "struct" then return out_db end if
@@ -148,6 +185,8 @@ function _copy_data_builder(db)
   return out_db
 end function
 
+/// Implements copy bss builder.
+/// @internal
 function _copy_bss_builder(bb)
   out_bb = d.newBssBuilder()
   if typeof(bb) != "struct" then return out_bb end if
@@ -156,6 +195,8 @@ function _copy_bss_builder(bb)
   return out_bb
 end function
 
+/// Implements copy rdata builder.
+/// @internal
 function _copy_rdata_builder(rb)
   out_rb = d.newRDataBuilder()
   if typeof(rb) != "struct" then return out_rb end if
@@ -170,6 +211,8 @@ function _copy_rdata_builder(rb)
   return out_rb
 end function
 
+/// Implements sparse data builder.
+/// @internal
 function _sparse_data_builder(base_db)
   out_db = d.newDataBuilder()
   if typeof(base_db) != "struct" then return out_db end if
@@ -180,6 +223,8 @@ function _sparse_data_builder(base_db)
   return out_db
 end function
 
+/// Implements sparse rdata builder.
+/// @internal
 function _sparse_rdata_builder(base_rb)
   out_rb = d.newRDataBuilder()
   if typeof(base_rb) != "struct" then return out_rb end if
@@ -192,19 +237,35 @@ function _sparse_rdata_builder(base_rb)
   return out_rb
 end function
 
+/// Creates new codegen.
+/// @param source Source value to process.
+/// @param filename Value supplied for `filename`.
+/// @param import_aliases Value supplied for `import_aliases`.
+/// @param extern_sigs Value supplied for `extern_sigs`.
+/// @param extern_structs Value supplied for `extern_structs`.
 function newCodegen(source, filename, import_aliases, extern_sigs, extern_structs)
   st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, "windows-x64", [])
   st = scope.cg_scope_setup(st)
   return Codegen(st)
 end function
 
+/// Creates new codegen for target.
+/// @param source Source value to process.
+/// @param filename Value supplied for `filename`.
+/// @param import_aliases Value supplied for `import_aliases`.
+/// @param extern_sigs Value supplied for `extern_sigs`.
+/// @param extern_structs Value supplied for `extern_structs`.
+/// @param target Value supplied for `target`.
+/// @param heap_config Value supplied for `heap_config`.
 function newCodegenForTarget(source, filename, import_aliases, extern_sigs, extern_structs, target, heap_config)
   st = core.cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target, heap_config)
   st = scope.cg_scope_setup(st)
   return Codegen(st)
 end function
 
-// Configure target-only state without perturbing the historical Windows seed layout.
+/// Configure target-only state without perturbing the historical Windows seed layout.
+/// @param cg Value supplied for `cg`.
+/// @param target Value supplied for `target`.
 function set_target(cg, target)
   if typeof(cg) != "struct" or typeof(cg.state) != "struct" then return cg end if
   normalized = "" + target
@@ -213,6 +274,8 @@ function set_target(cg, target)
   return cg
 end function
 
+/// Implements init.
+/// @internal
 function __init__(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) == "struct" then
@@ -221,6 +284,9 @@ function __init__(cg)
   return cg
 end function
 
+/// Runs emit program.
+/// @param cg Value supplied for `cg`.
+/// @param program Value supplied for `program`.
 function emit_program(cg, program)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -233,6 +299,8 @@ function emit_program(cg, program)
   return cg
 end function
 
+/// Implements clone state for object.
+/// @internal
 function _clone_state_for_object(base, seed_runtime)
   if typeof(base) != "struct" then
     return core.cg_core_new("", "", [], [], [], "windows-x64", [])
@@ -373,15 +441,17 @@ function _clone_state_for_object(base, seed_runtime)
   return st
 end function
 
+/// Implements clone for object.
+/// @param cg Value supplied for `cg`.
+/// @param seed_runtime Value supplied for `seed_runtime`.
 function clone_for_object(cg, seed_runtime)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
   return Codegen(_clone_state_for_object(cg.state, seed_runtime))
 end function
 
-// Start a new serialized text fragment without resetting semantic codegen
-// state. Re-root the statement callback because object serialization may run
-// a collection between function batches.
+/// Start a new serialized text fragment without resetting semantic codegen state. Re-root the statement callback because object serialization may run a collection between function batches.
+/// @param cg Value supplied for `cg`.
 function start_object_fragment(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -390,6 +460,9 @@ function start_object_fragment(cg)
   return cg
 end function
 
+/// Implements prepare program for objects.
+/// @param cg Value supplied for `cg`.
+/// @param program Value supplied for `program`.
 function prepare_program_for_objects(cg, program)
   if typeof(cg) != "struct" then return [cg, [], 0] end if
   if typeof(cg.state) != "struct" then return [cg, [], 0] end if
@@ -407,6 +480,11 @@ function prepare_program_for_objects(cg, program)
   return [cg, prep[1], prep[2]]
 end function
 
+/// Runs emit entry object.
+/// @param cg Value supplied for `cg`.
+/// @param module_init_recs Value supplied for `module_init_recs`.
+/// @param max_call_args_main Value supplied for `max_call_args_main`.
+/// @param main_name Value supplied for `main_name`.
 function emit_entry_object(cg, module_init_recs, max_call_args_main, main_name)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -415,6 +493,9 @@ function emit_entry_object(cg, module_init_recs, max_call_args_main, main_name)
   return cg
 end function
 
+/// Runs emit module init object.
+/// @param cg Value supplied for `cg`.
+/// @param module_rec Value supplied for `module_rec`.
 function emit_module_init_object(cg, module_rec)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -423,6 +504,9 @@ function emit_module_init_object(cg, module_rec)
   return cg
 end function
 
+/// Runs emit module functions.
+/// @param cg Value supplied for `cg`.
+/// @param module_file Value supplied for `module_file`.
 function emit_module_functions(cg, module_file)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -431,36 +515,53 @@ function emit_module_functions(cg, module_file)
   return cg
 end function
 
+/// Implements module function entries.
+/// @param cg Value supplied for `cg`.
+/// @param module_file Value supplied for `module_file`.
 function module_function_entries(cg, module_file)
   if typeof(cg) != "struct" then return [] end if
   if typeof(cg.state) != "struct" then return [] end if
   return stmt.module_function_entries(cg.state, module_file)
 end function
 
+/// Implements all function entries.
+/// @param cg Value supplied for `cg`.
 function all_function_entries(cg)
   if typeof(cg) != "struct" then return [] end if
   if typeof(cg.state) != "struct" then return [] end if
   return stmt.all_function_entries(cg.state)
 end function
 
+/// Implements function entry count.
+/// @param entries Value supplied for `entries`.
 function function_entry_count(entries)
   return stmt.function_entry_count(entries)
 end function
 
+/// Implements function entry name.
+/// @param entries Value supplied for `entries`.
+/// @param node_id Value supplied for `node_id`.
 function function_entry_name(entries, node_id)
   return stmt.function_entry_name(entries, node_id)
 end function
 
-// Allocate one reusable workspace for the serial per-function analyses. Object
-// emitters keep it outside cloned codegen state and pass it across fragments.
+/// Allocate one reusable workspace for the serial per-function analyses. Object emitters keep it outside cloned codegen state and pass it across fragments.
 function new_function_analysis_scratch()
   return stmt._new_function_analysis_scratch()
 end function
 
+/// Releases or resets release function analysis scratch.
+/// @param value Value to process.
 function release_function_analysis_scratch(value)
   return stmt._release_function_analysis_scratch(value)
 end function
 
+/// Runs emit module function entries.
+/// @param cg Value supplied for `cg`.
+/// @param entries Value supplied for `entries`.
+/// @param start_index Value supplied for `start_index`.
+/// @param count Number of items to process.
+/// @param analysis_scratch Value supplied for `analysis_scratch`.
 function emit_module_function_entries(cg, entries, start_index, count, analysis_scratch)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -469,6 +570,11 @@ function emit_module_function_entries(cg, entries, start_index, count, analysis_
   return cg
 end function
 
+/// Releases or resets release emitted function entries.
+/// @param cg Value supplied for `cg`.
+/// @param entries Value supplied for `entries`.
+/// @param start_index Value supplied for `start_index`.
+/// @param count Number of items to process.
 function release_emitted_function_entries(cg, entries, start_index, count)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -476,6 +582,8 @@ function release_emitted_function_entries(cg, entries, start_index, count)
   return cg
 end function
 
+/// Runs emit extern stubs.
+/// @param cg Value supplied for `cg`.
 function emit_extern_stubs(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -483,6 +591,8 @@ function emit_extern_stubs(cg)
   return cg
 end function
 
+/// Runs emit used helpers.
+/// @param cg Value supplied for `cg`.
 function emit_used_helpers(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -490,10 +600,8 @@ function emit_used_helpers(cg)
   return cg
 end function
 
-// Drop program-analysis records once every user function has been emitted.
-// Runtime helpers and extern stubs only need the prepared metadata and section
-// builders; retaining the full function AST here makes large object builds
-// repeatedly collect an almost entirely live compiler heap.
+/// Drop program-analysis records once every user function has been emitted. Runtime helpers and extern stubs only need the prepared metadata and section builders; retaining the full function AST here makes large object builds repeatedly collect an almost entirely live compiler heap.
+/// @param cg Value supplied for `cg`.
 function clear_program_function_state(cg)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if
@@ -501,6 +609,9 @@ function clear_program_function_state(cg)
   return cg
 end function
 
+/// Implements track helper.
+/// @param cg Value supplied for `cg`.
+/// @param label Value supplied for `label`.
 function track_helper(cg, label)
   if typeof(cg) != "struct" then return cg end if
   if typeof(cg.state) != "struct" then return cg end if

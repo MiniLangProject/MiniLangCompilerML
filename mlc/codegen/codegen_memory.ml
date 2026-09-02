@@ -1,37 +1,73 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Emits the shared managed heap, allocator, root frames and mark/sweep GC.
+//! Provides the mlc codegen codegen_memory package.
+
 package mlc.codegen.codegen_memory
 import mlc.asm as a
 import mlc.constants as c
 import mlc.tools as t
 import mlc.data as d
 
+/// Stores the mem page size.
 const MEM_PAGE_SIZE = 0x1000
+/// Stores the mem reserve granularity.
 const MEM_RESERVE_GRANULARITY = 0x10000
+/// Stores the heap size default.
 const HEAP_SIZE_DEFAULT = 0x02000000
+/// Stores the heap commit default.
 const HEAP_COMMIT_DEFAULT = HEAP_SIZE_DEFAULT
+/// Stores the heap reserve default.
 const HEAP_RESERVE_DEFAULT = 1024 * 1024 * 1024 * 4
+/// Stores the heap reserve min.
 const HEAP_RESERVE_MIN = HEAP_SIZE_DEFAULT
+/// Stores the heap grow min.
 const HEAP_GROW_MIN = 0x01000000
+/// Stores the alloc min split.
 const ALLOC_MIN_SPLIT = 32
-// TLABs are formatted ranges inside the one shared heap, never private heaps.
+/// TLABs are formatted ranges inside the one shared heap, never private heaps.
 const TLAB_SIZE = 0x10000
-// Keep the lock-free path aligned with the runtime's young-object class.
-// Larger arrays/strings/byte buffers go through the exact central path.
+/// Keep the lock-free path aligned with the runtime's young-object class. Larger arrays/strings/byte buffers go through the exact central path.
 const TLAB_MAX_OBJECT_SIZE = 0x100
+/// Stores the thread handoff cursor offset.
 const THREAD_HANDOFF_CURSOR_OFFSET = 136
+/// Stores the thread handoff root base offset.
 const THREAD_HANDOFF_ROOT_BASE_OFFSET = 88
+/// Stores the thread tlab start offset.
 const THREAD_TLAB_START_OFFSET = 176
+/// Stores the thread tlab cursor offset.
 const THREAD_TLAB_CURSOR_OFFSET = 184
+/// Stores the thread tlab end offset.
 const THREAD_TLAB_END_OFFSET = 192
+/// Stores the gc mark stack qwords.
 const GC_MARK_STACK_QWORDS = 8388608
+/// Stores the gc default bytes limit.
 const GC_DEFAULT_BYTES_LIMIT = 64 << 20
-// Sentinel for the unboxed signed-i64 maximum. Tagged MiniLang integers cannot
-// represent 0x7FFFFFFFFFFFFFFF directly, so the data helper writes its bytes.
+/// Sentinel for the unboxed signed-i64 maximum. Tagged MiniLang integers cannot represent 0x7FFFFFFFFFFFFFFF directly, so the data helper writes its bytes.
 const GC_DISABLE_PERIODIC_LIMIT = -1
+/// Stores the gc young default bytes limit.
 const GC_YOUNG_DEFAULT_BYTES_LIMIT = 8 << 20
+/// Stores the gc young object max bytes.
 const GC_YOUNG_OBJECT_MAX_BYTES = 256
+/// Stores the memory enable refcount.
 const MEMORY_ENABLE_REFCOUNT = false
 
+/// Runs emit mov rax i64 max.
+/// @internal
 function _emit_mov_rax_i64_max(state)
   imax = toNumber("9223372036854775807")
   if typeof(imax) == "int" then
@@ -44,6 +80,8 @@ function _emit_mov_rax_i64_max(state)
   return state
 end function
 
+/// Reports whether has label.
+/// @internal
 function _has_label(labels, name)
   if typeof(labels) != "array" or len(labels) <= 0 then return false end if
   for i = 0 to len(labels) - 1
@@ -53,6 +91,8 @@ function _has_label(labels, name)
   return false
 end function
 
+/// Updates append unique.
+/// @internal
 function _append_unique(values, value)
   if typeof(values) != "array" then values = [] end if
   if len(values) <= 0 then return [value] end if
@@ -62,11 +102,15 @@ function _append_unique(values, value)
   return values + [value]
 end function
 
+/// Implements ensure data u64.
+/// @internal
 function _ensure_data_u64(db, name, value)
   if d.data_has_label(db, name) then return db end if
   return d.data_add_u64(db, name, value)
 end function
 
+/// Implements ensure gc limit data.
+/// @internal
 function _ensure_gc_limit_data(db, name, value)
   if d.data_has_label(db, name) then return db end if
   if value == GC_DISABLE_PERIODIC_LIMIT then
@@ -75,16 +119,22 @@ function _ensure_gc_limit_data(db, name, value)
   return d.data_add_u64(db, name, value)
 end function
 
+/// Implements ensure rdata str.
+/// @internal
 function _ensure_rdata_str(rb, name, text)
   if d.rdata_has_label(rb, name) then return rb end if
   return d.rdata_add_str_nl(rb, name, text, false)
 end function
 
+/// Implements mark bitmap bytes for heap bytes.
+/// @internal
 function _mark_bitmap_bytes_for_heap_bytes(heap_bytes)
   if heap_bytes < 0 then heap_bytes = 0 end if
   return (heap_bytes + 63) >> 6
 end function
 
+/// Implements rlabel len.
+/// @internal
 function _rlabel_len(labels, name)
   if typeof(labels) != "array" or len(labels) <= 0 then return 0 end if
   for i = 0 to len(labels) - 1
@@ -97,6 +147,8 @@ function _rlabel_len(labels, name)
   return 0
 end function
 
+/// Implements heap cfg get any.
+/// @internal
 function _heap_cfg_get_any(state, key)
   cfg = 0
   if typeof(state) == "struct" then cfg = state.heap_config end if
@@ -113,24 +165,32 @@ function _heap_cfg_get_any(state, key)
   return 0
 end function
 
+/// Implements heap cfg get int.
+/// @internal
 function _heap_cfg_get_int(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
   if typeof(v) == "int" then return v end if
   return defaultv
 end function
 
+/// Implements heap cfg get bool.
+/// @internal
 function _heap_cfg_get_bool(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
   if typeof(v) == "bool" then return v end if
   return defaultv
 end function
 
+/// Implements heap cfg has any.
+/// @internal
 function _heap_cfg_has_any(state)
   cfg = 0
   if typeof(state) == "struct" then cfg = state.heap_config end if
   return typeof(cfg) == "array" and len(cfg) > 0
 end function
 
+/// Implements configured gc limits.
+/// @internal
 function _configured_gc_limits(state)
   configured_limits = _configured_gc_limits(state)
   periodic_limit = configured_limits[0]
@@ -138,10 +198,14 @@ function _configured_gc_limits(state)
   return [periodic_limit, young_limit]
 end function
 
+/// Implements init.
+/// @internal
 function __init__(state)
   return state
 end function
 
+/// Implements ensure gc data.
+/// @param state Value supplied for `state`.
 function ensure_gc_data(state)
   db = state.data
   bb = state.bss
@@ -197,6 +261,9 @@ function ensure_gc_data(state)
   return state
 end function
 
+/// Runs emit heap init.
+/// @param state Value supplied for `state`.
+/// @param heap_size Value supplied for `heap_size`.
 function emit_heap_init(state, heap_size)
   state = ensure_gc_data(state)
 
@@ -354,6 +421,9 @@ function emit_heap_init(state, heap_size)
   return state
 end function
 
+/// Runs emit gc init globals.
+/// @param state Value supplied for `state`.
+/// @param disable_periodic Value supplied for `disable_periodic`.
 function emit_gc_init_globals(state, disable_periodic)
   state = ensure_gc_data(state)
 
@@ -381,6 +451,10 @@ function emit_gc_init_globals(state, disable_periodic)
   return state
 end function
 
+/// Runs emit gc clear root slots.
+/// @param state Value supplied for `state`.
+/// @param root_base Value supplied for `root_base`.
+/// @param root_top Value supplied for `root_top`.
 function emit_gc_clear_root_slots(state, root_base, root_top)
   root_count = (root_top - root_base) / 8
   if root_count <= 0 then return state end if
@@ -418,6 +492,11 @@ function emit_gc_clear_root_slots(state, root_base, root_top)
   return state
 end function
 
+/// Runs emit gc push root frame.
+/// @param state Value supplied for `state`.
+/// @param root_rec_off Value supplied for `root_rec_off`.
+/// @param root_base Value supplied for `root_base`.
+/// @param root_top Value supplied for `root_top`.
 function emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
   state = ensure_gc_data(state)
   root_count = (root_top - root_base) >> 3
@@ -446,6 +525,9 @@ function emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
   return state
 end function
 
+/// Runs emit gc pop root frame.
+/// @param state Value supplied for `state`.
+/// @param root_rec_off Value supplied for `root_rec_off`.
 function emit_gc_pop_root_frame(state, root_rec_off)
   state = ensure_gc_data(state)
   state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", root_rec_off + 0)
@@ -458,8 +540,8 @@ function emit_gc_pop_root_frame(state, root_rec_off)
   return state
 end function
 
-// Emit the shared-heap allocator, including the TLAB fast path and synchronized
-// refill/GC fallback. Every successful return owns exactly one initialized block.
+/// Emit the shared-heap allocator, including the TLAB fast path and synchronized refill/GC fallback. Every successful return owns exactly one initialized block.
+/// @param state Value supplied for `state`.
 function emit_alloc_function(state)
   state = ensure_gc_data(state)
 
@@ -1103,8 +1185,8 @@ function emit_alloc_function(state)
   return state
 end function
 
-// Emit stop-the-world mark/sweep collection. Thread roots are published before
-// suspension and heap ownership remains held until sweep/shrink state is stable.
+/// Emit stop-the-world mark/sweep collection. Thread roots are published before suspension and heap ownership remains held until sweep/shrink state is stable.
+/// @param state Value supplied for `state`.
 function emit_gc_collect_function(state)
   state = ensure_gc_data(state)
   if typeof(state.rdata) == "struct" then
@@ -1757,18 +1839,24 @@ function emit_gc_collect_function(state)
   return state
 end function
 
+/// Runs emit incref function.
+/// @param state Value supplied for `state`.
 function emit_incref_function(state)
   state.asm = a.mark(state.asm, "fn_incref")
   state.asm = a.ret(state.asm)
   return state
 end function
 
+/// Runs emit decref function.
+/// @param state Value supplied for `state`.
 function emit_decref_function(state)
   state.asm = a.mark(state.asm, "fn_decref")
   state.asm = a.ret(state.asm)
   return state
 end function
 
+/// Runs emit heap count function.
+/// @param state Value supplied for `state`.
 function emit_heap_count_function(state)
   state = ensure_gc_data(state)
   threaded_heap = state.native_threads_possible
@@ -1826,6 +1914,8 @@ function emit_heap_count_function(state)
   return state
 end function
 
+/// Runs emit heap bytes used function.
+/// @param state Value supplied for `state`.
 function emit_heap_bytes_used_function(state)
   state = ensure_gc_data(state)
   threaded_heap = state.native_threads_possible
@@ -1853,6 +1943,8 @@ function emit_heap_bytes_used_function(state)
   return state
 end function
 
+/// Runs emit heap bytes committed function.
+/// @param state Value supplied for `state`.
 function emit_heap_bytes_committed_function(state)
   state = ensure_gc_data(state)
   threaded_heap = state.native_threads_possible
@@ -1880,6 +1972,8 @@ function emit_heap_bytes_committed_function(state)
   return state
 end function
 
+/// Runs emit heap bytes reserved function.
+/// @param state Value supplied for `state`.
 function emit_heap_bytes_reserved_function(state)
   state = ensure_gc_data(state)
   threaded_heap = state.native_threads_possible
@@ -1907,6 +2001,8 @@ function emit_heap_bytes_reserved_function(state)
   return state
 end function
 
+/// Runs emit heap free blocks function.
+/// @param state Value supplied for `state`.
 function emit_heap_free_blocks_function(state)
   state = ensure_gc_data(state)
   threaded_heap = state.native_threads_possible
@@ -1975,6 +2071,8 @@ function emit_heap_free_blocks_function(state)
   return state
 end function
 
+/// Runs emit heap free bytes function.
+/// @param state Value supplied for `state`.
 function emit_heap_free_bytes_function(state)
   state = ensure_gc_data(state)
   threaded_heap = state.native_threads_possible
@@ -2045,6 +2143,8 @@ function emit_heap_free_bytes_function(state)
   return state
 end function
 
+/// Runs emit heap grow function.
+/// @param state Value supplied for `state`.
 function emit_heap_grow_function(state)
   state = ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_heap_grow")
@@ -2163,6 +2263,8 @@ function emit_heap_grow_function(state)
   return state
 end function
 
+/// Implements cg memory init.
+/// @param state Value supplied for `state`.
 function cg_memory_init(state)
   return ensure_gc_data(state)
 end function

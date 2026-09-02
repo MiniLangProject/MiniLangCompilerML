@@ -1,4 +1,22 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Emits allocation-heavy builtins such as input, boxing and concatenation.
+//! Provides the mlc codegen codegen_builtins_alloc package.
+
 package mlc.codegen.codegen_builtins_alloc
 import mlc.asm as a
 import mlc.constants as c
@@ -7,13 +25,18 @@ import mlc.codegen.codegen_memory as mem
 import mlc.tools as t
 import mlc.data as d
 
+/// Stores the input read max.
 const INPUT_READ_MAX = 4095
 
+/// Runs emit addstr error.
+/// @internal
 function _emit_addstr_error(state, msg_lbl)
   state.asm = a.lea_rax_rip(state.asm, msg_lbl)
   return state
 end function
 
+/// Reports whether has label.
+/// @internal
 function _has_label(labels, name)
   if typeof(labels) != "array" or len(labels) <= 0 then return false end if
   for i = 0 to len(labels) - 1
@@ -23,6 +46,8 @@ function _has_label(labels, name)
   return false
 end function
 
+/// Implements enum variants of.
+/// @internal
 function _enum_variants_of(state, qname)
   arr = state.enum_variants
   if typeof(arr) != "array" or len(arr) <= 0 then return [] end if
@@ -40,6 +65,8 @@ function _enum_variants_of(state, qname)
   return []
 end function
 
+/// Implements ensure enum obj strings.
+/// @internal
 function _ensure_enum_obj_strings(state)
   if typeof(state.enum_ids) != "array" or len(state.enum_ids) <= 0 then return state end if
   for i = 0 to len(state.enum_ids) - 1
@@ -70,6 +97,8 @@ function _ensure_enum_obj_strings(state)
   return state
 end function
 
+/// Runs emit input function.
+/// @param state Value supplied for `state`.
 function emit_input_function(state)
   state.asm = a.mark(state.asm, "fn_input")
 
@@ -191,6 +220,8 @@ function emit_input_function(state)
   return state
 end function
 
+/// Runs emit decode function.
+/// @param state Value supplied for `state`.
 function emit_decode_function(state)
   state.asm = a.mark(state.asm, "fn_decode")
 
@@ -257,6 +288,8 @@ function emit_decode_function(state)
   return state
 end function
 
+/// Runs emit decode z function.
+/// @param state Value supplied for `state`.
 function emit_decodeZ_function(state)
   state.asm = a.mark(state.asm, "fn_decodeZ")
 
@@ -327,6 +360,8 @@ function emit_decodeZ_function(state)
   return state
 end function
 
+/// Runs emit decode16 z function.
+/// @param state Value supplied for `state`.
 function emit_decode16Z_function(state)
   state.asm = a.mark(state.asm, "fn_decode16Z")
 
@@ -427,6 +462,8 @@ function emit_decode16Z_function(state)
   return state
 end function
 
+/// Runs emit hex function.
+/// @param state Value supplied for `state`.
 function emit_hex_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_hex")
@@ -538,6 +575,8 @@ function emit_hex_function(state)
   return state
 end function
 
+/// Runs emit from hex function.
+/// @param state Value supplied for `state`.
 function emit_fromHex_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_fromHex")
@@ -794,6 +833,8 @@ function emit_fromHex_function(state)
   return state
 end function
 
+/// Runs emit box float function.
+/// @param state Value supplied for `state`.
 function emit_box_float_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_box_float")
@@ -813,6 +854,8 @@ function emit_box_float_function(state)
   return state
 end function
 
+/// Runs emit value to string function.
+/// @param state Value supplied for `state`.
 function emit_value_to_string_function(state)
   state = mem.ensure_gc_data(state)
   state = _ensure_enum_obj_strings(state)
@@ -1054,6 +1097,8 @@ function emit_value_to_string_function(state)
   return state
 end function
 
+/// Runs emit string add function.
+/// @param state Value supplied for `state`.
 function emit_string_add_function(state)
   state = mem.ensure_gc_data(state)
 
@@ -1247,6 +1292,8 @@ function emit_string_add_function(state)
   return state
 end function
 
+/// Runs emit array add function.
+/// @param state Value supplied for `state`.
 function emit_array_add_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_add_array")
@@ -1319,6 +1366,8 @@ function emit_array_add_function(state)
   return state
 end function
 
+/// Runs emit bytes alloc function.
+/// @param state Value supplied for `state`.
 function emit_bytes_alloc_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_bytes_alloc")
@@ -1360,6 +1409,8 @@ function emit_bytes_alloc_function(state)
   return state
 end function
 
+/// Runs emit bytes add function.
+/// @param state Value supplied for `state`.
 function emit_bytes_add_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_add_bytes")
@@ -1428,6 +1479,8 @@ function emit_bytes_add_function(state)
   return state
 end function
 
+/// Runs emit bytes eq function.
+/// @param state Value supplied for `state`.
 function emit_bytes_eq_function(state)
   state.asm = a.mark(state.asm, "fn_bytes_eq")
 
@@ -1494,6 +1547,8 @@ function emit_bytes_eq_function(state)
   return state
 end function
 
+/// Runs emit slice function.
+/// @param state Value supplied for `state`.
 function emit_slice_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_slice")
@@ -1598,6 +1653,8 @@ function emit_slice_function(state)
   return state
 end function
 
+/// Runs emit string slice function.
+/// @param state Value supplied for `state`.
 function emit_string_slice_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_string_slice")
@@ -1725,6 +1782,8 @@ function emit_string_slice_function(state)
   return state
 end function
 
+/// Runs emit string indexof function.
+/// @param state Value supplied for `state`.
 function emit_string_indexof_function(state)
   state.asm = a.mark(state.asm, "fn_string_indexof")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
@@ -1816,6 +1875,8 @@ function emit_string_indexof_function(state)
   return state
 end function
 
+/// Runs emit string lastindexof function.
+/// @param state Value supplied for `state`.
 function emit_string_lastindexof_function(state)
   state.asm = a.mark(state.asm, "fn_string_lastindexof")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
@@ -1884,6 +1945,8 @@ function emit_string_lastindexof_function(state)
   return state
 end function
 
+/// Runs emit string startswith function.
+/// @param state Value supplied for `state`.
 function emit_string_startswith_function(state)
   state.asm = a.mark(state.asm, "fn_string_startswith")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
@@ -1939,6 +2002,8 @@ function emit_string_startswith_function(state)
   return state
 end function
 
+/// Runs emit string endswith function.
+/// @param state Value supplied for `state`.
 function emit_string_endswith_function(state)
   state.asm = a.mark(state.asm, "fn_string_endswith")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
@@ -1996,6 +2061,8 @@ function emit_string_endswith_function(state)
   return state
 end function
 
+/// Runs emit string repeat function.
+/// @param state Value supplied for `state`.
 function emit_string_repeat_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_string_repeat")
@@ -2106,6 +2173,8 @@ function emit_string_repeat_function(state)
   return state
 end function
 
+/// Runs emit string ltrim ascii function.
+/// @param state Value supplied for `state`.
 function emit_string_ltrim_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_ltrim_ascii")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
@@ -2181,6 +2250,8 @@ function emit_string_ltrim_ascii_function(state)
   return state
 end function
 
+/// Runs emit string rtrim ascii function.
+/// @param state Value supplied for `state`.
 function emit_string_rtrim_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_rtrim_ascii")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
@@ -2254,6 +2325,8 @@ function emit_string_rtrim_ascii_function(state)
   return state
 end function
 
+/// Runs emit string trim ascii function.
+/// @param state Value supplied for `state`.
 function emit_string_trim_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_trim_ascii")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
@@ -2356,6 +2429,8 @@ function emit_string_trim_ascii_function(state)
   return state
 end function
 
+/// Runs emit string is blank ascii function.
+/// @param state Value supplied for `state`.
 function emit_string_is_blank_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_is_blank_ascii")
 
@@ -2402,6 +2477,8 @@ function emit_string_is_blank_ascii_function(state)
   return state
 end function
 
+/// Runs emit string reverse function.
+/// @param state Value supplied for `state`.
 function emit_string_reverse_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_string_reverse")
@@ -2487,6 +2564,8 @@ function emit_string_reverse_function(state)
   return state
 end function
 
+/// Runs emit string to lower ascii function.
+/// @param state Value supplied for `state`.
 function emit_string_to_lower_ascii_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_string_to_lower_ascii")
@@ -2592,6 +2671,8 @@ function emit_string_to_lower_ascii_function(state)
   return state
 end function
 
+/// Runs emit string to upper ascii function.
+/// @param state Value supplied for `state`.
 function emit_string_to_upper_ascii_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_string_to_upper_ascii")
@@ -2697,6 +2778,8 @@ function emit_string_to_upper_ascii_function(state)
   return state
 end function
 
+/// Runs emit string eq ignore case ascii function.
+/// @param state Value supplied for `state`.
 function emit_string_eq_ignore_case_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_eq_ignore_case_ascii")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
@@ -2769,6 +2852,8 @@ function emit_string_eq_ignore_case_ascii_function(state)
   return state
 end function
 
+/// Runs emit string join function.
+/// @param state Value supplied for `state`.
 function emit_string_join_function(state)
   state = mem.ensure_gc_data(state)
   state.asm = a.mark(state.asm, "fn_string_join")
@@ -2923,6 +3008,8 @@ function emit_string_join_function(state)
   return state
 end function
 
+/// Implements cg emit builtins alloc.
+/// @param state Value supplied for `state`.
 function cg_emit_builtins_alloc(state)
   state = emit_input_function(state)
   state = emit_decode_function(state)

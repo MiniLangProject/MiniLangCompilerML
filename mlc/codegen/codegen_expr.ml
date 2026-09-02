@@ -1,4 +1,22 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Lowers MiniLang expressions, calls, constants and native interop to x64.
+//! Provides the mlc codegen codegen_expr package.
+
 package mlc.codegen.codegen_expr
 import std.string as s
 import mlc.asm as a
@@ -11,34 +29,52 @@ import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_threads as th
 
-// Explicit success/value envelope for compile-time expression evaluation.
+/// Explicit success/value envelope for compile-time expression evaluation.
 struct ConstEvalResult
+  /// Stores the ok member of `ConstEvalResult`.
   ok,
+  /// Stores the value member of `ConstEvalResult`.
   value,
 end struct
 
-// Cost and control-flow summary used by the bounded inliner.
+/// Cost and control-flow summary used by the bounded inliner.
 struct InlineStats
+  /// Stores the cost member of `InlineStats`.
   cost,
+  /// Stores the stmt count member of `InlineStats`.
   stmt_count,
+  /// Stores the call count member of `InlineStats`.
   call_count,
+  /// Stores the branch count member of `InlineStats`.
   branch_count,
+  /// Stores the max call args member of `InlineStats`.
   max_call_args,
+  /// Stores the has loop member of `InlineStats`.
   has_loop,
+  /// Stores the has switch member of `InlineStats`.
   has_switch,
+  /// Stores the has nested fn member of `InlineStats`.
   has_nested_fn,
 end struct
 
+/// Represents arg normalize result.
 struct ArgNormalizeResult
+  /// Stores the ok member of `ArgNormalizeResult`.
   ok,
+  /// Stores the args member of `ArgNormalizeResult`.
   args,
+  /// Stores the message member of `ArgNormalizeResult`.
   message,
 end struct
 
+/// Implements variadic is direct var.
+/// @internal
 function _variadic_is_direct_var(ex, name)
   return t.ast_is_node(ex) and t.ast_kind(ex) == "Var" and _coerce_name(t.ast_name(ex)) == name
 end function
 
+/// Implements variadic expr safe.
+/// @internal
 function _variadic_expr_safe(ex, name, allow_direct)
   if typeof(ex) == "void" or ex == 0 then return true end if
   if t.ast_is_node(ex) == false then return true end if
@@ -86,6 +122,8 @@ function _variadic_expr_safe(ex, name, allow_direct)
   return true
 end function
 
+/// Implements variadic stmts safe.
+/// @internal
 function _variadic_stmts_safe(body, name)
   if typeof(body) != "array" or len(body) <= 0 then return true end if
   for i = 0 to len(body) - 1
@@ -131,6 +169,8 @@ function _variadic_stmts_safe(body, name)
   return true
 end function
 
+/// Implements variadic param stack safe.
+/// @internal
 function _variadic_param_stack_safe(fn)
   if typeof(fn) != "struct" then return false end if
   index = try(fn.variadic_index)
@@ -139,6 +179,8 @@ function _variadic_param_stack_safe(fn)
   return _variadic_stmts_safe(try(fn.body), _coerce_name(params[index]))
 end function
 
+/// Implements normalize declared call args.
+/// @internal
 function _normalize_declared_call_args(expr, fn, implicit)
   supplied = try(expr.args)
   if typeof(supplied) != "array" then supplied = [] end if
@@ -224,6 +266,8 @@ function _normalize_declared_call_args(expr, fn, implicit)
   return ArgNormalizeResult(true, slots, "")
 end function
 
+/// Implements inline.
+/// @internal
 function inline _opt_truthy(v)
   tv = typeof(v)
   if tv == "void" then return false end if
@@ -235,16 +279,22 @@ function inline _opt_truthy(v)
   return true
 end function
 
+/// Implements inline.
+/// @internal
 function inline _is_number_no_bool(v)
   tv = typeof(v)
   if tv == "int" or tv == "float" then return true end if
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _is_int_no_bool(v)
   return typeof(v) == "int"
 end function
 
+/// Implements inline.
+/// @internal
 function inline _coerce_name(v)
   tv = typeof(v)
   if tv == "string" then return v end if
@@ -259,6 +309,8 @@ function inline _coerce_name(v)
   return ""
 end function
 
+/// Implements inline.
+/// @internal
 function inline _named_array_get(arr, key)
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
   for i = 0 to len(arr) - 1
@@ -273,6 +325,8 @@ function inline _named_array_get(arr, key)
   return 0
 end function
 
+/// Implements inline.
+/// @internal
 function inline _named_int_get(arr, key, defaultv)
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
   for i = 0 to len(arr) - 1
@@ -289,6 +343,8 @@ function inline _named_int_get(arr, key, defaultv)
   return defaultv
 end function
 
+/// Implements inline.
+/// @internal
 function inline _state_struct_id_get(state, key, defaultv)
   if typeof(state.struct_ids_index) == "struct" then
     v0 = t.fastmap_get(state.struct_ids_index, key, defaultv)
@@ -297,6 +353,8 @@ function inline _state_struct_id_get(state, key, defaultv)
   return _named_int_get(state.struct_ids, key, defaultv)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _state_enum_id_get(state, key, defaultv)
   if typeof(state.enum_ids_index) == "struct" then
     v0 = t.fastmap_get(state.enum_ids_index, key, defaultv)
@@ -305,6 +363,8 @@ function inline _state_enum_id_get(state, key, defaultv)
   return _named_int_get(state.enum_ids, key, defaultv)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _state_named_array_get(index_map, arr, key)
   if typeof(index_map) == "struct" then
     return t.fastmap_get(index_map, key, 0)
@@ -312,26 +372,38 @@ function inline _state_named_array_get(index_map, arr, key)
   return _named_array_get(arr, key)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _state_struct_fields_get(state, key)
   return _state_named_array_get(state.struct_fields_index, state.struct_fields, key)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _state_struct_field_types_get(state, key)
   return _state_named_array_get(0, state.struct_field_types, key)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _state_struct_methods_get(state, key)
   return _state_named_array_get(state.struct_methods_index, state.struct_methods, key)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _state_enum_variants_get(state, key)
   return _state_named_array_get(state.enum_variants_index, state.enum_variants, key)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _state_struct_static_methods_get(state, key)
   return _state_named_array_get(state.struct_static_methods_index, state.struct_static_methods, key)
 end function
 
+/// Implements inline.
+/// @internal
 function inline _strpair_get(arr, key)
   if typeof(arr) == "struct" then
     v0 = t.fastmap_get(arr, key, "")
@@ -353,6 +425,8 @@ function inline _strpair_get(arr, key)
   return ""
 end function
 
+/// Implements inline.
+/// @internal
 function inline _method_map_get(map_arr, method_name)
   if typeof(map_arr) == "struct" then
     mv = t.fastmap_get(map_arr, method_name, "")
@@ -372,6 +446,8 @@ function inline _method_map_get(map_arr, method_name)
   return ""
 end function
 
+/// Implements user function get.
+/// @internal
 function _user_function_get(state, qname)
   arr = state.user_functions
   idx_map = state.user_function_index
@@ -391,6 +467,8 @@ function _user_function_get(state, qname)
   return 0
 end function
 
+/// Reports whether has any global prefix.
+/// @internal
 function _has_any_global_prefix(state, base)
   if typeof(base) != "string" or base == "" then return false end if
   if typeof(state.qualify_cache) == "struct" then
@@ -484,6 +562,8 @@ function _has_any_global_prefix(state, base)
   return found
 end function
 
+/// Implements inline.
+/// @internal
 function inline _compile_symbol_has(state, key)
   if typeof(key) != "string" or key == "" then return false end if
   if typeof(_user_function_get(state, key)) == "struct" then return true end if
@@ -493,6 +573,8 @@ function inline _compile_symbol_has(state, key)
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _builtin_label(name)
   nm = name
   if typeof(nm) != "string" then return "" end if
@@ -547,12 +629,16 @@ function inline _builtin_label(name)
   return ""
 end function
 
+/// Implements inline.
+/// @internal
 function inline _next_lid(state)
   lid = state.label_id
   state.label_id = state.label_id + 1
   return lid
 end function
 
+/// Implements native callback resolve user fn.
+/// @internal
 function _native_callback_resolve_user_fn(state, ex)
   qn = _expr_to_qualname(state, ex)
   if qn == "" then return "" end if
@@ -569,6 +655,8 @@ function _native_callback_resolve_user_fn(state, ex)
   return ""
 end function
 
+/// Runs emit native callback ret lresult.
+/// @internal
 function _emit_native_callback_ret_lresult(state, l_zero, l_done)
   state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
   state.asm = a.and_r64_imm(state.asm, "r11", 7)
@@ -589,6 +677,8 @@ function _emit_native_callback_ret_lresult(state, l_zero, l_done)
   return state
 end function
 
+/// Runs emit native callback wndproc.
+/// @internal
 function _emit_native_callback_wndproc(state, fn_qn)
   fn = _user_function_get(state, fn_qn)
   if typeof(fn) != "struct" then
@@ -656,6 +746,8 @@ function _emit_native_callback_wndproc(state, fn_qn)
   return state
 end function
 
+/// Implements inline.
+/// @internal
 function inline _alias_lookup(alias_map, key)
   if typeof(alias_map) == "struct" then
     v0 = t.fastmap_get(alias_map, key, "")
@@ -672,6 +764,8 @@ function inline _alias_lookup(alias_map, key)
   return ""
 end function
 
+/// Implements inline.
+/// @internal
 function inline _alias_lookup_array_exact(alias_map, key)
   if typeof(alias_map) != "array" or len(alias_map) <= 0 then return "" end if
   for i = 0 to len(alias_map) - 1
@@ -683,6 +777,8 @@ function inline _alias_lookup_array_exact(alias_map, key)
   return ""
 end function
 
+/// Implements apply import alias.
+/// @internal
 function _apply_import_alias(state, qname)
   if typeof(qname) != "string" then return "" end if
   qn_len = len(qname)
@@ -715,6 +811,8 @@ function _apply_import_alias(state, qname)
   return target + "." + tail
 end function
 
+/// Implements inline.
+/// @internal
 function inline _arr_has_str(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
   for i = 0 to len(arr) - 1
@@ -723,6 +821,8 @@ function inline _arr_has_str(arr, value)
   return false
 end function
 
+/// Reports whether is current localish name.
+/// @internal
 function _is_current_localish_name(state, name)
   if typeof(name) != "string" or name == "" then return false end if
 
@@ -732,6 +832,8 @@ function _is_current_localish_name(state, name)
   return false
 end function
 
+/// Implements alias target for base.
+/// @internal
 function _alias_target_for_base(state, base)
   if typeof(base) != "string" or base == "" then return "" end if
   if typeof(state.import_aliases) == "array" then
@@ -746,6 +848,8 @@ function _alias_target_for_base(state, base)
   return target
 end function
 
+/// Implements member base alias shadowed.
+/// @internal
 function _member_base_alias_shadowed(state, expr)
   cur = expr
   while t.ast_kind(cur) == "Member"
@@ -768,6 +872,8 @@ function _member_base_alias_shadowed(state, expr)
   return _is_current_localish_name(state, base)
 end function
 
+/// Implements pool has key.
+/// @internal
 function _pool_has_key(pool, key)
   if typeof(pool) != "array" or len(pool) <= 0 then return false end if
   for i = 0 to len(pool) - 1
@@ -779,6 +885,8 @@ function _pool_has_key(pool, key)
   return false
 end function
 
+/// Implements pool collect suffix.
+/// @internal
 function _pool_collect_suffix(pool, prefix, suffix, matches)
   vals_out_b = t.arr_chunk_new(32)
   if typeof(matches) == "array" and len(matches) > 0 then
@@ -803,6 +911,8 @@ function _pool_collect_suffix(pool, prefix, suffix, matches)
   return vals_out
 end function
 
+/// Implements qualify identifier.
+/// @internal
 function _qualify_identifier(state, name)
   if typeof(name) != "string" then return "" end if
   if name == "" then return "" end if
@@ -890,6 +1000,8 @@ function _qualify_identifier(state, name)
   return n1
 end function
 
+/// Implements expr to qualname.
+/// @internal
 function _expr_to_qualname(state, expr)
   if t.ast_is_node(expr) == false then return "" end if
   qn0 = _qname_of(state, expr)
@@ -916,6 +1028,8 @@ function _expr_to_qualname(state, expr)
   return ""
 end function
 
+/// Implements extern sig get.
+/// @internal
 function _extern_sig_get(state, qname)
   if typeof(qname) != "string" or qname == "" then return 0 end if
   if typeof(state.extern_sig_index) == "struct" then
@@ -934,6 +1048,8 @@ function _extern_sig_get(state, qname)
   return 0
 end function
 
+/// Runs emit struct field index dispatch.
+/// @internal
 function _emit_struct_field_index_dispatch(state, field, struct_id_reg, out_reg, ok_label, fail_label, tag)
   pairs_b = t.arr_chunk_new(64)
   arr = state.struct_fields
@@ -1002,6 +1118,8 @@ function _emit_struct_field_index_dispatch(state, field, struct_id_reg, out_reg,
   return state
 end function
 
+/// Implements resolve const value.
+/// @internal
 function _resolve_const_value(state, name)
   b = scope.cg_resolve_binding(state, name)
   if typeof(b) != "struct" then
@@ -1016,6 +1134,8 @@ function _resolve_const_value(state, name)
   return ConstEvalResult(true, b.const_value_py)
 end function
 
+/// Implements try const bin.
+/// @internal
 function _try_const_bin(op, lv, rv)
   if op == "and" then return ConstEvalResult(true, _opt_truthy(lv) and _opt_truthy(rv)) end if
   if op == "or" then return ConstEvalResult(true, _opt_truthy(lv) or _opt_truthy(rv)) end if
@@ -1093,6 +1213,8 @@ function _try_const_bin(op, lv, rv)
   return ConstEvalResult(false, 0)
 end function
 
+/// Implements cg expr try const value.
+/// @internal
 function _cg_expr_try_const_value(state, expr, preserve_unary_float)
   if t.ast_is_node(expr) == false then return ConstEvalResult(false, 0) end if
 
@@ -1166,6 +1288,8 @@ function _cg_expr_try_const_value(state, expr, preserve_unary_float)
   return ConstEvalResult(false, 0)
 end function
 
+/// Implements opt try const immediate encoded.
+/// @internal
 function _opt_try_const_immediate_encoded(state, expr)
   cv = cg_expr_try_const_value(state, expr)
   if cv.ok == false then return 0 end if
@@ -1181,6 +1305,8 @@ function _opt_try_const_immediate_encoded(state, expr)
   return 0
 end function
 
+/// Implements opt try pure const array len.
+/// @internal
 function _opt_try_pure_const_array_len(state, expr)
   if typeof(expr) != "struct" then return -1 end if
   if _coerce_name(try(expr.node_kind)) != "ArrayLit" then return -1 end if
@@ -1194,6 +1320,8 @@ function _opt_try_pure_const_array_len(state, expr)
   return len(items)
 end function
 
+/// Implements opt try known type label.
+/// @internal
 function _opt_try_known_type_label(state, expr, detailed)
   cv = cg_expr_try_const_value(state, expr)
   if cv.ok then
@@ -1233,6 +1361,8 @@ function _opt_try_known_type_label(state, expr, detailed)
   return ""
 end function
 
+/// Implements qname parts any.
+/// @internal
 function _qname_parts_any(expr)
   if t.ast_is_node(expr) == false then return 0 end if
   k = _coerce_name(t.ast_kind(expr))
@@ -1255,6 +1385,8 @@ function _qname_parts_any(expr)
   return 0
 end function
 
+/// Runs emit std math roundlike intrinsic.
+/// @internal
 function _emit_std_math_roundlike_intrinsic(state, callee_name, arg)
   if callee_name != "std.math.floor" and callee_name != "std.math.ceil" and callee_name != "std.math.trunc" and callee_name != "std.math.round" then
     return [state, false]
@@ -1333,16 +1465,24 @@ function _emit_std_math_roundlike_intrinsic(state, callee_name, arg)
   return [state, true]
 end function
 
+/// Implements cg expr try const value.
+/// @param state Value supplied for `state`.
+/// @param expr Value supplied for `expr`.
 function cg_expr_try_const_value(state, expr)
   // Optimizer folding follows runtime arithmetic normalization.
   return _cg_expr_try_const_value(state, expr, false)
 end function
 
+/// Implements cg expr try const decl value.
+/// @param state Value supplied for `state`.
+/// @param expr Value supplied for `expr`.
 function cg_expr_try_const_decl_value(state, expr)
   // Declaration constexpr evaluation matches Python's source-value typing.
   return _cg_expr_try_const_value(state, expr, true)
 end function
 
+/// Implements extern struct get.
+/// @internal
 function _extern_struct_get(state, qname)
   xs = state.extern_abi_structs
   if typeof(xs) != "array" or len(xs) <= 0 then return 0 end if
@@ -1353,6 +1493,8 @@ function _extern_struct_get(state, qname)
   return 0
 end function
 
+/// Reports whether is expr list separator artifact.
+/// @internal
 function _is_expr_list_separator_artifact(ex)
   if typeof(ex) != "struct" then return false end if
   nk = _coerce_name(try(ex.node_kind))
@@ -1363,6 +1505,8 @@ function _is_expr_list_separator_artifact(ex)
   return false
 end function
 
+/// Implements filter expr list separator artifacts.
+/// @internal
 function _filter_expr_list_separator_artifacts(items)
   if typeof(items) != "array" then return [] end if
   if len(items) <= 0 then return items end if
@@ -1380,6 +1524,9 @@ function _filter_expr_list_separator_artifacts(items)
   return t.arr_chunk_finish(out_b)
 end function
 
+/// Implements cg emit expr.
+/// @param state Value supplied for `state`.
+/// @param expr Value supplied for `expr`.
 function cg_emit_expr(state, expr)
   if t.ast_is_node(expr) == false then
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -1465,6 +1612,8 @@ function cg_emit_expr(state, expr)
   return _emit_expr_unsupported(state, expr, k)
 end function
 
+/// Runs emit expr coalesce.
+/// @internal
 function _emit_expr_coalesce(state, expr)
   lid = _next_lid(state)
   l_done = "coalesce_done_" + lid
@@ -1476,6 +1625,8 @@ function _emit_expr_coalesce(state, expr)
   return state
 end function
 
+/// Runs emit expr safe member.
+/// @internal
 function _emit_expr_safe_member(state, expr)
   lid = _next_lid(state)
   l_void = "safe_member_void_" + lid
@@ -1496,6 +1647,8 @@ function _emit_expr_safe_member(state, expr)
   return state
 end function
 
+/// Runs emit expr safe call.
+/// @internal
 function _emit_expr_safe_call(state, expr)
   safe = expr.callee
   lid = _next_lid(state)
@@ -1518,6 +1671,8 @@ function _emit_expr_safe_call(state, expr)
   return state
 end function
 
+/// Runs emit expr type guard.
+/// @internal
 function _emit_expr_type_guard(state, expr)
   lid = _next_lid(state)
   l_valid = "type_guard_valid_" + lid
@@ -1565,6 +1720,8 @@ function _emit_expr_type_guard(state, expr)
   return state
 end function
 
+/// Runs emit expr num.
+/// @internal
 function _emit_expr_num(state, expr)
   val_num = t.ast_value(expr)
   if typeof(val_num) == "int" then
@@ -1586,11 +1743,15 @@ function _emit_expr_num(state, expr)
   return state
 end function
 
+/// Runs emit expr bool.
+/// @internal
 function _emit_expr_bool(state, expr)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(t.ast_value(expr)))
   return state
 end function
 
+/// Runs emit expr str.
+/// @internal
 function _emit_expr_str(state, expr)
   lbl_str = "objstr_" + _next_lid(state)
   state.rdata = d.rdata_add_obj_string(state.rdata, lbl_str, t.ast_value(expr))
@@ -1598,11 +1759,15 @@ function _emit_expr_str(state, expr)
   return state
 end function
 
+/// Runs emit expr voidlit.
+/// @internal
 function _emit_expr_voidlit(state, expr)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   return state
 end function
 
+/// Runs emit expr is type.
+/// @internal
 function _emit_expr_is_type(state, expr)
   ty_raw = _coerce_name(expr.type_name)
   neg = false
@@ -1799,6 +1964,8 @@ function _emit_expr_is_type(state, expr)
   return state
 end function
 
+/// Runs emit expr var.
+/// @internal
 function _emit_expr_var(state, expr)
   nm_raw = ""
   nm_try = t.ast_name(expr)
@@ -1820,6 +1987,8 @@ function _emit_expr_var(state, expr)
   return scope.emit_load_var_scoped(state, nm)
 end function
 
+/// Runs emit expr member.
+/// @internal
 function _emit_expr_member(state, expr)
   mname = _coerce_name(try(expr.name))
   if mname == "" then mname = _coerce_name(try(expr.field)) end if
@@ -1996,6 +2165,8 @@ function _emit_expr_member(state, expr)
   return state
 end function
 
+/// Runs emit expr index.
+/// @internal
 function _emit_expr_index(state, expr)
   fast_plan = _opt_known_index_plan(state, expr)
   if typeof(fast_plan) == "array" and len(fast_plan) >= 3 then
@@ -2167,6 +2338,8 @@ function _emit_expr_index(state, expr)
   return state
 end function
 
+/// Runs emit expr unary.
+/// @internal
 function _emit_expr_unary(state, expr)
   state = cg_emit_expr(state, t.ast_right(expr))
   if t.ast_op(expr) == "-" then
@@ -2265,6 +2438,8 @@ function _emit_expr_unary(state, expr)
   return state
 end function
 
+/// Implements intflow name has.
+/// @internal
 function _intflow_name_has(arr, name)
   if typeof(arr) == "struct" then return t.fastmap_get(arr, name, 0) != 0 end if
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
@@ -2274,6 +2449,8 @@ function _intflow_name_has(arr, name)
   return false
 end function
 
+/// Implements opt const nonzero number.
+/// @internal
 function _opt_const_nonzero_number(state, ex)
   cv = cg_expr_try_const_value(state, ex)
   if typeof(cv) != "struct" or cv.ok == false then return false end if
@@ -2281,11 +2458,15 @@ function _opt_const_nonzero_number(state, ex)
   return (tv == "int" or tv == "float") and cv.value != 0
 end function
 
+/// Implements opt const nonnegative int.
+/// @internal
 function _opt_const_nonnegative_int(state, ex)
   cv = cg_expr_try_const_value(state, ex)
   return typeof(cv) == "struct" and cv.ok and typeof(cv.value) == "int" and cv.value >= 0
 end function
 
+/// Implements opt expr known int.
+/// @internal
 function _opt_expr_known_int(state, ex)
   if t.ast_is_node(ex) == false then return false end if
   cv = cg_expr_try_const_value(state, ex)
@@ -2319,6 +2500,8 @@ function _opt_expr_known_int(state, ex)
   return false
 end function
 
+/// Implements inline.
+/// @internal
 function inline _opt_type_base(type_name)
   if typeof(type_name) != "string" or type_name == "" then return "" end if
   for i = 0 to len(type_name) - 1
@@ -2327,6 +2510,8 @@ function inline _opt_type_base(type_name)
   return type_name
 end function
 
+/// Implements opt type exact length.
+/// @internal
 function _opt_type_exact_length(type_name)
   if typeof(type_name) != "string" or type_name == "" then return -1 end if
   colon = -1
@@ -2342,6 +2527,8 @@ function _opt_type_exact_length(type_name)
   return value
 end function
 
+/// Implements opt type fact get.
+/// @internal
 function _opt_type_fact_get(items, name)
   if typeof(items) == "struct" then
     fact = t.fastmap_get(items, name, "")
@@ -2356,6 +2543,8 @@ function _opt_type_fact_get(items, name)
   return ""
 end function
 
+/// Implements opt expr known type.
+/// @internal
 function _opt_expr_known_type(state, ex)
   if t.ast_is_node(ex) == false then return "" end if
   k = _coerce_name(t.ast_kind(ex))
@@ -2427,12 +2616,16 @@ function _opt_expr_known_type(state, ex)
   return ""
 end function
 
+/// Implements opt type query can elide evaluation.
+/// @internal
 function _opt_type_query_can_elide_evaluation(ex)
   if t.ast_is_node(ex) == false then return false end if
   k = _coerce_name(t.ast_kind(ex))
   return k == "Num" or k == "Bool" or k == "Str" or k == "Var"
 end function
 
+/// Implements opt known index plan.
+/// @internal
 function _opt_known_index_plan(state, ex)
   if typeof(ex) != "struct" then return [] end if
   target = try(ex.target)
@@ -2479,6 +2672,8 @@ function _opt_known_index_plan(state, ex)
   return [kind, base_slot, bounds_proven]
 end function
 
+/// Implements opt emit known index.
+/// @internal
 function _opt_emit_known_index(state, expr, plan)
   kind = plan[0]
   base_slot = plan[1]
@@ -2564,7 +2759,8 @@ function _opt_emit_known_index(state, expr, plan)
   return state
 end function
 
-// Return log2(value), or -1 when value is not a positive power of two.
+/// Return log2(value), or -1 when value is not a positive power of two.
+/// @internal
 function _positive_power_of_two_shift(value)
   if typeof(value) != "int" or value <= 0 then return -1 end if
   shift = 0
@@ -2577,6 +2773,8 @@ function _positive_power_of_two_shift(value)
   return shift
 end function
 
+/// Runs emit known int binop.
+/// @internal
 function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
   // Operands in r10/r11 are proven tagged integers. Every specialization must
   // preserve the generic path's wraparound and void/error behavior.
@@ -2799,6 +2997,8 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
   return state
 end function
 
+/// Runs emit known float binop.
+/// @internal
 function _emit_known_float_binop(state, expr)
   op = _coerce_name(t.ast_op(expr))
   supported = op == "+" or op == "-" or op == "*" or op == "/" or op == "%" or op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
@@ -2876,8 +3076,8 @@ function _emit_known_float_binop(state, expr)
   return [state, true]
 end function
 
-// Emit binary operators, preserving left-to-right effects and routing dynamic
-// type/error cases through the same helpers used by the reference compiler.
+/// Emit binary operators, preserving left-to-right effects and routing dynamic type/error cases through the same helpers used by the reference compiler.
+/// @internal
 function _emit_expr_bin(state, expr)
   if t.ast_op(expr) == "and" then
     lid_and = _next_lid(state)
@@ -4135,6 +4335,8 @@ function _emit_expr_bin(state, expr)
   return state
 end function
 
+/// Runs emit expr call.
+/// @internal
 function _emit_expr_call(state, expr)
   // Keep callsite line current so runtime-created errors carry correct origin.
   state = core.emit_dbg_line(state, expr)
@@ -4825,6 +5027,8 @@ function _emit_expr_call(state, expr)
   return _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime)
 end function
 
+/// Runs emit expr call early builtins.
+/// @internal
 function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, nargs)
   // Native string/bytes helpers use the same compact ABI path as the Python
   // compiler.  Keeping this ahead of generic value-call dispatch is important:
@@ -6022,6 +6226,8 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
   return [state, false]
 end function
 
+/// Runs emit generic call builtin cases.
+/// @internal
 function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, nargs, call_args_base)
   if callee == "array" then
     if nargs != 1 and nargs != 2 then
@@ -6843,6 +7049,8 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
   return [state, false]
 end function
 
+/// Runs emit native value helper call.
+/// @internal
 function _emit_native_value_helper_call(state, callee, raw_name, call_args, nargs)
   nm = callee
   if raw_name != "" then nm = raw_name end if
@@ -6966,6 +7174,8 @@ function _emit_native_value_helper_call(state, callee, raw_name, call_args, narg
   return [state, true]
 end function
 
+/// Implements expr heap cfg bool.
+/// @internal
 function _expr_heap_cfg_bool(state, key, defaultv)
   if typeof(state) != "struct" or typeof(state.heap_config) != "array" or len(state.heap_config) <= 0 then return defaultv end if
   for ci = 0 to len(state.heap_config) - 1
@@ -6978,6 +7188,8 @@ function _expr_heap_cfg_bool(state, key, defaultv)
   return defaultv
 end function
 
+/// Implements direct user call enabled.
+/// @internal
 function _direct_user_call_enabled(state, qname)
   // Keep the old unguarded fast path available for controlled experiments,
   // but do not use it by default: a top-level function binding can legally be
@@ -6985,6 +7197,8 @@ function _direct_user_call_enabled(state, qname)
   return _expr_heap_cfg_bool(state, "cg_unguarded_direct_user_calls", false)
 end function
 
+/// Runs emit expr call generic.
+/// @internal
 function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime)
   skip_call_args_eval = false
   direct_struct_constructor = false
@@ -7812,6 +8026,8 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
 end function
 
 
+/// Runs emit expr array lit.
+/// @internal
 function _emit_expr_array_lit(state, expr)
   n = 0
   items_lit = try(expr.items)
@@ -7873,6 +8089,8 @@ function _emit_expr_array_lit(state, expr)
   return state
 end function
 
+/// Runs emit expr unsupported.
+/// @internal
 function _emit_expr_unsupported(state, expr, k)
   loc = ""
   fn_dbg = _coerce_name(t.ast_filename(expr))
@@ -7904,10 +8122,8 @@ function _emit_expr_unsupported(state, expr, k)
 end function
 
 
-// ------------------------------------------------------------
-// Compatibility wrappers (Python CodegenExpr parity)
-// ------------------------------------------------------------
-
+/// Compatibility wrappers (Python CodegenExpr parity).
+/// @internal
 function _abi_ty_to_str(abi_ty)
   if typeof(abi_ty) == "string" then return abi_ty end if
   if typeof(abi_ty) == "struct" then
@@ -7918,12 +8134,16 @@ function _abi_ty_to_str(abi_ty)
   return ""
 end function
 
+/// Implements qname parts.
+/// @internal
 function _qname_parts(state, ex)
   qn = _expr_to_qualname(state, ex)
   if qn == "" then return [] end if
   return s.split(qn, ".")
 end function
 
+/// Implements qname of.
+/// @internal
 function _qname_of(state, ex)
   if t.ast_is_node(ex) == false then return "" end if
 
@@ -8051,6 +8271,8 @@ function _qname_of(state, ex)
   return ""
 end function
 
+/// Implements qname with prefixes.
+/// @internal
 function _qname_with_prefixes(state, qname)
   if typeof(qname) != "string" or qname == "" then return [] end if
   vals_b = t.arr_chunk_new(4)
@@ -8083,10 +8305,14 @@ function _qname_with_prefixes(state, qname)
   return vals
 end function
 
+/// Implements qualify dotted.
+/// @internal
 function _qualify_dotted(state, name)
   return _qualify_identifier(state, name)
 end function
 
+/// Implements qname exists.
+/// @internal
 function _qname_exists(state, qname)
   if typeof(qname) != "string" or qname == "" then return false end if
   if typeof(_user_function_get(state, qname)) == "struct" then return true end if
@@ -8097,6 +8323,8 @@ function _qname_exists(state, qname)
   return typeof(b) == "struct"
 end function
 
+/// Reports whether has global prefix.
+/// @internal
 function _has_global_prefix(state, name)
   if typeof(name) != "string" then return false end if
   pref = state.current_file_prefix
@@ -8105,6 +8333,8 @@ function _has_global_prefix(state, name)
   return s.startsWith(name, pref)
 end function
 
+/// Reports whether is instance method qname.
+/// @internal
 function _is_instance_method_qname(state, qname)
   if typeof(qname) != "string" then return false end if
   sm = state.struct_methods
@@ -8144,6 +8374,8 @@ function _is_instance_method_qname(state, qname)
   return false
 end function
 
+/// Implements expr has this.
+/// @internal
 function _expr_has_this(ex)
   if t.ast_is_node(ex) == false then return false end if
   k = _coerce_name(t.ast_kind(ex))
@@ -8199,6 +8431,8 @@ function _expr_has_this(ex)
   return false
 end function
 
+/// Implements stmt has this.
+/// @internal
 function _stmt_has_this(st)
   if typeof(st) != "struct" then return false end if
   k = _coerce_name(try(st.node_kind))
@@ -8339,6 +8573,8 @@ function _stmt_has_this(st)
   return false
 end function
 
+/// Implements fn uses this.
+/// @internal
 function _fn_uses_this(fn_node)
   if typeof(fn_node) != "struct" then return false end if
   cached_uses_this = try(fn_node._ml_uses_this)
@@ -8355,6 +8591,8 @@ function _fn_uses_this(fn_node)
   return uses
 end function
 
+/// Reports whether contains nested fn.
+/// @internal
 function _contains_nested_fn(node)
   if typeof(node) != "struct" then return false end if
   if _coerce_name(try(node.node_kind)) == "FunctionDef" then return true end if
@@ -8396,14 +8634,16 @@ function _contains_nested_fn(node)
   return false
 end function
 
+/// Implements extern dll base.
+/// @internal
 function _extern_dll_base(dll, is_linux)
   identity = "" + dll
   if is_linux == false then identity = s.toLowerAscii(s.trim(identity)) end if
   return t.extern_library_label_token(identity)
 end function
 
-// Out parameters always carry an address, even when their pointee is double.
-// Keep that pointer in the integer ABI class on every target.
+/// Out parameters always carry an address, even when their pointee is double. Keep that pointer in the integer ABI class on every target.
+/// @internal
 function _abi_param_is_double(abi_ty)
   if typeof(abi_ty) == "struct" and typeof(try(abi_ty.is_out)) == "bool" and abi_ty.is_out then
     return false
@@ -8411,10 +8651,14 @@ function _abi_param_is_double(abi_ty)
   return s.toLowerAscii(s.trim(_abi_ty_to_str(abi_ty))) == "double"
 end function
 
+/// Implements extern iat label.
+/// @internal
 function _extern_iat_label(dll, sym, is_linux)
   return "iat_" + _extern_dll_base(dll, is_linux) + "_" + sym
 end function
 
+/// Runs emit make error const.
+/// @internal
 function _emit_make_error_const(state, code, message)
   err_code = 0
   if typeof(code) == "int" then err_code = code end if
@@ -8455,6 +8699,8 @@ function _emit_make_error_const(state, code, message)
   return state
 end function
 
+/// Runs emit auto errprop.
+/// @internal
 function _emit_auto_errprop(state)
   sup = 0
   if typeof(state.errprop_suppression) == "int" then sup = state.errprop_suppression end if
@@ -8502,6 +8748,8 @@ function _emit_auto_errprop(state)
   return state
 end function
 
+/// Runs emit auto errprop cold block.
+/// @internal
 function _emit_auto_errprop_cold_block(state)
   if state.in_function and typeof(state.func_ret_label) == "string" and state.func_ret_label != "" then
     state.asm = a.jmp(state.asm, state.func_ret_label)
@@ -8512,6 +8760,8 @@ function _emit_auto_errprop_cold_block(state)
   return state
 end function
 
+/// Runs emit extern arg to native.
+/// @internal
 function _emit_extern_arg_to_native(state, abi_ty, fail_label, pos, wbuf_label)
   raw_ty = s.trim(_abi_ty_to_str(abi_ty))
   ty = s.toLowerAscii(raw_ty)
@@ -8657,6 +8907,8 @@ function _emit_extern_arg_to_native(state, abi_ty, fail_label, pos, wbuf_label)
   return state
 end function
 
+/// Runs emit extern ret from native.
+/// @internal
 function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
   ty = s.toLowerAscii(s.trim(_abi_ty_to_str(abi_ty)))
   if ty == "" or ty == "void" or ty == "none" then
@@ -8885,6 +9137,8 @@ function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
   return state
 end function
 
+/// Runs emit extern out from stack.
+/// @internal
 function _emit_extern_out_from_stack(state, abi_ty, stack_off, pos)
   ty_raw = s.trim(_abi_ty_to_str(abi_ty))
   ty = s.toLowerAscii(ty_raw)
@@ -8936,8 +9190,8 @@ function _emit_extern_out_from_stack(state, abi_ty, stack_off, pos)
   return _emit_extern_ret_from_native(state, ty, "", pos)
 end function
 
-// Marshal one MiniLang call frame to the declared native ABI. Managed roots
-// remain published across the call and out-values are normalized on return.
+/// Marshal one MiniLang call frame to the declared native ABI. Managed roots remain published across the call and out-values are normalized on return.
+/// @internal
 function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   threaded_native = state.native_threads_possible
   qn = ""
@@ -9251,6 +9505,8 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   return state
 end function
 
+/// Implements inline collect expr stats.
+/// @internal
 function _inline_collect_expr_stats(ex, stats)
   if t.ast_is_node(ex) == false then return 0 end if
   k = _coerce_name(t.ast_kind(ex))
@@ -9286,6 +9542,8 @@ function _inline_collect_expr_stats(ex, stats)
   return 8
 end function
 
+/// Implements inline collect stmt list stats.
+/// @internal
 function _inline_collect_stmt_list_stats(stmts, stats)
   cost = 0
   if typeof(stmts) != "array" or len(stmts) <= 0 then return cost end if
@@ -9295,6 +9553,8 @@ function _inline_collect_stmt_list_stats(stmts, stats)
   return cost
 end function
 
+/// Implements inline collect stmt stats.
+/// @internal
 function _inline_collect_stmt_stats(st, stats)
   if typeof(st) != "struct" then return 0 end if
   k = _coerce_name(try(st.node_kind))
@@ -9375,6 +9635,8 @@ function _inline_collect_stmt_stats(st, stats)
   return 6
 end function
 
+/// Implements function wants inline.
+/// @internal
 function _function_wants_inline(fn)
   if typeof(fn) != "struct" then return false end if
   if typeof(try(fn.is_inline)) == "bool" and fn.is_inline then return true end if
@@ -9406,6 +9668,8 @@ function _function_wants_inline(fn)
   return true
 end function
 
+/// Implements call args have stack variadic.
+/// @internal
 function _call_args_have_stack_variadic(args)
   if typeof(args) != "array" or len(args) <= 0 then return false end if
   for i = 0 to len(args) - 1
@@ -9415,6 +9679,8 @@ function _call_args_have_stack_variadic(args)
   return false
 end function
 
+/// Implements inline declared type fact.
+/// @internal
 function _inline_declared_type_fact(state, raw_type)
   if typeof(raw_type) != "string" or raw_type == "" then return "" end if
   lower = s.toLowerAscii(raw_type)
@@ -9427,6 +9693,8 @@ function _inline_declared_type_fact(state, raw_type)
   return "struct:" + qualified
 end function
 
+/// Implements inline call eligible.
+/// @internal
 function _inline_call_eligible(fn)
   if typeof(fn) != "struct" then return false end if
   stats = InlineStats(0, 0, 0, 0, 0, false, false, false)
@@ -9440,6 +9708,8 @@ function _inline_call_eligible(fn)
   return true
 end function
 
+/// Runs emit inline call.
+/// @internal
 function _emit_inline_call(state, callee, args)
   // Inline expansion evaluates arguments left-to-right into persistent root
   // slots, then emits the callee in an isolated scope so caller bindings cannot
@@ -9637,10 +9907,14 @@ function _emit_inline_call(state, callee, args)
   return state
 end function
 
+/// Implements opt try const value.
+/// @internal
 function _opt_try_const_value(state, ex)
   return cg_expr_try_const_value(state, ex)
 end function
 
+/// Implements opt emit const value.
+/// @internal
 function _opt_emit_const_value(state, value)
   tv = typeof(value)
   if tv == "bool" then
@@ -9672,6 +9946,8 @@ function _opt_emit_const_value(state, value)
   return state
 end function
 
+/// Runs emit call args eval recursive.
+/// @internal
 function _emit_call_args_eval_recursive(state, call_args, idx, nargs, base_off)
   if typeof(nargs) != "int" then return state end if
   if idx < 0 or idx >= nargs then return state end if
@@ -9689,10 +9965,15 @@ function _emit_call_args_eval_recursive(state, call_args, idx, nargs, base_off)
   return _emit_call_args_eval_recursive(state, call_args, idx + 1, nargs, base_off)
 end function
 
+/// Runs emit expr.
+/// @param state Value supplied for `state`.
+/// @param ex Value supplied for `ex`.
 function emit_expr(state, ex)
   return cg_emit_expr(state, ex)
 end function
 
+/// Runs emit extern stubs.
+/// @param state Value supplied for `state`.
 function emit_extern_stubs(state)
   threaded_native = state.native_threads_possible
   if threaded_native then

@@ -1,59 +1,107 @@
+/*
+Copyright 2026 Nils Kopal
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Emits native threads, synchronization and stop-the-world GC coordination.
+//! Provides the mlc codegen codegen_threads package.
+
 package mlc.codegen.codegen_threads
 import mlc.asm as a
 import mlc.constants as c
 import mlc.data as d
 import mlc.tools as t
 
-// Native thread-context layout. Tagged managed values occupy qword fields and
-// are scanned as GC roots; status and counters use native integer fields.
+/// Native thread-context layout. Tagged managed values occupy qword fields and are scanned as GC roots; status and counters use native integer fields.
 const THREAD_TYPE = 0
+/// Stores the thread status.
 const THREAD_STATUS = 4
+/// Stores the thread handle.
 const THREAD_HANDLE = 8
+/// Stores the thread id.
 const THREAD_ID = 16
+/// Stores the thread code.
 const THREAD_CODE = 24
+/// Stores the thread stop.
 const THREAD_STOP = 32
+/// Stores the thread result.
 const THREAD_RESULT = 40
+/// Stores the thread roots.
 const THREAD_ROOTS = 48
+/// Stores the thread tmp0.
 const THREAD_TMP0 = 56
+/// Stores the thread next.
 const THREAD_NEXT = 120
+/// Stores the thread gc state.
 const THREAD_GC_STATE = 128
-// Cursor for the four allocation-handoff roots at THREAD_TMP0+32.
+/// Cursor for the four allocation-handoff roots at THREAD_TMP0+32.
 const THREAD_HANDOFF_CURSOR = 136
+/// Stores the thread alloc cursor.
 const THREAD_ALLOC_CURSOR = THREAD_HANDOFF_CURSOR
+/// Stores the thread arg.
 const THREAD_ARG = 144
+/// Stores the thread logical id.
 const THREAD_LOGICAL_ID = 152
+/// Stores the thread arity.
 const THREAD_ARITY = 160
+/// Stores the thread heap bypass depth.
 const THREAD_HEAP_BYPASS_DEPTH = 168
-// Per-thread allocation ranges carved from the shared process heap.
+/// Per-thread allocation ranges carved from the shared process heap.
 const THREAD_TLAB_START = 176
+/// Stores the thread tlab cursor.
 const THREAD_TLAB_CURSOR = 184
+/// Stores the thread tlab end.
 const THREAD_TLAB_END = 192
-// Active Join() operations retain THREAD_HANDLE until their native wait ends.
+/// Active Join() operations retain THREAD_HANDLE until their native wait ends.
 const THREAD_HANDLE_USERS = 200
+/// Stores the thread context size.
 const THREAD_CONTEXT_SIZE = 208
+/// Stores the thread context stride.
 const THREAD_CONTEXT_STRIDE = 208
+/// Stores the thread context pool size.
 const THREAD_CONTEXT_POOL_SIZE = 0x10000
 
-// Public lifecycle states stored in THREAD_STATUS.
+/// Public lifecycle states stored in THREAD_STATUS.
 const THREAD_CREATED = 0
+/// Stores the thread running.
 const THREAD_RUNNING = 1
+/// Stores the thread stop requested.
 const THREAD_STOP_REQUESTED = 2
+/// Stores the thread completed.
 const THREAD_COMPLETED = 3
+/// Stores the thread stopped.
 const THREAD_STOPPED = 4
+/// Stores the thread failed.
 const THREAD_FAILED = 5
-// Private states used while publishing a native worker/configuration update.
-// Status() maps them to stable public strings rather than exposing new states.
+/// Private states used while publishing a native worker/configuration update. Status() maps them to stable public strings rather than exposing new states.
 const THREAD_STARTING = 6
+/// Stores the thread configuring.
 const THREAD_CONFIGURING = 7
 
-// Collector-facing states used by cooperative stop-the-world coordination.
+/// Collector-facing states used by cooperative stop-the-world coordination.
 const GC_THREAD_RUNNING = 0
+/// Stores the gc thread parked.
 const GC_THREAD_PARKED = 1
+/// Stores the gc thread native.
 const GC_THREAD_NATIVE = 2
+/// Stores the gc thread inactive.
 const GC_THREAD_INACTIVE = 3
+/// Stores the gc thread collector.
 const GC_THREAD_COLLECTOR = 4
 
+/// Reports whether has label.
+/// @internal
 function _has_label(labels, name)
   if typeof(labels) != "array" or len(labels) <= 0 then return false end if
   for i = 0 to len(labels) - 1
@@ -62,6 +110,8 @@ function _has_label(labels, name)
   return false
 end function
 
+/// Updates append unique.
+/// @internal
 function _append_unique(values, value)
   if typeof(values) != "array" then values = [] end if
   if len(values) <= 0 then return [value] end if
@@ -71,12 +121,15 @@ function _append_unique(values, value)
   return values + [value]
 end function
 
+/// Creates new label id.
+/// @internal
 function _new_label_id(state)
   state.label_id = state.label_id + 1
   return state.label_id
 end function
 
-// Materialize global monitors, the main context and coordination counters once.
+/// Materialize global monitors, the main context and coordination counters once.
+/// @param state Value supplied for `state`.
 function ensure_thread_data(state)
   if d.data_has_label(state.data, "sync_monitor") == false then
     state.data = d.data_pad_align(state.data, 8)
@@ -112,7 +165,8 @@ function ensure_thread_data(state)
   return state
 end function
 
-// Initialize the main thread context and all process-wide critical sections.
+/// Initialize the main thread context and all process-wide critical sections.
+/// @param state Value supplied for `state`.
 function emit_sync_init(state)
   state = ensure_thread_data(state)
   state.asm = a.lea_rax_rip(state.asm, "main_thread_context")
@@ -149,7 +203,8 @@ function emit_sync_init(state)
   return state
 end function
 
-// Emit a cheap conditional call that parks when collection was requested.
+/// Emit a cheap conditional call that parks when collection was requested.
+/// @param state Value supplied for `state`.
 function emit_gc_safepoint_poll(state)
   if state.native_threads_possible == false then return state end if
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_safepoint")
@@ -162,7 +217,8 @@ function emit_gc_safepoint_poll(state)
   return state
 end function
 
-// Cooperatively turn a stop request into an early function return.
+/// Cooperatively turn a stop request into an early function return.
+/// @param state Value supplied for `state`.
 function emit_thread_cancellation_poll(state)
   if state.native_threads_possible == false then return state end if
   if state.in_function == false then return state end if
@@ -184,6 +240,8 @@ function emit_thread_cancellation_poll(state)
   return state
 end function
 
+/// Runs emit managed thread count delta.
+/// @internal
 function _emit_managed_thread_count_delta(state, delta)
   lid = _new_label_id(state)
   l_retry = "managed_thread_count_retry_" + lid
@@ -201,7 +259,8 @@ function _emit_managed_thread_count_delta(state, delta)
   return state
 end function
 
-// Emit the slow path that publishes a parked state until GC resumes the world.
+/// Emit the slow path that publishes a parked state until GC resumes the world.
+/// @param state Value supplied for `state`.
 function emit_gc_safepoint_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_safepoint")
@@ -264,7 +323,8 @@ function emit_gc_safepoint_function(state)
   return state
 end function
 
-// Mark the current thread native so the collector does not wait for a poll.
+/// Mark the current thread native so the collector does not wait for a poll.
+/// @param state Value supplied for `state`.
 function emit_gc_native_enter_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_safepoint")
   state = ensure_thread_data(state)
@@ -299,7 +359,8 @@ function emit_gc_native_enter_function(state)
   return state
 end function
 
-// Rejoin managed execution, parking first when a collection is active.
+/// Rejoin managed execution, parking first when a collection is active.
+/// @param state Value supplied for `state`.
 function emit_gc_native_leave_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_native_leave")
@@ -346,7 +407,8 @@ function emit_gc_native_leave_function(state)
   return state
 end function
 
-// Remove a terminating managed worker from collector participation.
+/// Remove a terminating managed worker from collector participation.
+/// @param state Value supplied for `state`.
 function emit_gc_managed_exit_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_managed_exit")
@@ -366,7 +428,8 @@ function emit_gc_managed_exit_function(state)
   return state
 end function
 
-// Serialize heap mutation while preserving re-entrant allocation depth.
+/// Serialize heap mutation while preserving re-entrant allocation depth.
+/// @param state Value supplied for `state`.
 function emit_heap_enter_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_safepoint")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
@@ -423,7 +486,8 @@ function emit_heap_enter_function(state)
   return state
 end function
 
-// Release the heap monitor at the outermost allocation depth.
+/// Release the heap monitor at the outermost allocation depth.
+/// @param state Value supplied for `state`.
 function emit_heap_leave_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_heap_leave")
@@ -451,7 +515,8 @@ function emit_heap_leave_function(state)
   return state
 end function
 
-// Request collection and wait until every other managed thread is safe.
+/// Request collection and wait until every other managed thread is safe.
+/// @param state Value supplied for `state`.
 function emit_gc_world_stop_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_world_stop")
@@ -514,7 +579,8 @@ function emit_gc_world_stop_function(state)
   return state
 end function
 
-// Clear the collection request and make parked threads runnable again.
+/// Clear the collection request and make parked threads runnable again.
+/// @param state Value supplied for `state`.
 function emit_gc_world_resume_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_gc_world_resume")
@@ -536,7 +602,8 @@ function emit_gc_world_resume_function(state)
   return state
 end function
 
-// Enter the process-wide monitor used by synchronized language constructs.
+/// Enter the process-wide monitor used by synchronized language constructs.
+/// @param state Value supplied for `state`.
 function emit_sync_enter_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
@@ -554,7 +621,8 @@ function emit_sync_enter_function(state)
   return state
 end function
 
-// Leave the process-wide synchronized monitor.
+/// Leave the process-wide synchronized monitor.
+/// @param state Value supplied for `state`.
 function emit_sync_leave_function(state)
   state = ensure_thread_data(state)
   state.asm = a.mark(state.asm, "fn_sync_leave")
@@ -570,7 +638,8 @@ function emit_sync_leave_function(state)
   return state
 end function
 
-// Allocate and initialize a managed Thread object without starting it.
+/// Allocate and initialize a managed Thread object without starting it.
+/// @param state Value supplied for `state`.
 function emit_thread_new_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_heap_enter")
   state.used_helpers = _append_unique(state.used_helpers, "fn_heap_leave")
@@ -664,7 +733,8 @@ function emit_thread_new_function(state)
   return state
 end function
 
-// Publish the argument and create the native worker exactly once.
+/// Publish the argument and create the native worker exactly once.
+/// @param state Value supplied for `state`.
 function emit_thread_start_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_thread_entry")
   state.asm = a.mark(state.asm, "fn_thread_start")
@@ -731,6 +801,8 @@ function emit_thread_start_function(state)
   return state
 end function
 
+/// Runs emit thread stop function.
+/// @param state Value supplied for `state`.
 function emit_thread_stop_function(state)
   state.asm = a.mark(state.asm, "fn_thread_stop")
   lid = _new_label_id(state)
@@ -767,6 +839,8 @@ function emit_thread_stop_function(state)
   return state
 end function
 
+/// Runs emit thread join function.
+/// @param state Value supplied for `state`.
 function emit_thread_join_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
@@ -861,6 +935,8 @@ function emit_thread_join_function(state)
   return state
 end function
 
+/// Runs emit thread alive function.
+/// @param state Value supplied for `state`.
 function emit_thread_alive_function(state)
   state.asm = a.mark(state.asm, "fn_thread_alive")
   lid = _new_label_id(state)
@@ -882,6 +958,8 @@ function emit_thread_alive_function(state)
   return state
 end function
 
+/// Runs emit thread id function.
+/// @param state Value supplied for `state`.
 function emit_thread_id_function(state)
   state.asm = a.mark(state.asm, "fn_thread_id")
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rcx", THREAD_ID)
@@ -891,6 +969,8 @@ function emit_thread_id_function(state)
   return state
 end function
 
+/// Runs emit thread logical id function.
+/// @param state Value supplied for `state`.
 function emit_thread_logical_id_function(state)
   state.asm = a.mark(state.asm, "fn_thread_logical_id")
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rcx", THREAD_LOGICAL_ID)
@@ -898,6 +978,8 @@ function emit_thread_logical_id_function(state)
   return state
 end function
 
+/// Runs emit thread set logical id function.
+/// @param state Value supplied for `state`.
 function emit_thread_set_logical_id_function(state)
   state.asm = a.mark(state.asm, "fn_thread_set_logical_id")
   lid = _new_label_id(state)
@@ -919,6 +1001,8 @@ function emit_thread_set_logical_id_function(state)
   return state
 end function
 
+/// Runs emit thread result function.
+/// @param state Value supplied for `state`.
 function emit_thread_result_function(state)
   state.asm = a.mark(state.asm, "fn_thread_result")
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rcx", THREAD_RESULT)
@@ -926,6 +1010,8 @@ function emit_thread_result_function(state)
   return state
 end function
 
+/// Runs emit thread current logical id function.
+/// @param state Value supplied for `state`.
 function emit_thread_current_logical_id_function(state)
   state.asm = a.mark(state.asm, "fn_thread_current_logical_id")
   state.asm = a.mov_r11_gs_qword_28(state.asm)
@@ -934,6 +1020,8 @@ function emit_thread_current_logical_id_function(state)
   return state
 end function
 
+/// Runs emit thread status function.
+/// @param state Value supplied for `state`.
 function emit_thread_status_function(state)
   names = ["obj_thread_created", "obj_thread_running", "obj_thread_stop_requested", "obj_thread_completed", "obj_thread_stopped", "obj_thread_failed"]
   values = ["Created", "Running", "StopRequested", "Completed", "Stopped", "Failed"]
@@ -966,6 +1054,8 @@ function emit_thread_status_function(state)
   return state
 end function
 
+/// Runs emit thread close function.
+/// @param state Value supplied for `state`.
 function emit_thread_close_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
@@ -1052,6 +1142,8 @@ function emit_thread_close_function(state)
   return state
 end function
 
+/// Runs emit thread stop requested function.
+/// @param state Value supplied for `state`.
 function emit_thread_stop_requested_function(state)
   state.asm = a.mark(state.asm, "fn_thread_stop_requested")
   lid = _new_label_id(state)
@@ -1073,6 +1165,8 @@ function emit_thread_stop_requested_function(state)
   return state
 end function
 
+/// Runs emit thread alloc function.
+/// @param state Value supplied for `state`.
 function emit_thread_alloc_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_alloc")
   state.asm = a.mark(state.asm, "fn_thread_alloc")
@@ -1080,7 +1174,8 @@ function emit_thread_alloc_function(state)
   return state
 end function
 
-// Bridge the target's native worker entrypoint to managed code and publish its result.
+/// Bridge the target's native worker entrypoint to managed code and publish its result.
+/// @param state Value supplied for `state`.
 function emit_thread_entry_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_leave")
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_managed_exit")
