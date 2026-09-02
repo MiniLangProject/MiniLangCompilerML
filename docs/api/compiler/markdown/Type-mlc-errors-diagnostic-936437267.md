@@ -23,7 +23,7 @@ Recoverable diagnostic used by keep-going compilation.
 filename
 ```
 
-Stores the filename member of `Diagnostic`.
+Filename associated with `Diagnostic`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L39)
@@ -35,7 +35,7 @@ Stores the filename member of `Diagnostic`.
 kind
 ```
 
-Stores the kind member of `Diagnostic`.
+Kind associated with `Diagnostic`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L35)
@@ -47,7 +47,7 @@ Stores the kind member of `Diagnostic`.
 message
 ```
 
-Stores the message member of `Diagnostic`.
+Diagnostic message carried by `Diagnostic`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L37)
@@ -59,7 +59,7 @@ Stores the message member of `Diagnostic`.
 pos
 ```
 
-Stores the pos member of `Diagnostic`.
+Pos associated with `Diagnostic`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L41)
@@ -71,7 +71,7 @@ Stores the pos member of `Diagnostic`.
 source
 ```
 
-Stores the source member of `Diagnostic`.
+Source associated with `Diagnostic`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L43)

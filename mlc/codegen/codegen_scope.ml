@@ -25,67 +25,67 @@ import mlc.tools as t
 
 /// One resolved variable binding, including storage, capture and const metadata. promoted_xmm is an optional nonvolatile register mirror; the stack slot stays authoritative so GC metadata, diagnostics and native interop remain stable.
 struct VarBinding
-  /// Stores the id member of `VarBinding`.
+  /// Id associated with `VarBinding`.
   id,
-  /// Stores the name member of `VarBinding`.
+  /// Name associated with `VarBinding`.
   name,
-  /// Stores the kind member of `VarBinding`.
+  /// Kind associated with `VarBinding`.
   kind,
-  /// Stores the label member of `VarBinding`.
+  /// Label associated with `VarBinding`.
   label,
-  /// Stores the offset member of `VarBinding`.
+  /// Offset associated with `VarBinding`.
   offset,
-  /// Stores the depth member of `VarBinding`.
+  /// Depth associated with `VarBinding`.
   depth,
-  /// Stores the boxed member of `VarBinding`.
+  /// Boxed associated with `VarBinding`.
   boxed,
-  /// Stores the capture depth member of `VarBinding`.
+  /// Capture depth associated with `VarBinding`.
   capture_depth,
-  /// Stores the capture index member of `VarBinding`.
+  /// Capture index associated with `VarBinding`.
   capture_index,
-  /// Stores the decl node member of `VarBinding`.
+  /// Decl node associated with `VarBinding`.
   decl_node,
-  /// Stores the is const member of `VarBinding`.
+  /// Whether `VarBinding.is_const` indicates const.
   is_const,
-  /// Stores the const expr member of `VarBinding`.
+  /// Const expr associated with `VarBinding`.
   const_expr,
-  /// Stores the const initialized member of `VarBinding`.
+  /// Const initialized associated with `VarBinding`.
   const_initialized,
-  /// Stores the const value py member of `VarBinding`.
+  /// Const value py associated with `VarBinding`.
   const_value_py,
-  /// Stores the const value encoded member of `VarBinding`.
+  /// Const value encoded associated with `VarBinding`.
   const_value_encoded,
-  /// Stores the const value label member of `VarBinding`.
+  /// Const value label associated with `VarBinding`.
   const_value_label,
-  /// Stores the promoted xmm member of `VarBinding`.
+  /// Promoted xmm associated with `VarBinding`.
   promoted_xmm,
 end struct
 
 /// Compact immutable-signature binding for function/struct/builtin/extern objects. These globals can be rebound at runtime but never participate in constexpr initialization, so retaining five const-evaluation fields per callable only inflates the compiler's permanent root scope.
 struct CallableBinding
-  /// Stores the id member of `CallableBinding`.
+  /// Id associated with `CallableBinding`.
   id,
-  /// Stores the name member of `CallableBinding`.
+  /// Name associated with `CallableBinding`.
   name,
-  /// Stores the kind member of `CallableBinding`.
+  /// Kind associated with `CallableBinding`.
   kind,
-  /// Stores the label member of `CallableBinding`.
+  /// Label associated with `CallableBinding`.
   label,
-  /// Stores the offset member of `CallableBinding`.
+  /// Offset associated with `CallableBinding`.
   offset,
-  /// Stores the depth member of `CallableBinding`.
+  /// Depth associated with `CallableBinding`.
   depth,
-  /// Stores the boxed member of `CallableBinding`.
+  /// Boxed associated with `CallableBinding`.
   boxed,
-  /// Stores the capture depth member of `CallableBinding`.
+  /// Capture depth associated with `CallableBinding`.
   capture_depth,
-  /// Stores the capture index member of `CallableBinding`.
+  /// Capture index associated with `CallableBinding`.
   capture_index,
-  /// Stores the decl node member of `CallableBinding`.
+  /// Decl node associated with `CallableBinding`.
   decl_node,
-  /// Stores the is const member of `CallableBinding`.
+  /// Whether `CallableBinding.is_const` indicates const.
   is_const,
-  /// Stores the promoted xmm member of `CallableBinding`.
+  /// Promoted xmm associated with `CallableBinding`.
   promoted_xmm,
 end struct
 
@@ -95,7 +95,7 @@ function inline _is_ascii_digit(ch)
   return ch == "0" or ch == "1" or ch == "2" or ch == "3" or ch == "4" or ch == "5" or ch == "6" or ch == "7" or ch == "8" or ch == "9"
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _is_ascii_alpha(ch)
   if ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f" or ch == "g" or ch == "h" or ch == "i" or ch == "j" or ch == "k" or ch == "l" or ch == "m" then return true end if
@@ -105,7 +105,7 @@ function inline _is_ascii_alpha(ch)
   return false
 end function
 
-/// Implements sanitize ident.
+/// Manage sanitize ident in lexical-scope code generation.
 /// @internal
 function _sanitize_ident(name)
   raw = _coerce_name(name)
@@ -133,7 +133,7 @@ function _sanitize_ident(name)
   return sanitized
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _scope_depth(state)
   if typeof(state.scope_stack) != "array" then return 0 end if
@@ -186,7 +186,7 @@ function inline frame_finish(frame)
   return []
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _frame_last_binding(frame, name)
   n = frame_count(frame)
@@ -202,7 +202,7 @@ function inline _frame_last_binding(frame, name)
   return 0
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _heap_cfg_get_any(state, key)
   cfg = try(state.heap_cfg)
@@ -219,7 +219,7 @@ function inline _heap_cfg_get_any(state, key)
   return 0
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _heap_cfg_get_bool(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
@@ -227,7 +227,7 @@ function inline _heap_cfg_get_bool(state, key, defaultv)
   return defaultv
 end function
 
-/// Implements drop last frame.
+/// Manage drop last frame in lexical-scope code generation.
 /// @internal
 function _drop_last_frame(arr)
   if typeof(arr) != "array" then return [[]] end if
@@ -244,7 +244,7 @@ function _drop_last_frame(arr)
   return outv
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _is_reserved_identifier(state, name)
   rs = state.reserved_identifiers
@@ -277,7 +277,7 @@ function _append_unique(items, value)
   return items +[value]
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _arr_has(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
@@ -287,7 +287,7 @@ function inline _arr_has(arr, value)
   return false
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _map_int_get(arr, key, defaultv)
   if typeof(arr) == "struct" then
@@ -308,7 +308,7 @@ function inline _map_int_get(arr, key, defaultv)
   return defaultv
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _name_has_dot(name)
   if typeof(name) != "string" then return false end if
@@ -319,7 +319,7 @@ function inline _name_has_dot(name)
   return false
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _decl_node_key(node)
   if typeof(node) == "void" then return "void" end if
@@ -360,7 +360,7 @@ function inline _decl_node_key(node)
   return "" + node
 end function
 
-/// Implements inline.
+/// Manage inline in lexical-scope code generation.
 /// @internal
 function inline _func_global_lookup(arr, name)
   if typeof(arr) == "struct" then
@@ -392,7 +392,7 @@ function _has_data_label(labels, name)
   return false
 end function
 
-/// Runs emit make error const.
+/// Manage emit make error const in lexical-scope code generation.
 /// @internal
 function _emit_make_error_const(state, code, message)
   err_code = 0
@@ -437,7 +437,7 @@ function new_label_id(state)
   return state.label_id
 end function
 
-/// Implements cg scope setup.
+/// Manage cg scope setup in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 function cg_scope_setup(state)
   state.scope_stack = [t.arr_vec_new(256)]
@@ -460,13 +460,13 @@ function cg_scope_setup(state)
   return state
 end function
 
-/// Implements cg scope depth.
+/// Manage cg scope depth in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 function cg_scope_depth(state)
   return _scope_depth(state)
 end function
 
-/// Implements cg scope enter.
+/// Manage cg scope enter in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 function cg_scope_enter(state)
   if typeof(state.scope_stack) != "array" then
@@ -488,7 +488,7 @@ function cg_scope_enter(state)
   return state
 end function
 
-/// Implements cg scope leave.
+/// Manage cg scope leave in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param emit_cleanup Value supplied for `emit_cleanup`.
 function cg_scope_leave(state, emit_cleanup)
@@ -515,7 +515,7 @@ function cg_scope_leave(state, emit_cleanup)
   return state
 end function
 
-/// Implements cg next binding id.
+/// Manage cg next binding id in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 function cg_next_binding_id(state)
   state.binding_id = state.binding_id + 1
@@ -558,7 +558,7 @@ function cg_resolve_binding(state, name)
   return 0
 end function
 
-/// Implements cg resolve binding for write.
+/// Manage cg resolve binding for write in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 function cg_resolve_binding_for_write(state, name)
@@ -593,7 +593,7 @@ function cg_resolve_binding_for_write(state, name)
   return b
 end function
 
-/// Implements declare in current scope.
+/// Manage declare in current scope in lexical-scope code generation.
 /// @internal
 function _declare_in_current_scope(state, b)
   sd = state.scope_declared
@@ -635,7 +635,7 @@ function _declare_in_current_scope(state, b)
   return state
 end function
 
-/// Implements cg declare binding.
+/// Manage cg declare binding in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param kind Value supplied for `kind`.
@@ -722,7 +722,7 @@ function cg_declare_binding(state, name, kind, is_const, const_expr, const_value
   return state
 end function
 
-/// Implements cg set const binding value.
+/// Manage cg set const binding value in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param pyv Value supplied for `pyv`.
@@ -792,7 +792,7 @@ function cg_set_const_binding_value(state, name, pyv)
   return state
 end function
 
-/// Implements cg precompute const binding value.
+/// Manage cg precompute const binding value in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param pyv Value supplied for `pyv`.
@@ -843,19 +843,19 @@ function scope_setup(state)
   return cg_scope_setup(state)
 end function
 
-/// Implements scope depth.
+/// Manage scope depth in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 function scope_depth(state)
   return cg_scope_depth(state)
 end function
 
-/// Implements scope global slots.
+/// Manage scope global slots in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 function scope_global_slots(state)
   return frame_finish(state.global_slots)
 end function
 
-/// Implements coerce name.
+/// Manage coerce name in lexical-scope code generation.
 /// @internal
 function _coerce_name(name)
   tv = typeof(name)
@@ -887,7 +887,7 @@ function is_ident(s)
   return true
 end function
 
-/// Implements accept.
+/// Manage accept in lexical-scope code generation.
 /// @param s Value supplied for `s`.
 function accept(s)
   if typeof(s) != "string" or s == "" then return false end if
@@ -897,7 +897,7 @@ function accept(s)
   return true
 end function
 
-/// Implements search.
+/// Manage search in lexical-scope code generation.
 /// @param obj Value supplied for `obj`.
 /// @param depth Value supplied for `depth`.
 function search(obj, depth)
@@ -945,33 +945,33 @@ function push_scope(state)
   return cg_scope_enter(state)
 end function
 
-/// Implements pop scope.
+/// Manage pop scope in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param emit_cleanup Value supplied for `emit_cleanup`.
 function pop_scope(state, emit_cleanup)
   return cg_scope_leave(state, emit_cleanup)
 end function
 
-/// Implements next binding id.
+/// Manage next binding id in lexical-scope code generation.
 /// @internal
 function _next_binding_id(state)
   return cg_next_binding_id(state)
 end function
 
-/// Implements decl key.
+/// Manage decl key in lexical-scope code generation.
 /// @internal
 function _decl_key(node, name)
   return _coerce_name(name) + "|" + _decl_node_key(node)
 end function
 
-/// Implements resolve binding.
+/// Manage resolve binding in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 function resolve_binding(state, name)
   return cg_resolve_binding(state, _coerce_name(name))
 end function
 
-/// Implements resolve binding for write.
+/// Manage resolve binding for write in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 function resolve_binding_for_write(state, name)
@@ -984,7 +984,7 @@ function _add_binding_to_current_scope(state, b)
   return _declare_in_current_scope(state, b)
 end function
 
-/// Implements check reserved ident.
+/// Manage check reserved ident in lexical-scope code generation.
 /// @internal
 function _check_reserved_ident(state, name, decl_node)
   nm = _coerce_name(name)
@@ -995,7 +995,7 @@ function _check_reserved_ident(state, name, decl_node)
   return true
 end function
 
-/// Implements declare global binding.
+/// Manage declare global binding in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param decl_node Value supplied for `decl_node`.
@@ -1006,7 +1006,7 @@ function declare_global_binding(state, name, decl_node, is_const, const_expr)
   return cg_declare_binding(state, nm, "global", is_const, const_expr, void, decl_node)
 end function
 
-/// Implements declare global binding root.
+/// Manage declare global binding root in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param decl_node Value supplied for `decl_node`.
@@ -1102,7 +1102,7 @@ function declare_global_binding_root(state, name, decl_node, is_const, const_exp
   return state
 end function
 
-/// Implements declare callable binding root.
+/// Manage declare callable binding root in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param decl_node Value supplied for `decl_node`.
@@ -1153,7 +1153,7 @@ function declare_callable_binding_root(state, name, decl_node)
   return state
 end function
 
-/// Implements declare const binding root deferred.
+/// Manage declare const binding root deferred in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param decl_node Value supplied for `decl_node`.
@@ -1231,7 +1231,7 @@ function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
   return state
 end function
 
-/// Implements materialize global binding root.
+/// Manage materialize global binding root in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 function materialize_global_binding_root(state, name)
@@ -1298,7 +1298,7 @@ function materialize_global_binding_root(state, name)
   return state
 end function
 
-/// Implements declare local binding.
+/// Manage declare local binding in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param decl_node Value supplied for `decl_node`.
@@ -1309,7 +1309,7 @@ function declare_local_binding(state, name, decl_node, is_const, const_expr)
   return cg_declare_binding(state, nm, "local", is_const, const_expr, void, decl_node)
 end function
 
-/// Implements declare fresh binding.
+/// Manage declare fresh binding in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param decl_node Value supplied for `decl_node`.
@@ -1342,7 +1342,7 @@ function declare_fresh_binding(state, name, decl_node, kind)
   return declare_global_binding(state, nm, decl_node, false, 0)
 end function
 
-/// Implements bind param.
+/// Manage bind param in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param offset Zero-based starting offset.
@@ -1379,7 +1379,7 @@ function bind_param(state, name, offset, decl_node)
   return state
 end function
 
-/// Implements register decl site binding.
+/// Manage register decl site binding in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param node Value supplied for `node`.
 /// @param name Name of the requested item.
@@ -1393,7 +1393,7 @@ function register_decl_site_binding(state, node, name, binding)
   return state
 end function
 
-/// Implements ensure binding for write.
+/// Manage ensure binding for write in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param decl_node Value supplied for `decl_node`.
@@ -1435,7 +1435,7 @@ function ensure_binding_for_write(state, name, decl_node)
   return declare_global_binding(state, nm, decl_node, false, 0)
 end function
 
-/// Runs emit cleanup bindings.
+/// Manage emit cleanup bindings in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param bindings Value supplied for `bindings`.
 function emit_cleanup_bindings(state, bindings)
@@ -1460,7 +1460,7 @@ function emit_cleanup_bindings(state, bindings)
   return state
 end function
 
-/// Runs emit cleanup to depth.
+/// Manage emit cleanup to depth in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param target_depth Value supplied for `target_depth`.
 function emit_cleanup_to_depth(state, target_depth)
@@ -1481,7 +1481,7 @@ function emit_cleanup_to_depth(state, target_depth)
   return state
 end function
 
-/// Runs emit module init dependency error.
+/// Manage emit module init dependency error in lexical-scope code generation.
 /// @internal
 function _emit_module_init_dependency_error(state, target_name, target_file, target_state, node)
   state_txt = "not initialized"
@@ -1498,7 +1498,7 @@ function _emit_module_init_dependency_error(state, target_name, target_file, tar
   return state
 end function
 
-/// Implements maybe emit module init guard for global read.
+/// Manage maybe emit module init guard for global read in lexical-scope code generation.
 /// @internal
 function _maybe_emit_module_init_guard_for_global_read(state, binding, target_name, node)
   if typeof(state._module_init_active) != "bool" or state._module_init_active == false then return state end if
@@ -1529,7 +1529,7 @@ function _maybe_emit_module_init_guard_for_global_read(state, binding, target_na
   return state
 end function
 
-/// Runs emit load var scoped.
+/// Manage emit load var scoped in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 function emit_load_var_scoped(state, name)
@@ -1663,7 +1663,7 @@ function emit_load_var_scoped(state, name)
   return state
 end function
 
-/// Runs emit store var scoped.
+/// Manage emit store var scoped in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param node Value supplied for `node`.
@@ -1798,7 +1798,7 @@ function emit_store_var_scoped(state, name, node)
   return state
 end function
 
-/// Runs emit store existing global.
+/// Manage emit store existing global in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param binding Value supplied for `binding`.
 function emit_store_existing_global(state, binding)
@@ -1820,7 +1820,7 @@ function emit_store_existing_global(state, binding)
   return state
 end function
 
-/// Implements analysis reset function.
+/// Manage analysis reset function in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 function analysis_reset_function(state)
   state.decl_site_bindings = t.fastmap_new(128)
@@ -1832,7 +1832,7 @@ function analysis_reset_function(state)
   return state
 end function
 
-/// Implements analysis layout function locals.
+/// Manage analysis layout function locals in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param base_offset Value supplied for `base_offset`.
 function analysis_layout_function_locals(state, base_offset)
@@ -1859,7 +1859,7 @@ function analysis_layout_function_locals(state, base_offset)
   return state
 end function
 
-/// Implements declare function global.
+/// Manage declare function global in lexical-scope code generation.
 /// @param state Value supplied for `state`.
 /// @param local_name Value supplied for `local_name`.
 /// @param qualified_name Value supplied for `qualified_name`.

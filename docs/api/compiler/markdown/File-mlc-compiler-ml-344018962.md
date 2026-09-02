@@ -35,7 +35,7 @@ Reachable from entry: **yes**
 function _abi_param_type_supported(ty)
 ```
 
-Implements abi param type supported.
+Perform the abi param type supported compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -51,7 +51,7 @@ Implements abi param type supported.
 function _abi_return_type_supported(ty)
 ```
 
-Implements abi return type supported.
+Perform the abi return type supported compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -107,7 +107,7 @@ Updates add diag from stmt.
 inline function _alias_get(aliases, key)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -124,7 +124,7 @@ Implements inline.
 function _alias_set(aliases, key, value)
 ```
 
-Implements alias set.
+Perform the alias set compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -142,7 +142,7 @@ Implements alias set.
 function _alias_to_array(aliases)
 ```
 
-Implements alias to array.
+Perform the alias to array compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -192,7 +192,7 @@ Updates append zero pad.
 function _apply_link_patches(patches, obj_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, image_base, section_buf, is_rel32, patch_index, unknown_prefix, invalid_prefix)
 ```
 
-Implements apply link patches.
+Perform the apply link patches compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -256,7 +256,7 @@ Stream one object's relocations into final section buffers. Private labels stay 
 inline function _array_contains(arr, value)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -273,7 +273,7 @@ Implements inline.
 function _asm_append_section(bld, name, buf, rva)
 ```
 
-Implements asm append section.
+Perform the asm append section compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -292,7 +292,7 @@ Implements asm append section.
 function _asm_db_text(hex_text)
 ```
 
-Implements asm db text.
+Perform the asm db text compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -308,7 +308,7 @@ Implements asm db text.
 function _asm_default_path(output_exe)
 ```
 
-Implements asm default path.
+Perform the asm default path compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -324,7 +324,7 @@ Implements asm default path.
 _asm_dump_data
 ```
 
-Stores the asm dump data compiler state.
+Track asm dump data compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L419)
@@ -336,7 +336,7 @@ Stores the asm dump data compiler state.
 _asm_dump_pe
 ```
 
-Stores the asm dump pe compiler state.
+Track asm dump pe compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L421)
@@ -348,7 +348,7 @@ Stores the asm dump pe compiler state.
 _asm_listing_enabled
 ```
 
-Stores the asm listing enabled compiler state.
+Track asm listing enabled compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L409)
@@ -360,7 +360,7 @@ Stores the asm listing enabled compiler state.
 _asm_listing_path
 ```
 
-Stores the asm listing path compiler state.
+Track asm listing path compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L411)
@@ -372,7 +372,7 @@ Stores the asm listing path compiler state.
 _asm_show_addr
 ```
 
-Stores the asm show addr compiler state.
+Track asm show addr compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L413)
@@ -384,7 +384,7 @@ Stores the asm show addr compiler state.
 _asm_show_bytes
 ```
 
-Stores the asm show bytes compiler state.
+Track asm show bytes compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L415)
@@ -396,7 +396,7 @@ Stores the asm show bytes compiler state.
 _asm_show_code
 ```
 
-Stores the asm show code compiler state.
+Track asm show code compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L417)
@@ -424,7 +424,7 @@ Extract the path-like portion of a top-level import for the lightweight automati
 function _auto_object_pipeline_score(input_ml, include_dirs)
 ```
 
-Implements auto object pipeline score.
+Perform the auto object pipeline score compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -460,7 +460,7 @@ Walk only enough of the import graph to cross the large-build threshold. This av
 inline function _basename(path)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -476,7 +476,7 @@ Implements inline.
 function _bss_label_offset_map(st)
 ```
 
-Implements bss label offset map.
+Perform the bss label offset map compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -508,7 +508,7 @@ Creates build line starts.
 function _cfg_get_int(cfg, key, defaultv)
 ```
 
-Implements cfg get int.
+Perform the cfg get int compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -526,7 +526,7 @@ Implements cfg get int.
 function _cfg_set(cfg, key, value)
 ```
 
-Implements cfg set.
+Perform the cfg set compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -544,7 +544,7 @@ Implements cfg set.
 function _char_code_local(ch)
 ```
 
-Implements char code local.
+Perform the char code local compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -560,7 +560,7 @@ Implements char code local.
 function _check_decl_stmt(st, module_path, diags, keep_going, max_errors)
 ```
 
-Implements check decl stmt.
+Perform the check decl stmt compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -596,7 +596,7 @@ Releases or resets clear tmp obj dir.
 function _cmd_quote_arg(x)
 ```
 
-Implements cmd quote arg.
+Perform the cmd quote arg compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -612,7 +612,7 @@ Implements cmd quote arg.
 function _coerce_name(v)
 ```
 
-Implements coerce name.
+Perform the coerce name compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -628,7 +628,7 @@ Implements coerce name.
 function _collect_compile_defines(args)
 ```
 
-Implements collect compile defines.
+Perform the collect compile defines compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -644,7 +644,7 @@ Implements collect compile defines.
 function _collect_extern_sigs_walk(stmts, prefix, current_file, file_prefixes, acc)
 ```
 
-Implements collect extern sigs walk.
+Perform the collect extern sigs walk compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -664,7 +664,7 @@ Implements collect extern sigs walk.
 function _collect_extern_structs_walk(stmts, prefix, current_file, file_prefixes, names)
 ```
 
-Implements collect extern structs walk.
+Perform the collect extern structs walk compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -684,7 +684,7 @@ Implements collect extern structs walk.
 function _collect_file_package_prefixes(program)
 ```
 
-Implements collect file package prefixes.
+Perform the collect file package prefixes compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -700,7 +700,7 @@ Implements collect file package prefixes.
 function _collect_include_dirs(args)
 ```
 
-Implements collect include dirs.
+Perform the collect include dirs compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -716,7 +716,7 @@ Implements collect include dirs.
 function _collect_internal_helper_targets(dst, patches)
 ```
 
-Implements collect internal helper targets.
+Perform the collect internal helper targets compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -733,7 +733,7 @@ Implements collect internal helper targets.
 function _collect_mlo_paths_from_dir(obj_dir)
 ```
 
-Implements collect mlo paths from dir.
+Perform the collect mlo paths from dir compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -749,7 +749,7 @@ Implements collect mlo paths from dir.
 function _collect_runtime_config(args)
 ```
 
-Implements collect runtime config.
+Perform the collect runtime config compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -765,7 +765,7 @@ Implements collect runtime config.
 function _compact_codegen_state_for_pe(st)
 ```
 
-Implements compact codegen state for pe.
+Perform the compact codegen state for pe compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -781,7 +781,7 @@ Implements compact codegen state for pe.
 _compile_codegen_keepalive
 ```
 
-Stores the compile codegen keepalive compiler state.
+Track compile codegen keepalive compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L401)
@@ -793,7 +793,7 @@ Stores the compile codegen keepalive compiler state.
 _compile_target
 ```
 
-Stores the compile target compiler state.
+Track compile target compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L429)
@@ -805,7 +805,7 @@ Stores the compile target compiler state.
 function _compiler_ast_profile_count(profile, kind)
 ```
 
-Runs compiler ast profile count.
+Perform the compiler ast profile count compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -822,7 +822,7 @@ Runs compiler ast profile count.
 function _compiler_ast_profile_report(program, module_count)
 ```
 
-Runs compiler ast profile report.
+Perform the compiler ast profile report compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -857,7 +857,7 @@ Traverse the public AST schema only when explicitly requested. Compact leaf Node
 function _compiler_ast_profile_visit_value(profile, value, depth)
 ```
 
-Runs compiler ast profile visit value.
+Perform the compiler ast profile visit value compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -875,7 +875,7 @@ Runs compiler ast profile visit value.
 function _compiler_gc_limit_from_config(runtime_config)
 ```
 
-Runs compiler gc limit from config.
+Perform the compiler gc limit from config compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -891,7 +891,7 @@ Runs compiler gc limit from config.
 _compiler_profile_ast_enabled
 ```
 
-Stores the compiler profile ast enabled compiler state.
+Track compiler profile ast enabled compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L427)
@@ -903,7 +903,7 @@ Stores the compiler profile ast enabled compiler state.
 _compiler_profile_batches_enabled
 ```
 
-Stores the compiler profile batches enabled compiler state.
+Track compiler profile batches enabled compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L425)
@@ -915,7 +915,7 @@ Stores the compiler profile batches enabled compiler state.
 _compiler_profile_enabled
 ```
 
-Stores the compiler profile enabled compiler state.
+Track compiler profile enabled compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L423)
@@ -927,7 +927,7 @@ Stores the compiler profile enabled compiler state.
 function _compiler_profile_finish()
 ```
 
-Runs compiler profile finish.
+Perform the compiler profile finish compiler phase.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L536)
@@ -955,7 +955,7 @@ Extract the package/type prefix shown on detailed object-batch profiles.
 function _compiler_profile_phase(msg)
 ```
 
-Runs compiler profile phase.
+Perform the compiler profile phase compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -971,7 +971,7 @@ Runs compiler profile phase.
 _compiler_profile_phase_name
 ```
 
-Stores the compiler profile phase name compiler state.
+Track compiler profile phase name compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L435)
@@ -983,7 +983,7 @@ Stores the compiler profile phase name compiler state.
 _compiler_profile_phase_started
 ```
 
-Stores the compiler profile phase started compiler state.
+Track compiler profile phase started compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L433)
@@ -995,7 +995,7 @@ Stores the compiler profile phase started compiler state.
 function _compiler_profile_reset()
 ```
 
-Runs compiler profile reset.
+Perform the compiler profile reset compiler phase.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L497)
@@ -1007,7 +1007,7 @@ Runs compiler profile reset.
 _compiler_profile_started
 ```
 
-Stores the compiler profile started compiler state.
+Track compiler profile started compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L431)
@@ -1019,7 +1019,7 @@ Stores the compiler profile started compiler state.
 function _concat_bytes_parts(parts_builder)
 ```
 
-Implements concat bytes parts.
+Perform the concat bytes parts compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1035,7 +1035,7 @@ Implements concat bytes parts.
 inline function _containsDot(txt)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1051,7 +1051,7 @@ Implements inline.
 function _copy_mlo_sections_from_file(path, text_buf, text_off, rdata_buf, rdata_off, data_buf, data_off)
 ```
 
-Implements copy mlo sections from file.
+Perform the copy mlo sections from file compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1073,7 +1073,7 @@ Implements copy mlo sections from file.
 function _debug_validate_patch_names(label, patches)
 ```
 
-Implements debug validate patch names.
+Perform the debug validate patch names compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1090,7 +1090,7 @@ Implements debug validate patch names.
 function _declared_package(program)
 ```
 
-Implements declared package.
+Perform the declared package compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1106,7 +1106,7 @@ Implements declared package.
 inline function _dirname(path)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1122,7 +1122,7 @@ Implements inline.
 function _dll_base(dll)
 ```
 
-Implements dll base.
+Perform the dll base compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1138,7 +1138,7 @@ Implements dll base.
 _dump_labels_path
 ```
 
-Stores the dump labels path compiler state.
+Track dump labels path compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L389)
@@ -1166,7 +1166,7 @@ Run only object emission in a child compiler. The small coordinating parent then
 inline function _endsWith(text, suf)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1183,7 +1183,7 @@ Implements inline.
 function _ensure_dir_recursive(path)
 ```
 
-Implements ensure dir recursive.
+Perform the ensure dir recursive compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1199,7 +1199,7 @@ Implements ensure dir recursive.
 function _expected_package_for_file(abs_path, resolved_kind, resolved_root)
 ```
 
-Implements expected package for file.
+Perform the expected package for file compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1217,7 +1217,7 @@ Implements expected package for file.
 function _expr_to_qualname(expr)
 ```
 
-Implements expr to qualname.
+Perform the expr to qualname compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1233,7 +1233,7 @@ Implements expr to qualname.
 function _extern_physical_abi_class(ty, is_out)
 ```
 
-Implements extern physical abi class.
+Perform the extern physical abi class compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1250,7 +1250,7 @@ Implements extern physical abi class.
 function _extern_struct_field_type_supported(ty)
 ```
 
-Implements extern struct field type supported.
+Perform the extern struct field type supported compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1266,7 +1266,7 @@ Implements extern struct field type supported.
 function _extern_struct_layout_find(layouts, qname)
 ```
 
-Implements extern struct layout find.
+Perform the extern struct layout find compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1283,7 +1283,7 @@ Implements extern struct layout find.
 function _extern_struct_type_size(ty)
 ```
 
-Implements extern struct type size.
+Perform the extern struct type size compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1299,7 +1299,7 @@ Implements extern struct type size.
 function _extern_symbol_default(qname)
 ```
 
-Implements extern symbol default.
+Perform the extern symbol default compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1315,7 +1315,7 @@ Implements extern symbol default.
 function _extract_imports(program)
 ```
 
-Implements extract imports.
+Perform the extract imports compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1331,7 +1331,7 @@ Implements extract imports.
 inline function _file_stem(path)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1347,7 +1347,7 @@ Implements inline.
 function _filter_non_import_stmts(program)
 ```
 
-Implements filter non import stmts.
+Perform the filter non import stmts compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1379,7 +1379,7 @@ Returns find main name.
 function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg, base_state, helper_union, module_obj_paths_b)
 ```
 
-Implements finish module mlo.
+Perform the finish module mlo compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1402,7 +1402,7 @@ Implements finish module mlo.
 function _fresh_link_gc_limit_from_config(runtime_config)
 ```
 
-Implements fresh link gc limit from config.
+Perform the fresh link gc limit from config compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1418,7 +1418,7 @@ Implements fresh link gc limit from config.
 function _front_body_contains_async(body)
 ```
 
-Implements front body contains async.
+Perform the front body contains async compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1450,7 +1450,7 @@ Async lowering uses the standard shared thread pool. Discover it before language
 _front_resolve_cache
 ```
 
-Stores the front resolve cache compiler state.
+Track front resolve cache compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L395)
@@ -1462,7 +1462,7 @@ Stores the front resolve cache compiler state.
 _front_visited_set
 ```
 
-Stores the front visited set compiler state.
+Track front visited set compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L393)
@@ -1572,7 +1572,7 @@ Reports whether has flag.
 function _heap_probe(tag)
 ```
 
-Implements heap probe.
+Perform the heap probe compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1588,7 +1588,7 @@ Implements heap probe.
 function _hex_u32_fixed(value)
 ```
 
-Implements hex u32 fixed.
+Perform the hex u32 fixed compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1604,7 +1604,7 @@ Implements hex u32 fixed.
 extern function _host_CloseHandle(handle as ptr) from "kernel32.dll" symbol "CloseHandle" returns bool
 ```
 
-Implements host close handle.
+Perform the host close handle compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1620,7 +1620,7 @@ Implements host close handle.
 extern function _host_CreateProcessW(applicationName as wstr, commandLine as wstr, processAttributes as ptr, threadAttributes as ptr, inheritHandles as bool, creationFlags as u32, environment as ptr, currentDirectory as ptr, startupInfo as bytes, processInformation as bytes) from "kernel32.dll" symbol "CreateProcessW" returns bool
 ```
 
-Implements host create process w.
+Perform the host create process w compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1645,7 +1645,7 @@ Implements host create process w.
 extern function _host_GetExitCodeProcess(handle as ptr, exitCode as bytes) from "kernel32.dll" symbol "GetExitCodeProcess" returns bool
 ```
 
-Implements host get exit code process.
+Perform the host get exit code process compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1662,7 +1662,7 @@ Implements host get exit code process.
 extern function _host_WaitForSingleObject(handle as ptr, milliseconds as u32) from "kernel32.dll" symbol "WaitForSingleObject" returns u32
 ```
 
-Implements host wait for single object.
+Perform the host wait for single object compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1679,7 +1679,7 @@ Implements host wait for single object.
 function _imports_to_pe_imports(imports)
 ```
 
-Implements imports to pe imports.
+Perform the imports to pe imports compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1695,7 +1695,7 @@ Implements imports to pe imports.
 inline function _is_abs_path(p)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1791,7 +1791,7 @@ Reports whether is internal helper label local.
 function _label_get(arr, key, defaultv)
 ```
 
-Implements label get.
+Perform the label get compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1809,7 +1809,7 @@ Implements label get.
 function _label_get_chunked(chunks, tail, key, defaultv)
 ```
 
-Implements label get chunked.
+Perform the label get chunked compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1828,7 +1828,7 @@ Implements label get chunked.
 function _label_key(name)
 ```
 
-Implements label key.
+Perform the label key compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1844,7 +1844,7 @@ Implements label key.
 function _label_lookup_fallback(labels, name, defaultv)
 ```
 
-Implements label lookup fallback.
+Perform the label lookup fallback compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1862,7 +1862,7 @@ Implements label lookup fallback.
 function _label_set(arr, key, value)
 ```
 
-Implements label set.
+Perform the label set compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1880,7 +1880,7 @@ Implements label set.
 inline function _last_segment_after_dot(txt)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1917,7 +1917,7 @@ Link canonical MLO fragments into the same fixed-address ELF image as the monoli
 function _link_direct_patch_target(label_map, obj_index_map, source_obj_map, source_obj_prefix, target)
 ```
 
-Implements link direct patch target.
+Perform the link direct patch target compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1937,7 +1937,7 @@ Implements link direct patch target.
 function _link_local_labels_get(local_label_map, local_labels, target)
 ```
 
-Implements link local labels get.
+Perform the link local labels get compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1955,7 +1955,7 @@ Implements link local labels get.
 function _link_local_patch_target(src_patch, target)
 ```
 
-Implements link local patch target.
+Perform the link local patch target compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1990,7 +1990,7 @@ Link canonical MLO fragments in input order while retaining only compact label/p
 function _link_mlo_linux_sections(obj_paths, output_exe, text_buf, rdata_buf, data_buf, bss_size, patch_file_recs, imports)
 ```
 
-Implements link mlo linux sections.
+Perform the link mlo linux sections compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2013,7 +2013,7 @@ Implements link mlo linux sections.
 function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem, runtime_config)
 ```
 
-Implements link obj dir in fresh process.
+Perform the link obj dir in fresh process compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2033,7 +2033,7 @@ Implements link obj dir in fresh process.
 function _link_obj_label_list_get(obj_index_lists, name, defaultv)
 ```
 
-Implements link obj label list get.
+Perform the link obj label list get compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2051,7 +2051,7 @@ Implements link obj label list get.
 function _link_obj_label_list_set(obj_index_lists, name, value)
 ```
 
-Implements link obj label list set.
+Perform the link obj label list set compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2069,7 +2069,7 @@ Implements link obj label list set.
 function _link_obj_label_map_get(obj_index_map, name, defaultv)
 ```
 
-Implements link obj label map get.
+Perform the link obj label map get compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2087,7 +2087,7 @@ Implements link obj label map get.
 function _link_obj_label_map_set(obj_index_map, name, value)
 ```
 
-Implements link obj label map set.
+Perform the link obj label map set compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2105,7 +2105,7 @@ Implements link obj label map set.
 _link_patch_keepalive
 ```
 
-Stores the link patch keepalive compiler state.
+Track link patch keepalive compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L403)
@@ -2117,7 +2117,7 @@ Stores the link patch keepalive compiler state.
 function _link_rec_labels_lookup(recs, text_rva, rdata_rva, data_rva, bss_rva, name, defaultv)
 ```
 
-Implements link rec labels lookup.
+Perform the link rec labels lookup compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2139,7 +2139,7 @@ Implements link rec labels lookup.
 function _link_resolve_patch_target(label_map, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, target)
 ```
 
-Implements link resolve patch target.
+Perform the link resolve patch target compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2167,7 +2167,7 @@ Implements link resolve patch target.
 function _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, target)
 ```
 
-Implements link resolve patch target cached.
+Perform the link resolve patch target cached compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2196,7 +2196,7 @@ Implements link resolve patch target cached.
 function _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target)
 ```
 
-Implements link resolve target.
+Perform the link resolve target compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2219,7 +2219,7 @@ Implements link resolve target.
 function _link_should_use_fresh_process(obj_paths)
 ```
 
-Implements link should use fresh process.
+Perform the link should use fresh process compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2235,7 +2235,7 @@ Implements link should use fresh process.
 function _link_target_obj_index(name)
 ```
 
-Implements link target obj index.
+Perform the link target obj index compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2251,7 +2251,7 @@ Implements link target obj index.
 function _link_target_obj_index_num(name)
 ```
 
-Implements link target obj index num.
+Perform the link target obj index num compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2267,7 +2267,7 @@ Implements link target obj index num.
 function _link_target_prefers_global(target)
 ```
 
-Implements link target prefers global.
+Perform the link target prefers global compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2318,7 +2318,7 @@ Native Linux filesystems require execute permission in addition to valid ELF con
 _mem_probe_enabled
 ```
 
-Stores the mem probe enabled compiler state.
+Track mem probe enabled compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L387)
@@ -2330,7 +2330,7 @@ Stores the mem probe enabled compiler state.
 function _merge_array_chunks_balanced(chunks)
 ```
 
-Implements merge array chunks balanced.
+Perform the merge array chunks balanced compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2346,7 +2346,7 @@ Implements merge array chunks balanced.
 function _merge_string_arrays(dst, src)
 ```
 
-Implements merge string arrays.
+Perform the merge string arrays compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2363,7 +2363,7 @@ Implements merge string arrays.
 function _mlo_align_down8(value)
 ```
 
-Implements mlo align down8.
+Perform the mlo align down8 compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2379,7 +2379,7 @@ Implements mlo align down8.
 function _mlo_bp_bytes(bp, b)
 ```
 
-Implements mlo bp bytes.
+Perform the mlo bp bytes compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2396,7 +2396,7 @@ Implements mlo bp bytes.
 function _mlo_bp_push(bp, b)
 ```
 
-Implements mlo bp push.
+Perform the mlo bp push compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2413,7 +2413,7 @@ Implements mlo bp push.
 function _mlo_bp_string(bp, text)
 ```
 
-Implements mlo bp string.
+Perform the mlo bp string compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2430,7 +2430,7 @@ Implements mlo bp string.
 function _mlo_bp_u32(bp as struct, value as int) returns struct
 ```
 
-Implements mlo bp u32.
+Perform the mlo bp u32 compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2447,7 +2447,7 @@ Implements mlo bp u32.
 function _mlo_bp_write_imports(bp, imports)
 ```
 
-Implements mlo bp write imports.
+Perform the mlo bp write imports compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2464,7 +2464,7 @@ Implements mlo bp write imports.
 function _mlo_bp_write_labels(bp, labels)
 ```
 
-Implements mlo bp write labels.
+Perform the mlo bp write labels compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2481,7 +2481,7 @@ Implements mlo bp write labels.
 function _mlo_bp_write_patches(bp, patches)
 ```
 
-Implements mlo bp write patches.
+Perform the mlo bp write patches compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2498,7 +2498,7 @@ Implements mlo bp write patches.
 extern function _mlo_CloseHandle(handle as ptr) from "kernel32.dll" symbol "CloseHandle" returns bool
 ```
 
-Implements mlo close handle.
+Perform the mlo close handle compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2514,7 +2514,7 @@ Implements mlo close handle.
 extern function _mlo_CreateFileW(path as wstr, access as int, share as int, security as ptr, creation as int, flags as int, template as ptr) from "kernel32.dll" symbol "CreateFileW" returns ptr
 ```
 
-Implements mlo create file w.
+Perform the mlo create file w compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2536,7 +2536,7 @@ Implements mlo create file w.
 function _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_patches)
 ```
 
-Implements mlo exported text labels.
+Perform the mlo exported text labels compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2555,7 +2555,7 @@ Implements mlo exported text labels.
 function _mlo_from_sparse_state_delta(kind, module_file, entry_label, st, base_state)
 ```
 
-Implements mlo from sparse state delta.
+Perform the mlo from sparse state delta compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2575,7 +2575,7 @@ Implements mlo from sparse state delta.
 function _mlo_from_state(kind, module_file, entry_label, st)
 ```
 
-Implements mlo from state.
+Perform the mlo from state compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2594,7 +2594,7 @@ Implements mlo from state.
 function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
 ```
 
-Implements mlo from state delta.
+Perform the mlo from state delta compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2614,7 +2614,7 @@ Implements mlo from state delta.
 function _mlo_import_get_funcs(imports, dll)
 ```
 
-Implements mlo import get funcs.
+Perform the mlo import get funcs compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2631,7 +2631,7 @@ Implements mlo import get funcs.
 function _mlo_import_set_funcs(imports, dll, funcs)
 ```
 
-Implements mlo import set funcs.
+Perform the mlo import set funcs compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2649,7 +2649,7 @@ Implements mlo import set funcs.
 function _mlo_imports_from_state(imports)
 ```
 
-Implements mlo imports from state.
+Perform the mlo imports from state compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2683,7 +2683,7 @@ Only labels that can be referenced from another canonical object need to enter t
 function _mlo_is_shared_runtime_data_label(name)
 ```
 
-Implements mlo is shared runtime data label.
+Perform the mlo is shared runtime data label compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2699,7 +2699,7 @@ Implements mlo is shared runtime data label.
 function _mlo_label_count(labels)
 ```
 
-Implements mlo label count.
+Perform the mlo label count compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2731,7 +2731,7 @@ Count public and private labels while an object is already decoded during the se
 function _mlo_label_map_add(mapv, old_name, new_name)
 ```
 
-Implements mlo label map add.
+Perform the mlo label map add compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2749,7 +2749,7 @@ Implements mlo label map add.
 function _mlo_label_name_at(labels, offset)
 ```
 
-Implements mlo label name at.
+Perform the mlo label name at compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2766,7 +2766,7 @@ Implements mlo label name at.
 function _mlo_labels_after(labels, prefix_off)
 ```
 
-Implements mlo labels after.
+Perform the mlo labels after compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2783,7 +2783,7 @@ Implements mlo labels after.
 function _mlo_labels_after_cut(labels, min_off, cut_off)
 ```
 
-Implements mlo labels after cut.
+Perform the mlo labels after cut compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2801,7 +2801,7 @@ Implements mlo labels after cut.
 function _mlo_labels_from_arr(arr)
 ```
 
-Implements mlo labels from arr.
+Perform the mlo labels from arr compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2817,7 +2817,7 @@ Implements mlo labels from arr.
 function _mlo_labels_from_asm_labels(arr)
 ```
 
-Implements mlo labels from asm labels.
+Perform the mlo labels from asm labels compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2833,7 +2833,7 @@ Implements mlo labels from asm labels.
 function _mlo_linux_dynamic_imports(imports)
 ```
 
-Implements mlo linux dynamic imports.
+Perform the mlo linux dynamic imports compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2865,7 +2865,7 @@ Encode ELF imports in the existing platform-neutral string-list field. PE reader
 function _mlo_merge_imports(dst, src)
 ```
 
-Implements mlo merge imports.
+Perform the mlo merge imports compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2882,7 +2882,7 @@ Implements mlo merge imports.
 function _mlo_namespace_object(obj, prefix, preserve_public)
 ```
 
-Implements mlo namespace object.
+Perform the mlo namespace object compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2900,7 +2900,7 @@ Implements mlo namespace object.
 function _mlo_patches_after(patches, prefix_off)
 ```
 
-Implements mlo patches after.
+Perform the mlo patches after compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2917,7 +2917,7 @@ Implements mlo patches after.
 function _mlo_patches_after_cut(patches, min_off, cut_off)
 ```
 
-Implements mlo patches after cut.
+Perform the mlo patches after cut compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2953,7 +2953,7 @@ Resolve targets already defined in this text fragment directly in the materializ
 function _mlo_patches_from_data(arr)
 ```
 
-Implements mlo patches from data.
+Perform the mlo patches from data compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2969,7 +2969,7 @@ Implements mlo patches from data.
 function _mlo_preserve_module_label(name)
 ```
 
-Implements mlo preserve module label.
+Perform the mlo preserve module label compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3003,7 +3003,7 @@ A later canonical fragment may intern a constant that was first emitted by an ea
 function _mlo_read_imports(rd)
 ```
 
-Implements mlo read imports.
+Perform the mlo read imports compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3019,7 +3019,7 @@ Implements mlo read imports.
 function _mlo_read_labels(rd)
 ```
 
-Implements mlo read labels.
+Perform the mlo read labels compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3035,7 +3035,7 @@ Implements mlo read labels.
 function _mlo_read_patches(rd, version)
 ```
 
-Implements mlo read patches.
+Perform the mlo read patches compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3052,7 +3052,7 @@ Implements mlo read patches.
 function _mlo_rename_labels(labels, prefix, preserve_public, label_map)
 ```
 
-Implements mlo rename labels.
+Perform the mlo rename labels compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3071,7 +3071,7 @@ Implements mlo rename labels.
 function _mlo_rename_patches(patches, label_map)
 ```
 
-Implements mlo rename patches.
+Perform the mlo rename patches compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3088,7 +3088,7 @@ Implements mlo rename patches.
 function _mlo_resolve_rdata_alias_patches(patches, rb)
 ```
 
-Implements mlo resolve rdata alias patches.
+Perform the mlo resolve rdata alias patches compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3121,7 +3121,7 @@ Count serialized labels without decoding their names or allocating wrapper struc
 function _mlo_skip_labels(rd)
 ```
 
-Implements mlo skip labels.
+Perform the mlo skip labels compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3137,7 +3137,7 @@ Implements mlo skip labels.
 function _mlo_skip_patches(rd, version)
 ```
 
-Implements mlo skip patches.
+Perform the mlo skip patches compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3154,7 +3154,7 @@ Implements mlo skip patches.
 function _mlo_sort_rank(name)
 ```
 
-Implements mlo sort rank.
+Perform the mlo sort rank compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3170,7 +3170,7 @@ Implements mlo sort rank.
 function _mlo_state_checkpoint(st)
 ```
 
-Implements mlo state checkpoint.
+Perform the mlo state checkpoint compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3186,7 +3186,7 @@ Implements mlo state checkpoint.
 function _mlo_strip_shared_runtime_data_labels(labels)
 ```
 
-Implements mlo strip shared runtime data labels.
+Perform the mlo strip shared runtime data labels compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3220,7 +3220,7 @@ Complete one bounded native write even if the host reports a short write. The co
 function _mlo_write_imports(ob, imports)
 ```
 
-Implements mlo write imports.
+Perform the mlo write imports compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3237,7 +3237,7 @@ Implements mlo write imports.
 function _mlo_write_labels(ob, labels)
 ```
 
-Implements mlo write labels.
+Perform the mlo write labels compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3271,7 +3271,7 @@ Serialize through a reusable bounded staging buffer. A one-megabyte batch keeps 
 function _mlo_write_patches(ob, patches)
 ```
 
-Implements mlo write patches.
+Perform the mlo write patches compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3288,7 +3288,7 @@ Implements mlo write patches.
 _mlo_write_scratch
 ```
 
-Stores the mlo write scratch compiler state.
+Track mlo write scratch compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L397)
@@ -3300,7 +3300,7 @@ Stores the mlo write scratch compiler state.
 function _mlo_write_scratch_buffer()
 ```
 
-Implements mlo write scratch buffer.
+Perform the mlo write scratch buffer compiler phase.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L3958)
@@ -3312,7 +3312,7 @@ Implements mlo write scratch buffer.
 extern function _mlo_WriteFile(handle as ptr, input as bytes, count as int, written as bytes, overlapped as ptr) from "kernel32.dll" symbol "WriteFile" returns bool
 ```
 
-Implements mlo write file.
+Perform the mlo write file compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3332,7 +3332,7 @@ Implements mlo write file.
 function _module_get_package(modules, path)
 ```
 
-Implements module get package.
+Perform the module get package compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3349,7 +3349,7 @@ Implements module get package.
 function _module_init_rec_for_file(module_init_recs, module_file)
 ```
 
-Implements module init rec for file.
+Perform the module init rec for file compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3366,7 +3366,7 @@ Implements module init rec for file.
 function _module_set_package(modules, path, package_name)
 ```
 
-Implements module set package.
+Perform the module set package compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3384,7 +3384,7 @@ Implements module set package.
 function _module_visit(path, entry_path, include_dirs, stack, visited, modules, aliases, parsed_modules, diags, keep_going, max_errors)
 ```
 
-Implements module visit.
+Perform the module visit compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3433,7 +3433,7 @@ Resolve directly against the indexes already maintained by each section builder.
 inline function _node_file(st, fallback)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3450,7 +3450,7 @@ Implements inline.
 inline function _node_pos(st)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3466,7 +3466,7 @@ Implements inline.
 function _objbuf_bytes(ob, b)
 ```
 
-Implements objbuf bytes.
+Perform the objbuf bytes compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3483,7 +3483,7 @@ Implements objbuf bytes.
 function _objbuf_finish(ob)
 ```
 
-Implements objbuf finish.
+Perform the objbuf finish compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3499,7 +3499,7 @@ Implements objbuf finish.
 function _objbuf_new()
 ```
 
-Implements objbuf new.
+Perform the objbuf new compiler phase.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L1187)
@@ -3511,7 +3511,7 @@ Implements objbuf new.
 function _objbuf_push(ob, b)
 ```
 
-Implements objbuf push.
+Perform the objbuf push compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3528,7 +3528,7 @@ Implements objbuf push.
 function _objbuf_string(ob, text)
 ```
 
-Implements objbuf string.
+Perform the objbuf string compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3545,7 +3545,7 @@ Implements objbuf string.
 function _objbuf_u32(ob, value)
 ```
 
-Implements objbuf u32.
+Perform the objbuf u32 compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3562,7 +3562,7 @@ Implements objbuf u32.
 _object_emit_only
 ```
 
-Stores the object emit only compiler state.
+Track object emit only compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L407)
@@ -3574,7 +3574,7 @@ Stores the object emit only compiler state.
 _object_pipeline_enabled
 ```
 
-Stores the object pipeline enabled compiler state.
+Track object pipeline enabled compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L405)
@@ -3604,7 +3604,7 @@ Copy one length-prefixed blob from the current raw MLO file directly into its fi
 function _objreader_new(buf)
 ```
 
-Implements objreader new.
+Perform the objreader new compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3620,7 +3620,7 @@ Implements objreader new.
 function _objreader_read_bytes(rd)
 ```
 
-Implements objreader read bytes.
+Perform the objreader read bytes compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3636,7 +3636,7 @@ Implements objreader read bytes.
 function _objreader_read_string(rd)
 ```
 
-Implements objreader read string.
+Perform the objreader read string compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3652,7 +3652,7 @@ Implements objreader read string.
 function _objreader_read_u32(rd)
 ```
 
-Implements objreader read u32.
+Perform the objreader read u32 compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3684,7 +3684,7 @@ Advance over a length-prefixed blob without allocating a copy. Layout scans and 
 function _objreader_skip_bytes_len(rd)
 ```
 
-Implements objreader skip bytes len.
+Perform the objreader skip bytes len compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3768,7 +3768,7 @@ Returns parsed module set.
 function _patch_triplets_for_link(patches, default_kind)
 ```
 
-Implements patch triplets for link.
+Perform the patch triplets for link compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3785,7 +3785,7 @@ Implements patch triplets for link.
 function _path_abspath(p)
 ```
 
-Implements path abspath.
+Perform the path abspath compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3801,7 +3801,7 @@ Implements path abspath.
 function _path_canon(p)
 ```
 
-Implements path canon.
+Perform the path canon compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3817,7 +3817,7 @@ Implements path canon.
 inline function _path_eq(a, b)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3834,7 +3834,7 @@ Implements inline.
 inline function _path_join(a, b)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3851,7 +3851,7 @@ Implements inline.
 function _path_norm(p)
 ```
 
-Implements path norm.
+Perform the path norm compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3867,7 +3867,7 @@ Implements path norm.
 _path_norm_cache
 ```
 
-Stores the path norm cache compiler state.
+Track path norm cache compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L391)
@@ -3879,7 +3879,7 @@ Stores the path norm cache compiler state.
 function _path_norm_cached(p)
 ```
 
-Implements path norm cached.
+Perform the path norm cached compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3895,7 +3895,7 @@ Implements path norm cached.
 function _path_to_package(rel_path)
 ```
 
-Implements path to package.
+Perform the path to package compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3911,7 +3911,7 @@ Implements path to package.
 _pe_state_keepalive
 ```
 
-Stores the pe state keepalive compiler state.
+Track pe state keepalive compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L399)
@@ -3923,7 +3923,7 @@ Stores the pe state keepalive compiler state.
 function _print_diag(d)
 ```
 
-Implements print diag.
+Perform the print diag compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3939,7 +3939,7 @@ Implements print diag.
 function _progress_link(msg)
 ```
 
-Implements progress link.
+Perform the progress link compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3955,7 +3955,7 @@ Implements progress link.
 function _progress_obj(msg)
 ```
 
-Implements progress obj.
+Perform the progress obj compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3971,7 +3971,7 @@ Implements progress obj.
 function _progress_phase(msg)
 ```
 
-Implements progress phase.
+Perform the progress phase compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4047,7 +4047,7 @@ End the parsing/semantic ownership phase in one operation. Generated code, reloc
 function _relpath_from_root(path, root)
 ```
 
-Implements relpath from root.
+Perform the relpath from root compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4064,7 +4064,7 @@ Implements relpath from root.
 function _resolve_import(requested, base_dir, include_dirs)
 ```
 
-Implements resolve import.
+Perform the resolve import compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4082,7 +4082,7 @@ Implements resolve import.
 function _resolve_import_cache_key(requested, base_dir)
 ```
 
-Implements resolve import cache key.
+Perform the resolve import cache key compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4099,7 +4099,7 @@ Implements resolve import cache key.
 function _resolve_import_cached(requested, base_dir, include_dirs)
 ```
 
-Implements resolve import cached.
+Perform the resolve import cached compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4134,7 +4134,7 @@ Launch a child compiler without a command shell on Windows. Besides avoiding cmd
 function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
 ```
 
-Runs run frontcheck.
+Perform the run frontcheck compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4153,7 +4153,7 @@ Runs run frontcheck.
 function _sanitize_fs_component(text)
 ```
 
-Implements sanitize fs component.
+Perform the sanitize fs component compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4169,7 +4169,7 @@ Implements sanitize fs component.
 function _section_has_payload(blob, labels, patches, size_hint)
 ```
 
-Implements section has payload.
+Perform the section has payload compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4188,7 +4188,7 @@ Implements section has payload.
 function _self_exe_path()
 ```
 
-Implements self exe path.
+Perform the self exe path compiler phase.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L862)
@@ -4200,7 +4200,7 @@ Implements self exe path.
 function _size_suffix_mul(ch)
 ```
 
-Implements size suffix mul.
+Perform the size suffix mul compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4216,7 +4216,7 @@ Implements size suffix mul.
 function _slice_used_bytes(buf, used)
 ```
 
-Implements slice used bytes.
+Perform the slice used bytes compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4233,7 +4233,7 @@ Implements slice used bytes.
 function _sort_strings_inplace(items)
 ```
 
-Implements sort strings inplace.
+Perform the sort strings inplace compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4249,7 +4249,7 @@ Implements sort strings inplace.
 function _split_imports_nonimports(program)
 ```
 
-Implements split imports nonimports.
+Perform the split imports nonimports compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4265,7 +4265,7 @@ Implements split imports nonimports.
 function _st_file(st)
 ```
 
-Implements st file.
+Perform the st file compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4281,7 +4281,7 @@ Implements st file.
 function _stack_contains(stack, path)
 ```
 
-Implements stack contains.
+Perform the stack contains compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4298,7 +4298,7 @@ Implements stack contains.
 inline function _startsWith(text, pref)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4315,7 +4315,7 @@ Implements inline.
 function _stmt_is_import(st)
 ```
 
-Implements stmt is import.
+Perform the stmt is import compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4331,7 +4331,7 @@ Implements stmt is import.
 function _string_leq(a, b)
 ```
 
-Implements string leq.
+Perform the string leq compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4348,7 +4348,7 @@ Implements string leq.
 function _subsystem_cli_name(subsystem)
 ```
 
-Implements subsystem cli name.
+Perform the subsystem cli name compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4364,7 +4364,7 @@ Implements subsystem cli name.
 function _tmp_obj_dir(output_exe)
 ```
 
-Implements tmp obj dir.
+Perform the tmp obj dir compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4380,7 +4380,7 @@ Implements tmp obj dir.
 function _tmp_obj_path(tmp_dir, index, module_path, kind)
 ```
 
-Implements tmp obj path.
+Perform the tmp obj path compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4399,7 +4399,7 @@ Implements tmp obj path.
 inline function _to_int_or(defv, text)
 ```
 
-Implements inline.
+Perform the inline compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4416,7 +4416,7 @@ Implements inline.
 function _u32le_at(buf, off)
 ```
 
-Implements u32le at.
+Perform the u32le at compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4433,7 +4433,7 @@ Implements u32le at.
 function _u64le_host_at(buf, offset)
 ```
 
-Implements u64le host at.
+Perform the u64le host at compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4450,7 +4450,7 @@ Implements u64le host at.
 function _usage()
 ```
 
-Implements usage.
+Perform the usage compiler phase.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L455)
@@ -4462,7 +4462,7 @@ Implements usage.
 function _validate_size_flags(args)
 ```
 
-Implements validate size flags.
+Perform the validate size flags compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4478,7 +4478,7 @@ Implements validate size flags.
 function _visited_add(visited, path)
 ```
 
-Implements visited add.
+Perform the visited add compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4495,7 +4495,7 @@ Implements visited add.
 function _visited_contains(path)
 ```
 
-Implements visited contains.
+Perform the visited contains compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4511,7 +4511,7 @@ Implements visited contains.
 function _visited_finish(visited, fallback_entry)
 ```
 
-Implements visited finish.
+Perform the visited finish compiler phase.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4589,7 +4589,7 @@ Updates write mlo file.
 const AUTO_OBJECT_PIPELINE_SCORE = 262144
 ```
 
-Stores the auto object pipeline score.
+Track auto object pipeline score.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L44)
@@ -4715,26 +4715,26 @@ Emit bounded .mlo batches and link them in a fresh compiler process.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7477)
 
-<a id="constant-constant-mlc-compiler-compiler-version-const-compiler-version-1-2-2-mlc-compiler-ml-266799528"></a>
+<a id="constant-constant-mlc-compiler-compiler-version-const-compiler-version-1-2-3-mlc-compiler-ml-939287697"></a>
 ### COMPILER_VERSION
 
 ```ml
-const COMPILER_VERSION = "1.2.2"
+const COMPILER_VERSION = "1.2.3"
 ```
 
-Stores the compiler version.
+Track compiler version.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L38)
 
-<a id="constant-constant-mlc-compiler-compiler-version-text-const-compiler-version-text-minilang-compiler-1-2-2-mlc-compiler-ml-1156501570"></a>
+<a id="constant-constant-mlc-compiler-compiler-version-text-const-compiler-version-text-minilang-compiler-1-2-3-mlc-compiler-ml-412714339"></a>
 ### COMPILER_VERSION_TEXT
 
 ```ml
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.2"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.3"
 ```
 
-Stores the compiler version text.
+Track compiler version text.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L40)
@@ -4765,7 +4765,7 @@ Creates create directory w.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 ```
 
-Stores the direct section label threshold.
+Track direct section label threshold.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L42)
@@ -4801,7 +4801,7 @@ Returns get full path name w.
 const LINK_LABEL_GC_OBJECT_STRIDE = 128
 ```
 
-Stores the link label gc object stride.
+Track link label gc object stride.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L56)
@@ -4831,7 +4831,7 @@ Link an existing object directory without parsing source again.
 const LINK_SECTION_COPY_GC_OBJECT_STRIDE = 64
 ```
 
-Stores the link section copy gc object stride.
+Track link section copy gc object stride.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L58)
@@ -4844,7 +4844,7 @@ Stores the link section copy gc object stride.
 const MLO_WRITE_BATCH_BYTES = 1048576
 ```
 
-Stores the mlo write batch bytes.
+Track mlo write batch bytes.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L60)
@@ -4864,7 +4864,7 @@ Stores the mlo write batch bytes.
 const OBJECT_COMPILER_BATCH_SIZE = 4
 ```
 
-Stores the object compiler batch size.
+Track object compiler batch size.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L48)
@@ -4888,7 +4888,7 @@ Moderate function streams benefit from shorter allocation waves. Very large stre
 const OBJECT_FUNCTION_BATCH_SIZE = 8
 ```
 
-Stores the object function batch size.
+Track object function batch size.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L46)
@@ -4900,7 +4900,7 @@ Stores the object function batch size.
 const OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD = 2048
 ```
 
-Stores the object large emission function threshold.
+Track object large emission function threshold.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L54)
@@ -4912,7 +4912,7 @@ Stores the object large emission function threshold.
 const OBJECT_LARGE_EMISSION_GC_STRIDE = 64
 ```
 
-Stores the object large emission gc stride.
+Track object large emission gc stride.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L52)

@@ -23,7 +23,7 @@ Represents synchronized block.
 _filename
 ```
 
-Stores the filename member of `SynchronizedBlock`.
+Filename associated with `SynchronizedBlock`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L455)
@@ -35,7 +35,7 @@ Stores the filename member of `SynchronizedBlock`.
 _pos
 ```
 
-Stores the pos member of `SynchronizedBlock`.
+Pos associated with `SynchronizedBlock`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L453)
@@ -47,7 +47,7 @@ Stores the pos member of `SynchronizedBlock`.
 body
 ```
 
-Stores the body member of `SynchronizedBlock`.
+Body associated with `SynchronizedBlock`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L449)
@@ -59,7 +59,7 @@ Stores the body member of `SynchronizedBlock`.
 cleanup
 ```
 
-Stores the cleanup member of `SynchronizedBlock`.
+Cleanup associated with `SynchronizedBlock`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L451)
@@ -71,7 +71,7 @@ Stores the cleanup member of `SynchronizedBlock`.
 lock
 ```
 
-Stores the lock member of `SynchronizedBlock`.
+Lock associated with `SynchronizedBlock`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L447)
@@ -83,7 +83,7 @@ Stores the lock member of `SynchronizedBlock`.
 node_kind
 ```
 
-Stores the node kind member of `SynchronizedBlock`.
+Node kind associated with `SynchronizedBlock`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L445)

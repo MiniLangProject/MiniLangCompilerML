@@ -23,7 +23,7 @@ Represents dynamic imports result.
 imports
 ```
 
-Stores the imports member of `DynamicImportsResult`.
+Imports associated with `DynamicImportsResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L49)
@@ -35,7 +35,7 @@ Stores the imports member of `DynamicImportsResult`.
 state
 ```
 
-Stores the state member of `DynamicImportsResult`.
+State associated with `DynamicImportsResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L47)

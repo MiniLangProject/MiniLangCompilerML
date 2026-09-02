@@ -23,7 +23,7 @@ Represents parse keep result.
 errors
 ```
 
-Stores the errors member of `ParseKeepResult`.
+Errors associated with `ParseKeepResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L881)
@@ -35,7 +35,7 @@ Stores the errors member of `ParseKeepResult`.
 program
 ```
 
-Stores the program member of `ParseKeepResult`.
+Program associated with `ParseKeepResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L879)

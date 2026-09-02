@@ -23,7 +23,7 @@ One typed value available while evaluating conditional-compilation directives.
 name
 ```
 
-Stores the name member of `CompileValue`.
+Name associated with `CompileValue`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L887)
@@ -35,7 +35,7 @@ Stores the name member of `CompileValue`.
 value
 ```
 
-Stores the value member of `CompileValue`.
+Value associated with `CompileValue`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L889)

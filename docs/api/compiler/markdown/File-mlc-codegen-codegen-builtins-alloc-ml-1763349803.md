@@ -26,7 +26,7 @@ Reachable from entry: **yes**
 function _emit_addstr_error(state, msg_lbl)
 ```
 
-Runs emit addstr error.
+Lower emit addstr error allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -43,7 +43,7 @@ Runs emit addstr error.
 function _ensure_enum_obj_strings(state)
 ```
 
-Implements ensure enum obj strings.
+Lower ensure enum obj strings allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -59,7 +59,7 @@ Implements ensure enum obj strings.
 function _enum_variants_of(state, qname)
 ```
 
-Implements enum variants of.
+Lower enum variants of allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -93,7 +93,7 @@ Reports whether has label.
 function cg_emit_builtins_alloc(state)
 ```
 
-Implements cg emit builtins alloc.
+Lower cg emit builtins alloc allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -109,7 +109,7 @@ Implements cg emit builtins alloc.
 function emit_array_add_function(state)
 ```
 
-Runs emit array add function.
+Lower emit array add function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -125,7 +125,7 @@ Runs emit array add function.
 function emit_box_float_function(state)
 ```
 
-Runs emit box float function.
+Lower emit box float function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -141,7 +141,7 @@ Runs emit box float function.
 function emit_bytes_add_function(state)
 ```
 
-Runs emit bytes add function.
+Lower emit bytes add function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -157,7 +157,7 @@ Runs emit bytes add function.
 function emit_bytes_alloc_function(state)
 ```
 
-Runs emit bytes alloc function.
+Lower emit bytes alloc function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -173,7 +173,7 @@ Runs emit bytes alloc function.
 function emit_bytes_eq_function(state)
 ```
 
-Runs emit bytes eq function.
+Lower emit bytes eq function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -189,7 +189,7 @@ Runs emit bytes eq function.
 function emit_decode16Z_function(state)
 ```
 
-Runs emit decode16 z function.
+Lower emit decode16 z function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -205,7 +205,7 @@ Runs emit decode16 z function.
 function emit_decode_function(state)
 ```
 
-Runs emit decode function.
+Lower emit decode function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -221,7 +221,7 @@ Runs emit decode function.
 function emit_decodeZ_function(state)
 ```
 
-Runs emit decode z function.
+Lower emit decode z function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -237,7 +237,7 @@ Runs emit decode z function.
 function emit_fromHex_function(state)
 ```
 
-Runs emit from hex function.
+Lower emit from hex function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -253,7 +253,7 @@ Runs emit from hex function.
 function emit_hex_function(state)
 ```
 
-Runs emit hex function.
+Lower emit hex function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -269,7 +269,7 @@ Runs emit hex function.
 function emit_input_function(state)
 ```
 
-Runs emit input function.
+Lower emit input function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -285,7 +285,7 @@ Runs emit input function.
 function emit_slice_function(state)
 ```
 
-Runs emit slice function.
+Lower emit slice function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -301,7 +301,7 @@ Runs emit slice function.
 function emit_string_add_function(state)
 ```
 
-Runs emit string add function.
+Lower emit string add function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -317,7 +317,7 @@ Runs emit string add function.
 function emit_string_endswith_function(state)
 ```
 
-Runs emit string endswith function.
+Lower emit string endswith function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -333,7 +333,7 @@ Runs emit string endswith function.
 function emit_string_eq_ignore_case_ascii_function(state)
 ```
 
-Runs emit string eq ignore case ascii function.
+Lower emit string eq ignore case ascii function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -349,7 +349,7 @@ Runs emit string eq ignore case ascii function.
 function emit_string_indexof_function(state)
 ```
 
-Runs emit string indexof function.
+Lower emit string indexof function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -365,7 +365,7 @@ Runs emit string indexof function.
 function emit_string_is_blank_ascii_function(state)
 ```
 
-Runs emit string is blank ascii function.
+Lower emit string is blank ascii function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -381,7 +381,7 @@ Runs emit string is blank ascii function.
 function emit_string_join_function(state)
 ```
 
-Runs emit string join function.
+Lower emit string join function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -397,7 +397,7 @@ Runs emit string join function.
 function emit_string_lastindexof_function(state)
 ```
 
-Runs emit string lastindexof function.
+Lower emit string lastindexof function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -413,7 +413,7 @@ Runs emit string lastindexof function.
 function emit_string_ltrim_ascii_function(state)
 ```
 
-Runs emit string ltrim ascii function.
+Lower emit string ltrim ascii function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -429,7 +429,7 @@ Runs emit string ltrim ascii function.
 function emit_string_repeat_function(state)
 ```
 
-Runs emit string repeat function.
+Lower emit string repeat function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -445,7 +445,7 @@ Runs emit string repeat function.
 function emit_string_reverse_function(state)
 ```
 
-Runs emit string reverse function.
+Lower emit string reverse function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -461,7 +461,7 @@ Runs emit string reverse function.
 function emit_string_rtrim_ascii_function(state)
 ```
 
-Runs emit string rtrim ascii function.
+Lower emit string rtrim ascii function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -477,7 +477,7 @@ Runs emit string rtrim ascii function.
 function emit_string_slice_function(state)
 ```
 
-Runs emit string slice function.
+Lower emit string slice function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -493,7 +493,7 @@ Runs emit string slice function.
 function emit_string_startswith_function(state)
 ```
 
-Runs emit string startswith function.
+Lower emit string startswith function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -509,7 +509,7 @@ Runs emit string startswith function.
 function emit_string_to_lower_ascii_function(state)
 ```
 
-Runs emit string to lower ascii function.
+Lower emit string to lower ascii function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -525,7 +525,7 @@ Runs emit string to lower ascii function.
 function emit_string_to_upper_ascii_function(state)
 ```
 
-Runs emit string to upper ascii function.
+Lower emit string to upper ascii function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -541,7 +541,7 @@ Runs emit string to upper ascii function.
 function emit_string_trim_ascii_function(state)
 ```
 
-Runs emit string trim ascii function.
+Lower emit string trim ascii function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -557,7 +557,7 @@ Runs emit string trim ascii function.
 function emit_value_to_string_function(state)
 ```
 
-Runs emit value to string function.
+Lower emit value to string function allocation behavior to native x64.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -573,7 +573,7 @@ Runs emit value to string function.
 const INPUT_READ_MAX = 4095
 ```
 
-Stores the input read max.
+Track input read max.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L29)

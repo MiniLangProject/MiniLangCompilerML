@@ -23,7 +23,7 @@ Represents return.
 _filename
 ```
 
-Stores the filename member of `Return`.
+Filename associated with `Return`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L585)
@@ -35,7 +35,7 @@ Stores the filename member of `Return`.
 _pos
 ```
 
-Stores the pos member of `Return`.
+Pos associated with `Return`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L583)
@@ -47,7 +47,7 @@ Stores the pos member of `Return`.
 expr
 ```
 
-Stores the expr member of `Return`.
+Expr associated with `Return`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L581)
@@ -59,7 +59,7 @@ Stores the expr member of `Return`.
 node_kind
 ```
 
-Stores the node kind member of `Return`.
+Node kind associated with `Return`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L579)

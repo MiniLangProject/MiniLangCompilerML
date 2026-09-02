@@ -23,7 +23,7 @@ Structure-of-arrays token arena. Parser cursors are integer IDs; kinds use one b
 cap
 ```
 
-Stores the cap member of `TokenArena`.
+Allocated capacity of `TokenArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L70)
@@ -35,7 +35,7 @@ Stores the cap member of `TokenArena`.
 count
 ```
 
-Stores the count member of `TokenArena`.
+Count associated with `TokenArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L68)
@@ -47,7 +47,7 @@ Stores the count member of `TokenArena`.
 kinds
 ```
 
-Stores the kinds member of `TokenArena`.
+Kinds associated with `TokenArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L58)
@@ -59,7 +59,7 @@ Stores the kinds member of `TokenArena`.
 positions
 ```
 
-Stores the positions member of `TokenArena`.
+Positions associated with `TokenArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L62)
@@ -71,7 +71,7 @@ Stores the positions member of `TokenArena`.
 text_index
 ```
 
-Stores the text index member of `TokenArena`.
+Text index associated with `TokenArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L66)
@@ -83,7 +83,7 @@ Stores the text index member of `TokenArena`.
 texts
 ```
 
-Stores the texts member of `TokenArena`.
+Texts associated with `TokenArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L64)
@@ -95,7 +95,7 @@ Stores the texts member of `TokenArena`.
 value_ids
 ```
 
-Stores the value ids member of `TokenArena`.
+Value ids associated with `TokenArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L60)

@@ -22,98 +22,98 @@ import mlc.tools as t
 
 /// Deferred rel32 relocation from an instruction field to a named label.
 struct AsmPatch
-  /// Stores the pos member of `AsmPatch`.
+  /// Pos associated with `AsmPatch`.
   pos,
-  /// Stores the target member of `AsmPatch`.
+  /// Target associated with `AsmPatch`.
   target,
-  /// Stores the kind member of `AsmPatch`.
+  /// Kind associated with `AsmPatch`.
   kind,
 end struct
 
 /// Named code offset in the materialized instruction stream.
 struct AsmLabel
-  /// Stores the name member of `AsmLabel`.
+  /// Name associated with `AsmLabel`.
   name,
-  /// Stores the pos member of `AsmLabel`.
+  /// Pos associated with `AsmLabel`.
   pos,
 end struct
 
 /// Paged instruction stream plus chunked labels, patches and call metadata.
 struct AsmBuilder
-  /// Stores the buf member of `AsmBuilder`.
+  /// Buf associated with `AsmBuilder`.
   buf,
-  /// Stores the size member of `AsmBuilder`.
+  /// Current logical size of `AsmBuilder`.
   size,
-  /// Stores the labels member of `AsmBuilder`.
+  /// Labels associated with `AsmBuilder`.
   labels,
-  /// Stores the labels chunks member of `AsmBuilder`.
+  /// Labels chunks associated with `AsmBuilder`.
   labels_chunks,
-  /// Stores the labels tail member of `AsmBuilder`.
+  /// Labels tail associated with `AsmBuilder`.
   labels_tail,
-  /// Stores the patches chunks member of `AsmBuilder`.
+  /// Patches chunks associated with `AsmBuilder`.
   patches_chunks,
-  /// Stores the patches tail member of `AsmBuilder`.
+  /// Patches tail associated with `AsmBuilder`.
   patches_tail,
-  /// Stores the deferred patches chunks member of `AsmBuilder`.
+  /// Deferred patches chunks associated with `AsmBuilder`.
   deferred_patches_chunks,
-  /// Stores the deferred patches tail member of `AsmBuilder`.
+  /// Deferred patches tail associated with `AsmBuilder`.
   deferred_patches_tail,
-  /// Stores the calls chunks member of `AsmBuilder`.
+  /// Calls chunks associated with `AsmBuilder`.
   calls_chunks,
-  /// Stores the calls tail member of `AsmBuilder`.
+  /// Calls tail associated with `AsmBuilder`.
   calls_tail,
-  /// Stores the chunk pages member of `AsmBuilder`.
+  /// Chunk pages associated with `AsmBuilder`.
   chunk_pages,
-  /// Stores the chunk tail member of `AsmBuilder`.
+  /// Chunk tail associated with `AsmBuilder`.
   chunk_tail,
-  /// Stores the chunk size member of `AsmBuilder`.
+  /// Chunk size associated with `AsmBuilder`.
   chunk_size,
-  /// Stores the buf valid member of `AsmBuilder`.
+  /// Buf valid associated with `AsmBuilder`.
   buf_valid,
-  /// Stores the before call live temps member of `AsmBuilder`.
+  /// Before call live temps associated with `AsmBuilder`.
   before_call_live_temps,
-  /// Stores the tracked helpers member of `AsmBuilder`.
+  /// Tracked helpers associated with `AsmBuilder`.
   tracked_helpers,
-  /// Stores the label pos map member of `AsmBuilder`.
+  /// Label pos map associated with `AsmBuilder`.
   label_pos_map,
-  /// Stores the peephole last jump member of `AsmBuilder`.
+  /// Peephole last jump associated with `AsmBuilder`.
   peephole_last_jump,
-  /// Stores the peephole last push member of `AsmBuilder`.
+  /// Peephole last push associated with `AsmBuilder`.
   peephole_last_push,
-  /// Stores the record calls member of `AsmBuilder`.
+  /// Record calls associated with `AsmBuilder`.
   record_calls,
-  /// Stores the tracked helper map member of `AsmBuilder`.
+  /// Tracked helper map associated with `AsmBuilder`.
   tracked_helper_map,
-  /// Stores the active chunk member of `AsmBuilder`.
+  /// Active chunk associated with `AsmBuilder`.
   active_chunk,
-  /// Stores the active chunk index member of `AsmBuilder`.
+  /// Active chunk index associated with `AsmBuilder`.
   active_chunk_index,
 end struct
 
 /// Encoded general-purpose-register number, width and REX requirement.
 struct GPR
-  /// Stores the id member of `GPR`.
+  /// Id associated with `GPR`.
   id,
-  /// Stores the size member of `GPR`.
+  /// Current logical size of `GPR`.
   size,
-  /// Stores the force rex member of `GPR`.
+  /// Force rex associated with `GPR`.
   force_rex,
 end struct
 
 /// Encoded ModRM/SIB memory operand tail and extension bits.
 struct EncMem
-  /// Stores the rex x member of `EncMem`.
+  /// Rex x associated with `EncMem`.
   rex_x,
-  /// Stores the rex b member of `EncMem`.
+  /// Rex b associated with `EncMem`.
   rex_b,
-  /// Stores the tail member of `EncMem`.
+  /// Tail associated with `EncMem`.
   tail,
 end struct
 
-/// Stores the materialize keepalive compiler state.
+/// Track materialize keepalive compiler state.
 _materialize_keepalive = 0
 
-/// Implements starts with text.
+/// Encode or manage starts with text in the native x64 assembler.
 /// @internal
 function _starts_with_text(text, prefix)
   if typeof(text) != "string" then return false end if
@@ -126,7 +126,7 @@ function _starts_with_text(text, prefix)
   return true
 end function
 
-/// Implements array contains text.
+/// Encode or manage array contains text in the native x64 assembler.
 /// @internal
 function _array_contains_text(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
@@ -136,7 +136,7 @@ function _array_contains_text(arr, value)
   return false
 end function
 
-/// Implements keepalive barrier.
+/// Encode or manage keepalive barrier in the native x64 assembler.
 /// @internal
 function _keepalive_barrier(value)
   return value
@@ -220,7 +220,7 @@ function _fold_materialized_patch_set(asm, patch_chunks, patch_tail, out_b)
   return [asm, out_b]
 end function
 
-/// Implements materialize and fold local patches.
+/// Encode or manage materialize and fold local patches in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function materialize_and_fold_local_patches(asm)
   asm = _materialize_buffer(asm)
@@ -273,7 +273,7 @@ function _resolve_patch_set(asm, patch_chunks, patch_tail, kept_chunks, kept_tai
   return [asm, kept_chunks, kept_tail]
 end function
 
-/// Implements resolve defined patches.
+/// Encode or manage resolve defined patches in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function resolve_defined_patches(asm)
   // Resolve only patches emitted since the previous phase. Forward targets
@@ -289,7 +289,7 @@ function resolve_defined_patches(asm)
   return asm
 end function
 
-/// Implements resolve all defined patches.
+/// Encode or manage resolve all defined patches in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function resolve_all_defined_patches(asm)
   // Once helper labels have been emitted, revisit deferred forward references
@@ -343,7 +343,7 @@ function get_tracked_helpers(asm)
   return asm.tracked_helpers
 end function
 
-/// Implements patch push.
+/// Encode or manage patch push in the native x64 assembler.
 /// @internal
 function _patch_push(asm, patch)
   app = t.arr_chunked_push(asm.patches_chunks, asm.patches_tail, patch, 256)
@@ -352,7 +352,7 @@ function _patch_push(asm, patch)
   return asm
 end function
 
-/// Implements call push.
+/// Encode or manage call push in the native x64 assembler.
 /// @internal
 function _call_push(asm, label)
   app = t.arr_chunked_push(asm.calls_chunks, asm.calls_tail, label, 256)
@@ -361,7 +361,7 @@ function _call_push(asm, label)
   return asm
 end function
 
-/// Implements track helper label.
+/// Encode or manage track helper label in the native x64 assembler.
 /// @internal
 function _track_helper_label(asm, label)
   if typeof(label) != "string" or label == "" then return asm end if
@@ -393,7 +393,7 @@ function _track_helper_label(asm, label)
   return asm
 end function
 
-/// Implements spill before call.
+/// Encode or manage spill before call in the native x64 assembler.
 /// @internal
 function _spill_before_call(asm)
   live = asm.before_call_live_temps
@@ -409,7 +409,7 @@ function _spill_before_call(asm)
   return asm
 end function
 
-/// Implements label push.
+/// Encode or manage label push in the native x64 assembler.
 /// @internal
 function _label_push(asm, label)
   app = t.arr_chunked_push(asm.labels_chunks, asm.labels_tail, label, 256)
@@ -418,7 +418,7 @@ function _label_push(asm, label)
   return asm
 end function
 
-/// Implements label index.
+/// Encode or manage label index in the native x64 assembler.
 /// @internal
 function _label_index(labels, name)
   if len(labels) <= 0 then return -1 end if
@@ -428,7 +428,7 @@ function _label_index(labels, name)
   return -1
 end function
 
-/// Implements label pos.
+/// Encode or manage label pos in the native x64 assembler.
 /// @internal
 function _label_pos(labels, name)
   idx = _label_index(labels, name)
@@ -436,7 +436,7 @@ function _label_pos(labels, name)
   return labels[idx].pos
 end function
 
-/// Implements rid any.
+/// Encode or manage rid any in the native x64 assembler.
 /// @internal
 function _rid_any(name)
   if name == "rax" or name == "eax" or name == "al" then return 0 end if
@@ -476,7 +476,7 @@ function _is_force_rex_8(name as string) returns bool
   return name == "spl" or name == "bpl" or name == "sil" or name == "dil"
 end function
 
-/// Implements byte at.
+/// Encode or manage byte at in the native x64 assembler.
 /// @internal
 function _byte_at(asm, idx)
   if typeof(idx) != "int" or idx < 0 or idx >= asm.size then return -1 end if
@@ -510,7 +510,7 @@ function _byte_at(asm, idx)
   return -1
 end function
 
-/// Implements patches replace.
+/// Encode or manage patches replace in the native x64 assembler.
 /// @internal
 function _patches_replace(asm, patches)
   asm.patches_chunks = []
@@ -539,7 +539,7 @@ function _remove_patch_at(asm, idx)
   return _patches_replace(asm, kept)
 end function
 
-/// Implements last patch.
+/// Encode or manage last patch in the native x64 assembler.
 /// @internal
 function _last_patch(asm)
   tn = t.arr_chunk_tail_len(asm.patches_tail)
@@ -547,7 +547,7 @@ function _last_patch(asm)
   return t.arr_chunk_tail_get(asm.patches_tail, tn - 1, 0)
 end function
 
-/// Implements drop last patch.
+/// Encode or manage drop last patch in the native x64 assembler.
 /// @internal
 function _drop_last_patch(asm)
   tn = t.arr_chunk_tail_len(asm.patches_tail)
@@ -562,7 +562,7 @@ function _drop_last_patch(asm)
   return asm
 end function
 
-/// Implements chunk count.
+/// Encode or manage chunk count in the native x64 assembler.
 /// @internal
 function _chunk_count(asm)
   n = 0
@@ -571,7 +571,7 @@ function _chunk_count(asm)
   return n
 end function
 
-/// Implements chunk get.
+/// Encode or manage chunk get in the native x64 assembler.
 /// @internal
 function _chunk_get(asm, idx)
   if typeof(asm.active_chunk) == "bytes" and asm.active_chunk_index == idx then
@@ -601,7 +601,7 @@ function _chunk_get(asm, idx)
   return bytes(cs, 0)
 end function
 
-/// Implements chunk set.
+/// Encode or manage chunk set in the native x64 assembler.
 /// @internal
 function _chunk_set(asm, idx, chunk)
   asm.active_chunk = chunk
@@ -619,7 +619,7 @@ function _chunk_set(asm, idx, chunk)
   return asm
 end function
 
-/// Implements chunk push.
+/// Encode or manage chunk push in the native x64 assembler.
 /// @internal
 function _chunk_push(asm, chunk)
   app = t.arr_chunked_push(asm.chunk_pages, asm.chunk_tail, chunk, 256)
@@ -657,7 +657,7 @@ function _restore_materialized_chunks(asm)
   return asm
 end function
 
-/// Implements ensure capacity.
+/// Encode or manage ensure capacity in the native x64 assembler.
 /// @internal
 function _ensure_capacity(asm, need)
   if need <= 0 then return asm end if
@@ -693,10 +693,10 @@ function _set_chunk_byte(asm, idx, value)
   return asm
 end function
 
-/// Implements materialize buffer.
+/// Encode or manage materialize buffer in the native x64 assembler.
 /// @internal
 function _materialize_buffer(asm)
-  /// Stores the materialize keepalive.
+  /// Current materialize keepalive used by this routine.
   /// @internal
   global _materialize_keepalive
   if typeof(asm.buf) == "bytes" and asm.buf_valid and len(asm.buf) == asm.size then
@@ -744,7 +744,7 @@ function _materialize_buffer(asm)
   return asm
 end function
 
-/// Runs emit.
+/// Encode or manage emit in the native x64 assembler.
 /// @internal
 function _emit(asm, b)
   if typeof(b) != "bytes" or len(b) <= 0 then return asm end if
@@ -772,7 +772,7 @@ function _emit(asm, b)
   return asm
 end function
 
-/// Runs emit8.
+/// Encode or manage emit8 in the native x64 assembler.
 /// @internal
 function _emit8(asm, x)
   dst = asm.size
@@ -795,13 +795,13 @@ function _emit8(asm, x)
   return asm
 end function
 
-/// Implements materialize.
+/// Encode or manage materialize in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function materialize(asm)
   return _materialize_buffer(asm)
 end function
 
-/// Runs emit32.
+/// Encode or manage emit32 in the native x64 assembler.
 /// @internal
 function _emit32(asm, x)
   dst = asm.size
@@ -835,7 +835,7 @@ function add_patch(asm, position, label, kind)
   return _patch_push(asm, AsmPatch(position, label, kind))
 end function
 
-/// Runs emit64.
+/// Encode or manage emit64 in the native x64 assembler.
 /// @internal
 function _emit64(asm, x)
   dst = asm.size
@@ -864,14 +864,14 @@ function _emit64(asm, x)
   return asm
 end function
 
-/// Implements pos.
+/// Encode or manage pos in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @returns The resulting `int` value.
 function pos(asm as struct) returns int
   return asm.size
 end function
 
-/// Runs emit rex.
+/// Encode or manage emit rex in the native x64 assembler.
 /// @internal
 function _emit_rex(asm, w, r, x, b, force)
   if (w | r | x | b) == 0 and force == false then
@@ -881,32 +881,32 @@ function _emit_rex(asm, w, r, x, b, force)
   return _emit8(asm, v)
 end function
 
-/// Runs emit modrm.
+/// Encode or manage emit modrm in the native x64 assembler.
 /// @internal
 function _emit_modrm(asm, mod, reg, rm)
   v = ((mod & 3) << 6) |((reg & 7) << 3) |(rm & 7)
   return _emit8(asm, v)
 end function
 
-/// Implements modrm byte.
+/// Encode or manage modrm byte in the native x64 assembler.
 /// @internal
 function _modrm_byte(mod as int, reg as int, rm as int) returns int
   return ((mod & 3) << 6) |((reg & 7) << 3) |(rm & 7)
 end function
 
-/// Implements sib byte.
+/// Encode or manage sib byte in the native x64 assembler.
 /// @internal
 function _sib_byte(scale as int, index as int, base as int) returns int
   return ((scale & 3) << 6) |((index & 7) << 3) |(base & 7)
 end function
 
-/// Implements fits i8.
+/// Encode or manage fits i8 in the native x64 assembler.
 /// @internal
 function _fits_i8(x as int) returns bool
   return x >= -128 and x <= 127
 end function
 
-/// Runs emit bytes u8.
+/// Encode or manage emit bytes u8 in the native x64 assembler.
 /// @internal
 function _emit_bytes_u8(v)
   b = bytes(1, 0)
@@ -956,7 +956,7 @@ function _encode_mem(reg_field, base_id, disp)
   return EncMem(rex_x, rex_b, tail)
 end function
 
-/// Implements scale bits.
+/// Encode or manage scale bits in the native x64 assembler.
 /// @internal
 function _scale_bits(scale)
   if scale == 1 then return 0 end if
@@ -1004,7 +1004,7 @@ function _encode_mem_bis(reg_field, base_id, index_id, scale, disp)
   return EncMem(rex_x, rex_b, tail)
 end function
 
-/// Implements vex3.
+/// Encode or manage vex3 in the native x64 assembler.
 /// @internal
 function _vex3(m, w, vvvv, l, pp, r, x, b)
   rb = 1
@@ -1024,7 +1024,7 @@ function _vex3(m, w, vvvv, l, pp, r, x, b)
   return _emit_bytes_u8(0xC4) + _emit_bytes_u8(b1) + _emit_bytes_u8(b2)
 end function
 
-/// Implements xmm id.
+/// Encode or manage xmm id in the native x64 assembler.
 /// @internal
 function _xmm_id(name)
   if name == "xmm0" then return 0 end if
@@ -1046,7 +1046,7 @@ function _xmm_id(name)
   return -1
 end function
 
-/// Implements ymm id.
+/// Encode or manage ymm id in the native x64 assembler.
 /// @internal
 function _ymm_id(name)
   if name == "ymm0" then return 0 end if
@@ -1068,35 +1068,35 @@ function _ymm_id(name)
   return -1
 end function
 
-/// Runs emit.
+/// Encode or manage emit in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param b Second input value.
 function emit(asm, b)
   return _emit(asm, b)
 end function
 
-/// Runs emit8.
+/// Encode or manage emit8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param x Value supplied for `x`.
 function emit8(asm, x)
   return _emit8(asm, x)
 end function
 
-/// Runs emit32.
+/// Encode or manage emit32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param x Value supplied for `x`.
 function emit32(asm, x)
   return _emit32(asm, x)
 end function
 
-/// Runs emit64.
+/// Encode or manage emit64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param x Value supplied for `x`.
 function emit64(asm, x)
   return _emit64(asm, x)
 end function
 
-/// Implements mov rax gs qword 28.
+/// Encode or manage mov rax gs qword 28 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_rax_gs_qword_28(asm)
   vals = [0x65, 0x48, 0x8B, 0x04, 0x25, 0x28, 0, 0, 0]
@@ -1104,7 +1104,7 @@ function mov_rax_gs_qword_28(asm)
   return asm
 end function
 
-/// Implements mov r11 gs qword 28.
+/// Encode or manage mov r11 gs qword 28 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_r11_gs_qword_28(asm)
   vals = [0x65, 0x4C, 0x8B, 0x1C, 0x25, 0x28, 0, 0, 0]
@@ -1112,7 +1112,7 @@ function mov_r11_gs_qword_28(asm)
   return asm
 end function
 
-/// Implements mov r10 gs qword 28.
+/// Encode or manage mov r10 gs qword 28 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_r10_gs_qword_28(asm)
   vals = [0x65, 0x4C, 0x8B, 0x14, 0x25, 0x28, 0, 0, 0]
@@ -1120,7 +1120,7 @@ function mov_r10_gs_qword_28(asm)
   return asm
 end function
 
-/// Implements mov gs qword 28 rax.
+/// Encode or manage mov gs qword 28 rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_gs_qword_28_rax(asm)
   vals = [0x65, 0x48, 0x89, 0x04, 0x25, 0x28, 0, 0, 0]
@@ -1128,7 +1128,7 @@ function mov_gs_qword_28_rax(asm)
   return asm
 end function
 
-/// Implements gc tmp context offset.
+/// Encode or manage gc tmp context offset in the native x64 assembler.
 /// @internal
 function _gc_tmp_context_offset(label)
   if label == "gc_tmp0" then return 56 end if
@@ -1142,7 +1142,7 @@ function _gc_tmp_context_offset(label)
   return -1
 end function
 
-/// Implements mark.
+/// Encode or manage mark in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param name Name of the requested item.
 function mark(asm, name)
@@ -1172,7 +1172,7 @@ function mark(asm, name)
   return asm
 end function
 
-/// Implements finalize.
+/// Encode or manage finalize in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function finalize(asm)
   labels = get_labels(asm)
@@ -1212,13 +1212,13 @@ function finalize(asm)
   return asm.buf
 end function
 
-/// Implements nop.
+/// Encode or manage nop in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function nop(asm)
   return _emit8(asm, 0x90)
 end function
 
-/// Implements jmp.
+/// Encode or manage jmp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jmp(asm, label)
@@ -1245,7 +1245,7 @@ function jmp(asm, label)
   return asm
 end function
 
-/// Implements jmp r64.
+/// Encode or manage jmp r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg Value supplied for `reg`.
 function jmp_r64(asm, reg)
@@ -1257,7 +1257,7 @@ function jmp_r64(asm, reg)
   return asm
 end function
 
-/// Implements jcc.
+/// Encode or manage jcc in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param cc Value supplied for `cc`.
 /// @param label Value supplied for `label`.
@@ -1305,56 +1305,56 @@ function jcc(asm, cc, label)
   return asm
 end function
 
-/// Implements je.
+/// Encode or manage je in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function je(asm, label) return jcc(asm, "e", label) end function
-/// Implements jz.
+/// Encode or manage jz in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jz(asm, label) return jcc(asm, "z", label) end function
-/// Implements jne.
+/// Encode or manage jne in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jne(asm, label) return jcc(asm, "ne", label) end function
-/// Implements jnz.
+/// Encode or manage jnz in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jnz(asm, label) return jcc(asm, "nz", label) end function
-/// Implements jl.
+/// Encode or manage jl in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jl(asm, label) return jcc(asm, "l", label) end function
-/// Implements jle.
+/// Encode or manage jle in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jle(asm, label) return jcc(asm, "le", label) end function
-/// Implements jg.
+/// Encode or manage jg in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jg(asm, label) return jcc(asm, "g", label) end function
-/// Implements jge.
+/// Encode or manage jge in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jge(asm, label) return jcc(asm, "ge", label) end function
-/// Implements jb.
+/// Encode or manage jb in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jb(asm, label) return jcc(asm, "b", label) end function
-/// Implements jbe.
+/// Encode or manage jbe in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jbe(asm, label) return jcc(asm, "be", label) end function
-/// Implements ja.
+/// Encode or manage ja in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function ja(asm, label) return jcc(asm, "a", label) end function
-/// Implements jae.
+/// Encode or manage jae in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jae(asm, label) return jcc(asm, "ae", label) end function
 
-/// Implements call.
+/// Encode or manage call in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function call(asm, label)
@@ -1370,7 +1370,7 @@ function call(asm, label)
   return asm
 end function
 
-/// Implements call rax.
+/// Encode or manage call rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function call_rax(asm)
   asm = _spill_before_call(asm)
@@ -1379,7 +1379,7 @@ function call_rax(asm)
   return asm
 end function
 
-/// Implements call membase disp.
+/// Encode or manage call membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -1394,7 +1394,7 @@ function call_membase_disp(asm, base, disp)
   return asm
 end function
 
-/// Implements call rip qword.
+/// Encode or manage call rip qword in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function call_rip_qword(asm, label)
@@ -1407,19 +1407,19 @@ function call_rip_qword(asm, label)
   return asm
 end function
 
-/// Implements ret.
+/// Encode or manage ret in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function ret(asm)
   return _emit8(asm, 0xC3)
 end function
 
-/// Implements leave.
+/// Encode or manage leave in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function leave(asm)
   return _emit8(asm, 0xC9)
 end function
 
-/// Implements lea r64 rip.
+/// Encode or manage lea r64 rip in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param label Value supplied for `label`.
@@ -1436,7 +1436,7 @@ function lea_r64_rip(asm, dst, label)
   return asm
 end function
 
-/// Implements lea rax rip.
+/// Encode or manage lea rax rip in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 /// @returns The resulting `struct` value.
@@ -1444,28 +1444,28 @@ function lea_rax_rip(asm as struct, label as string) returns struct
   return lea_r64_rip(asm, "rax", label)
 end function
 
-/// Implements lea rdx rip.
+/// Encode or manage lea rdx rip in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function lea_rdx_rip(asm, label)
   return lea_r64_rip(asm, "rdx", label)
 end function
 
-/// Implements lea r8 rip.
+/// Encode or manage lea r8 rip in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function lea_r8_rip(asm, label)
   return lea_r64_rip(asm, "r8", label)
 end function
 
-/// Implements lea r9 rip.
+/// Encode or manage lea r9 rip in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function lea_r9_rip(asm, label)
   return lea_r64_rip(asm, "r9", label)
 end function
 
-/// Implements lea r11 rip.
+/// Encode or manage lea r11 rip in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function lea_r11_rip(asm, label)
@@ -1488,7 +1488,7 @@ function push_reg(asm, reg)
   return asm
 end function
 
-/// Implements pop reg.
+/// Encode or manage pop reg in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg Value supplied for `reg`.
 function pop_reg(asm, reg)
@@ -1517,47 +1517,47 @@ end function
 /// Updates push rbx.
 /// @param asm Value supplied for `asm`.
 function push_rbx(asm) return push_reg(asm, "rbx") end function
-/// Implements pop rbx.
+/// Encode or manage pop rbx in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function pop_rbx(asm) return pop_reg(asm, "rbx") end function
 /// Updates push r12.
 /// @param asm Value supplied for `asm`.
 function push_r12(asm) return push_reg(asm, "r12") end function
-/// Implements pop r12.
+/// Encode or manage pop r12 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function pop_r12(asm) return pop_reg(asm, "r12") end function
 /// Updates push r13.
 /// @param asm Value supplied for `asm`.
 function push_r13(asm) return push_reg(asm, "r13") end function
-/// Implements pop r13.
+/// Encode or manage pop r13 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function pop_r13(asm) return pop_reg(asm, "r13") end function
 /// Updates push r14.
 /// @param asm Value supplied for `asm`.
 function push_r14(asm) return push_reg(asm, "r14") end function
-/// Implements pop r14.
+/// Encode or manage pop r14 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function pop_r14(asm) return pop_reg(asm, "r14") end function
 /// Updates push r15.
 /// @param asm Value supplied for `asm`.
 function push_r15(asm) return push_reg(asm, "r15") end function
-/// Implements pop r15.
+/// Encode or manage pop r15 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function pop_r15(asm) return pop_reg(asm, "r15") end function
 /// Updates push rbp.
 /// @param asm Value supplied for `asm`.
 function push_rbp(asm) return push_reg(asm, "rbp") end function
-/// Implements pop rbp.
+/// Encode or manage pop rbp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function pop_rbp(asm) return pop_reg(asm, "rbp") end function
 
-/// Implements mov rbp rsp.
+/// Encode or manage mov rbp rsp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_rbp_rsp(asm)
   return mov_r64_r64(asm, "rbp", "rsp")
 end function
 
-/// Implements mov r64 imm64.
+/// Encode or manage mov r64 imm64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param imm Value supplied for `imm`.
@@ -1586,7 +1586,7 @@ function mov_r64_imm64(asm, dst, imm)
   return asm
 end function
 
-/// Implements mov r32 imm32.
+/// Encode or manage mov r32 imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param imm Value supplied for `imm`.
@@ -1601,7 +1601,7 @@ function mov_r32_imm32(asm, dst, imm)
   return asm
 end function
 
-/// Implements mov rax imm64.
+/// Encode or manage mov rax imm64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 /// @returns The resulting `struct` value.
@@ -1609,7 +1609,7 @@ function mov_rax_imm64(asm as struct, imm as int) returns struct
   return mov_r64_imm64(asm, "rax", imm)
 end function
 
-/// Implements mov r64 tagged int.
+/// Encode or manage mov r64 tagged int in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param value Value to process.
@@ -1625,7 +1625,7 @@ function mov_r64_tagged_int(asm, dst, value)
   return mov_r64_u64_hi_lo_exact(asm, dst, hi32, lo32)
 end function
 
-/// Implements mov rax tagged int.
+/// Encode or manage mov rax tagged int in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param value Value to process.
 /// @returns The resulting `struct` value.
@@ -1633,7 +1633,7 @@ function mov_rax_tagged_int(asm as struct, value as int) returns struct
   return mov_r64_tagged_int(asm, "rax", value)
 end function
 
-/// Implements mov r64 u64 hi lo exact.
+/// Encode or manage mov r64 u64 hi lo exact in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param hi32 Value supplied for `hi32`.
@@ -1648,7 +1648,7 @@ function mov_r64_u64_hi_lo_exact(asm, dst, hi32, lo32)
   return asm
 end function
 
-/// Implements mov rax u64 hi lo exact.
+/// Encode or manage mov rax u64 hi lo exact in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param hi32 Value supplied for `hi32`.
 /// @param lo32 Value supplied for `lo32`.
@@ -1656,7 +1656,7 @@ function mov_rax_u64_hi_lo_exact(asm, hi32, lo32)
   return mov_r64_u64_hi_lo_exact(asm, "rax", hi32, lo32)
 end function
 
-/// Implements mov rcx imm32.
+/// Encode or manage mov rcx imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 /// @returns The resulting `struct` value.
@@ -1664,14 +1664,14 @@ function mov_rcx_imm32(asm as struct, imm as int) returns struct
   return mov_r32_imm32(asm, "ecx", imm)
 end function
 
-/// Implements mov r8d imm32.
+/// Encode or manage mov r8d imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function mov_r8d_imm32(asm, imm)
   return mov_r32_imm32(asm, "r8d", imm)
 end function
 
-/// Implements mov r64 r64.
+/// Encode or manage mov r64 r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -1686,7 +1686,7 @@ function mov_r64_r64(asm, dst, src)
   return asm
 end function
 
-/// Implements mov r32 r32.
+/// Encode or manage mov r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -1701,7 +1701,7 @@ function mov_r32_r32(asm, dst, src)
   return asm
 end function
 
-/// Implements mov r8 r8.
+/// Encode or manage mov r8 r8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -1718,7 +1718,7 @@ function mov_r8_r8(asm, dst, src)
   return asm
 end function
 
-/// Implements grp1 imm.
+/// Encode or manage grp1 imm in the native x64 assembler.
 /// @internal
 function _grp1_imm(asm, size, subop, rm, imm)
   if size != 8 and size != 32 and size != 64 then return error(1, "Unsupported operand size for grp1") end if
@@ -1758,27 +1758,27 @@ end function
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function add_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 0, reg_name, imm) end function
-/// Implements sub r64 imm.
+/// Encode or manage sub r64 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function sub_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 5, reg_name, imm) end function
-/// Implements and r64 imm.
+/// Encode or manage and r64 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function and_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 4, reg_name, imm) end function
-/// Implements or r64 imm.
+/// Encode or manage or r64 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function or_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 1, reg_name, imm) end function
-/// Implements xor r64 imm.
+/// Encode or manage xor r64 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function xor_r64_imm(asm, reg_name, imm) return _grp1_imm(asm, 64, 6, reg_name, imm) end function
-/// Implements cmp r64 imm.
+/// Encode or manage cmp r64 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
@@ -1799,14 +1799,14 @@ function add_r64_imm8(asm, reg_name, imm)
   // encoder instead of poisoning the asm builder with an error object.
   return add_r64_imm(asm, reg_name, imm)
 end function
-/// Implements sub r64 imm8.
+/// Encode or manage sub r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function sub_r64_imm8(asm, reg_name, imm)
   return sub_r64_imm(asm, reg_name, imm)
 end function
-/// Implements and r64 imm8.
+/// Encode or manage and r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
@@ -1814,7 +1814,7 @@ end function
 function and_r64_imm8(asm as struct, reg_name as string, imm as int) returns struct
   return and_r64_imm(asm, reg_name, imm)
 end function
-/// Implements or r64 imm8.
+/// Encode or manage or r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
@@ -1822,14 +1822,14 @@ end function
 function or_r64_imm8(asm as struct, reg_name as string, imm as int) returns struct
   return or_r64_imm(asm, reg_name, imm)
 end function
-/// Implements xor r64 imm8.
+/// Encode or manage xor r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function xor_r64_imm8(asm, reg_name, imm)
   return xor_r64_imm(asm, reg_name, imm)
 end function
-/// Implements cmp r64 imm8.
+/// Encode or manage cmp r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
@@ -1843,27 +1843,27 @@ end function
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function add_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 0, reg_name, imm) end function
-/// Implements sub r32 imm.
+/// Encode or manage sub r32 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function sub_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 5, reg_name, imm) end function
-/// Implements and r32 imm.
+/// Encode or manage and r32 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function and_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 4, reg_name, imm) end function
-/// Implements or r32 imm.
+/// Encode or manage or r32 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function or_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 1, reg_name, imm) end function
-/// Implements xor r32 imm.
+/// Encode or manage xor r32 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function xor_r32_imm(asm, reg_name, imm) return _grp1_imm(asm, 32, 6, reg_name, imm) end function
-/// Implements cmp r32 imm.
+/// Encode or manage cmp r32 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
@@ -1873,18 +1873,18 @@ function cmp_r32_imm(asm, reg_name, imm)
   end if
   return _grp1_imm(asm, 32, 7, reg_name, imm)
 end function
-/// Implements cmp r32 imm32.
+/// Encode or manage cmp r32 imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function cmp_r32_imm32(asm, reg_name, imm) return cmp_r32_imm(asm, reg_name, imm) end function
-/// Implements cmp r64 imm32.
+/// Encode or manage cmp r64 imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function cmp_r64_imm32(asm, reg_name, imm) return cmp_r64_imm(asm, reg_name, imm) end function
 
-/// Runs emit bin rr.
+/// Encode or manage emit bin rr in the native x64 assembler.
 /// @internal
 function _emit_bin_rr(asm, op, dst, src, w)
   rd = _rid_any(dst)
@@ -1901,7 +1901,7 @@ end function
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function add_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x03, dst, src, 1) end function
-/// Implements sub r64 r64.
+/// Encode or manage sub r64 r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -1911,74 +1911,74 @@ function sub_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x2B, dst, src, 1) 
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function add_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x03, dst, src, 0) end function
-/// Implements sub r32 r32.
+/// Encode or manage sub r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function sub_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x2B, dst, src, 0) end function
-/// Implements xor r64 r64.
+/// Encode or manage xor r64 r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function xor_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x33, dst, src, 1) end function
-/// Implements xor r32 r32.
+/// Encode or manage xor r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function xor_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x33, dst, src, 0) end function
-/// Implements and r64 r64.
+/// Encode or manage and r64 r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function and_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x23, dst, src, 1) end function
-/// Implements and r32 r32.
+/// Encode or manage and r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function and_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x23, dst, src, 0) end function
-/// Implements or r64 r64.
+/// Encode or manage or r64 r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function or_r64_r64(asm, dst, src) return _emit_bin_rr(asm, 0x0B, dst, src, 1) end function
-/// Implements or r32 r32.
+/// Encode or manage or r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function or_r32_r32(asm, dst, src) return _emit_bin_rr(asm, 0x0B, dst, src, 0) end function
-/// Implements and r8 r8.
+/// Encode or manage and r8 r8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function and_r8_r8(asm, dst, src) return _emit_bin_rr(asm, 0x22, dst, src, 0) end function
-/// Implements or r8 r8.
+/// Encode or manage or r8 r8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
 function or_r8_r8(asm, dst, src) return _emit_bin_rr(asm, 0x0A, dst, src, 0) end function
 
-/// Implements cmp r64 r64.
+/// Encode or manage cmp r64 r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param left Left input value.
 /// @param right Right input value.
 function cmp_r64_r64(asm, left, right) return _emit_bin_rr(asm, 0x3B, left, right, 1) end function
-/// Implements cmp r32 r32.
+/// Encode or manage cmp r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param left Left input value.
 /// @param right Right input value.
 function cmp_r32_r32(asm, left, right) return _emit_bin_rr(asm, 0x3B, left, right, 0) end function
-/// Implements test r64 r64.
+/// Encode or manage test r64 r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param left Left input value.
 /// @param right Right input value.
 function test_r64_r64(asm, left, right) return _emit_bin_rr(asm, 0x85, left, right, 1) end function
-/// Implements test r32 r32.
+/// Encode or manage test r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param left Left input value.
 /// @param right Right input value.
 function test_r32_r32(asm, left, right) return _emit_bin_rr(asm, 0x85, left, right, 0) end function
 
-/// Implements test r8 r8.
+/// Encode or manage test r8 r8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param left Left input value.
 /// @param right Right input value.
@@ -2034,7 +2034,7 @@ function setcc_al(asm as struct, cc as string) returns struct
   return setcc_r8(asm, cc, "al")
 end function
 
-/// Implements movzx r32 r8.
+/// Encode or manage movzx r32 r8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src8 Value supplied for `src8`.
@@ -2050,59 +2050,59 @@ function movzx_r32_r8(asm, dst, src8)
   return asm
 end function
 
-/// Implements movzx eax al.
+/// Encode or manage movzx eax al in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @returns The resulting `struct` value.
 function movzx_eax_al(asm as struct) returns struct
   return movzx_r32_r8(asm, "eax", "al")
 end function
 
-/// Implements mov rbx rax.
+/// Encode or manage mov rbx rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_rbx_rax(asm) return mov_r64_r64(asm, "rbx", "rax") end function
-/// Implements mov rcx rbx.
+/// Encode or manage mov rcx rbx in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_rcx_rbx(asm) return mov_r64_r64(asm, "rcx", "rbx") end function
-/// Implements mov rdx rax.
+/// Encode or manage mov rdx rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_rdx_rax(asm) return mov_r64_r64(asm, "rdx", "rax") end function
-/// Implements mov r10 rax.
+/// Encode or manage mov r10 rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_r10_rax(asm) return mov_r64_r64(asm, "r10", "rax") end function
-/// Implements mov r11 rax.
+/// Encode or manage mov r11 rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_r11_rax(asm) return mov_r64_r64(asm, "r11", "rax") end function
-/// Implements mov rax r10.
+/// Encode or manage mov rax r10 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_rax_r10(asm) return mov_r64_r64(asm, "rax", "r10") end function
-/// Implements mov rax r11.
+/// Encode or manage mov rax r11 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_rax_r11(asm) return mov_r64_r64(asm, "rax", "r11") end function
 
 /// Updates add rax r10.
 /// @param asm Value supplied for `asm`.
 function add_rax_r10(asm) return add_r64_r64(asm, "rax", "r10") end function
-/// Implements sub rax r11.
+/// Encode or manage sub rax r11 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function sub_rax_r11(asm) return sub_r64_r64(asm, "rax", "r11") end function
 /// Updates add rax imm8.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function add_rax_imm8(asm, imm) return add_r64_imm8(asm, "rax", imm) end function
-/// Implements sub rax imm8.
+/// Encode or manage sub rax imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function sub_rax_imm8(asm, imm) return sub_r64_imm8(asm, "rax", imm) end function
-/// Implements and rax imm8.
+/// Encode or manage and rax imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function and_rax_imm8(asm, imm) return and_r64_imm8(asm, "rax", imm) end function
-/// Implements or rax imm8.
+/// Encode or manage or rax imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function or_rax_imm8(asm, imm) return or_r64_imm8(asm, "rax", imm) end function
 
-/// Runs emit shift imm8.
+/// Encode or manage emit shift imm8 in the native x64 assembler.
 /// @internal
 function _emit_shift_imm8(asm, subop, reg_name, imm, w)
   rd = _rid_any(reg_name)
@@ -2114,47 +2114,47 @@ function _emit_shift_imm8(asm, subop, reg_name, imm, w)
   return asm
 end function
 
-/// Implements shl r64 imm8.
+/// Encode or manage shl r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function shl_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 4, reg_name, imm, 1) end function
-/// Implements shr r64 imm8.
+/// Encode or manage shr r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function shr_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 5, reg_name, imm, 1) end function
-/// Implements sar r64 imm8.
+/// Encode or manage sar r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function sar_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 7, reg_name, imm, 1) end function
-/// Implements shl r32 imm8.
+/// Encode or manage shl r32 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function shl_r32_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 4, reg_name, imm, 0) end function
-/// Implements sar r32 imm8.
+/// Encode or manage sar r32 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function sar_r32_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 7, reg_name, imm, 0) end function
-/// Implements shr r32 imm8.
+/// Encode or manage shr r32 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function shr_r32_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 5, reg_name, imm, 0) end function
 
-/// Implements sar rax imm8.
+/// Encode or manage sar rax imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function sar_rax_imm8(asm, imm) return sar_r64_imm8(asm, "rax", imm) end function
-/// Implements shl rax imm8.
+/// Encode or manage shl rax imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function shl_rax_imm8(asm, imm) return shl_r64_imm8(asm, "rax", imm) end function
 
-/// Implements neg r64.
+/// Encode or manage neg r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function neg_r64(asm, reg_name)
@@ -2166,19 +2166,19 @@ function neg_r64(asm, reg_name)
   return asm
 end function
 
-/// Implements neg rax.
+/// Encode or manage neg rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function neg_rax(asm)
   return neg_r64(asm, "rax")
 end function
 
-/// Implements cmp rax r10.
+/// Encode or manage cmp rax r10 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function cmp_rax_r10(asm)
   return cmp_r64_r64(asm, "rax", "r10")
 end function
 
-/// Implements cmp rax imm8.
+/// Encode or manage cmp rax imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 /// @returns The resulting `struct` value.
@@ -2186,14 +2186,14 @@ function cmp_rax_imm8(asm as struct, imm as int) returns struct
   return cmp_r64_imm8(asm, "rax", imm)
 end function
 
-/// Implements cmp rax imm32.
+/// Encode or manage cmp rax imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function cmp_rax_imm32(asm, imm)
   return cmp_r64_imm(asm, "rax", imm)
 end function
 
-/// Implements test rax imm32.
+/// Encode or manage test rax imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function test_rax_imm32(asm, imm)
@@ -2205,13 +2205,13 @@ function test_rax_imm32(asm, imm)
   return asm
 end function
 
-/// Implements xor ecx ecx.
+/// Encode or manage xor ecx ecx in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function xor_ecx_ecx(asm)
   return xor_r32_r32(asm, "ecx", "ecx")
 end function
 
-/// Implements xor eax eax.
+/// Encode or manage xor eax eax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function xor_eax_eax(asm)
   return xor_r32_r32(asm, "eax", "eax")
@@ -2231,7 +2231,7 @@ function add_rcx_imm32(asm, imm)
   return add_r64_imm(asm, "rcx", imm)
 end function
 
-/// Implements sub rsp imm8.
+/// Encode or manage sub rsp imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function sub_rsp_imm8(asm, imm)
@@ -2247,7 +2247,7 @@ function add_rsp_imm8(asm, imm)
   return add_r64_imm(asm, "rsp", imm)
 end function
 
-/// Implements sub rsp imm32.
+/// Encode or manage sub rsp imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function sub_rsp_imm32(asm, imm)
@@ -2261,7 +2261,7 @@ function add_rsp_imm32(asm, imm)
   return add_rsp_imm8(asm, imm)
 end function
 
-/// Implements mov r64 membase disp.
+/// Encode or manage mov r64 membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -2279,7 +2279,7 @@ function mov_r64_membase_disp(asm, dst, base, disp)
   return asm
 end function
 
-/// Implements mov membase disp r64.
+/// Encode or manage mov membase disp r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2297,7 +2297,7 @@ function mov_membase_disp_r64(asm, base, disp, src)
   return asm
 end function
 
-/// Implements mov r32 membase disp.
+/// Encode or manage mov r32 membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -2315,7 +2315,7 @@ function mov_r32_membase_disp(asm, dst, base, disp)
   return asm
 end function
 
-/// Implements mov membase disp r32.
+/// Encode or manage mov membase disp r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2333,7 +2333,7 @@ function mov_membase_disp_r32(asm, base, disp, src)
   return asm
 end function
 
-/// Implements lock cmpxchg membase disp r32.
+/// Encode or manage lock cmpxchg membase disp r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2353,7 +2353,7 @@ function lock_cmpxchg_membase_disp_r32(asm, base, disp, src)
   return asm
 end function
 
-/// Implements lock cmpxchg membase disp r64.
+/// Encode or manage lock cmpxchg membase disp r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2375,7 +2375,7 @@ function lock_cmpxchg_membase_disp_r64(asm, base, disp, src)
   return asm
 end function
 
-/// Implements mov r8 membase disp.
+/// Encode or manage mov r8 membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -2395,7 +2395,7 @@ function mov_r8_membase_disp(asm, dst, base, disp)
   return asm
 end function
 
-/// Implements mov membase disp r8.
+/// Encode or manage mov membase disp r8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2415,7 +2415,7 @@ function mov_membase_disp_r8(asm, base, disp, src)
   return asm
 end function
 
-/// Implements mov membase disp imm32.
+/// Encode or manage mov membase disp imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2434,7 +2434,7 @@ function mov_membase_disp_imm32(asm, base, disp, imm, qword)
   return asm
 end function
 
-/// Implements mov membase disp imm8.
+/// Encode or manage mov membase disp imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2450,7 +2450,7 @@ function mov_membase_disp_imm8(asm, base, disp, imm)
   return asm
 end function
 
-/// Implements lea r64 membase disp.
+/// Encode or manage lea r64 membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -2468,21 +2468,21 @@ function lea_r64_membase_disp(asm, dst, base, disp)
   return asm
 end function
 
-/// Implements mov rax rsp disp8.
+/// Encode or manage mov rax rsp disp8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param disp Value supplied for `disp`.
 function mov_rax_rsp_disp8(asm, disp)
   return mov_r64_membase_disp(asm, "rax", "rsp", disp)
 end function
 
-/// Implements mov rsp disp8 rax.
+/// Encode or manage mov rsp disp8 rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param disp Value supplied for `disp`.
 function mov_rsp_disp8_rax(asm, disp)
   return mov_membase_disp_r64(asm, "rsp", disp, "rax")
 end function
 
-/// Implements mov rax rsp disp32.
+/// Encode or manage mov rax rsp disp32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param disp Value supplied for `disp`.
 /// @returns The resulting `struct` value.
@@ -2490,7 +2490,7 @@ function mov_rax_rsp_disp32(asm as struct, disp as int) returns struct
   return mov_r64_membase_disp(asm, "rax", "rsp", disp)
 end function
 
-/// Implements mov rsp disp32 rax.
+/// Encode or manage mov rsp disp32 rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param disp Value supplied for `disp`.
 /// @returns The resulting `struct` value.
@@ -2498,7 +2498,7 @@ function mov_rsp_disp32_rax(asm as struct, disp as int) returns struct
   return mov_membase_disp_r64(asm, "rsp", disp, "rax")
 end function
 
-/// Implements grp1 r8 imm8.
+/// Encode or manage grp1 r8 imm8 in the native x64 assembler.
 /// @internal
 function _grp1_r8_imm8(asm, subop, reg8, imm)
   r = _rid_any(reg8)
@@ -2511,17 +2511,17 @@ function _grp1_r8_imm8(asm, subop, reg8, imm)
   return asm
 end function
 
-/// Implements and r8 imm8.
+/// Encode or manage and r8 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg8 Value supplied for `reg8`.
 /// @param imm Value supplied for `imm`.
 function and_r8_imm8(asm, reg8, imm) return _grp1_r8_imm8(asm, 4, reg8, imm) end function
-/// Implements or r8 imm8.
+/// Encode or manage or r8 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg8 Value supplied for `reg8`.
 /// @param imm Value supplied for `imm`.
 function or_r8_imm8(asm, reg8, imm) return _grp1_r8_imm8(asm, 1, reg8, imm) end function
-/// Implements xor r8 imm8.
+/// Encode or manage xor r8 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg8 Value supplied for `reg8`.
 /// @param imm Value supplied for `imm`.
@@ -2531,13 +2531,13 @@ function xor_r8_imm8(asm, reg8, imm) return _grp1_r8_imm8(asm, 6, reg8, imm) end
 /// @param reg8 Value supplied for `reg8`.
 /// @param imm Value supplied for `imm`.
 function add_r8_imm8(asm, reg8, imm) return _grp1_r8_imm8(asm, 0, reg8, imm) end function
-/// Implements sub r8 imm8.
+/// Encode or manage sub r8 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg8 Value supplied for `reg8`.
 /// @param imm Value supplied for `imm`.
 function sub_r8_imm8(asm, reg8, imm) return _grp1_r8_imm8(asm, 5, reg8, imm) end function
 
-/// Implements cmp r8 imm8.
+/// Encode or manage cmp r8 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg8 Value supplied for `reg8`.
 /// @param imm Value supplied for `imm`.
@@ -2548,7 +2548,7 @@ function cmp_r8_imm8(asm, reg8, imm)
   return _grp1_r8_imm8(asm, 7, reg8, imm)
 end function
 
-/// Implements test r64 imm32.
+/// Encode or manage test r64 imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
@@ -2562,7 +2562,7 @@ function test_r64_imm32(asm, reg_name, imm)
   return asm
 end function
 
-/// Implements cmp r8 membase disp.
+/// Encode or manage cmp r8 membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg8 Value supplied for `reg8`.
 /// @param base Value supplied for `base`.
@@ -2582,7 +2582,7 @@ function cmp_r8_membase_disp(asm, reg8, base, disp)
   return asm
 end function
 
-/// Implements cmp membase disp imm8.
+/// Encode or manage cmp membase disp imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2598,7 +2598,7 @@ function cmp_membase_disp_imm8(asm, base, disp, imm)
   return asm
 end function
 
-/// Implements movzx r32 membase disp.
+/// Encode or manage movzx r32 membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst32 Value supplied for `dst32`.
 /// @param base Value supplied for `base`.
@@ -2618,7 +2618,7 @@ function movzx_r32_membase_disp(asm, dst32, base, disp)
   return asm
 end function
 
-/// Implements bsf r32 r32.
+/// Encode or manage bsf r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst32 Value supplied for `dst32`.
 /// @param src32 Value supplied for `src32`.
@@ -2637,7 +2637,7 @@ function bsf_r32_r32(asm, dst32, src32)
   return asm
 end function
 
-/// Implements bsr r32 r32.
+/// Encode or manage bsr r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst32 Value supplied for `dst32`.
 /// @param src32 Value supplied for `src32`.
@@ -2675,7 +2675,7 @@ function crc32_r64_membase_disp(asm, dst64, base, disp)
   return asm
 end function
 
-/// Implements crc32 r32 membase disp8.
+/// Encode or manage crc32 r32 membase disp8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst32 Value supplied for `dst32`.
 /// @param base Value supplied for `base`.
@@ -2695,7 +2695,7 @@ function crc32_r32_membase_disp8(asm, dst32, base, disp)
   return asm
 end function
 
-/// Implements inc r64.
+/// Encode or manage inc r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function inc_r64(asm, reg_name)
@@ -2707,7 +2707,7 @@ function inc_r64(asm, reg_name)
   return asm
 end function
 
-/// Implements dec r64.
+/// Encode or manage dec r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function dec_r64(asm, reg_name)
@@ -2719,7 +2719,7 @@ function dec_r64(asm, reg_name)
   return asm
 end function
 
-/// Implements inc r32.
+/// Encode or manage inc r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function inc_r32(asm, reg_name)
@@ -2731,7 +2731,7 @@ function inc_r32(asm, reg_name)
   return asm
 end function
 
-/// Implements dec r32.
+/// Encode or manage dec r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function dec_r32(asm, reg_name)
@@ -2743,7 +2743,7 @@ function dec_r32(asm, reg_name)
   return asm
 end function
 
-/// Implements inc membase disp qword.
+/// Encode or manage inc membase disp qword in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2757,7 +2757,7 @@ function inc_membase_disp_qword(asm, base, disp)
   return asm
 end function
 
-/// Implements dec membase disp qword.
+/// Encode or manage dec membase disp qword in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -2771,20 +2771,20 @@ function dec_membase_disp_qword(asm, base, disp)
   return asm
 end function
 
-/// Implements mov r9d imm32.
+/// Encode or manage mov r9d imm32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function mov_r9d_imm32(asm, imm)
   return mov_r32_imm32(asm, "r9d", imm)
 end function
 
-/// Implements mov r8d edx.
+/// Encode or manage mov r8d edx in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_r8d_edx(asm)
   return mov_r32_r32(asm, "r8d", "edx")
 end function
 
-/// Implements mov qword ptr rsp20 rax zero.
+/// Encode or manage mov qword ptr rsp20 rax zero in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function mov_qword_ptr_rsp20_rax_zero(asm)
   asm = xor_r32_r32(asm, "eax", "eax")
@@ -2792,7 +2792,7 @@ function mov_qword_ptr_rsp20_rax_zero(asm)
   return asm
 end function
 
-/// Implements mov eax rip dword.
+/// Encode or manage mov eax rip dword in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_eax_rip_dword(asm, label)
@@ -2804,7 +2804,7 @@ function mov_eax_rip_dword(asm, label)
   return asm
 end function
 
-/// Implements mov rip dword eax.
+/// Encode or manage mov rip dword eax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_rip_dword_eax(asm, label)
@@ -2816,7 +2816,7 @@ function mov_rip_dword_eax(asm, label)
   return asm
 end function
 
-/// Implements mov rax rip qword.
+/// Encode or manage mov rax rip qword in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_rax_rip_qword(asm, label)
@@ -2837,7 +2837,7 @@ function mov_rax_rip_qword(asm, label)
   return asm
 end function
 
-/// Implements mov rdx rip qword.
+/// Encode or manage mov rdx rip qword in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_rdx_rip_qword(asm, label)
@@ -2858,7 +2858,7 @@ function mov_rdx_rip_qword(asm, label)
   return asm
 end function
 
-/// Implements mov rip qword rax.
+/// Encode or manage mov rip qword rax in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_rip_qword_rax(asm, label)
@@ -2879,7 +2879,7 @@ function mov_rip_qword_rax(asm, label)
   return asm
 end function
 
-/// Implements mov rip qword rdx.
+/// Encode or manage mov rip qword rdx in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_rip_qword_rdx(asm, label)
@@ -2900,7 +2900,7 @@ function mov_rip_qword_rdx(asm, label)
   return asm
 end function
 
-/// Implements mov rip qword r11.
+/// Encode or manage mov rip qword r11 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_rip_qword_r11(asm, label)
@@ -2921,7 +2921,7 @@ function mov_rip_qword_r11(asm, label)
   return asm
 end function
 
-/// Implements mov rip qword r8.
+/// Encode or manage mov rip qword r8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_rip_qword_r8(asm, label)
@@ -2942,7 +2942,7 @@ function mov_rip_qword_r8(asm, label)
   return asm
 end function
 
-/// Implements mov rip qword r9.
+/// Encode or manage mov rip qword r9 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function mov_rip_qword_r9(asm, label)
@@ -2963,7 +2963,7 @@ function mov_rip_qword_r9(asm, label)
   return asm
 end function
 
-/// Implements mov r64 mem bis.
+/// Encode or manage mov r64 mem bis in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -2984,7 +2984,7 @@ function mov_r64_mem_bis(asm, dst, base, index_reg, scale, disp)
   return asm
 end function
 
-/// Implements mov mem bis r64.
+/// Encode or manage mov mem bis r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param index_reg Value supplied for `index_reg`.
@@ -3005,7 +3005,7 @@ function mov_mem_bis_r64(asm, base, index_reg, scale, disp, src)
   return asm
 end function
 
-/// Implements mov r32 mem bis.
+/// Encode or manage mov r32 mem bis in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -3026,7 +3026,7 @@ function mov_r32_mem_bis(asm, dst, base, index_reg, scale, disp)
   return asm
 end function
 
-/// Implements mov mem bis r32.
+/// Encode or manage mov mem bis r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param index_reg Value supplied for `index_reg`.
@@ -3047,7 +3047,7 @@ function mov_mem_bis_r32(asm, base, index_reg, scale, disp, src)
   return asm
 end function
 
-/// Implements lea r64 mem bis.
+/// Encode or manage lea r64 mem bis in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -3068,7 +3068,7 @@ function lea_r64_mem_bis(asm, dst, base, index_reg, scale, disp)
   return asm
 end function
 
-/// Implements shl r64 cl.
+/// Encode or manage shl r64 cl in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function shl_r64_cl(asm, reg_name)
@@ -3080,7 +3080,7 @@ function shl_r64_cl(asm, reg_name)
   return asm
 end function
 
-/// Implements shr r64 cl.
+/// Encode or manage shr r64 cl in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function shr_r64_cl(asm, reg_name)
@@ -3092,7 +3092,7 @@ function shr_r64_cl(asm, reg_name)
   return asm
 end function
 
-/// Implements sar r64 cl.
+/// Encode or manage sar r64 cl in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function sar_r64_cl(asm, reg_name)
@@ -3104,7 +3104,7 @@ function sar_r64_cl(asm, reg_name)
   return asm
 end function
 
-/// Implements imul r64 r64.
+/// Encode or manage imul r64 r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3119,7 +3119,7 @@ function imul_r64_r64(asm, dst, src)
   return asm
 end function
 
-/// Implements imul r64 r64 imm.
+/// Encode or manage imul r64 r64 imm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3141,7 +3141,7 @@ function imul_r64_r64_imm(asm, dst, src, imm)
   return asm
 end function
 
-/// Implements cqo.
+/// Encode or manage cqo in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function cqo(asm)
   asm = _emit_rex(asm, 1, 0, 0, 0, false)
@@ -3149,7 +3149,7 @@ function cqo(asm)
   return asm
 end function
 
-/// Implements idiv r64.
+/// Encode or manage idiv r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function idiv_r64(asm, reg_name)
@@ -3161,7 +3161,7 @@ function idiv_r64(asm, reg_name)
   return asm
 end function
 
-/// Implements div r64.
+/// Encode or manage div r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
 function div_r64(asm, reg_name)
@@ -3173,7 +3173,7 @@ function div_r64(asm, reg_name)
   return asm
 end function
 
-/// Implements rep movsb.
+/// Encode or manage rep movsb in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function rep_movsb(asm)
   asm = _emit8(asm, 0xF3)
@@ -3181,7 +3181,7 @@ function rep_movsb(asm)
   return asm
 end function
 
-/// Implements rep movsq.
+/// Encode or manage rep movsq in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function rep_movsq(asm)
   asm = _emit8(asm, 0xF3)
@@ -3190,7 +3190,7 @@ function rep_movsq(asm)
   return asm
 end function
 
-/// Implements rep stosb.
+/// Encode or manage rep stosb in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function rep_stosb(asm)
   asm = _emit8(asm, 0xF3)
@@ -3198,7 +3198,7 @@ function rep_stosb(asm)
   return asm
 end function
 
-/// Implements rep stosq.
+/// Encode or manage rep stosq in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function rep_stosq(asm)
   asm = _emit8(asm, 0xF3)
@@ -3207,7 +3207,7 @@ function rep_stosq(asm)
   return asm
 end function
 
-/// Implements repe cmpsb.
+/// Encode or manage repe cmpsb in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function repe_cmpsb(asm)
   asm = _emit8(asm, 0xF3)
@@ -3215,7 +3215,7 @@ function repe_cmpsb(asm)
   return asm
 end function
 
-/// Implements cpuid.
+/// Encode or manage cpuid in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function cpuid(asm)
   asm = _emit8(asm, 0x0F)
@@ -3223,7 +3223,7 @@ function cpuid(asm)
   return asm
 end function
 
-/// Implements xgetbv.
+/// Encode or manage xgetbv in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function xgetbv(asm)
   asm = _emit8(asm, 0x0F)
@@ -3232,7 +3232,7 @@ function xgetbv(asm)
   return asm
 end function
 
-/// Runs emit sse rr.
+/// Encode or manage emit sse rr in the native x64 assembler.
 /// @internal
 function _emit_sse_rr(asm, prefix1, prefix2, opcode, dst_xmm, src_xmm)
   d = _xmm_id(dst_xmm)
@@ -3247,7 +3247,7 @@ function _emit_sse_rr(asm, prefix1, prefix2, opcode, dst_xmm, src_xmm)
   return asm
 end function
 
-/// Implements movsd xmm xmm.
+/// Encode or manage movsd xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param src_xmm Value supplied for `src_xmm`.
@@ -3263,7 +3263,7 @@ function addsd_xmm_xmm(asm, dst_xmm, src_xmm)
   return _emit_sse_rr(asm, 0xF2, -1, 0x58, dst_xmm, src_xmm)
 end function
 
-/// Implements subsd xmm xmm.
+/// Encode or manage subsd xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param src_xmm Value supplied for `src_xmm`.
@@ -3271,7 +3271,7 @@ function subsd_xmm_xmm(asm, dst_xmm, src_xmm)
   return _emit_sse_rr(asm, 0xF2, -1, 0x5C, dst_xmm, src_xmm)
 end function
 
-/// Implements mulsd xmm xmm.
+/// Encode or manage mulsd xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param src_xmm Value supplied for `src_xmm`.
@@ -3279,7 +3279,7 @@ function mulsd_xmm_xmm(asm, dst_xmm, src_xmm)
   return _emit_sse_rr(asm, 0xF2, -1, 0x59, dst_xmm, src_xmm)
 end function
 
-/// Implements divsd xmm xmm.
+/// Encode or manage divsd xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param src_xmm Value supplied for `src_xmm`.
@@ -3287,7 +3287,7 @@ function divsd_xmm_xmm(asm, dst_xmm, src_xmm)
   return _emit_sse_rr(asm, 0xF2, -1, 0x5E, dst_xmm, src_xmm)
 end function
 
-/// Implements ucomisd xmm xmm.
+/// Encode or manage ucomisd xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param left_xmm Value supplied for `left_xmm`.
 /// @param right_xmm Value supplied for `right_xmm`.
@@ -3296,7 +3296,7 @@ function ucomisd_xmm_xmm(asm as struct, left_xmm as string, right_xmm as string)
   return _emit_sse_rr(asm, 0x66, -1, 0x2E, left_xmm, right_xmm)
 end function
 
-/// Implements xorpd xmm xmm.
+/// Encode or manage xorpd xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param src_xmm Value supplied for `src_xmm`.
@@ -3305,7 +3305,7 @@ function xorpd_xmm_xmm(asm as struct, dst_xmm as string, src_xmm as string) retu
   return _emit_sse_rr(asm, 0x66, -1, 0x57, dst_xmm, src_xmm)
 end function
 
-/// Implements movapd xmm xmm.
+/// Encode or manage movapd xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param src_xmm Value supplied for `src_xmm`.
@@ -3314,7 +3314,7 @@ function movapd_xmm_xmm(asm, dst_xmm, src_xmm)
   return _emit_sse_rr(asm, 0x66, -1, 0x28, dst_xmm, src_xmm)
 end function
 
-/// Implements movsd xmm membase disp.
+/// Encode or manage movsd xmm membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param base Value supplied for `base`.
@@ -3332,7 +3332,7 @@ function movsd_xmm_membase_disp(asm, dst_xmm, base, disp)
   return asm
 end function
 
-/// Implements movsd membase disp xmm.
+/// Encode or manage movsd membase disp xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -3350,7 +3350,7 @@ function movsd_membase_disp_xmm(asm, base, disp, src_xmm)
   return asm
 end function
 
-/// Implements cvtsi2sd xmm r64.
+/// Encode or manage cvtsi2sd xmm r64 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param src_reg Value supplied for `src_reg`.
@@ -3366,7 +3366,7 @@ function cvtsi2sd_xmm_r64(asm, dst_xmm, src_reg)
   return asm
 end function
 
-/// Implements cvttsd2si r64 xmm.
+/// Encode or manage cvttsd2si r64 xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_reg Value supplied for `dst_reg`.
 /// @param src_xmm Value supplied for `src_xmm`.
@@ -3382,7 +3382,7 @@ function cvttsd2si_r64_xmm(asm, dst_reg, src_xmm)
   return asm
 end function
 
-/// Implements roundsd xmm xmm imm8.
+/// Encode or manage roundsd xmm xmm imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst_xmm Value supplied for `dst_xmm`.
 /// @param src_xmm Value supplied for `src_xmm`.
@@ -3433,7 +3433,7 @@ function movq_r64_xmm(asm, dst_reg, src_xmm)
   return asm
 end function
 
-/// Implements movd r32 xmm.
+/// Encode or manage movd r32 xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3450,7 +3450,7 @@ function movd_r32_xmm(asm, dst, src)
   return asm
 end function
 
-/// Implements movdqu xmm membase disp.
+/// Encode or manage movdqu xmm membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -3468,7 +3468,7 @@ function movdqu_xmm_membase_disp(asm, dst, base, disp)
   return asm
 end function
 
-/// Implements movdqu membase disp xmm.
+/// Encode or manage movdqu membase disp xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -3486,7 +3486,7 @@ function movdqu_membase_disp_xmm(asm, base, disp, src)
   return asm
 end function
 
-/// Implements pxor xmm xmm.
+/// Encode or manage pxor xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3494,7 +3494,7 @@ function pxor_xmm_xmm(asm, dst, src)
   return _emit_sse_rr(asm, 0x66, -1, 0xEF, dst, src)
 end function
 
-/// Implements pcmpeqb xmm xmm.
+/// Encode or manage pcmpeqb xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3502,7 +3502,7 @@ function pcmpeqb_xmm_xmm(asm, dst, src)
   return _emit_sse_rr(asm, 0x66, -1, 0x74, dst, src)
 end function
 
-/// Implements pcmpeqw xmm xmm.
+/// Encode or manage pcmpeqw xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3510,7 +3510,7 @@ function pcmpeqw_xmm_xmm(asm, dst, src)
   return _emit_sse_rr(asm, 0x66, -1, 0x75, dst, src)
 end function
 
-/// Implements pmovmskb r32 xmm.
+/// Encode or manage pmovmskb r32 xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst32 Value supplied for `dst32`.
 /// @param src Value supplied for `src`.
@@ -3527,7 +3527,7 @@ function pmovmskb_r32_xmm(asm, dst32, src)
   return asm
 end function
 
-/// Implements punpcklqdq xmm xmm.
+/// Encode or manage punpcklqdq xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3535,7 +3535,7 @@ function punpcklqdq_xmm_xmm(asm, dst, src)
   return _emit_sse_rr(asm, 0x66, -1, 0x6C, dst, src)
 end function
 
-/// Implements cvtsd2ss xmm xmm.
+/// Encode or manage cvtsd2ss xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3551,7 +3551,7 @@ function cvtsd2ss_xmm_xmm(asm, dst, src)
   return asm
 end function
 
-/// Implements cvtss2sd xmm xmm.
+/// Encode or manage cvtss2sd xmm xmm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src Value supplied for `src`.
@@ -3567,7 +3567,7 @@ function cvtss2sd_xmm_xmm(asm, dst, src)
   return asm
 end function
 
-/// Implements vmovdqu ymm membase disp.
+/// Encode or manage vmovdqu ymm membase disp in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param base Value supplied for `base`.
@@ -3583,7 +3583,7 @@ function vmovdqu_ymm_membase_disp(asm, dst, base, disp)
   return asm
 end function
 
-/// Implements vmovdqu membase disp ymm.
+/// Encode or manage vmovdqu membase disp ymm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param base Value supplied for `base`.
 /// @param disp Value supplied for `disp`.
@@ -3599,7 +3599,7 @@ function vmovdqu_membase_disp_ymm(asm, base, disp, src)
   return asm
 end function
 
-/// Implements vpcmpeqb ymm ymm ymm.
+/// Encode or manage vpcmpeqb ymm ymm ymm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src1 Value supplied for `src1`.
@@ -3615,7 +3615,7 @@ function vpcmpeqb_ymm_ymm_ymm(asm, dst, src1, src2)
   return asm
 end function
 
-/// Implements vpcmpeqw ymm ymm ymm.
+/// Encode or manage vpcmpeqw ymm ymm ymm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src1 Value supplied for `src1`.
@@ -3631,7 +3631,7 @@ function vpcmpeqw_ymm_ymm_ymm(asm, dst, src1, src2)
   return asm
 end function
 
-/// Implements vpmovmskb r32 ymm.
+/// Encode or manage vpmovmskb r32 ymm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst32 Value supplied for `dst32`.
 /// @param src Value supplied for `src`.
@@ -3646,7 +3646,7 @@ function vpmovmskb_r32_ymm(asm, dst32, src)
   return asm
 end function
 
-/// Implements vpxor ymm ymm ymm.
+/// Encode or manage vpxor ymm ymm ymm in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param dst Value supplied for `dst`.
 /// @param src1 Value supplied for `src1`.
@@ -3662,7 +3662,7 @@ function vpxor_ymm_ymm_ymm(asm, dst, src1, src2)
   return asm
 end function
 
-/// Implements vzeroupper.
+/// Encode or manage vzeroupper in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function vzeroupper(asm)
   asm = _emit8(asm, 0xC5)
@@ -3671,7 +3671,7 @@ function vzeroupper(asm)
   return asm
 end function
 
-/// Implements peephole trim tail.
+/// Encode or manage peephole trim tail in the native x64 assembler.
 /// @internal
 function _peephole_trim_tail(asm, n)
   if typeof(n) != "int" or n <= 0 then return asm end if
@@ -3682,7 +3682,7 @@ function _peephole_trim_tail(asm, n)
   return asm
 end function
 
-/// Implements enable listing.
+/// Encode or manage enable listing in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param path Path to operate on.
 /// @param show_addr Value supplied for `show_addr`.
@@ -3692,13 +3692,13 @@ function enable_listing(asm, path, show_addr, show_bytes, show_text)
   return asm
 end function
 
-/// Implements disable listing.
+/// Encode or manage disable listing in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function disable_listing(asm)
   return asm
 end function
 
-/// Implements gpr.
+/// Encode or manage gpr in the native x64 assembler.
 /// @param name Name of the requested item.
 function gpr(name)
   if _is_r8_name(name) then
@@ -3715,7 +3715,7 @@ function gpr(name)
   return error(1, "Unknown register: " + name)
 end function
 
-/// Implements rex.
+/// Encode or manage rex in the native x64 assembler.
 /// @internal
 function _rex(w, r, x, b, force)
   if (w | r | x | b) == 0 and force == false then
@@ -3724,37 +3724,37 @@ function _rex(w, r, x, b, force)
   return _emit_bytes_u8(0x40 |((w & 1) << 3) |((r & 1) << 2) |((x & 1) << 1) |(b & 1))
 end function
 
-/// Implements modrm.
+/// Encode or manage modrm in the native x64 assembler.
 /// @internal
 function _modrm(mod, reg, rm)
   return _emit_bytes_u8(_modrm_byte(mod, reg, rm))
 end function
 
-/// Implements sib.
+/// Encode or manage sib in the native x64 assembler.
 /// @internal
 function _sib(scale, index, base)
   return _emit_bytes_u8(_sib_byte(scale, index, base))
 end function
 
-/// Implements jcc mnemonic.
+/// Encode or manage jcc mnemonic in the native x64 assembler.
 /// @internal
 function _jcc_mnemonic(cc)
   return cc
 end function
 
-/// Implements fmt disp.
+/// Encode or manage fmt disp in the native x64 assembler.
 /// @internal
 function _fmt_disp(disp)
   return ""
 end function
 
-/// Implements fmt mem.
+/// Encode or manage fmt mem in the native x64 assembler.
 /// @internal
 function _fmt_mem(base, disp)
   return ""
 end function
 
-/// Implements fmt mem sib.
+/// Encode or manage fmt mem sib in the native x64 assembler.
 /// @internal
 function _fmt_mem_sib(base, index_reg, scale, disp)
   return ""
@@ -3773,7 +3773,7 @@ function write_listing(asm, path)
   return asm
 end function
 
-/// Runs emit placeholder.
+/// Encode or manage emit placeholder in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param text Text to process.
 function emit_placeholder(asm, text)

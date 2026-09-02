@@ -23,7 +23,7 @@ Represents set member.
 _filename
 ```
 
-Stores the filename member of `SetMember`.
+Filename associated with `SetMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L471)
@@ -35,7 +35,7 @@ Stores the filename member of `SetMember`.
 _pos
 ```
 
-Stores the pos member of `SetMember`.
+Pos associated with `SetMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L469)
@@ -47,7 +47,7 @@ Stores the pos member of `SetMember`.
 expr
 ```
 
-Stores the expr member of `SetMember`.
+Expr associated with `SetMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L467)
@@ -59,7 +59,7 @@ Stores the expr member of `SetMember`.
 field
 ```
 
-Stores the field member of `SetMember`.
+Field associated with `SetMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L465)
@@ -71,7 +71,7 @@ Stores the field member of `SetMember`.
 node_kind
 ```
 
-Stores the node kind member of `SetMember`.
+Node kind associated with `SetMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L461)
@@ -83,7 +83,7 @@ Stores the node kind member of `SetMember`.
 obj
 ```
 
-Stores the obj member of `SetMember`.
+Obj associated with `SetMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L463)

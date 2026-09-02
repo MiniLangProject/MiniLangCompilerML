@@ -23,7 +23,7 @@ Partially filled final chunk with explicit logical length.
 cap
 ```
 
-Stores the cap member of `ArrayChunkTail`.
+Allocated capacity of `ArrayChunkTail`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L79)
@@ -35,7 +35,7 @@ Stores the cap member of `ArrayChunkTail`.
 data
 ```
 
-Stores the data member of `ArrayChunkTail`.
+Backing data owned by `ArrayChunkTail`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L75)
@@ -47,7 +47,7 @@ Stores the data member of `ArrayChunkTail`.
 used
 ```
 
-Stores the used member of `ArrayChunkTail`.
+Number of populated entries in `ArrayChunkTail`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L77)

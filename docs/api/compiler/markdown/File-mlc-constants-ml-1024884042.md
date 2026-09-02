@@ -17,7 +17,7 @@ Reachable from entry: **yes**
 const CALLSTAT_STRUCT_ID = 3758096386
 ```
 
-Stores the callstat struct id.
+Track callstat struct id.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L91)
@@ -29,7 +29,7 @@ Stores the callstat struct id.
 const ERR_ARRAY_INIT_SIZE = 1307
 ```
 
-Stores the err array init size.
+Track err array init size.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L118)
@@ -41,7 +41,7 @@ Stores the err array init size.
 const ERR_CALL_NOT_CALLABLE = 1100
 ```
 
-Stores the err call not callable.
+Track err call not callable.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L98)
@@ -65,7 +65,7 @@ Runtime error codes.
 const ERR_EXTERN_RET_WSTR_CONVERSION = 1002
 ```
 
-Stores the err extern ret wstr conversion.
+Track err extern ret wstr conversion.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L96)
@@ -77,7 +77,7 @@ Stores the err extern ret wstr conversion.
 const ERR_INDEX_OOB = 1300
 ```
 
-Stores the err index oob.
+Track err index oob.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L104)
@@ -89,7 +89,7 @@ Stores the err index oob.
 const ERR_INDEX_TARGET_TYPE = 1302
 ```
 
-Stores the err index target type.
+Track err index target type.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L108)
@@ -101,7 +101,7 @@ Stores the err index target type.
 const ERR_INDEX_TYPE = 1301
 ```
 
-Stores the err index type.
+Track err index type.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L106)
@@ -113,7 +113,7 @@ Stores the err index type.
 const ERR_MEMBER_NOT_FOUND = 1306
 ```
 
-Stores the err member not found.
+Track err member not found.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L116)
@@ -125,7 +125,7 @@ Stores the err member not found.
 const ERR_MEMBER_TARGET_TYPE = 1305
 ```
 
-Stores the err member target type.
+Track err member target type.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L114)
@@ -137,7 +137,7 @@ Stores the err member target type.
 const ERR_METHOD_NOT_FOUND = 1101
 ```
 
-Stores the err method not found.
+Track err method not found.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L100)
@@ -149,7 +149,7 @@ Stores the err method not found.
 const ERR_MODULE_INIT_CYCLE = 1400
 ```
 
-Stores the err module init cycle.
+Track err module init cycle.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L122)
@@ -161,7 +161,7 @@ Stores the err module init cycle.
 const ERR_PRINT_UNSUPPORTED = 1304
 ```
 
-Stores the err print unsupported.
+Track err print unsupported.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L112)
@@ -173,7 +173,7 @@ Stores the err print unsupported.
 const ERR_STRINGIFY_UNSUPPORTED = 1303
 ```
 
-Stores the err stringify unsupported.
+Track err stringify unsupported.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L110)
@@ -185,7 +185,7 @@ Stores the err stringify unsupported.
 const ERR_SYNCHRONIZED_VALUE = 1500
 ```
 
-Stores the err synchronized value.
+Track err synchronized value.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L124)
@@ -197,7 +197,7 @@ Stores the err synchronized value.
 const ERR_TYPE_GUARD = 1308
 ```
 
-Stores the err type guard.
+Track err type guard.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L120)
@@ -209,7 +209,7 @@ Stores the err type guard.
 const ERR_VOID_OP = 1200
 ```
 
-Stores the err void op.
+Track err void op.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L102)
@@ -233,7 +233,7 @@ Builtin struct ids.
 const GC_BLOCK_FLAGS_MASK = 7
 ```
 
-Stores the gc block flags mask.
+Track gc block flags mask.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L79)
@@ -245,7 +245,7 @@ Stores the gc block flags mask.
 const GC_BLOCK_FREE_BIT = 1
 ```
 
-Stores the gc block free bit.
+Track gc block free bit.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L77)
@@ -257,7 +257,7 @@ Stores the gc block free bit.
 const GC_BLOCK_SIZE_MASK = ~GC_BLOCK_FLAGS_MASK
 ```
 
-Stores the gc block size mask.
+Track gc block size mask.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L81)
@@ -281,7 +281,7 @@ Gc header.
 const GC_OFF_BLOCK_SIZE = -8
 ```
 
-Stores the gc off block size.
+Track gc off block size.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L69)
@@ -293,7 +293,7 @@ Stores the gc off block size.
 const GC_OFF_MARK = 0
 ```
 
-Stores the gc off mark.
+Track gc off mark.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L71)
@@ -305,7 +305,7 @@ Stores the gc off mark.
 const GC_OFF_NEXT_FREE = 8
 ```
 
-Stores the gc off next free.
+Track gc off next free.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L75)
@@ -317,7 +317,7 @@ Stores the gc off next free.
 const GC_OFF_REFCOUNT = GC_OFF_MARK
 ```
 
-Stores the gc off refcount.
+Track gc off refcount.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L73)
@@ -329,7 +329,7 @@ Stores the gc off refcount.
 const INBUF_SIZE = 4096
 ```
 
-Stores the inbuf size.
+Track inbuf size.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L86)
@@ -341,7 +341,7 @@ Stores the inbuf size.
 const OBJ_ARRAY = 2
 ```
 
-Stores the obj array.
+Track obj array.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L40)
@@ -353,7 +353,7 @@ Stores the obj array.
 const OBJ_ARRAY_IMM = 13
 ```
 
-Stores the obj array imm.
+Track obj array imm.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L62)
@@ -365,7 +365,7 @@ Stores the obj array imm.
 const OBJ_BOX = 9
 ```
 
-Stores the obj box.
+Track obj box.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L54)
@@ -377,7 +377,7 @@ Stores the obj box.
 const OBJ_BUILTIN = 7
 ```
 
-Stores the obj builtin.
+Track obj builtin.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L50)
@@ -389,7 +389,7 @@ Stores the obj builtin.
 const OBJ_BYTES = 10
 ```
 
-Stores the obj bytes.
+Track obj bytes.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L56)
@@ -401,7 +401,7 @@ Stores the obj bytes.
 const OBJ_CLOSURE = 11
 ```
 
-Stores the obj closure.
+Track obj closure.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L58)
@@ -413,7 +413,7 @@ Stores the obj closure.
 const OBJ_ENV = 8
 ```
 
-Stores the obj env.
+Track obj env.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L52)
@@ -425,7 +425,7 @@ Stores the obj env.
 const OBJ_ENV_LOCAL = 12
 ```
 
-Stores the obj env local.
+Track obj env local.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L60)
@@ -437,7 +437,7 @@ Stores the obj env local.
 const OBJ_FLOAT = 4
 ```
 
-Stores the obj float.
+Track obj float.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L44)
@@ -461,7 +461,7 @@ Heap object ids.
 const OBJ_FUNCTION = 3
 ```
 
-Stores the obj function.
+Track obj function.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L42)
@@ -473,7 +473,7 @@ Stores the obj function.
 const OBJ_STRING = 1
 ```
 
-Stores the obj string.
+Track obj string.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L38)
@@ -485,7 +485,7 @@ Stores the obj string.
 const OBJ_STRUCT = 5
 ```
 
-Stores the obj struct.
+Track obj struct.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L46)
@@ -497,7 +497,7 @@ Stores the obj struct.
 const OBJ_STRUCTTYPE = 6
 ```
 
-Stores the obj structtype.
+Track obj structtype.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L48)
@@ -509,7 +509,7 @@ Stores the obj structtype.
 const OBJ_THREAD = 14
 ```
 
-Stores the obj thread.
+Track obj thread.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L64)
@@ -521,7 +521,7 @@ Stores the obj thread.
 const TAG_BOOL = 2
 ```
 
-Stores the tag bool.
+Track tag bool.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L27)
@@ -533,7 +533,7 @@ Stores the tag bool.
 const TAG_ENUM = 4
 ```
 
-Stores the tag enum.
+Track tag enum.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L31)
@@ -545,7 +545,7 @@ Stores the tag enum.
 const TAG_FLOAT = 5
 ```
 
-Stores the tag float.
+Track tag float.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L33)
@@ -557,7 +557,7 @@ Stores the tag float.
 const TAG_INT = 1
 ```
 
-Stores the tag int.
+Track tag int.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L25)
@@ -581,7 +581,7 @@ Tagged values.
 const TAG_VOID = 3
 ```
 
-Stores the tag void.
+Track tag void.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/constants.ml#L29)

@@ -23,7 +23,7 @@ Represents const decl.
 _filename
 ```
 
-Stores the filename member of `ConstDecl`.
+Filename associated with `ConstDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L501)
@@ -35,7 +35,7 @@ Stores the filename member of `ConstDecl`.
 _pos
 ```
 
-Stores the pos member of `ConstDecl`.
+Pos associated with `ConstDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L499)
@@ -47,7 +47,7 @@ Stores the pos member of `ConstDecl`.
 expr
 ```
 
-Stores the expr member of `ConstDecl`.
+Expr associated with `ConstDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L497)
@@ -59,7 +59,7 @@ Stores the expr member of `ConstDecl`.
 name
 ```
 
-Stores the name member of `ConstDecl`.
+Name associated with `ConstDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L495)
@@ -71,7 +71,7 @@ Stores the name member of `ConstDecl`.
 node_kind
 ```
 
-Stores the node kind member of `ConstDecl`.
+Node kind associated with `ConstDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L493)

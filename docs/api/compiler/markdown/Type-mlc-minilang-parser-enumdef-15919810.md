@@ -23,7 +23,7 @@ Represents enum def.
 _filename
 ```
 
-Stores the filename member of `EnumDef`.
+Filename associated with `EnumDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L841)
@@ -35,7 +35,7 @@ Stores the filename member of `EnumDef`.
 _pos
 ```
 
-Stores the pos member of `EnumDef`.
+Pos associated with `EnumDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L839)
@@ -47,7 +47,7 @@ Stores the pos member of `EnumDef`.
 name
 ```
 
-Stores the name member of `EnumDef`.
+Name associated with `EnumDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L833)
@@ -59,7 +59,7 @@ Stores the name member of `EnumDef`.
 node_kind
 ```
 
-Stores the node kind member of `EnumDef`.
+Node kind associated with `EnumDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L831)
@@ -71,7 +71,7 @@ Stores the node kind member of `EnumDef`.
 values
 ```
 
-Stores the values member of `EnumDef`.
+Values associated with `EnumDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L837)
@@ -83,7 +83,7 @@ Stores the values member of `EnumDef`.
 variants
 ```
 
-Stores the variants member of `EnumDef`.
+Variants associated with `EnumDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L835)

@@ -23,7 +23,7 @@ Represents mlo patch.
 kind
 ```
 
-Stores the kind member of `MloPatch`.
+Kind associated with `MloPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L283)
@@ -35,7 +35,7 @@ Stores the kind member of `MloPatch`.
 offset
 ```
 
-Stores the offset member of `MloPatch`.
+Offset associated with `MloPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L279)
@@ -47,7 +47,7 @@ Stores the offset member of `MloPatch`.
 target
 ```
 
-Stores the target member of `MloPatch`.
+Target associated with `MloPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L281)

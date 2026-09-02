@@ -23,7 +23,7 @@ Represents call.
 _filename
 ```
 
-Stores the filename member of `Call`.
+Filename associated with `Call`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L273)
@@ -35,7 +35,7 @@ Stores the filename member of `Call`.
 _pos
 ```
 
-Stores the pos member of `Call`.
+Pos associated with `Call`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L271)
@@ -47,7 +47,7 @@ Stores the pos member of `Call`.
 arg_names
 ```
 
-Stores the arg names member of `Call`.
+Arg names associated with `Call`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L269)
@@ -59,7 +59,7 @@ Stores the arg names member of `Call`.
 args
 ```
 
-Stores the args member of `Call`.
+Args associated with `Call`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L267)
@@ -71,7 +71,7 @@ Stores the args member of `Call`.
 callee
 ```
 
-Stores the callee member of `Call`.
+Callee associated with `Call`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L265)
@@ -83,7 +83,7 @@ Stores the callee member of `Call`.
 node_kind
 ```
 
-Stores the node kind member of `Call`.
+Node kind associated with `Call`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L263)

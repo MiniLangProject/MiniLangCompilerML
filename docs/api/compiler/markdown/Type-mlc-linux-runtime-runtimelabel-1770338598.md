@@ -23,7 +23,7 @@ Represents runtime label.
 name
 ```
 
-Stores the name member of `RuntimeLabel`.
+Name associated with `RuntimeLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L29)
@@ -35,7 +35,7 @@ Stores the name member of `RuntimeLabel`.
 offset
 ```
 
-Stores the offset member of `RuntimeLabel`.
+Offset associated with `RuntimeLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L31)

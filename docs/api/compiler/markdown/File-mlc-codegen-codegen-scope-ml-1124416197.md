@@ -58,7 +58,7 @@ Updates append unique.
 inline function _arr_has(arr, value)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -75,7 +75,7 @@ Implements inline.
 function _check_reserved_ident(state, name, decl_node)
 ```
 
-Implements check reserved ident.
+Manage check reserved ident in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -93,7 +93,7 @@ Implements check reserved ident.
 function _coerce_name(name)
 ```
 
-Implements coerce name.
+Manage coerce name in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -109,7 +109,7 @@ Implements coerce name.
 function _decl_key(node, name)
 ```
 
-Implements decl key.
+Manage decl key in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -126,7 +126,7 @@ Implements decl key.
 inline function _decl_node_key(node)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -142,7 +142,7 @@ Implements inline.
 function _declare_in_current_scope(state, b)
 ```
 
-Implements declare in current scope.
+Manage declare in current scope in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -159,7 +159,7 @@ Implements declare in current scope.
 function _drop_last_frame(arr)
 ```
 
-Implements drop last frame.
+Manage drop last frame in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -175,7 +175,7 @@ Implements drop last frame.
 function _emit_make_error_const(state, code, message)
 ```
 
-Runs emit make error const.
+Manage emit make error const in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -193,7 +193,7 @@ Runs emit make error const.
 function _emit_module_init_dependency_error(state, target_name, target_file, target_state, node)
 ```
 
-Runs emit module init dependency error.
+Manage emit module init dependency error in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -213,7 +213,7 @@ Runs emit module init dependency error.
 inline function _frame_last_binding(frame, name)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -230,7 +230,7 @@ Implements inline.
 inline function _func_global_lookup(arr, name)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -264,7 +264,7 @@ Reports whether has data label.
 inline function _heap_cfg_get_any(state, key)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -281,7 +281,7 @@ Implements inline.
 inline function _heap_cfg_get_bool(state, key, defaultv)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -299,7 +299,7 @@ Implements inline.
 inline function _is_ascii_alpha(ch)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -331,7 +331,7 @@ Reports whether a character is an ASCII digit.
 inline function _is_reserved_identifier(state, name)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -348,7 +348,7 @@ Implements inline.
 inline function _map_int_get(arr, key, defaultv)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -366,7 +366,7 @@ Implements inline.
 function _maybe_emit_module_init_guard_for_global_read(state, binding, target_name, node)
 ```
 
-Implements maybe emit module init guard for global read.
+Manage maybe emit module init guard for global read in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -385,7 +385,7 @@ Implements maybe emit module init guard for global read.
 inline function _name_has_dot(name)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -401,7 +401,7 @@ Implements inline.
 function _next_binding_id(state)
 ```
 
-Implements next binding id.
+Manage next binding id in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -417,7 +417,7 @@ Implements next binding id.
 function _sanitize_ident(name)
 ```
 
-Implements sanitize ident.
+Manage sanitize ident in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -433,7 +433,7 @@ Implements sanitize ident.
 inline function _scope_depth(state)
 ```
 
-Implements inline.
+Manage inline in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -449,7 +449,7 @@ Implements inline.
 function accept(s)
 ```
 
-Implements accept.
+Manage accept in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -465,7 +465,7 @@ Implements accept.
 function analysis_layout_function_locals(state, base_offset)
 ```
 
-Implements analysis layout function locals.
+Manage analysis layout function locals in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -482,7 +482,7 @@ Implements analysis layout function locals.
 function analysis_reset_function(state)
 ```
 
-Implements analysis reset function.
+Manage analysis reset function in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -498,7 +498,7 @@ Implements analysis reset function.
 function bind_param(state, name, offset, decl_node)
 ```
 
-Implements bind param.
+Manage bind param in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -518,7 +518,7 @@ Implements bind param.
 function cg_declare_binding(state, name, kind, is_const, const_expr, const_value_py, decl_node)
 ```
 
-Implements cg declare binding.
+Manage cg declare binding in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -540,7 +540,7 @@ Implements cg declare binding.
 function cg_next_binding_id(state)
 ```
 
-Implements cg next binding id.
+Manage cg next binding id in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -556,7 +556,7 @@ Implements cg next binding id.
 function cg_precompute_const_binding_value(state, name, pyv)
 ```
 
-Implements cg precompute const binding value.
+Manage cg precompute const binding value in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -591,7 +591,7 @@ Resolve the nearest visible binding through the per-scope indexes. A complete in
 function cg_resolve_binding_for_write(state, name)
 ```
 
-Implements cg resolve binding for write.
+Manage cg resolve binding for write in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -608,7 +608,7 @@ Implements cg resolve binding for write.
 function cg_scope_depth(state)
 ```
 
-Implements cg scope depth.
+Manage cg scope depth in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -624,7 +624,7 @@ Implements cg scope depth.
 function cg_scope_enter(state)
 ```
 
-Implements cg scope enter.
+Manage cg scope enter in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -640,7 +640,7 @@ Implements cg scope enter.
 function cg_scope_leave(state, emit_cleanup)
 ```
 
-Implements cg scope leave.
+Manage cg scope leave in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -657,7 +657,7 @@ Implements cg scope leave.
 function cg_scope_setup(state)
 ```
 
-Implements cg scope setup.
+Manage cg scope setup in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -673,7 +673,7 @@ Implements cg scope setup.
 function cg_set_const_binding_value(state, name, pyv)
 ```
 
-Implements cg set const binding value.
+Manage cg set const binding value in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -691,7 +691,7 @@ Implements cg set const binding value.
 function declare_callable_binding_root(state, name, decl_node)
 ```
 
-Implements declare callable binding root.
+Manage declare callable binding root in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -709,7 +709,7 @@ Implements declare callable binding root.
 function declare_const_binding_root_deferred(state, name, decl_node, const_expr)
 ```
 
-Implements declare const binding root deferred.
+Manage declare const binding root deferred in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -728,7 +728,7 @@ Implements declare const binding root deferred.
 function declare_fresh_binding(state, name, decl_node, kind)
 ```
 
-Implements declare fresh binding.
+Manage declare fresh binding in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -747,7 +747,7 @@ Implements declare fresh binding.
 function declare_function_global(state, local_name, qualified_name)
 ```
 
-Implements declare function global.
+Manage declare function global in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -765,7 +765,7 @@ Implements declare function global.
 function declare_global_binding(state, name, decl_node, is_const, const_expr)
 ```
 
-Implements declare global binding.
+Manage declare global binding in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -785,7 +785,7 @@ Implements declare global binding.
 function declare_global_binding_root(state, name, decl_node, is_const, const_expr)
 ```
 
-Implements declare global binding root.
+Manage declare global binding root in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -805,7 +805,7 @@ Implements declare global binding root.
 function declare_local_binding(state, name, decl_node, is_const, const_expr)
 ```
 
-Implements declare local binding.
+Manage declare local binding in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -825,7 +825,7 @@ Implements declare local binding.
 function emit_cleanup_bindings(state, bindings)
 ```
 
-Runs emit cleanup bindings.
+Manage emit cleanup bindings in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -842,7 +842,7 @@ Runs emit cleanup bindings.
 function emit_cleanup_to_depth(state, target_depth)
 ```
 
-Runs emit cleanup to depth.
+Manage emit cleanup to depth in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -859,7 +859,7 @@ Runs emit cleanup to depth.
 function emit_load_var_scoped(state, name)
 ```
 
-Runs emit load var scoped.
+Manage emit load var scoped in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -876,7 +876,7 @@ Runs emit load var scoped.
 function emit_store_existing_global(state, binding)
 ```
 
-Runs emit store existing global.
+Manage emit store existing global in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -893,7 +893,7 @@ Runs emit store existing global.
 function emit_store_var_scoped(state, name, node)
 ```
 
-Runs emit store var scoped.
+Manage emit store var scoped in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -911,7 +911,7 @@ Runs emit store var scoped.
 function ensure_binding_for_write(state, name, decl_node)
 ```
 
-Implements ensure binding for write.
+Manage ensure binding for write in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1029,7 +1029,7 @@ Reports whether is ident.
 function materialize_global_binding_root(state, name)
 ```
 
-Implements materialize global binding root.
+Manage materialize global binding root in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1062,7 +1062,7 @@ Creates new label id.
 function pop_scope(state, emit_cleanup)
 ```
 
-Implements pop scope.
+Manage pop scope in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1095,7 +1095,7 @@ Updates push scope.
 function register_decl_site_binding(state, node, name, binding)
 ```
 
-Implements register decl site binding.
+Manage register decl site binding in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1114,7 +1114,7 @@ Implements register decl site binding.
 function resolve_binding(state, name)
 ```
 
-Implements resolve binding.
+Manage resolve binding in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1131,7 +1131,7 @@ Implements resolve binding.
 function resolve_binding_for_write(state, name)
 ```
 
-Implements resolve binding for write.
+Manage resolve binding for write in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1148,7 +1148,7 @@ Implements resolve binding for write.
 function scope_depth(state)
 ```
 
-Implements scope depth.
+Manage scope depth in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1164,7 +1164,7 @@ Implements scope depth.
 function scope_global_slots(state)
 ```
 
-Implements scope global slots.
+Manage scope global slots in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1196,7 +1196,7 @@ Compatibility wrappers (Python CodegenScope parity).
 function search(obj, depth)
 ```
 
-Implements search.
+Manage search in lexical-scope code generation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

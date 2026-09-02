@@ -23,7 +23,7 @@ Represents yield.
 _filename
 ```
 
-Stores the filename member of `Yield`.
+Filename associated with `Yield`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L597)
@@ -35,7 +35,7 @@ Stores the filename member of `Yield`.
 _pos
 ```
 
-Stores the pos member of `Yield`.
+Pos associated with `Yield`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L595)
@@ -47,7 +47,7 @@ Stores the pos member of `Yield`.
 expr
 ```
 
-Stores the expr member of `Yield`.
+Expr associated with `Yield`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L593)
@@ -59,7 +59,7 @@ Stores the expr member of `Yield`.
 node_kind
 ```
 
-Stores the node kind member of `Yield`.
+Node kind associated with `Yield`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L591)

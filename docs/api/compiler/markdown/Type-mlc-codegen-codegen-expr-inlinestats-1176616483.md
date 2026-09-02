@@ -23,7 +23,7 @@ Cost and control-flow summary used by the bounded inliner.
 branch_count
 ```
 
-Stores the branch count member of `InlineStats`.
+Branch count associated with `InlineStats`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L49)
@@ -35,7 +35,7 @@ Stores the branch count member of `InlineStats`.
 call_count
 ```
 
-Stores the call count member of `InlineStats`.
+Call count associated with `InlineStats`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L47)
@@ -47,7 +47,7 @@ Stores the call count member of `InlineStats`.
 cost
 ```
 
-Stores the cost member of `InlineStats`.
+Cost associated with `InlineStats`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L43)
@@ -59,7 +59,7 @@ Stores the cost member of `InlineStats`.
 has_loop
 ```
 
-Stores the has loop member of `InlineStats`.
+Whether `InlineStats.has_loop` contains loop.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L53)
@@ -71,7 +71,7 @@ Stores the has loop member of `InlineStats`.
 has_nested_fn
 ```
 
-Stores the has nested fn member of `InlineStats`.
+Whether `InlineStats.has_nested_fn` contains nested fn.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L57)
@@ -83,7 +83,7 @@ Stores the has nested fn member of `InlineStats`.
 has_switch
 ```
 
-Stores the has switch member of `InlineStats`.
+Whether `InlineStats.has_switch` contains switch.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L55)
@@ -95,7 +95,7 @@ Stores the has switch member of `InlineStats`.
 max_call_args
 ```
 
-Stores the max call args member of `InlineStats`.
+Max call args associated with `InlineStats`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L51)
@@ -107,7 +107,7 @@ Stores the max call args member of `InlineStats`.
 stmt_count
 ```
 
-Stores the stmt count member of `InlineStats`.
+Stmt count associated with `InlineStats`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L45)

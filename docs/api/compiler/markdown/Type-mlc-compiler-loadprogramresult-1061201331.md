@@ -23,7 +23,7 @@ Represents load program result.
 aliases
 ```
 
-Stores the aliases member of `LoadProgramResult`.
+Aliases associated with `LoadProgramResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L215)
@@ -35,7 +35,7 @@ Stores the aliases member of `LoadProgramResult`.
 diagnostics
 ```
 
-Stores the diagnostics member of `LoadProgramResult`.
+Diagnostics associated with `LoadProgramResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L209)
@@ -47,7 +47,7 @@ Stores the diagnostics member of `LoadProgramResult`.
 parsed_modules
 ```
 
-Stores the parsed modules member of `LoadProgramResult`.
+Parsed modules associated with `LoadProgramResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L221)
@@ -59,7 +59,7 @@ Stores the parsed modules member of `LoadProgramResult`.
 program
 ```
 
-Stores the program member of `LoadProgramResult`.
+Program associated with `LoadProgramResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L213)
@@ -71,7 +71,7 @@ Stores the program member of `LoadProgramResult`.
 source
 ```
 
-Stores the source member of `LoadProgramResult`.
+Source associated with `LoadProgramResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L211)
@@ -83,7 +83,7 @@ Stores the source member of `LoadProgramResult`.
 sources
 ```
 
-Stores the sources member of `LoadProgramResult`.
+Sources associated with `LoadProgramResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L217)
@@ -95,7 +95,7 @@ Stores the sources member of `LoadProgramResult`.
 visited
 ```
 
-Stores the visited member of `LoadProgramResult`.
+Visited associated with `LoadProgramResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L219)

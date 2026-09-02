@@ -23,7 +23,7 @@ Explicit success/value envelope for compile-time expression evaluation.
 ok
 ```
 
-Stores the ok member of `ConstEvalResult`.
+Whether `ConstEvalResult` represents a successful result.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L35)
@@ -35,7 +35,7 @@ Stores the ok member of `ConstEvalResult`.
 value
 ```
 
-Stores the value member of `ConstEvalResult`.
+Value associated with `ConstEvalResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L37)

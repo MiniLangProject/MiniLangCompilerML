@@ -23,7 +23,7 @@ Two-lane deterministic hash state used for cache fingerprints.
 a
 ```
 
-Stores the a member of `ProjectHash`.
+A associated with `ProjectHash`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L89)
@@ -35,7 +35,7 @@ Stores the a member of `ProjectHash`.
 b
 ```
 
-Stores the b member of `ProjectHash`.
+B associated with `ProjectHash`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L91)

@@ -23,7 +23,7 @@ Represents named any.
 key
 ```
 
-Stores the key member of `NamedAny`.
+Key associated with `NamedAny`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L293)
@@ -35,7 +35,7 @@ Stores the key member of `NamedAny`.
 value
 ```
 
-Stores the value member of `NamedAny`.
+Value associated with `NamedAny`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L295)

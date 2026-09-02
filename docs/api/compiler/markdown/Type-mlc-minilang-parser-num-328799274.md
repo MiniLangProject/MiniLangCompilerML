@@ -23,7 +23,7 @@ Expression AST. Every node carries source coordinates for later diagnostics.
 _filename
 ```
 
-Stores the filename member of `Num`.
+Filename associated with `Num`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L119)
@@ -35,7 +35,7 @@ Stores the filename member of `Num`.
 _pos
 ```
 
-Stores the pos member of `Num`.
+Pos associated with `Num`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L117)
@@ -47,7 +47,7 @@ Stores the pos member of `Num`.
 node_kind
 ```
 
-Stores the node kind member of `Num`.
+Node kind associated with `Num`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L113)
@@ -59,7 +59,7 @@ Stores the node kind member of `Num`.
 value
 ```
 
-Stores the value member of `Num`.
+Value associated with `Num`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L115)

@@ -23,7 +23,7 @@ Represents obj reader.
 buf
 ```
 
-Stores the buf member of `ObjReader`.
+Buf associated with `ObjReader`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L379)
@@ -35,7 +35,7 @@ Stores the buf member of `ObjReader`.
 pos
 ```
 
-Stores the pos member of `ObjReader`.
+Pos associated with `ObjReader`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L381)
@@ -47,7 +47,7 @@ Stores the pos member of `ObjReader`.
 u32_result
 ```
 
-Stores the u32 result member of `ObjReader`.
+U32 result associated with `ObjReader`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L383)

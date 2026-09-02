@@ -23,7 +23,7 @@ AST telemetry is opt-in so normal builds do not pay for a second tree walk.
 counts
 ```
 
-Stores the counts member of `CompilerAstProfile`.
+Counts associated with `CompilerAstProfile`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L235)
@@ -35,7 +35,7 @@ Stores the counts member of `CompilerAstProfile`.
 max_depth
 ```
 
-Stores the max depth member of `CompilerAstProfile`.
+Max depth associated with `CompilerAstProfile`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L239)
@@ -47,7 +47,7 @@ Stores the max depth member of `CompilerAstProfile`.
 total
 ```
 
-Stores the total member of `CompilerAstProfile`.
+Total associated with `CompilerAstProfile`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L237)

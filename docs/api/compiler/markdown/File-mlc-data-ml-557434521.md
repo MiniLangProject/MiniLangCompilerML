@@ -22,7 +22,7 @@ Reachable from entry: **yes**
 function _buf_append(db, b)
 ```
 
-Implements buf append.
+Build or query buf append in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -39,7 +39,7 @@ Implements buf append.
 function _buf_ensure(db, need)
 ```
 
-Implements buf ensure.
+Build or query buf ensure in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -56,7 +56,7 @@ Implements buf ensure.
 function _buf_used(db)
 ```
 
-Implements buf used.
+Build or query buf used in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -72,7 +72,7 @@ Implements buf used.
 function _data_upsert_label(db, name, offset)
 ```
 
-Implements data upsert label.
+Build or query data upsert label in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -141,7 +141,7 @@ Returns find range label index.
 function _float_to_f64le(value)
 ```
 
-Implements float to f64le.
+Build or query float to f64le in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -157,7 +157,7 @@ Implements float to f64le.
 function _rdata_intern_raw(rb, name, raw)
 ```
 
-Implements rdata intern raw.
+Build or query rdata intern raw in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -175,7 +175,7 @@ Implements rdata intern raw.
 function _rdata_upsert_label(rb, name, offset, length)
 ```
 
-Implements rdata upsert label.
+Build or query rdata upsert label in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -194,7 +194,7 @@ Implements rdata upsert label.
 function _upsert_data_label(labels, name, offset)
 ```
 
-Implements upsert data label.
+Build or query upsert data label in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -212,7 +212,7 @@ Implements upsert data label.
 function _upsert_range_label(labels, name, offset, length)
 ```
 
-Implements upsert range label.
+Build or query upsert range label in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -231,7 +231,7 @@ Implements upsert range label.
 function bss_pad_align(bb, align)
 ```
 
-Implements bss pad align.
+Build or query bss pad align in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -248,7 +248,7 @@ Implements bss pad align.
 function bss_reserve(bb, name, size, align)
 ```
 
-Implements bss reserve.
+Build or query bss reserve in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -268,7 +268,7 @@ Implements bss reserve.
 function data_add_abs64_patch(db, offset, target)
 ```
 
-Implements data add abs64 patch.
+Build or query data add abs64 patch in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -286,7 +286,7 @@ Implements data add abs64 patch.
 function data_add_bytes(db, name, b)
 ```
 
-Implements data add bytes.
+Build or query data add bytes in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -304,7 +304,7 @@ Implements data add bytes.
 function data_add_u32(db, name, value)
 ```
 
-Implements data add u32.
+Build or query data add u32 in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -322,7 +322,7 @@ Implements data add u32.
 function data_add_u64(db, name, value)
 ```
 
-Implements data add u64.
+Build or query data add u64 in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -340,7 +340,7 @@ Implements data add u64.
 function data_clear_labels(db)
 ```
 
-Implements data clear labels.
+Build or query data clear labels in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -356,7 +356,7 @@ Implements data clear labels.
 function data_clear_patches(db)
 ```
 
-Implements data clear patches.
+Build or query data clear patches in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -372,7 +372,7 @@ Implements data clear patches.
 function data_get_labels(db)
 ```
 
-Implements data get labels.
+Build or query data get labels in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -388,7 +388,7 @@ Implements data get labels.
 function data_get_labels_after(db, start_index)
 ```
 
-Implements data get labels after.
+Build or query data get labels after in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -405,7 +405,7 @@ Implements data get labels after.
 function data_get_patches(db)
 ```
 
-Implements data get patches.
+Build or query data get patches in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -421,7 +421,7 @@ Implements data get patches.
 function data_get_patches_after(db, start_index)
 ```
 
-Implements data get patches after.
+Build or query data get patches after in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -438,7 +438,7 @@ Implements data get patches after.
 function data_has_label(db as struct, name as string) returns bool
 ```
 
-Implements data has label.
+Build or query data has label in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -457,7 +457,7 @@ Implements data has label.
 function data_label_count(db)
 ```
 
-Implements data label count.
+Build or query data label count in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -473,7 +473,7 @@ Implements data label count.
 function data_label_record(db, name)
 ```
 
-Implements data label record.
+Build or query data label record in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -490,7 +490,7 @@ Implements data label record.
 function data_pad_align(db, align)
 ```
 
-Implements data pad align.
+Build or query data pad align in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -507,7 +507,7 @@ Implements data pad align.
 function data_patch_count(db)
 ```
 
-Implements data patch count.
+Build or query data patch count in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -523,7 +523,7 @@ Implements data patch count.
 function data_set_labels(db, labels)
 ```
 
-Implements data set labels.
+Build or query data set labels in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -540,7 +540,7 @@ Implements data set labels.
 function data_set_patches(db, patches)
 ```
 
-Implements data set patches.
+Build or query data set patches in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -598,7 +598,7 @@ Create an empty read-only-data builder and its constant pools.
 function rdata_add_abs64_patch(rb, offset, target)
 ```
 
-Implements rdata add abs64 patch.
+Build or query rdata add abs64 patch in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -616,7 +616,7 @@ Implements rdata add abs64 patch.
 function rdata_add_bytes(rb, name, raw)
 ```
 
-Implements rdata add bytes.
+Build or query rdata add bytes in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -634,7 +634,7 @@ Implements rdata add bytes.
 function rdata_add_bytes_unique(rb, name, raw)
 ```
 
-Implements rdata add bytes unique.
+Build or query rdata add bytes unique in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -652,7 +652,7 @@ Implements rdata add bytes unique.
 function rdata_add_obj_float(rb, name, value)
 ```
 
-Implements rdata add obj float.
+Build or query rdata add obj float in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -670,7 +670,7 @@ Implements rdata add obj float.
 function rdata_add_obj_string(rb, name, text)
 ```
 
-Implements rdata add obj string.
+Build or query rdata add obj string in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -688,7 +688,7 @@ Implements rdata add obj string.
 function rdata_add_obj_string_unique(rb, name, text)
 ```
 
-Implements rdata add obj string unique.
+Build or query rdata add obj string unique in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -706,7 +706,7 @@ Implements rdata add obj string unique.
 function rdata_add_str(rb, name, text)
 ```
 
-Implements rdata add str.
+Build or query rdata add str in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -724,7 +724,7 @@ Implements rdata add str.
 function rdata_add_str_nl(rb, name, text, add_newline)
 ```
 
-Implements rdata add str nl.
+Build or query rdata add str nl in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -743,7 +743,7 @@ Implements rdata add str nl.
 function rdata_clear_labels(rb)
 ```
 
-Implements rdata clear labels.
+Build or query rdata clear labels in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -759,7 +759,7 @@ Implements rdata clear labels.
 function rdata_clear_patches(rb)
 ```
 
-Implements rdata clear patches.
+Build or query rdata clear patches in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -775,7 +775,7 @@ Implements rdata clear patches.
 function rdata_get_labels(rb)
 ```
 
-Implements rdata get labels.
+Build or query rdata get labels in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -791,7 +791,7 @@ Implements rdata get labels.
 function rdata_get_labels_after(rb, start_index)
 ```
 
-Implements rdata get labels after.
+Build or query rdata get labels after in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -808,7 +808,7 @@ Implements rdata get labels after.
 function rdata_get_patches(rb)
 ```
 
-Implements rdata get patches.
+Build or query rdata get patches in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -824,7 +824,7 @@ Implements rdata get patches.
 function rdata_get_patches_after(rb, start_index)
 ```
 
-Implements rdata get patches after.
+Build or query rdata get patches after in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -841,7 +841,7 @@ Implements rdata get patches after.
 function rdata_has_label(rb, name)
 ```
 
-Implements rdata has label.
+Build or query rdata has label in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -858,7 +858,7 @@ Implements rdata has label.
 function rdata_label_count(rb)
 ```
 
-Implements rdata label count.
+Build or query rdata label count in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -874,7 +874,7 @@ Implements rdata label count.
 function rdata_label_length(rb, name)
 ```
 
-Implements rdata label length.
+Build or query rdata label length in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -891,7 +891,7 @@ Implements rdata label length.
 function rdata_label_record(rb, name)
 ```
 
-Implements rdata label record.
+Build or query rdata label record in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -908,7 +908,7 @@ Implements rdata label record.
 function rdata_pad_align(rb, align)
 ```
 
-Implements rdata pad align.
+Build or query rdata pad align in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -925,7 +925,7 @@ Implements rdata pad align.
 function rdata_patch_count(rb)
 ```
 
-Implements rdata patch count.
+Build or query rdata patch count in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -941,7 +941,7 @@ Implements rdata patch count.
 function rdata_resolve_alias(rb, name)
 ```
 
-Implements rdata resolve alias.
+Build or query rdata resolve alias in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -958,7 +958,7 @@ Implements rdata resolve alias.
 function rdata_set_labels(rb, labels)
 ```
 
-Implements rdata set labels.
+Build or query rdata set labels in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -975,7 +975,7 @@ Implements rdata set labels.
 function rdata_set_patches(rb, patches)
 ```
 
-Implements rdata set patches.
+Build or query rdata set patches in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -992,7 +992,7 @@ Implements rdata set patches.
 function rdata_used(rb)
 ```
 
-Implements rdata used.
+Build or query rdata used in native data sections.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

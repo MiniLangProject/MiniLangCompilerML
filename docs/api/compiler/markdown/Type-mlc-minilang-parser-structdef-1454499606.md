@@ -23,7 +23,7 @@ Represents struct def.
 _extern_field_types
 ```
 
-Stores the extern field types member of `StructDef`.
+Extern field types associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L785)
@@ -35,7 +35,7 @@ Stores the extern field types member of `StructDef`.
 _filename
 ```
 
-Stores the filename member of `StructDef`.
+Filename associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L789)
@@ -47,7 +47,7 @@ Stores the filename member of `StructDef`.
 _pos
 ```
 
-Stores the pos member of `StructDef`.
+Pos associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L787)
@@ -59,7 +59,7 @@ Stores the pos member of `StructDef`.
 field_optional
 ```
 
-Stores the field optional member of `StructDef`.
+Field optional associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L781)
@@ -71,7 +71,7 @@ Stores the field optional member of `StructDef`.
 field_types
 ```
 
-Stores the field types member of `StructDef`.
+Field types associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L779)
@@ -83,7 +83,7 @@ Stores the field types member of `StructDef`.
 fields
 ```
 
-Stores the fields member of `StructDef`.
+Fields associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L775)
@@ -95,7 +95,7 @@ Stores the fields member of `StructDef`.
 interfaces
 ```
 
-Stores the interfaces member of `StructDef`.
+Interfaces associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L783)
@@ -107,7 +107,7 @@ Stores the interfaces member of `StructDef`.
 methods
 ```
 
-Stores the methods member of `StructDef`.
+Methods associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L777)
@@ -119,7 +119,7 @@ Stores the methods member of `StructDef`.
 name
 ```
 
-Stores the name member of `StructDef`.
+Name associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L773)
@@ -131,7 +131,7 @@ Stores the name member of `StructDef`.
 node_kind
 ```
 
-Stores the node kind member of `StructDef`.
+Node kind associated with `StructDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L771)

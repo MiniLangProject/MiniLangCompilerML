@@ -31,7 +31,7 @@ Reachable from entry: **yes**
 function __init__(cg)
 ```
 
-Implements init.
+Coordinate init in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -47,7 +47,7 @@ Implements init.
 function _arr_has(arr, value)
 ```
 
-Implements arr has.
+Coordinate arr has in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -64,7 +64,7 @@ Implements arr has.
 function _clone_state_for_object(base, seed_runtime)
 ```
 
-Implements clone state for object.
+Coordinate clone state for object in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -81,7 +81,7 @@ Implements clone state for object.
 function _copy_array(arr)
 ```
 
-Implements copy array.
+Coordinate copy array in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -97,7 +97,7 @@ Implements copy array.
 function _copy_bss_builder(bb)
 ```
 
-Implements copy bss builder.
+Coordinate copy bss builder in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -113,7 +113,7 @@ Implements copy bss builder.
 function _copy_bytes(buf)
 ```
 
-Implements copy bytes.
+Coordinate copy bytes in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -129,7 +129,7 @@ Implements copy bytes.
 function _copy_data_builder(db)
 ```
 
-Implements copy data builder.
+Coordinate copy data builder in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -145,7 +145,7 @@ Implements copy data builder.
 function _copy_fastmap(mapv)
 ```
 
-Implements copy fastmap.
+Coordinate copy fastmap in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -161,7 +161,7 @@ Implements copy fastmap.
 function _copy_fastmap_stack(frames)
 ```
 
-Implements copy fastmap stack.
+Coordinate copy fastmap stack in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -177,7 +177,7 @@ Implements copy fastmap stack.
 function _copy_frame_stack(frames)
 ```
 
-Implements copy frame stack.
+Coordinate copy frame stack in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -193,7 +193,7 @@ Implements copy frame stack.
 function _copy_rdata_builder(rb)
 ```
 
-Implements copy rdata builder.
+Coordinate copy rdata builder in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -209,7 +209,7 @@ Implements copy rdata builder.
 function _named_array_set(arr, key, values)
 ```
 
-Implements named array set.
+Coordinate named array set in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -227,7 +227,7 @@ Implements named array set.
 function _named_int_set(arr, key, value)
 ```
 
-Implements named int set.
+Coordinate named int set in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -245,7 +245,7 @@ Implements named int set.
 function _sparse_data_builder(base_db)
 ```
 
-Implements sparse data builder.
+Coordinate sparse data builder in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -261,7 +261,7 @@ Implements sparse data builder.
 function _sparse_rdata_builder(base_rb)
 ```
 
-Implements sparse rdata builder.
+Coordinate sparse rdata builder in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -277,7 +277,7 @@ Implements sparse rdata builder.
 function all_function_entries(cg)
 ```
 
-Implements all function entries.
+Coordinate all function entries in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -309,7 +309,7 @@ Drop program-analysis records once every user function has been emitted. Runtime
 function clone_for_object(cg, seed_runtime)
 ```
 
-Implements clone for object.
+Coordinate clone for object in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -327,7 +327,7 @@ Implements clone for object.
 function emit_entry_object(cg, module_init_recs, max_call_args_main, main_name)
 ```
 
-Runs emit entry object.
+Coordinate emit entry object in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -346,7 +346,7 @@ Runs emit entry object.
 function emit_extern_stubs(cg)
 ```
 
-Runs emit extern stubs.
+Coordinate emit extern stubs in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -362,7 +362,7 @@ Runs emit extern stubs.
 function emit_module_function_entries(cg, entries, start_index, count, analysis_scratch)
 ```
 
-Runs emit module function entries.
+Coordinate emit module function entries in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -382,7 +382,7 @@ Runs emit module function entries.
 function emit_module_functions(cg, module_file)
 ```
 
-Runs emit module functions.
+Coordinate emit module functions in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -399,7 +399,7 @@ Runs emit module functions.
 function emit_module_init_object(cg, module_rec)
 ```
 
-Runs emit module init object.
+Coordinate emit module init object in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -416,7 +416,7 @@ Runs emit module init object.
 function emit_program(cg, program)
 ```
 
-Runs emit program.
+Coordinate emit program in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -433,7 +433,7 @@ Runs emit program.
 function emit_used_helpers(cg)
 ```
 
-Runs emit used helpers.
+Coordinate emit used helpers in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -449,7 +449,7 @@ Runs emit used helpers.
 function enable_call_profile_metadata(cg)
 ```
 
-Implements enable call profile metadata.
+Coordinate enable call profile metadata in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -465,7 +465,7 @@ Implements enable call profile metadata.
 function function_entry_count(entries)
 ```
 
-Implements function entry count.
+Coordinate function entry count in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -481,7 +481,7 @@ Implements function entry count.
 function function_entry_name(entries, node_id)
 ```
 
-Implements function entry name.
+Coordinate function entry name in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -498,7 +498,7 @@ Implements function entry name.
 function module_function_entries(cg, module_file)
 ```
 
-Implements module function entries.
+Coordinate module function entries in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -569,7 +569,7 @@ Creates new codegen for target.
 function prepare_program_for_objects(cg, program)
 ```
 
-Implements prepare program for objects.
+Coordinate prepare program for objects in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -654,7 +654,7 @@ Start a new serialized text fragment without resetting semantic codegen state. R
 function track_helper(cg, label)
 ```
 
-Implements track helper.
+Coordinate track helper in the native-codegen pipeline.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

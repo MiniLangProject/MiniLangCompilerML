@@ -23,7 +23,7 @@ Chunked writable-data builder with indexed labels and relocations.
 data
 ```
 
-Stores the data member of `DataBuilder`.
+Backing data owned by `DataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L67)
@@ -35,7 +35,7 @@ Stores the data member of `DataBuilder`.
 label_index
 ```
 
-Stores the label index member of `DataBuilder`.
+Label index associated with `DataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L71)
@@ -47,7 +47,7 @@ Stores the label index member of `DataBuilder`.
 labels
 ```
 
-Stores the labels member of `DataBuilder`.
+Labels associated with `DataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L69)
@@ -59,7 +59,7 @@ Stores the labels member of `DataBuilder`.
 patches
 ```
 
-Stores the patches member of `DataBuilder`.
+Patches associated with `DataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L75)
@@ -71,7 +71,7 @@ Stores the patches member of `DataBuilder`.
 reference_label_index
 ```
 
-Stores the reference label index member of `DataBuilder`.
+Reference label index associated with `DataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L73)
@@ -83,7 +83,7 @@ Stores the reference label index member of `DataBuilder`.
 used
 ```
 
-Stores the used member of `DataBuilder`.
+Number of populated entries in `DataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L77)

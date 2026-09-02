@@ -23,7 +23,7 @@ Small name/value record used by deterministic lookup tables.
 name
 ```
 
-Stores the name member of `NamedInt`.
+Name associated with `NamedInt`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L76)
@@ -35,7 +35,7 @@ Stores the name member of `NamedInt`.
 value
 ```
 
-Stores the value member of `NamedInt`.
+Value associated with `NamedInt`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L78)

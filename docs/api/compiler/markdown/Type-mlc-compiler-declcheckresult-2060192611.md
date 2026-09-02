@@ -23,7 +23,7 @@ Represents decl check result.
 diagnostics
 ```
 
-Stores the diagnostics member of `DeclCheckResult`.
+Diagnostics associated with `DeclCheckResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L201)
@@ -35,7 +35,7 @@ Stores the diagnostics member of `DeclCheckResult`.
 failed
 ```
 
-Stores the failed member of `DeclCheckResult`.
+Failed associated with `DeclCheckResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L203)

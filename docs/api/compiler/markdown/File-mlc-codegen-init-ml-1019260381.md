@@ -17,7 +17,7 @@ Reachable from entry: **no**
 const VERSION = "bootstrap"
 ```
 
-Stores the version.
+Track version.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/__init__.ml#L23)

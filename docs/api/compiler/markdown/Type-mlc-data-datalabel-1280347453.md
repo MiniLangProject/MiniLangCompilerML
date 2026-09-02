@@ -23,7 +23,7 @@ Named offset into a writable or zero-initialized section.
 name
 ```
 
-Stores the name member of `DataLabel`.
+Name associated with `DataLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L27)
@@ -35,7 +35,7 @@ Stores the name member of `DataLabel`.
 offset
 ```
 
-Stores the offset member of `DataLabel`.
+Offset associated with `DataLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L29)

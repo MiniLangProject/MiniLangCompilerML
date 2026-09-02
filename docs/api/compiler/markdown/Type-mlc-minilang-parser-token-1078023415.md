@@ -23,7 +23,7 @@ Lexical token preserving raw value and absolute source offset.
 kind
 ```
 
-Stores the kind member of `Token`.
+Kind associated with `Token`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L48)
@@ -35,7 +35,7 @@ Stores the kind member of `Token`.
 pos
 ```
 
-Stores the pos member of `Token`.
+Pos associated with `Token`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L52)
@@ -47,7 +47,7 @@ Stores the pos member of `Token`.
 value
 ```
 
-Stores the value member of `Token`.
+Value associated with `Token`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L50)

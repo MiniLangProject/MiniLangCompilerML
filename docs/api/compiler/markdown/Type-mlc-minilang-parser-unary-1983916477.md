@@ -23,7 +23,7 @@ Represents unary.
 _filename
 ```
 
-Stores the filename member of `Unary`.
+Filename associated with `Unary`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L195)
@@ -35,7 +35,7 @@ Stores the filename member of `Unary`.
 _pos
 ```
 
-Stores the pos member of `Unary`.
+Pos associated with `Unary`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L193)
@@ -47,7 +47,7 @@ Stores the pos member of `Unary`.
 node_kind
 ```
 
-Stores the node kind member of `Unary`.
+Node kind associated with `Unary`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L187)
@@ -59,7 +59,7 @@ Stores the node kind member of `Unary`.
 op
 ```
 
-Stores the op member of `Unary`.
+Op associated with `Unary`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L189)
@@ -71,7 +71,7 @@ Stores the op member of `Unary`.
 right
 ```
 
-Stores the right member of `Unary`.
+Right associated with `Unary`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L191)

@@ -23,7 +23,7 @@ Represents switch.
 _filename
 ```
 
-Stores the filename member of `Switch`.
+Filename associated with `Switch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L765)
@@ -35,7 +35,7 @@ Stores the filename member of `Switch`.
 _pos
 ```
 
-Stores the pos member of `Switch`.
+Pos associated with `Switch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L763)
@@ -47,7 +47,7 @@ Stores the pos member of `Switch`.
 cases
 ```
 
-Stores the cases member of `Switch`.
+Cases associated with `Switch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L759)
@@ -59,7 +59,7 @@ Stores the cases member of `Switch`.
 default_body
 ```
 
-Stores the default body member of `Switch`.
+Default body associated with `Switch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L761)
@@ -71,7 +71,7 @@ Stores the default body member of `Switch`.
 expr
 ```
 
-Stores the expr member of `Switch`.
+Expr associated with `Switch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L757)
@@ -83,7 +83,7 @@ Stores the expr member of `Switch`.
 node_kind
 ```
 
-Stores the node kind member of `Switch`.
+Node kind associated with `Switch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L755)

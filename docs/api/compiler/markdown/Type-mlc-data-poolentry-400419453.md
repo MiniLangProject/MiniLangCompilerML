@@ -23,7 +23,7 @@ Deduplication entry for pooled constants.
 key
 ```
 
-Stores the key member of `PoolEntry`.
+Key associated with `PoolEntry`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L45)
@@ -35,7 +35,7 @@ Stores the key member of `PoolEntry`.
 label
 ```
 
-Stores the label member of `PoolEntry`.
+Label associated with `PoolEntry`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L51)
@@ -47,7 +47,7 @@ Stores the label member of `PoolEntry`.
 length
 ```
 
-Stores the length member of `PoolEntry`.
+Length associated with `PoolEntry`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L49)
@@ -59,7 +59,7 @@ Stores the length member of `PoolEntry`.
 offset
 ```
 
-Stores the offset member of `PoolEntry`.
+Offset associated with `PoolEntry`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L47)

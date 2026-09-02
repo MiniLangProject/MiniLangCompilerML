@@ -23,7 +23,7 @@ Spill slot/register pair that keeps a tagged expression value GC-visible.
 dirty
 ```
 
-Stores the dirty member of `ExprValueTemp`.
+Dirty associated with `ExprValueTemp`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L305)
@@ -35,7 +35,7 @@ Stores the dirty member of `ExprValueTemp`.
 off
 ```
 
-Stores the off member of `ExprValueTemp`.
+Off associated with `ExprValueTemp`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L301)
@@ -47,7 +47,7 @@ Stores the off member of `ExprValueTemp`.
 reg
 ```
 
-Stores the reg member of `ExprValueTemp`.
+Reg associated with `ExprValueTemp`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L303)

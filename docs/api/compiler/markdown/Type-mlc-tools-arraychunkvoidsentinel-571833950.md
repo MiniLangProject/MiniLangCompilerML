@@ -23,7 +23,7 @@ Internal marker that preserves actual void values inside spare capacity.
 tag
 ```
 
-Stores the tag member of `ArrayChunkVoidSentinel`.
+Tag associated with `ArrayChunkVoidSentinel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L85)

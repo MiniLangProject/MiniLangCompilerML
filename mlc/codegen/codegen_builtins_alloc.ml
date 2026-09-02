@@ -25,10 +25,10 @@ import mlc.codegen.codegen_memory as mem
 import mlc.tools as t
 import mlc.data as d
 
-/// Stores the input read max.
+/// Track input read max.
 const INPUT_READ_MAX = 4095
 
-/// Runs emit addstr error.
+/// Lower emit addstr error allocation behavior to native x64.
 /// @internal
 function _emit_addstr_error(state, msg_lbl)
   state.asm = a.lea_rax_rip(state.asm, msg_lbl)
@@ -46,7 +46,7 @@ function _has_label(labels, name)
   return false
 end function
 
-/// Implements enum variants of.
+/// Lower enum variants of allocation behavior to native x64.
 /// @internal
 function _enum_variants_of(state, qname)
   arr = state.enum_variants
@@ -65,7 +65,7 @@ function _enum_variants_of(state, qname)
   return []
 end function
 
-/// Implements ensure enum obj strings.
+/// Lower ensure enum obj strings allocation behavior to native x64.
 /// @internal
 function _ensure_enum_obj_strings(state)
   if typeof(state.enum_ids) != "array" or len(state.enum_ids) <= 0 then return state end if
@@ -97,7 +97,7 @@ function _ensure_enum_obj_strings(state)
   return state
 end function
 
-/// Runs emit input function.
+/// Lower emit input function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_input_function(state)
   state.asm = a.mark(state.asm, "fn_input")
@@ -220,7 +220,7 @@ function emit_input_function(state)
   return state
 end function
 
-/// Runs emit decode function.
+/// Lower emit decode function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_decode_function(state)
   state.asm = a.mark(state.asm, "fn_decode")
@@ -288,7 +288,7 @@ function emit_decode_function(state)
   return state
 end function
 
-/// Runs emit decode z function.
+/// Lower emit decode z function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_decodeZ_function(state)
   state.asm = a.mark(state.asm, "fn_decodeZ")
@@ -360,7 +360,7 @@ function emit_decodeZ_function(state)
   return state
 end function
 
-/// Runs emit decode16 z function.
+/// Lower emit decode16 z function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_decode16Z_function(state)
   state.asm = a.mark(state.asm, "fn_decode16Z")
@@ -462,7 +462,7 @@ function emit_decode16Z_function(state)
   return state
 end function
 
-/// Runs emit hex function.
+/// Lower emit hex function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_hex_function(state)
   state = mem.ensure_gc_data(state)
@@ -575,7 +575,7 @@ function emit_hex_function(state)
   return state
 end function
 
-/// Runs emit from hex function.
+/// Lower emit from hex function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_fromHex_function(state)
   state = mem.ensure_gc_data(state)
@@ -833,7 +833,7 @@ function emit_fromHex_function(state)
   return state
 end function
 
-/// Runs emit box float function.
+/// Lower emit box float function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_box_float_function(state)
   state = mem.ensure_gc_data(state)
@@ -854,7 +854,7 @@ function emit_box_float_function(state)
   return state
 end function
 
-/// Runs emit value to string function.
+/// Lower emit value to string function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_value_to_string_function(state)
   state = mem.ensure_gc_data(state)
@@ -1097,7 +1097,7 @@ function emit_value_to_string_function(state)
   return state
 end function
 
-/// Runs emit string add function.
+/// Lower emit string add function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_add_function(state)
   state = mem.ensure_gc_data(state)
@@ -1292,7 +1292,7 @@ function emit_string_add_function(state)
   return state
 end function
 
-/// Runs emit array add function.
+/// Lower emit array add function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_array_add_function(state)
   state = mem.ensure_gc_data(state)
@@ -1366,7 +1366,7 @@ function emit_array_add_function(state)
   return state
 end function
 
-/// Runs emit bytes alloc function.
+/// Lower emit bytes alloc function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_bytes_alloc_function(state)
   state = mem.ensure_gc_data(state)
@@ -1409,7 +1409,7 @@ function emit_bytes_alloc_function(state)
   return state
 end function
 
-/// Runs emit bytes add function.
+/// Lower emit bytes add function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_bytes_add_function(state)
   state = mem.ensure_gc_data(state)
@@ -1479,7 +1479,7 @@ function emit_bytes_add_function(state)
   return state
 end function
 
-/// Runs emit bytes eq function.
+/// Lower emit bytes eq function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_bytes_eq_function(state)
   state.asm = a.mark(state.asm, "fn_bytes_eq")
@@ -1547,7 +1547,7 @@ function emit_bytes_eq_function(state)
   return state
 end function
 
-/// Runs emit slice function.
+/// Lower emit slice function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_slice_function(state)
   state = mem.ensure_gc_data(state)
@@ -1653,7 +1653,7 @@ function emit_slice_function(state)
   return state
 end function
 
-/// Runs emit string slice function.
+/// Lower emit string slice function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_slice_function(state)
   state = mem.ensure_gc_data(state)
@@ -1782,7 +1782,7 @@ function emit_string_slice_function(state)
   return state
 end function
 
-/// Runs emit string indexof function.
+/// Lower emit string indexof function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_indexof_function(state)
   state.asm = a.mark(state.asm, "fn_string_indexof")
@@ -1875,7 +1875,7 @@ function emit_string_indexof_function(state)
   return state
 end function
 
-/// Runs emit string lastindexof function.
+/// Lower emit string lastindexof function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_lastindexof_function(state)
   state.asm = a.mark(state.asm, "fn_string_lastindexof")
@@ -1945,7 +1945,7 @@ function emit_string_lastindexof_function(state)
   return state
 end function
 
-/// Runs emit string startswith function.
+/// Lower emit string startswith function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_startswith_function(state)
   state.asm = a.mark(state.asm, "fn_string_startswith")
@@ -2002,7 +2002,7 @@ function emit_string_startswith_function(state)
   return state
 end function
 
-/// Runs emit string endswith function.
+/// Lower emit string endswith function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_endswith_function(state)
   state.asm = a.mark(state.asm, "fn_string_endswith")
@@ -2061,7 +2061,7 @@ function emit_string_endswith_function(state)
   return state
 end function
 
-/// Runs emit string repeat function.
+/// Lower emit string repeat function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_repeat_function(state)
   state = mem.ensure_gc_data(state)
@@ -2173,7 +2173,7 @@ function emit_string_repeat_function(state)
   return state
 end function
 
-/// Runs emit string ltrim ascii function.
+/// Lower emit string ltrim ascii function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_ltrim_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_ltrim_ascii")
@@ -2250,7 +2250,7 @@ function emit_string_ltrim_ascii_function(state)
   return state
 end function
 
-/// Runs emit string rtrim ascii function.
+/// Lower emit string rtrim ascii function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_rtrim_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_rtrim_ascii")
@@ -2325,7 +2325,7 @@ function emit_string_rtrim_ascii_function(state)
   return state
 end function
 
-/// Runs emit string trim ascii function.
+/// Lower emit string trim ascii function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_trim_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_trim_ascii")
@@ -2429,7 +2429,7 @@ function emit_string_trim_ascii_function(state)
   return state
 end function
 
-/// Runs emit string is blank ascii function.
+/// Lower emit string is blank ascii function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_is_blank_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_is_blank_ascii")
@@ -2477,7 +2477,7 @@ function emit_string_is_blank_ascii_function(state)
   return state
 end function
 
-/// Runs emit string reverse function.
+/// Lower emit string reverse function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_reverse_function(state)
   state = mem.ensure_gc_data(state)
@@ -2564,7 +2564,7 @@ function emit_string_reverse_function(state)
   return state
 end function
 
-/// Runs emit string to lower ascii function.
+/// Lower emit string to lower ascii function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_to_lower_ascii_function(state)
   state = mem.ensure_gc_data(state)
@@ -2671,7 +2671,7 @@ function emit_string_to_lower_ascii_function(state)
   return state
 end function
 
-/// Runs emit string to upper ascii function.
+/// Lower emit string to upper ascii function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_to_upper_ascii_function(state)
   state = mem.ensure_gc_data(state)
@@ -2778,7 +2778,7 @@ function emit_string_to_upper_ascii_function(state)
   return state
 end function
 
-/// Runs emit string eq ignore case ascii function.
+/// Lower emit string eq ignore case ascii function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_eq_ignore_case_ascii_function(state)
   state.asm = a.mark(state.asm, "fn_string_eq_ignore_case_ascii")
@@ -2852,7 +2852,7 @@ function emit_string_eq_ignore_case_ascii_function(state)
   return state
 end function
 
-/// Runs emit string join function.
+/// Lower emit string join function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_string_join_function(state)
   state = mem.ensure_gc_data(state)
@@ -3008,7 +3008,7 @@ function emit_string_join_function(state)
   return state
 end function
 
-/// Implements cg emit builtins alloc.
+/// Lower cg emit builtins alloc allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function cg_emit_builtins_alloc(state)
   state = emit_input_function(state)

@@ -23,7 +23,7 @@ Imported DLL name and its ordered function list.
 dll
 ```
 
-Stores the dll member of `ImportDll`.
+Dll associated with `ImportDll`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L84)
@@ -35,7 +35,7 @@ Stores the dll member of `ImportDll`.
 funcs
 ```
 
-Stores the funcs member of `ImportDll`.
+Funcs associated with `ImportDll`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L86)

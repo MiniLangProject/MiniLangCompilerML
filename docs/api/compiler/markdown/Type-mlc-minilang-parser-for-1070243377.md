@@ -23,7 +23,7 @@ Represents for.
 _filename
 ```
 
-Stores the filename member of `For`.
+Filename associated with `For`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L665)
@@ -35,7 +35,7 @@ Stores the filename member of `For`.
 _pos
 ```
 
-Stores the pos member of `For`.
+Pos associated with `For`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L663)
@@ -47,7 +47,7 @@ Stores the pos member of `For`.
 body
 ```
 
-Stores the body member of `For`.
+Body associated with `For`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L661)
@@ -59,7 +59,7 @@ Stores the body member of `For`.
 end_expr
 ```
 
-Stores the end expr member of `For`.
+End expr associated with `For`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L659)
@@ -71,7 +71,7 @@ Stores the end expr member of `For`.
 node_kind
 ```
 
-Stores the node kind member of `For`.
+Node kind associated with `For`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L653)
@@ -83,7 +83,7 @@ Stores the node kind member of `For`.
 start
 ```
 
-Stores the start member of `For`.
+Start associated with `For`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L657)
@@ -95,7 +95,7 @@ Stores the start member of `For`.
 var
 ```
 
-Stores the var member of `For`.
+Var associated with `For`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L655)

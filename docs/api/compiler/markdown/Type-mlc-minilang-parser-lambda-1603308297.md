@@ -23,7 +23,7 @@ Parser-only anonymous function lowered to an ordinary nested closure.
 _filename
 ```
 
-Stores the filename member of `Lambda`.
+Filename associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L341)
@@ -35,7 +35,7 @@ Stores the filename member of `Lambda`.
 _pos
 ```
 
-Stores the pos member of `Lambda`.
+Pos associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L339)
@@ -47,7 +47,7 @@ Stores the pos member of `Lambda`.
 body
 ```
 
-Stores the body member of `Lambda`.
+Body associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L325)
@@ -59,7 +59,7 @@ Stores the body member of `Lambda`.
 node_kind
 ```
 
-Stores the node kind member of `Lambda`.
+Node kind associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L321)
@@ -71,7 +71,7 @@ Stores the node kind member of `Lambda`.
 param_defaults
 ```
 
-Stores the param defaults member of `Lambda`.
+Param defaults associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L331)
@@ -83,7 +83,7 @@ Stores the param defaults member of `Lambda`.
 param_optional
 ```
 
-Stores the param optional member of `Lambda`.
+Param optional associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L329)
@@ -95,7 +95,7 @@ Stores the param optional member of `Lambda`.
 param_types
 ```
 
-Stores the param types member of `Lambda`.
+Param types associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L327)
@@ -107,7 +107,7 @@ Stores the param types member of `Lambda`.
 params
 ```
 
-Stores the params member of `Lambda`.
+Params associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L323)
@@ -119,7 +119,7 @@ Stores the params member of `Lambda`.
 return_optional
 ```
 
-Stores the return optional member of `Lambda`.
+Return optional associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L337)
@@ -131,7 +131,7 @@ Stores the return optional member of `Lambda`.
 return_type
 ```
 
-Stores the return type member of `Lambda`.
+Return type associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L335)
@@ -143,7 +143,7 @@ Stores the return type member of `Lambda`.
 variadic_index
 ```
 
-Stores the variadic index member of `Lambda`.
+Variadic index associated with `Lambda`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L333)

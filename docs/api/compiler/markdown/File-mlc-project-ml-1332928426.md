@@ -28,7 +28,7 @@ Reachable from entry: **yes**
 function _abspath(path)
 ```
 
-Implements abspath.
+Resolve abspath during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -78,7 +78,7 @@ Atomically update the cached artifact and its validation metadata.
 function _cache_artifact_path(pb, digest)
 ```
 
-Implements cache artifact path.
+Resolve cache artifact path during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -129,7 +129,7 @@ Broad root traversal covers inactive package imports. This second pass follows q
 function _collect_ml_files(path, excluded, collector)
 ```
 
-Implements collect ml files.
+Resolve collect ml files during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -166,7 +166,7 @@ Collect every MiniLang source below a root once. Indexed directory/file sets mak
 function _collector_add_import_file(collector, path, excluded)
 ```
 
-Implements collector add import file.
+Resolve collector add import file during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -201,7 +201,7 @@ Std.fs.copyFile intentionally copies bytes only. Cache artifacts additionally re
 function _dirname(path)
 ```
 
-Implements dirname.
+Resolve dirname during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -217,7 +217,7 @@ Implements dirname.
 function _ensure_dir(path)
 ```
 
-Implements ensure dir.
+Resolve ensure dir during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -317,7 +317,7 @@ Reports whether hash text.
 function _hex32(value)
 ```
 
-Implements hex32.
+Resolve hex32 during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -381,7 +381,7 @@ Reports whether is known key.
 function _join(a, b)
 ```
 
-Implements join.
+Resolve join during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -398,7 +398,7 @@ Implements join.
 function _object_cache_dir(pb, digest)
 ```
 
-Implements object cache dir.
+Resolve object cache dir during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -447,7 +447,7 @@ Windows paths are case-insensitive; POSIX paths must retain exact spelling.
 function _project_u32le(value, offset)
 ```
 
-Implements project u32le.
+Resolve project u32le during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -464,7 +464,7 @@ Implements project u32le.
 function _project_word_char(source, index)
 ```
 
-Implements project word char.
+Resolve project word char during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -497,7 +497,7 @@ Extract quoted import paths without treating strings or comments as source. Fals
 function _relative_path(base, value)
 ```
 
-Implements relative path.
+Resolve relative path during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -531,7 +531,7 @@ Advance past whitespace and comments between the import keyword and path.
 function _skip_project_string(source, index)
 ```
 
-Implements skip project string.
+Resolve skip project string during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -548,7 +548,7 @@ Implements skip project string.
 function _string_less(left, right)
 ```
 
-Implements string less.
+Resolve string less during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -565,7 +565,7 @@ Implements string less.
 function _unquote(value)
 ```
 
-Implements unquote.
+Resolve unquote during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -581,7 +581,7 @@ Implements unquote.
 function _valid_define_name(name)
 ```
 
-Implements valid define name.
+Resolve valid define name during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -597,7 +597,7 @@ Implements valid define name.
 function _valid_define_value(value)
 ```
 
-Implements valid define value.
+Resolve valid define value during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -613,7 +613,7 @@ Implements valid define value.
 function _valid_project_digest(value)
 ```
 
-Implements valid project digest.
+Resolve valid project digest during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -731,7 +731,7 @@ Returns get full path name w.
 extern function MoveFileExW(source as wstr, destination as wstr, flags as u32) from "kernel32.dll" returns bool
 ```
 
-Implements move file ex w.
+Resolve move file ex w during project and module loading.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

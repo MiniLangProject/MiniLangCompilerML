@@ -23,7 +23,7 @@ Represents print.
 _filename
 ```
 
-Stores the filename member of `Print`.
+Filename associated with `Print`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L407)
@@ -35,7 +35,7 @@ Stores the filename member of `Print`.
 _pos
 ```
 
-Stores the pos member of `Print`.
+Pos associated with `Print`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L405)
@@ -47,7 +47,7 @@ Stores the pos member of `Print`.
 expr
 ```
 
-Stores the expr member of `Print`.
+Expr associated with `Print`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L403)
@@ -59,7 +59,7 @@ Stores the expr member of `Print`.
 node_kind
 ```
 
-Stores the node kind member of `Print`.
+Node kind associated with `Print`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L401)

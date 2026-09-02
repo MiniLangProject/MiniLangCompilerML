@@ -23,7 +23,7 @@ Represents named int.
 key
 ```
 
-Stores the key member of `NamedInt`.
+Key associated with `NamedInt`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L285)
@@ -35,7 +35,7 @@ Stores the key member of `NamedInt`.
 value
 ```
 
-Stores the value member of `NamedInt`.
+Value associated with `NamedInt`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L287)

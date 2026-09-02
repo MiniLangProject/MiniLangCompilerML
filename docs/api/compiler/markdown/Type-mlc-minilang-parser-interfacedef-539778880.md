@@ -23,7 +23,7 @@ Compile-time structural contract with no runtime representation.
 _filename
 ```
 
-Stores the filename member of `InterfaceDef`.
+Filename associated with `InterfaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L803)
@@ -35,7 +35,7 @@ Stores the filename member of `InterfaceDef`.
 _pos
 ```
 
-Stores the pos member of `InterfaceDef`.
+Pos associated with `InterfaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L801)
@@ -47,7 +47,7 @@ Stores the pos member of `InterfaceDef`.
 methods
 ```
 
-Stores the methods member of `InterfaceDef`.
+Methods associated with `InterfaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L799)
@@ -59,7 +59,7 @@ Stores the methods member of `InterfaceDef`.
 name
 ```
 
-Stores the name member of `InterfaceDef`.
+Name associated with `InterfaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L797)
@@ -71,7 +71,7 @@ Stores the name member of `InterfaceDef`.
 node_kind
 ```
 
-Stores the node kind member of `InterfaceDef`.
+Node kind associated with `InterfaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L795)

@@ -23,7 +23,7 @@ One resolved variable binding, including storage, capture and const metadata. pr
 boxed
 ```
 
-Stores the boxed member of `VarBinding`.
+Boxed associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L41)
@@ -35,7 +35,7 @@ Stores the boxed member of `VarBinding`.
 capture_depth
 ```
 
-Stores the capture depth member of `VarBinding`.
+Capture depth associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L43)
@@ -47,7 +47,7 @@ Stores the capture depth member of `VarBinding`.
 capture_index
 ```
 
-Stores the capture index member of `VarBinding`.
+Capture index associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L45)
@@ -59,7 +59,7 @@ Stores the capture index member of `VarBinding`.
 const_expr
 ```
 
-Stores the const expr member of `VarBinding`.
+Const expr associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L51)
@@ -71,7 +71,7 @@ Stores the const expr member of `VarBinding`.
 const_initialized
 ```
 
-Stores the const initialized member of `VarBinding`.
+Const initialized associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L53)
@@ -83,7 +83,7 @@ Stores the const initialized member of `VarBinding`.
 const_value_encoded
 ```
 
-Stores the const value encoded member of `VarBinding`.
+Const value encoded associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L57)
@@ -95,7 +95,7 @@ Stores the const value encoded member of `VarBinding`.
 const_value_label
 ```
 
-Stores the const value label member of `VarBinding`.
+Const value label associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L59)
@@ -107,7 +107,7 @@ Stores the const value label member of `VarBinding`.
 const_value_py
 ```
 
-Stores the const value py member of `VarBinding`.
+Const value py associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L55)
@@ -119,7 +119,7 @@ Stores the const value py member of `VarBinding`.
 decl_node
 ```
 
-Stores the decl node member of `VarBinding`.
+Decl node associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L47)
@@ -131,7 +131,7 @@ Stores the decl node member of `VarBinding`.
 depth
 ```
 
-Stores the depth member of `VarBinding`.
+Depth associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L39)
@@ -143,7 +143,7 @@ Stores the depth member of `VarBinding`.
 id
 ```
 
-Stores the id member of `VarBinding`.
+Id associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L29)
@@ -155,7 +155,7 @@ Stores the id member of `VarBinding`.
 is_const
 ```
 
-Stores the is const member of `VarBinding`.
+Whether `VarBinding.is_const` indicates const.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L49)
@@ -167,7 +167,7 @@ Stores the is const member of `VarBinding`.
 kind
 ```
 
-Stores the kind member of `VarBinding`.
+Kind associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L33)
@@ -179,7 +179,7 @@ Stores the kind member of `VarBinding`.
 label
 ```
 
-Stores the label member of `VarBinding`.
+Label associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L35)
@@ -191,7 +191,7 @@ Stores the label member of `VarBinding`.
 name
 ```
 
-Stores the name member of `VarBinding`.
+Name associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L31)
@@ -203,7 +203,7 @@ Stores the name member of `VarBinding`.
 offset
 ```
 
-Stores the offset member of `VarBinding`.
+Offset associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L37)
@@ -215,7 +215,7 @@ Stores the offset member of `VarBinding`.
 promoted_xmm
 ```
 
-Stores the promoted xmm member of `VarBinding`.
+Promoted xmm associated with `VarBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L61)

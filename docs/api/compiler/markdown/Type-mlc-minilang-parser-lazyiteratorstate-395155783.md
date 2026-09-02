@@ -23,7 +23,7 @@ Mutable construction state for a lazy iterator's pull-closure state machine. Int
 blocks
 ```
 
-Stores the blocks member of `LazyIteratorState`.
+Blocks associated with `LazyIteratorState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5041)
@@ -35,7 +35,7 @@ Stores the blocks member of `LazyIteratorState`.
 fn
 ```
 
-Stores the fn member of `LazyIteratorState`.
+Fn associated with `LazyIteratorState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5037)
@@ -47,7 +47,7 @@ Stores the fn member of `LazyIteratorState`.
 globals_declared
 ```
 
-Stores the globals declared member of `LazyIteratorState`.
+Globals declared associated with `LazyIteratorState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5045)
@@ -59,7 +59,7 @@ Stores the globals declared member of `LazyIteratorState`.
 persistent
 ```
 
-Stores the persistent member of `LazyIteratorState`.
+Persistent associated with `LazyIteratorState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5043)
@@ -71,7 +71,7 @@ Stores the persistent member of `LazyIteratorState`.
 state_name
 ```
 
-Stores the state name member of `LazyIteratorState`.
+State name associated with `LazyIteratorState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5039)

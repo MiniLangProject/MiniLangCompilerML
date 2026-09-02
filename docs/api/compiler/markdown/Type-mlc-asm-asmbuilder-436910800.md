@@ -23,7 +23,7 @@ Paged instruction stream plus chunked labels, patches and call metadata.
 active_chunk
 ```
 
-Stores the active chunk member of `AsmBuilder`.
+Active chunk associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L88)
@@ -35,7 +35,7 @@ Stores the active chunk member of `AsmBuilder`.
 active_chunk_index
 ```
 
-Stores the active chunk index member of `AsmBuilder`.
+Active chunk index associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L90)
@@ -47,7 +47,7 @@ Stores the active chunk index member of `AsmBuilder`.
 before_call_live_temps
 ```
 
-Stores the before call live temps member of `AsmBuilder`.
+Before call live temps associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L74)
@@ -59,7 +59,7 @@ Stores the before call live temps member of `AsmBuilder`.
 buf
 ```
 
-Stores the buf member of `AsmBuilder`.
+Buf associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L44)
@@ -71,7 +71,7 @@ Stores the buf member of `AsmBuilder`.
 buf_valid
 ```
 
-Stores the buf valid member of `AsmBuilder`.
+Buf valid associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L72)
@@ -83,7 +83,7 @@ Stores the buf valid member of `AsmBuilder`.
 calls_chunks
 ```
 
-Stores the calls chunks member of `AsmBuilder`.
+Calls chunks associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L62)
@@ -95,7 +95,7 @@ Stores the calls chunks member of `AsmBuilder`.
 calls_tail
 ```
 
-Stores the calls tail member of `AsmBuilder`.
+Calls tail associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L64)
@@ -107,7 +107,7 @@ Stores the calls tail member of `AsmBuilder`.
 chunk_pages
 ```
 
-Stores the chunk pages member of `AsmBuilder`.
+Chunk pages associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L66)
@@ -119,7 +119,7 @@ Stores the chunk pages member of `AsmBuilder`.
 chunk_size
 ```
 
-Stores the chunk size member of `AsmBuilder`.
+Chunk size associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L70)
@@ -131,7 +131,7 @@ Stores the chunk size member of `AsmBuilder`.
 chunk_tail
 ```
 
-Stores the chunk tail member of `AsmBuilder`.
+Chunk tail associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L68)
@@ -143,7 +143,7 @@ Stores the chunk tail member of `AsmBuilder`.
 deferred_patches_chunks
 ```
 
-Stores the deferred patches chunks member of `AsmBuilder`.
+Deferred patches chunks associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L58)
@@ -155,7 +155,7 @@ Stores the deferred patches chunks member of `AsmBuilder`.
 deferred_patches_tail
 ```
 
-Stores the deferred patches tail member of `AsmBuilder`.
+Deferred patches tail associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L60)
@@ -167,7 +167,7 @@ Stores the deferred patches tail member of `AsmBuilder`.
 label_pos_map
 ```
 
-Stores the label pos map member of `AsmBuilder`.
+Label pos map associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L78)
@@ -179,7 +179,7 @@ Stores the label pos map member of `AsmBuilder`.
 labels
 ```
 
-Stores the labels member of `AsmBuilder`.
+Labels associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L48)
@@ -191,7 +191,7 @@ Stores the labels member of `AsmBuilder`.
 labels_chunks
 ```
 
-Stores the labels chunks member of `AsmBuilder`.
+Labels chunks associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L50)
@@ -203,7 +203,7 @@ Stores the labels chunks member of `AsmBuilder`.
 labels_tail
 ```
 
-Stores the labels tail member of `AsmBuilder`.
+Labels tail associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L52)
@@ -215,7 +215,7 @@ Stores the labels tail member of `AsmBuilder`.
 patches_chunks
 ```
 
-Stores the patches chunks member of `AsmBuilder`.
+Patches chunks associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L54)
@@ -227,7 +227,7 @@ Stores the patches chunks member of `AsmBuilder`.
 patches_tail
 ```
 
-Stores the patches tail member of `AsmBuilder`.
+Patches tail associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L56)
@@ -239,7 +239,7 @@ Stores the patches tail member of `AsmBuilder`.
 peephole_last_jump
 ```
 
-Stores the peephole last jump member of `AsmBuilder`.
+Peephole last jump associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L80)
@@ -251,7 +251,7 @@ Stores the peephole last jump member of `AsmBuilder`.
 peephole_last_push
 ```
 
-Stores the peephole last push member of `AsmBuilder`.
+Peephole last push associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L82)
@@ -263,7 +263,7 @@ Stores the peephole last push member of `AsmBuilder`.
 record_calls
 ```
 
-Stores the record calls member of `AsmBuilder`.
+Record calls associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L84)
@@ -275,7 +275,7 @@ Stores the record calls member of `AsmBuilder`.
 size
 ```
 
-Stores the size member of `AsmBuilder`.
+Current logical size of `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L46)
@@ -287,7 +287,7 @@ Stores the size member of `AsmBuilder`.
 tracked_helper_map
 ```
 
-Stores the tracked helper map member of `AsmBuilder`.
+Tracked helper map associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L86)
@@ -299,7 +299,7 @@ Stores the tracked helper map member of `AsmBuilder`.
 tracked_helpers
 ```
 
-Stores the tracked helpers member of `AsmBuilder`.
+Tracked helpers associated with `AsmBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L76)

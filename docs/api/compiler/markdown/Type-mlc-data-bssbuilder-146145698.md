@@ -23,7 +23,7 @@ Size-only builder for the zero-initialized section.
 labels
 ```
 
-Stores the labels member of `BssBuilder`.
+Labels associated with `BssBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L85)
@@ -35,7 +35,7 @@ Stores the labels member of `BssBuilder`.
 size
 ```
 
-Stores the size member of `BssBuilder`.
+Current logical size of `BssBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L83)

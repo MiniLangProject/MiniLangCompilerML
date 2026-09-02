@@ -23,50 +23,50 @@ import mlc.constants as c
 import mlc.tools as t
 import mlc.data as d
 
-/// Stores the mem page size.
+/// Track mem page size.
 const MEM_PAGE_SIZE = 0x1000
-/// Stores the mem reserve granularity.
+/// Track mem reserve granularity.
 const MEM_RESERVE_GRANULARITY = 0x10000
-/// Stores the heap size default.
+/// Track heap size default.
 const HEAP_SIZE_DEFAULT = 0x02000000
-/// Stores the heap commit default.
+/// Track heap commit default.
 const HEAP_COMMIT_DEFAULT = HEAP_SIZE_DEFAULT
-/// Stores the heap reserve default.
+/// Track heap reserve default.
 const HEAP_RESERVE_DEFAULT = 1024 * 1024 * 1024 * 4
-/// Stores the heap reserve min.
+/// Track heap reserve min.
 const HEAP_RESERVE_MIN = HEAP_SIZE_DEFAULT
-/// Stores the heap grow min.
+/// Track heap grow min.
 const HEAP_GROW_MIN = 0x01000000
-/// Stores the alloc min split.
+/// Track alloc min split.
 const ALLOC_MIN_SPLIT = 32
 /// TLABs are formatted ranges inside the one shared heap, never private heaps.
 const TLAB_SIZE = 0x10000
 /// Keep the lock-free path aligned with the runtime's young-object class. Larger arrays/strings/byte buffers go through the exact central path.
 const TLAB_MAX_OBJECT_SIZE = 0x100
-/// Stores the thread handoff cursor offset.
+/// Track thread handoff cursor offset.
 const THREAD_HANDOFF_CURSOR_OFFSET = 136
-/// Stores the thread handoff root base offset.
+/// Track thread handoff root base offset.
 const THREAD_HANDOFF_ROOT_BASE_OFFSET = 88
-/// Stores the thread tlab start offset.
+/// Track thread tlab start offset.
 const THREAD_TLAB_START_OFFSET = 176
-/// Stores the thread tlab cursor offset.
+/// Track thread tlab cursor offset.
 const THREAD_TLAB_CURSOR_OFFSET = 184
-/// Stores the thread tlab end offset.
+/// Track thread tlab end offset.
 const THREAD_TLAB_END_OFFSET = 192
-/// Stores the gc mark stack qwords.
+/// Track gc mark stack qwords.
 const GC_MARK_STACK_QWORDS = 8388608
-/// Stores the gc default bytes limit.
+/// Track gc default bytes limit.
 const GC_DEFAULT_BYTES_LIMIT = 64 << 20
 /// Sentinel for the unboxed signed-i64 maximum. Tagged MiniLang integers cannot represent 0x7FFFFFFFFFFFFFFF directly, so the data helper writes its bytes.
 const GC_DISABLE_PERIODIC_LIMIT = -1
-/// Stores the gc young default bytes limit.
+/// Track gc young default bytes limit.
 const GC_YOUNG_DEFAULT_BYTES_LIMIT = 8 << 20
-/// Stores the gc young object max bytes.
+/// Track gc young object max bytes.
 const GC_YOUNG_OBJECT_MAX_BYTES = 256
-/// Stores the memory enable refcount.
+/// Track memory enable refcount.
 const MEMORY_ENABLE_REFCOUNT = false
 
-/// Runs emit mov rax i64 max.
+/// Emit emit mov rax i64 max in the managed-memory runtime.
 /// @internal
 function _emit_mov_rax_i64_max(state)
   imax = toNumber("9223372036854775807")
@@ -102,14 +102,14 @@ function _append_unique(values, value)
   return values + [value]
 end function
 
-/// Implements ensure data u64.
+/// Emit ensure data u64 in the managed-memory runtime.
 /// @internal
 function _ensure_data_u64(db, name, value)
   if d.data_has_label(db, name) then return db end if
   return d.data_add_u64(db, name, value)
 end function
 
-/// Implements ensure gc limit data.
+/// Emit ensure gc limit data in the managed-memory runtime.
 /// @internal
 function _ensure_gc_limit_data(db, name, value)
   if d.data_has_label(db, name) then return db end if
@@ -119,21 +119,21 @@ function _ensure_gc_limit_data(db, name, value)
   return d.data_add_u64(db, name, value)
 end function
 
-/// Implements ensure rdata str.
+/// Emit ensure rdata str in the managed-memory runtime.
 /// @internal
 function _ensure_rdata_str(rb, name, text)
   if d.rdata_has_label(rb, name) then return rb end if
   return d.rdata_add_str_nl(rb, name, text, false)
 end function
 
-/// Implements mark bitmap bytes for heap bytes.
+/// Emit mark bitmap bytes for heap bytes in the managed-memory runtime.
 /// @internal
 function _mark_bitmap_bytes_for_heap_bytes(heap_bytes)
   if heap_bytes < 0 then heap_bytes = 0 end if
   return (heap_bytes + 63) >> 6
 end function
 
-/// Implements rlabel len.
+/// Emit rlabel len in the managed-memory runtime.
 /// @internal
 function _rlabel_len(labels, name)
   if typeof(labels) != "array" or len(labels) <= 0 then return 0 end if
@@ -147,7 +147,7 @@ function _rlabel_len(labels, name)
   return 0
 end function
 
-/// Implements heap cfg get any.
+/// Emit heap cfg get any in the managed-memory runtime.
 /// @internal
 function _heap_cfg_get_any(state, key)
   cfg = 0
@@ -165,7 +165,7 @@ function _heap_cfg_get_any(state, key)
   return 0
 end function
 
-/// Implements heap cfg get int.
+/// Emit heap cfg get int in the managed-memory runtime.
 /// @internal
 function _heap_cfg_get_int(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
@@ -173,7 +173,7 @@ function _heap_cfg_get_int(state, key, defaultv)
   return defaultv
 end function
 
-/// Implements heap cfg get bool.
+/// Emit heap cfg get bool in the managed-memory runtime.
 /// @internal
 function _heap_cfg_get_bool(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
@@ -181,7 +181,7 @@ function _heap_cfg_get_bool(state, key, defaultv)
   return defaultv
 end function
 
-/// Implements heap cfg has any.
+/// Emit heap cfg has any in the managed-memory runtime.
 /// @internal
 function _heap_cfg_has_any(state)
   cfg = 0
@@ -189,7 +189,7 @@ function _heap_cfg_has_any(state)
   return typeof(cfg) == "array" and len(cfg) > 0
 end function
 
-/// Implements configured gc limits.
+/// Emit configured gc limits in the managed-memory runtime.
 /// @internal
 function _configured_gc_limits(state)
   configured_limits = _configured_gc_limits(state)
@@ -198,13 +198,13 @@ function _configured_gc_limits(state)
   return [periodic_limit, young_limit]
 end function
 
-/// Implements init.
+/// Emit init in the managed-memory runtime.
 /// @internal
 function __init__(state)
   return state
 end function
 
-/// Implements ensure gc data.
+/// Emit ensure gc data in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function ensure_gc_data(state)
   db = state.data
@@ -261,7 +261,7 @@ function ensure_gc_data(state)
   return state
 end function
 
-/// Runs emit heap init.
+/// Emit emit heap init in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 /// @param heap_size Value supplied for `heap_size`.
 function emit_heap_init(state, heap_size)
@@ -421,7 +421,7 @@ function emit_heap_init(state, heap_size)
   return state
 end function
 
-/// Runs emit gc init globals.
+/// Emit emit gc init globals in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 /// @param disable_periodic Value supplied for `disable_periodic`.
 function emit_gc_init_globals(state, disable_periodic)
@@ -451,7 +451,7 @@ function emit_gc_init_globals(state, disable_periodic)
   return state
 end function
 
-/// Runs emit gc clear root slots.
+/// Emit emit gc clear root slots in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 /// @param root_base Value supplied for `root_base`.
 /// @param root_top Value supplied for `root_top`.
@@ -492,7 +492,7 @@ function emit_gc_clear_root_slots(state, root_base, root_top)
   return state
 end function
 
-/// Runs emit gc push root frame.
+/// Emit emit gc push root frame in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 /// @param root_rec_off Value supplied for `root_rec_off`.
 /// @param root_base Value supplied for `root_base`.
@@ -525,7 +525,7 @@ function emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
   return state
 end function
 
-/// Runs emit gc pop root frame.
+/// Emit emit gc pop root frame in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 /// @param root_rec_off Value supplied for `root_rec_off`.
 function emit_gc_pop_root_frame(state, root_rec_off)
@@ -1839,7 +1839,7 @@ function emit_gc_collect_function(state)
   return state
 end function
 
-/// Runs emit incref function.
+/// Emit emit incref function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_incref_function(state)
   state.asm = a.mark(state.asm, "fn_incref")
@@ -1847,7 +1847,7 @@ function emit_incref_function(state)
   return state
 end function
 
-/// Runs emit decref function.
+/// Emit emit decref function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_decref_function(state)
   state.asm = a.mark(state.asm, "fn_decref")
@@ -1855,7 +1855,7 @@ function emit_decref_function(state)
   return state
 end function
 
-/// Runs emit heap count function.
+/// Emit emit heap count function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_count_function(state)
   state = ensure_gc_data(state)
@@ -1914,7 +1914,7 @@ function emit_heap_count_function(state)
   return state
 end function
 
-/// Runs emit heap bytes used function.
+/// Emit emit heap bytes used function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_bytes_used_function(state)
   state = ensure_gc_data(state)
@@ -1943,7 +1943,7 @@ function emit_heap_bytes_used_function(state)
   return state
 end function
 
-/// Runs emit heap bytes committed function.
+/// Emit emit heap bytes committed function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_bytes_committed_function(state)
   state = ensure_gc_data(state)
@@ -1972,7 +1972,7 @@ function emit_heap_bytes_committed_function(state)
   return state
 end function
 
-/// Runs emit heap bytes reserved function.
+/// Emit emit heap bytes reserved function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_bytes_reserved_function(state)
   state = ensure_gc_data(state)
@@ -2001,7 +2001,7 @@ function emit_heap_bytes_reserved_function(state)
   return state
 end function
 
-/// Runs emit heap free blocks function.
+/// Emit emit heap free blocks function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_free_blocks_function(state)
   state = ensure_gc_data(state)
@@ -2071,7 +2071,7 @@ function emit_heap_free_blocks_function(state)
   return state
 end function
 
-/// Runs emit heap free bytes function.
+/// Emit emit heap free bytes function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_free_bytes_function(state)
   state = ensure_gc_data(state)
@@ -2143,7 +2143,7 @@ function emit_heap_free_bytes_function(state)
   return state
 end function
 
-/// Runs emit heap grow function.
+/// Emit emit heap grow function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_grow_function(state)
   state = ensure_gc_data(state)
@@ -2263,7 +2263,7 @@ function emit_heap_grow_function(state)
   return state
 end function
 
-/// Implements cg memory init.
+/// Emit cg memory init in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function cg_memory_init(state)
   return ensure_gc_data(state)

@@ -23,7 +23,7 @@ Serialized import section plus directory and symbol metadata.
 data
 ```
 
-Stores the data member of `IdataResult`.
+Backing data owned by `IdataResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L102)
@@ -35,7 +35,7 @@ Stores the data member of `IdataResult`.
 iat_symbols
 ```
 
-Stores the iat symbols member of `IdataResult`.
+Iat symbols associated with `IdataResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L108)
@@ -47,7 +47,7 @@ Stores the iat symbols member of `IdataResult`.
 idata_total_size
 ```
 
-Stores the idata total size member of `IdataResult`.
+Idata total size associated with `IdataResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L106)
@@ -59,7 +59,7 @@ Stores the idata total size member of `IdataResult`.
 import_dir_rva
 ```
 
-Stores the import dir rva member of `IdataResult`.
+Import dir rva associated with `IdataResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L104)

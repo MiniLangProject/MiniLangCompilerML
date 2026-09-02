@@ -23,7 +23,7 @@ Reachable from entry: **yes**
 inline function _is_alnum_byte(ch)
 ```
 
-Implements inline.
+Process inline in the shared MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -39,7 +39,7 @@ Implements inline.
 inline function _is_digit_byte(ch)
 ```
 
-Implements inline.
+Process inline in the shared MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -55,7 +55,7 @@ Implements inline.
 inline function _is_space_byte(ch)
 ```
 
-Implements inline.
+Process inline in the shared MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -71,7 +71,7 @@ Implements inline.
 function _normalize_frontend_error(err, fallback_path)
 ```
 
-Implements normalize frontend error.
+Process normalize frontend error in the shared MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ Implements normalize frontend error.
 function _normalize_frontend_errors(errors, fallback_path)
 ```
 
-Implements normalize frontend errors.
+Process normalize frontend errors in the shared MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

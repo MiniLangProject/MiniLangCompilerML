@@ -23,7 +23,7 @@ Represents front check result.
 aliases
 ```
 
-Stores the aliases member of `FrontCheckResult`.
+Aliases associated with `FrontCheckResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L135)
@@ -35,7 +35,7 @@ Stores the aliases member of `FrontCheckResult`.
 diagnostics
 ```
 
-Stores the diagnostics member of `FrontCheckResult`.
+Diagnostics associated with `FrontCheckResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L129)
@@ -47,7 +47,7 @@ Stores the diagnostics member of `FrontCheckResult`.
 modules
 ```
 
-Stores the modules member of `FrontCheckResult`.
+Modules associated with `FrontCheckResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L133)
@@ -59,7 +59,7 @@ Stores the modules member of `FrontCheckResult`.
 parsed_modules
 ```
 
-Stores the parsed modules member of `FrontCheckResult`.
+Parsed modules associated with `FrontCheckResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L137)
@@ -71,7 +71,7 @@ Stores the parsed modules member of `FrontCheckResult`.
 visited
 ```
 
-Stores the visited member of `FrontCheckResult`.
+Visited associated with `FrontCheckResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L131)

@@ -23,7 +23,7 @@ Represents index.
 _filename
 ```
 
-Stores the filename member of `Index`.
+Filename associated with `Index`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L287)
@@ -35,7 +35,7 @@ Stores the filename member of `Index`.
 _pos
 ```
 
-Stores the pos member of `Index`.
+Pos associated with `Index`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L285)
@@ -47,7 +47,7 @@ Stores the pos member of `Index`.
 index
 ```
 
-Stores the index member of `Index`.
+Index associated with `Index`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L283)
@@ -59,7 +59,7 @@ Stores the index member of `Index`.
 node_kind
 ```
 
-Stores the node kind member of `Index`.
+Node kind associated with `Index`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L279)
@@ -71,7 +71,7 @@ Stores the node kind member of `Index`.
 target
 ```
 
-Stores the target member of `Index`.
+Target associated with `Index`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L281)

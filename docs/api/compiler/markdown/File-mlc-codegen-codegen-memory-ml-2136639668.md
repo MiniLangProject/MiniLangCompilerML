@@ -24,7 +24,7 @@ Reachable from entry: **yes**
 function __init__(state)
 ```
 
-Implements init.
+Emit init in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -57,7 +57,7 @@ Updates append unique.
 function _configured_gc_limits(state)
 ```
 
-Implements configured gc limits.
+Emit configured gc limits in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ Implements configured gc limits.
 function _emit_mov_rax_i64_max(state)
 ```
 
-Runs emit mov rax i64 max.
+Emit emit mov rax i64 max in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ Runs emit mov rax i64 max.
 function _ensure_data_u64(db, name, value)
 ```
 
-Implements ensure data u64.
+Emit ensure data u64 in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -107,7 +107,7 @@ Implements ensure data u64.
 function _ensure_gc_limit_data(db, name, value)
 ```
 
-Implements ensure gc limit data.
+Emit ensure gc limit data in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -125,7 +125,7 @@ Implements ensure gc limit data.
 function _ensure_rdata_str(rb, name, text)
 ```
 
-Implements ensure rdata str.
+Emit ensure rdata str in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -160,7 +160,7 @@ Reports whether has label.
 function _heap_cfg_get_any(state, key)
 ```
 
-Implements heap cfg get any.
+Emit heap cfg get any in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -177,7 +177,7 @@ Implements heap cfg get any.
 function _heap_cfg_get_bool(state, key, defaultv)
 ```
 
-Implements heap cfg get bool.
+Emit heap cfg get bool in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -195,7 +195,7 @@ Implements heap cfg get bool.
 function _heap_cfg_get_int(state, key, defaultv)
 ```
 
-Implements heap cfg get int.
+Emit heap cfg get int in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -213,7 +213,7 @@ Implements heap cfg get int.
 function _heap_cfg_has_any(state)
 ```
 
-Implements heap cfg has any.
+Emit heap cfg has any in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -229,7 +229,7 @@ Implements heap cfg has any.
 function _mark_bitmap_bytes_for_heap_bytes(heap_bytes)
 ```
 
-Implements mark bitmap bytes for heap bytes.
+Emit mark bitmap bytes for heap bytes in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -245,7 +245,7 @@ Implements mark bitmap bytes for heap bytes.
 function _rlabel_len(labels, name)
 ```
 
-Implements rlabel len.
+Emit rlabel len in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -262,7 +262,7 @@ Implements rlabel len.
 const ALLOC_MIN_SPLIT = 32
 ```
 
-Stores the alloc min split.
+Track alloc min split.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L41)
@@ -274,7 +274,7 @@ Stores the alloc min split.
 function cg_memory_init(state)
 ```
 
-Implements cg memory init.
+Emit cg memory init in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -306,7 +306,7 @@ Emit the shared-heap allocator, including the TLAB fast path and synchronized re
 function emit_decref_function(state)
 ```
 
-Runs emit decref function.
+Emit emit decref function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -322,7 +322,7 @@ Runs emit decref function.
 function emit_gc_clear_root_slots(state, root_base, root_top)
 ```
 
-Runs emit gc clear root slots.
+Emit emit gc clear root slots in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -356,7 +356,7 @@ Emit stop-the-world mark/sweep collection. Thread roots are published before sus
 function emit_gc_init_globals(state, disable_periodic)
 ```
 
-Runs emit gc init globals.
+Emit emit gc init globals in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -373,7 +373,7 @@ Runs emit gc init globals.
 function emit_gc_pop_root_frame(state, root_rec_off)
 ```
 
-Runs emit gc pop root frame.
+Emit emit gc pop root frame in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -390,7 +390,7 @@ Runs emit gc pop root frame.
 function emit_gc_push_root_frame(state, root_rec_off, root_base, root_top)
 ```
 
-Runs emit gc push root frame.
+Emit emit gc push root frame in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -409,7 +409,7 @@ Runs emit gc push root frame.
 function emit_heap_bytes_committed_function(state)
 ```
 
-Runs emit heap bytes committed function.
+Emit emit heap bytes committed function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -425,7 +425,7 @@ Runs emit heap bytes committed function.
 function emit_heap_bytes_reserved_function(state)
 ```
 
-Runs emit heap bytes reserved function.
+Emit emit heap bytes reserved function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -441,7 +441,7 @@ Runs emit heap bytes reserved function.
 function emit_heap_bytes_used_function(state)
 ```
 
-Runs emit heap bytes used function.
+Emit emit heap bytes used function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -457,7 +457,7 @@ Runs emit heap bytes used function.
 function emit_heap_count_function(state)
 ```
 
-Runs emit heap count function.
+Emit emit heap count function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -473,7 +473,7 @@ Runs emit heap count function.
 function emit_heap_free_blocks_function(state)
 ```
 
-Runs emit heap free blocks function.
+Emit emit heap free blocks function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -489,7 +489,7 @@ Runs emit heap free blocks function.
 function emit_heap_free_bytes_function(state)
 ```
 
-Runs emit heap free bytes function.
+Emit emit heap free bytes function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -505,7 +505,7 @@ Runs emit heap free bytes function.
 function emit_heap_grow_function(state)
 ```
 
-Runs emit heap grow function.
+Emit emit heap grow function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -521,7 +521,7 @@ Runs emit heap grow function.
 function emit_heap_init(state, heap_size)
 ```
 
-Runs emit heap init.
+Emit emit heap init in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -538,7 +538,7 @@ Runs emit heap init.
 function emit_incref_function(state)
 ```
 
-Runs emit incref function.
+Emit emit incref function in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -554,7 +554,7 @@ Runs emit incref function.
 function ensure_gc_data(state)
 ```
 
-Implements ensure gc data.
+Emit ensure gc data in the managed-memory runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -570,7 +570,7 @@ Implements ensure gc data.
 const GC_DEFAULT_BYTES_LIMIT = 64 << 20
 ```
 
-Stores the gc default bytes limit.
+Track gc default bytes limit.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L59)
@@ -594,7 +594,7 @@ Sentinel for the unboxed signed-i64 maximum. Tagged MiniLang integers cannot rep
 const GC_MARK_STACK_QWORDS = 8388608
 ```
 
-Stores the gc mark stack qwords.
+Track gc mark stack qwords.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L57)
@@ -606,7 +606,7 @@ Stores the gc mark stack qwords.
 const GC_YOUNG_DEFAULT_BYTES_LIMIT = 8 << 20
 ```
 
-Stores the gc young default bytes limit.
+Track gc young default bytes limit.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L63)
@@ -618,7 +618,7 @@ Stores the gc young default bytes limit.
 const GC_YOUNG_OBJECT_MAX_BYTES = 256
 ```
 
-Stores the gc young object max bytes.
+Track gc young object max bytes.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L65)
@@ -630,7 +630,7 @@ Stores the gc young object max bytes.
 const HEAP_COMMIT_DEFAULT = HEAP_SIZE_DEFAULT
 ```
 
-Stores the heap commit default.
+Track heap commit default.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L33)
@@ -642,7 +642,7 @@ Stores the heap commit default.
 const HEAP_GROW_MIN = 16777216
 ```
 
-Stores the heap grow min.
+Track heap grow min.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L39)
@@ -654,7 +654,7 @@ Stores the heap grow min.
 const HEAP_RESERVE_DEFAULT = 1024 * 1024 * 1024 * 4
 ```
 
-Stores the heap reserve default.
+Track heap reserve default.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L35)
@@ -666,7 +666,7 @@ Stores the heap reserve default.
 const HEAP_RESERVE_MIN = HEAP_SIZE_DEFAULT
 ```
 
-Stores the heap reserve min.
+Track heap reserve min.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L37)
@@ -678,7 +678,7 @@ Stores the heap reserve min.
 const HEAP_SIZE_DEFAULT = 33554432
 ```
 
-Stores the heap size default.
+Track heap size default.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L31)
@@ -690,7 +690,7 @@ Stores the heap size default.
 const MEM_PAGE_SIZE = 4096
 ```
 
-Stores the mem page size.
+Track mem page size.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L27)
@@ -702,7 +702,7 @@ Stores the mem page size.
 const MEM_RESERVE_GRANULARITY = 65536
 ```
 
-Stores the mem reserve granularity.
+Track mem reserve granularity.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L29)
@@ -714,7 +714,7 @@ Stores the mem reserve granularity.
 const MEMORY_ENABLE_REFCOUNT = false
 ```
 
-Stores the memory enable refcount.
+Track memory enable refcount.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L67)
@@ -726,7 +726,7 @@ Stores the memory enable refcount.
 const THREAD_HANDOFF_CURSOR_OFFSET = 136
 ```
 
-Stores the thread handoff cursor offset.
+Track thread handoff cursor offset.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L47)
@@ -738,7 +738,7 @@ Stores the thread handoff cursor offset.
 const THREAD_HANDOFF_ROOT_BASE_OFFSET = 88
 ```
 
-Stores the thread handoff root base offset.
+Track thread handoff root base offset.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L49)
@@ -750,7 +750,7 @@ Stores the thread handoff root base offset.
 const THREAD_TLAB_CURSOR_OFFSET = 184
 ```
 
-Stores the thread tlab cursor offset.
+Track thread tlab cursor offset.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L53)
@@ -762,7 +762,7 @@ Stores the thread tlab cursor offset.
 const THREAD_TLAB_END_OFFSET = 192
 ```
 
-Stores the thread tlab end offset.
+Track thread tlab end offset.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L55)
@@ -774,7 +774,7 @@ Stores the thread tlab end offset.
 const THREAD_TLAB_START_OFFSET = 176
 ```
 
-Stores the thread tlab start offset.
+Track thread tlab start offset.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L51)

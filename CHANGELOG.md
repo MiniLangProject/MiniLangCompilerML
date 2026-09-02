@@ -2,6 +2,13 @@
 
 All notable changes to the MiniLang compiler are documented here.
 
+## 1.2.3 - 2026-09-02
+
+- Split the largest statement and generic-call code-generation routines into
+  focused helpers without changing target-code emission order.
+- Replaced placeholder implementation comments with subsystem-specific English
+  descriptions and made checked-in MiniDoc output timestamp-free.
+
 ## 1.2.2 - 2026-09-02
 
 - Used the generated MiniDoc implementation map and a complete fixed-point call

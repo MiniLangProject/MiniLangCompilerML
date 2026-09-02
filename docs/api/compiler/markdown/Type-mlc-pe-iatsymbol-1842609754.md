@@ -23,7 +23,7 @@ Resolved import-address-table RVA for one native symbol.
 dll
 ```
 
-Stores the dll member of `IatSymbol`.
+Dll associated with `IatSymbol`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L92)
@@ -35,7 +35,7 @@ Stores the dll member of `IatSymbol`.
 func
 ```
 
-Stores the func member of `IatSymbol`.
+Func associated with `IatSymbol`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L94)
@@ -47,7 +47,7 @@ Stores the func member of `IatSymbol`.
 rva
 ```
 
-Stores the rva member of `IatSymbol`.
+Rva associated with `IatSymbol`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L96)

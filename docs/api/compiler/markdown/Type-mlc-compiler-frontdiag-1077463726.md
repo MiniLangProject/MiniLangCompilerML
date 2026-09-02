@@ -23,7 +23,7 @@ Frontend diagnostics and keep-going results.
 filename
 ```
 
-Stores the filename member of `FrontDiag`.
+Filename associated with `FrontDiag`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L119)
@@ -35,7 +35,7 @@ Stores the filename member of `FrontDiag`.
 kind
 ```
 
-Stores the kind member of `FrontDiag`.
+Kind associated with `FrontDiag`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L117)
@@ -47,7 +47,7 @@ Stores the kind member of `FrontDiag`.
 message
 ```
 
-Stores the message member of `FrontDiag`.
+Diagnostic message carried by `FrontDiag`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L123)
@@ -59,7 +59,7 @@ Stores the message member of `FrontDiag`.
 pos
 ```
 
-Stores the pos member of `FrontDiag`.
+Pos associated with `FrontDiag`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L121)

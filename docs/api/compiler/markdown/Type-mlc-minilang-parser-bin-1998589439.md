@@ -23,7 +23,7 @@ Represents bin.
 _filename
 ```
 
-Stores the filename member of `Bin`.
+Filename associated with `Bin`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L211)
@@ -35,7 +35,7 @@ Stores the filename member of `Bin`.
 _pos
 ```
 
-Stores the pos member of `Bin`.
+Pos associated with `Bin`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L209)
@@ -47,7 +47,7 @@ Stores the pos member of `Bin`.
 left
 ```
 
-Stores the left member of `Bin`.
+Left associated with `Bin`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L203)
@@ -59,7 +59,7 @@ Stores the left member of `Bin`.
 node_kind
 ```
 
-Stores the node kind member of `Bin`.
+Node kind associated with `Bin`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L201)
@@ -71,7 +71,7 @@ Stores the node kind member of `Bin`.
 op
 ```
 
-Stores the op member of `Bin`.
+Op associated with `Bin`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L205)
@@ -83,7 +83,7 @@ Stores the op member of `Bin`.
 right
 ```
 
-Stores the right member of `Bin`.
+Right associated with `Bin`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L207)

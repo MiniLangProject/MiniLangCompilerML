@@ -23,7 +23,7 @@ Represents thunk destination.
 kind
 ```
 
-Stores the kind member of `ThunkDestination`.
+Kind associated with `ThunkDestination`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L55)
@@ -35,7 +35,7 @@ Stores the kind member of `ThunkDestination`.
 value
 ```
 
-Stores the value member of `ThunkDestination`.
+Value associated with `ThunkDestination`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L57)

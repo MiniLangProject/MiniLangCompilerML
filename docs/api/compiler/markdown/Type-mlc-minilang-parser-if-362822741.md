@@ -23,7 +23,7 @@ Represents if.
 _filename
 ```
 
-Stores the filename member of `If`.
+Filename associated with `If`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L633)
@@ -35,7 +35,7 @@ Stores the filename member of `If`.
 _pos
 ```
 
-Stores the pos member of `If`.
+Pos associated with `If`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L631)
@@ -47,7 +47,7 @@ Stores the pos member of `If`.
 cond
 ```
 
-Stores the cond member of `If`.
+Cond associated with `If`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L623)
@@ -59,7 +59,7 @@ Stores the cond member of `If`.
 elifs
 ```
 
-Stores the elifs member of `If`.
+Elifs associated with `If`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L627)
@@ -71,7 +71,7 @@ Stores the elifs member of `If`.
 else_body
 ```
 
-Stores the else body member of `If`.
+Else body associated with `If`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L629)
@@ -83,7 +83,7 @@ Stores the else body member of `If`.
 node_kind
 ```
 
-Stores the node kind member of `If`.
+Node kind associated with `If`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L621)
@@ -95,7 +95,7 @@ Stores the node kind member of `If`.
 then_body
 ```
 
-Stores the then body member of `If`.
+Then body associated with `If`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L625)

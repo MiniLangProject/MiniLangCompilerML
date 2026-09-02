@@ -23,7 +23,7 @@ Chunked read-only builder with typed constant-deduplication pools.
 alias_index
 ```
 
-Stores the alias index member of `RDataBuilder`.
+Alias index associated with `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L107)
@@ -35,7 +35,7 @@ Stores the alias index member of `RDataBuilder`.
 data
 ```
 
-Stores the data member of `RDataBuilder`.
+Backing data owned by `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L91)
@@ -47,7 +47,7 @@ Stores the data member of `RDataBuilder`.
 label_index
 ```
 
-Stores the label index member of `RDataBuilder`.
+Label index associated with `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L95)
@@ -59,7 +59,7 @@ Stores the label index member of `RDataBuilder`.
 labels
 ```
 
-Stores the labels member of `RDataBuilder`.
+Labels associated with `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L93)
@@ -71,7 +71,7 @@ Stores the labels member of `RDataBuilder`.
 patches
 ```
 
-Stores the patches member of `RDataBuilder`.
+Patches associated with `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L99)
@@ -83,7 +83,7 @@ Stores the patches member of `RDataBuilder`.
 pool_obj_float
 ```
 
-Stores the pool obj float member of `RDataBuilder`.
+Pool obj float associated with `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L105)
@@ -95,7 +95,7 @@ Stores the pool obj float member of `RDataBuilder`.
 pool_obj_string
 ```
 
-Stores the pool obj string member of `RDataBuilder`.
+Pool obj string associated with `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L103)
@@ -107,7 +107,7 @@ Stores the pool obj string member of `RDataBuilder`.
 pool_raw
 ```
 
-Stores the pool raw member of `RDataBuilder`.
+Pool raw associated with `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L101)
@@ -119,7 +119,7 @@ Stores the pool raw member of `RDataBuilder`.
 reference_label_index
 ```
 
-Stores the reference label index member of `RDataBuilder`.
+Reference label index associated with `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L97)
@@ -131,7 +131,7 @@ Stores the reference label index member of `RDataBuilder`.
 used
 ```
 
-Stores the used member of `RDataBuilder`.
+Number of populated entries in `RDataBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L109)

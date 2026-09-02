@@ -23,7 +23,7 @@ Capacity-backed, indexed state for one recursive source-tree traversal.
 files
 ```
 
-Stores the files member of `ProjectFileCollector`.
+Files associated with `ProjectFileCollector`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L97)
@@ -35,7 +35,7 @@ Stores the files member of `ProjectFileCollector`.
 seen_dirs
 ```
 
-Stores the seen dirs member of `ProjectFileCollector`.
+Seen dirs associated with `ProjectFileCollector`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L101)
@@ -47,7 +47,7 @@ Stores the seen dirs member of `ProjectFileCollector`.
 seen_files
 ```
 
-Stores the seen files member of `ProjectFileCollector`.
+Seen files associated with `ProjectFileCollector`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L99)

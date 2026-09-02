@@ -23,7 +23,7 @@ Represents str.
 _filename
 ```
 
-Stores the filename member of `Str`.
+Filename associated with `Str`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L131)
@@ -35,7 +35,7 @@ Stores the filename member of `Str`.
 _pos
 ```
 
-Stores the pos member of `Str`.
+Pos associated with `Str`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L129)
@@ -47,7 +47,7 @@ Stores the pos member of `Str`.
 node_kind
 ```
 
-Stores the node kind member of `Str`.
+Node kind associated with `Str`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L125)
@@ -59,7 +59,7 @@ Stores the node kind member of `Str`.
 value
 ```
 
-Stores the value member of `Str`.
+Value associated with `Str`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L127)

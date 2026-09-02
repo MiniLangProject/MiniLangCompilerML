@@ -23,7 +23,7 @@ Compact immutable-signature binding for function/struct/builtin/extern objects. 
 boxed
 ```
 
-Stores the boxed member of `CallableBinding`.
+Boxed associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L79)
@@ -35,7 +35,7 @@ Stores the boxed member of `CallableBinding`.
 capture_depth
 ```
 
-Stores the capture depth member of `CallableBinding`.
+Capture depth associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L81)
@@ -47,7 +47,7 @@ Stores the capture depth member of `CallableBinding`.
 capture_index
 ```
 
-Stores the capture index member of `CallableBinding`.
+Capture index associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L83)
@@ -59,7 +59,7 @@ Stores the capture index member of `CallableBinding`.
 decl_node
 ```
 
-Stores the decl node member of `CallableBinding`.
+Decl node associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L85)
@@ -71,7 +71,7 @@ Stores the decl node member of `CallableBinding`.
 depth
 ```
 
-Stores the depth member of `CallableBinding`.
+Depth associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L77)
@@ -83,7 +83,7 @@ Stores the depth member of `CallableBinding`.
 id
 ```
 
-Stores the id member of `CallableBinding`.
+Id associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L67)
@@ -95,7 +95,7 @@ Stores the id member of `CallableBinding`.
 is_const
 ```
 
-Stores the is const member of `CallableBinding`.
+Whether `CallableBinding.is_const` indicates const.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L87)
@@ -107,7 +107,7 @@ Stores the is const member of `CallableBinding`.
 kind
 ```
 
-Stores the kind member of `CallableBinding`.
+Kind associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L71)
@@ -119,7 +119,7 @@ Stores the kind member of `CallableBinding`.
 label
 ```
 
-Stores the label member of `CallableBinding`.
+Label associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L73)
@@ -131,7 +131,7 @@ Stores the label member of `CallableBinding`.
 name
 ```
 
-Stores the name member of `CallableBinding`.
+Name associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L69)
@@ -143,7 +143,7 @@ Stores the name member of `CallableBinding`.
 offset
 ```
 
-Stores the offset member of `CallableBinding`.
+Offset associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L75)
@@ -155,7 +155,7 @@ Stores the offset member of `CallableBinding`.
 promoted_xmm
 ```
 
-Stores the promoted xmm member of `CallableBinding`.
+Promoted xmm associated with `CallableBinding`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L89)

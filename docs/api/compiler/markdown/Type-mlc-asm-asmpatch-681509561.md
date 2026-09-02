@@ -23,7 +23,7 @@ Deferred rel32 relocation from an instruction field to a named label.
 kind
 ```
 
-Stores the kind member of `AsmPatch`.
+Kind associated with `AsmPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L30)
@@ -35,7 +35,7 @@ Stores the kind member of `AsmPatch`.
 pos
 ```
 
-Stores the pos member of `AsmPatch`.
+Pos associated with `AsmPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L26)
@@ -47,7 +47,7 @@ Stores the pos member of `AsmPatch`.
 target
 ```
 
-Stores the target member of `AsmPatch`.
+Target associated with `AsmPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L28)

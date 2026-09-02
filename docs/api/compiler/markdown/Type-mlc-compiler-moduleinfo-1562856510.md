@@ -23,7 +23,7 @@ Parsed module graph nodes and resolution candidates.
 package_name
 ```
 
-Stores the package name member of `ModuleInfo`.
+Package name associated with `ModuleInfo`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L145)
@@ -35,7 +35,7 @@ Stores the package name member of `ModuleInfo`.
 path
 ```
 
-Stores the path member of `ModuleInfo`.
+Path associated with `ModuleInfo`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L143)

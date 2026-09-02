@@ -21,7 +21,7 @@ Reachable from entry: **yes**
 function _arr_concat_chunks_balanced(parts)
 ```
 
-Implements arr concat chunks balanced.
+Provide the arr concat chunks balanced compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -37,7 +37,7 @@ Implements arr concat chunks balanced.
 function _arr_copy_prefix(arr, n)
 ```
 
-Implements arr copy prefix.
+Provide the arr copy prefix compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -54,7 +54,7 @@ Implements arr copy prefix.
 function _arr_fill(n, fill)
 ```
 
-Implements arr fill.
+Provide the arr fill compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -71,7 +71,7 @@ Implements arr fill.
 function _arr_tail_from_array(arr, cap)
 ```
 
-Implements arr tail from array.
+Provide the arr tail from array compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ Implements arr tail from array.
 function _arr_tail_new(cap)
 ```
 
-Implements arr tail new.
+Provide the arr tail new compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -104,7 +104,7 @@ Implements arr tail new.
 function _arr_tail_to_array(tail)
 ```
 
-Implements arr tail to array.
+Provide the arr tail to array compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -120,7 +120,7 @@ Implements arr tail to array.
 function _arr_unwrap_value(value)
 ```
 
-Implements arr unwrap value.
+Provide the arr unwrap value compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -136,7 +136,7 @@ Implements arr unwrap value.
 _arr_void_sentinel
 ```
 
-Stores the arr void sentinel compiler state.
+Track arr void sentinel compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L127)
@@ -148,7 +148,7 @@ Stores the arr void sentinel compiler state.
 function _arr_wrap_value(value)
 ```
 
-Implements arr wrap value.
+Provide the arr wrap value compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -164,7 +164,7 @@ Implements arr wrap value.
 _ast_bin_cap
 ```
 
-Stores the ast bin cap compiler state.
+Track ast bin cap compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L177)
@@ -176,7 +176,7 @@ Stores the ast bin cap compiler state.
 _ast_bin_count
 ```
 
-Stores the ast bin count compiler state.
+Track ast bin count compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L175)
@@ -188,7 +188,7 @@ Stores the ast bin count compiler state.
 function _ast_bin_ensure(need)
 ```
 
-Implements ast bin ensure.
+Provide the ast bin ensure compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -204,7 +204,7 @@ Implements ast bin ensure.
 _ast_bin_file_ids
 ```
 
-Stores the ast bin file ids compiler state.
+Track ast bin file ids compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L173)
@@ -216,7 +216,7 @@ Stores the ast bin file ids compiler state.
 _ast_bin_lefts
 ```
 
-Stores the ast bin lefts compiler state.
+Track ast bin lefts compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L165)
@@ -228,7 +228,7 @@ Stores the ast bin lefts compiler state.
 _ast_bin_op_ids
 ```
 
-Stores the ast bin op ids compiler state.
+Track ast bin op ids compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L169)
@@ -240,7 +240,7 @@ Stores the ast bin op ids compiler state.
 _ast_bin_positions
 ```
 
-Stores the ast bin positions compiler state.
+Track ast bin positions compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L171)
@@ -252,7 +252,7 @@ Stores the ast bin positions compiler state.
 _ast_bin_rights
 ```
 
-Stores the ast bin rights compiler state.
+Track ast bin rights compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L167)
@@ -264,7 +264,7 @@ Stores the ast bin rights compiler state.
 _ast_filename_index
 ```
 
-Stores the ast filename index compiler state.
+Track ast filename index compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L159)
@@ -276,7 +276,7 @@ Stores the ast filename index compiler state.
 _ast_filenames
 ```
 
-Stores the ast filenames compiler state.
+Track ast filenames compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L157)
@@ -288,7 +288,7 @@ Stores the ast filenames compiler state.
 function _ast_intern(index_map, values, text)
 ```
 
-Implements ast intern.
+Provide the ast intern compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -306,7 +306,7 @@ Implements ast intern.
 _ast_leaf_cap
 ```
 
-Stores the ast leaf cap compiler state.
+Track ast leaf cap compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L155)
@@ -318,7 +318,7 @@ Stores the ast leaf cap compiler state.
 _ast_leaf_count
 ```
 
-Stores the ast leaf count compiler state.
+Track ast leaf count compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L153)
@@ -330,7 +330,7 @@ Stores the ast leaf count compiler state.
 function _ast_leaf_ensure(need)
 ```
 
-Implements ast leaf ensure.
+Provide the ast leaf ensure compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -346,7 +346,7 @@ Implements ast leaf ensure.
 _ast_leaf_file_ids
 ```
 
-Stores the ast leaf file ids compiler state.
+Track ast leaf file ids compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L149)
@@ -358,7 +358,7 @@ Stores the ast leaf file ids compiler state.
 function _ast_leaf_kind_id(kind)
 ```
 
-Implements ast leaf kind id.
+Provide the ast leaf kind id compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -374,7 +374,7 @@ Implements ast leaf kind id.
 function _ast_leaf_kind_name(kind_id)
 ```
 
-Implements ast leaf kind name.
+Provide the ast leaf kind name compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -390,7 +390,7 @@ Implements ast leaf kind name.
 _ast_leaf_kinds
 ```
 
-Stores the ast leaf kinds compiler state.
+Track ast leaf kinds compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L143)
@@ -402,7 +402,7 @@ Stores the ast leaf kinds compiler state.
 _ast_leaf_payloads
 ```
 
-Stores the ast leaf payloads compiler state.
+Track ast leaf payloads compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L145)
@@ -414,7 +414,7 @@ Stores the ast leaf payloads compiler state.
 _ast_leaf_positions
 ```
 
-Stores the ast leaf positions compiler state.
+Track ast leaf positions compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L147)
@@ -426,7 +426,7 @@ Stores the ast leaf positions compiler state.
 _ast_leaf_symbol_ids
 ```
 
-Stores the ast leaf symbol ids compiler state.
+Track ast leaf symbol ids compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L151)
@@ -438,7 +438,7 @@ Stores the ast leaf symbol ids compiler state.
 _ast_symbol_index
 ```
 
-Stores the ast symbol index compiler state.
+Track ast symbol index compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L163)
@@ -450,7 +450,7 @@ Stores the ast symbol index compiler state.
 _ast_symbols
 ```
 
-Stores the ast symbols compiler state.
+Track ast symbols compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L161)
@@ -479,7 +479,7 @@ Reads a packed unsigned 32-bit value from an AST byte column.
 function _ast_u32_write(buf, index, value)
 ```
 
-Implements ast u32 write.
+Provide the ast u32 write compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -497,7 +497,7 @@ Implements ast u32 write.
 inline function _bp_chunk_count(bp)
 ```
 
-Implements inline.
+Provide the inline compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -513,7 +513,7 @@ Implements inline.
 function _bp_chunk_get(bp, idx)
 ```
 
-Implements bp chunk get.
+Provide the bp chunk get compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -530,7 +530,7 @@ Implements bp chunk get.
 function _bp_chunk_push(bp, page)
 ```
 
-Implements bp chunk push.
+Provide the bp chunk push compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -547,7 +547,7 @@ Implements bp chunk push.
 function _bp_chunk_set(bp, idx, page)
 ```
 
-Implements bp chunk set.
+Provide the bp chunk set compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -565,7 +565,7 @@ Implements bp chunk set.
 function _bp_ensure(bp, need)
 ```
 
-Implements bp ensure.
+Provide the bp ensure compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -582,7 +582,7 @@ Implements bp ensure.
 inline function _chunks_is_paged(chunks)
 ```
 
-Implements inline.
+Provide the inline compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -598,7 +598,7 @@ Implements inline.
 function _chunks_materialize(chunks)
 ```
 
-Implements chunks materialize.
+Provide the chunks materialize compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -614,7 +614,7 @@ Implements chunks materialize.
 function _chunks_paged_from_array(chunks)
 ```
 
-Implements chunks paged from array.
+Provide the chunks paged from array compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -630,7 +630,7 @@ Implements chunks paged from array.
 function _chunks_paged_new()
 ```
 
-Implements chunks paged new.
+Provide the chunks paged new compiler utility operation.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1400)
@@ -642,7 +642,7 @@ Implements chunks paged new.
 function _chunks_paged_push(chunks, chunk)
 ```
 
-Implements chunks paged push.
+Provide the chunks paged push compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -659,7 +659,7 @@ Implements chunks paged push.
 inline function _chunks_paged_tag()
 ```
 
-Implements inline.
+Provide the inline compiler utility operation.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1386)
@@ -671,7 +671,7 @@ Implements inline.
 function _chunks_push_chunk(chunks, chunk)
 ```
 
-Implements chunks push chunk.
+Provide the chunks push chunk compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -688,7 +688,7 @@ Implements chunks push chunk.
 extern function _copy_native_bytes(destination as ptr, source as ptr, count as u64) from "kernel32.dll" symbol "RtlMoveMemory" returns ptr
 ```
 
-Implements copy native bytes.
+Provide the copy native bytes compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -706,7 +706,7 @@ Implements copy native bytes.
 inline function _f32_is_inf(v)
 ```
 
-Implements inline.
+Provide the inline compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -738,7 +738,7 @@ Reports whether a float value is NaN.
 function _fm_hash_any(key)
 ```
 
-Implements fm hash any.
+Provide the fm hash any compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -754,7 +754,7 @@ Implements fm hash any.
 function _fm_insert_no_resize(mapv, key, value)
 ```
 
-Implements fm insert no resize.
+Provide the fm insert no resize compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -772,7 +772,7 @@ Implements fm insert no resize.
 function _fm_is_valid(mapv)
 ```
 
-Implements fm is valid.
+Provide the fm is valid compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -788,7 +788,7 @@ Implements fm is valid.
 function _fm_next_pow2(n)
 ```
 
-Implements fm next pow2.
+Provide the fm next pow2 compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -804,7 +804,7 @@ Implements fm next pow2.
 function _fm_probe_slot(mapv, key)
 ```
 
-Implements fm probe slot.
+Provide the fm probe slot compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -821,7 +821,7 @@ Implements fm probe slot.
 function _fm_rehash(mapv, new_cap)
 ```
 
-Implements fm rehash.
+Provide the fm rehash compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -838,7 +838,7 @@ Implements fm rehash.
 function _u64_mask() returns int
 ```
 
-Implements u64 mask.
+Provide the u64 mask compiler utility operation.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L705)
@@ -850,7 +850,7 @@ Implements u64 mask.
 function align_to_mod(n, mod, target)
 ```
 
-Implements align to mod.
+Provide the align to mod compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -887,7 +887,7 @@ Round n upward to the next power-of-two alignment boundary.
 function arr_chunk_count(builder)
 ```
 
-Implements arr chunk count.
+Provide the arr chunk count compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -903,7 +903,7 @@ Implements arr chunk count.
 function arr_chunk_finish(builder)
 ```
 
-Implements arr chunk finish.
+Provide the arr chunk finish compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -919,7 +919,7 @@ Implements arr chunk finish.
 function arr_chunk_get(builder, idx, defaultv)
 ```
 
-Implements arr chunk get.
+Provide the arr chunk get compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -953,7 +953,7 @@ Create a chunked array builder with the requested tail capacity.
 function arr_chunk_push(builder, value)
 ```
 
-Implements arr chunk push.
+Provide the arr chunk push compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -970,7 +970,7 @@ Implements arr chunk push.
 function arr_chunk_push_all(builder, values)
 ```
 
-Implements arr chunk push all.
+Provide the arr chunk push all compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -987,7 +987,7 @@ Implements arr chunk push all.
 function arr_chunk_tail_get(tail, idx, defaultv)
 ```
 
-Implements arr chunk tail get.
+Provide the arr chunk tail get compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1021,7 +1021,7 @@ Returns the number of live elements in a chunk tail.
 function arr_chunk_tail_set(tail, idx, value)
 ```
 
-Implements arr chunk tail set.
+Provide the arr chunk tail set compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1039,7 +1039,7 @@ Implements arr chunk tail set.
 function arr_chunked_count(chunks, tail, cap)
 ```
 
-Implements arr chunked count.
+Provide the arr chunked count compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1057,7 +1057,7 @@ Implements arr chunked count.
 function arr_chunked_finish(chunks, tail)
 ```
 
-Implements arr chunked finish.
+Provide the arr chunked finish compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1074,7 +1074,7 @@ Implements arr chunked finish.
 function arr_chunked_get(chunks, tail, idx, cap, defaultv)
 ```
 
-Implements arr chunked get.
+Provide the arr chunked get compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1111,7 +1111,7 @@ Return the storage groups of a chunked sequence without flattening their element
 function arr_chunked_push(chunks, tail, value, cap)
 ```
 
-Implements arr chunked push.
+Provide the arr chunked push compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1163,7 +1163,7 @@ Flatten existing chunk groups plus the active tail directly into the final array
 function arr_merge_chunks_balanced(chunks)
 ```
 
-Implements arr merge chunks balanced.
+Provide the arr merge chunks balanced compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1211,7 +1211,7 @@ Reset a compiler-internal vector without discarding its capacity. Stale backing 
 function arr_vec_count(vec)
 ```
 
-Implements arr vec count.
+Provide the arr vec count compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1245,7 +1245,7 @@ Trusted variants are used only after one nominal ArrayVector check. They retain 
 function arr_vec_finish(vec)
 ```
 
-Implements arr vec finish.
+Provide the arr vec finish compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1261,7 +1261,7 @@ Implements arr vec finish.
 function arr_vec_from_array(values, extra_cap)
 ```
 
-Implements arr vec from array.
+Provide the arr vec from array compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1278,7 +1278,7 @@ Implements arr vec from array.
 function arr_vec_get(vec, idx, defaultv)
 ```
 
-Implements arr vec get.
+Provide the arr vec get compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1332,7 +1332,7 @@ ArrayVector is compiler-internal and always created by arr_vec_new. A nominal te
 function arr_vec_new(initial_cap)
 ```
 
-Implements arr vec new.
+Provide the arr vec new compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1348,7 +1348,7 @@ Implements arr vec new.
 function arr_vec_push(vec, value)
 ```
 
-Implements arr vec push.
+Provide the arr vec push compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1381,7 +1381,7 @@ Reset a transient vector and remove every managed reference from its backing sto
 function arr_vec_set(vec, idx, value)
 ```
 
-Implements arr vec set.
+Provide the arr vec set compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1433,7 +1433,7 @@ Drop every compilation-owned compact AST column and intern table. This is a bulk
 const AST_BIN_HANDLE_BASE = 1073741824
 ```
 
-Stores the ast bin handle base.
+Track ast bin handle base.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L140)
@@ -1465,7 +1465,7 @@ Binary expressions are the most frequent composite AST node. Store their childre
 function ast_filename(node)
 ```
 
-Implements ast filename.
+Provide the ast filename compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1513,7 +1513,7 @@ Reports whether a value is a compact leaf-AST handle.
 function ast_is_node(node)
 ```
 
-Implements ast is node.
+Provide the ast is node compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1529,7 +1529,7 @@ Implements ast is node.
 function ast_kind(node)
 ```
 
-Implements ast kind.
+Provide the ast kind compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1545,7 +1545,7 @@ Implements ast kind.
 const AST_LEAF_BOOL = 3
 ```
 
-Stores the ast leaf bool.
+Track ast leaf bool.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L134)
@@ -1557,7 +1557,7 @@ Stores the ast leaf bool.
 function ast_leaf_new(kind, value, pos, filename)
 ```
 
-Implements ast leaf new.
+Provide the ast leaf new compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1588,7 +1588,7 @@ Compact arena for immutable expression leaves. Negative integers are stable Node
 function ast_leaf_reset()
 ```
 
-Implements ast leaf reset.
+Provide the ast leaf reset compiler utility operation.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L234)
@@ -1600,7 +1600,7 @@ Implements ast leaf reset.
 function ast_leaf_stats()
 ```
 
-Implements ast leaf stats.
+Provide the ast leaf stats compiler utility operation.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L540)
@@ -1612,7 +1612,7 @@ Implements ast leaf stats.
 const AST_LEAF_STR = 2
 ```
 
-Stores the ast leaf str.
+Track ast leaf str.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L132)
@@ -1624,7 +1624,7 @@ Stores the ast leaf str.
 const AST_LEAF_VAR = 5
 ```
 
-Stores the ast leaf var.
+Track ast leaf var.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L138)
@@ -1636,7 +1636,7 @@ Stores the ast leaf var.
 const AST_LEAF_VOID = 4
 ```
 
-Stores the ast leaf void.
+Track ast leaf void.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L136)
@@ -1648,7 +1648,7 @@ Stores the ast leaf void.
 function ast_left(node)
 ```
 
-Implements ast left.
+Provide the ast left compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1664,7 +1664,7 @@ Implements ast left.
 function ast_name(node)
 ```
 
-Implements ast name.
+Provide the ast name compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1680,7 +1680,7 @@ Implements ast name.
 function ast_op(node)
 ```
 
-Implements ast op.
+Provide the ast op compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1696,7 +1696,7 @@ Implements ast op.
 function ast_pos(node)
 ```
 
-Implements ast pos.
+Provide the ast pos compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1712,7 +1712,7 @@ Implements ast pos.
 function ast_right(node)
 ```
 
-Implements ast right.
+Provide the ast right compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1728,7 +1728,7 @@ Implements ast right.
 function ast_value(node)
 ```
 
-Implements ast value.
+Provide the ast value compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1744,7 +1744,7 @@ Implements ast value.
 function byte_pages_append(bp, src)
 ```
 
-Implements byte pages append.
+Provide the byte pages append compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1829,7 +1829,7 @@ Append one little-endian 64-bit value. MiniLang integers carry 61 payload bits; 
 function byte_pages_get_byte(bp, idx, defaultv)
 ```
 
-Implements byte pages get byte.
+Provide the byte pages get byte compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1847,7 +1847,7 @@ Implements byte pages get byte.
 function byte_pages_len(bp)
 ```
 
-Implements byte pages len.
+Provide the byte pages len compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1875,7 +1875,7 @@ Create an empty paged byte buffer.
 function byte_pages_page(bp, page_index)
 ```
 
-Implements byte pages page.
+Provide the byte pages page compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1908,7 +1908,7 @@ Expose read-only pages to streaming serializers. The final page may contain spar
 function byte_pages_page_used(bp, page_index)
 ```
 
-Implements byte pages page used.
+Provide the byte pages page used compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1925,7 +1925,7 @@ Implements byte pages page used.
 function byte_pages_set_byte(bp, idx, value)
 ```
 
-Implements byte pages set byte.
+Provide the byte pages set byte compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1943,7 +1943,7 @@ Implements byte pages set byte.
 function byte_pages_to_bytes(bp)
 ```
 
-Implements byte pages to bytes.
+Provide the byte pages to bytes compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1959,7 +1959,7 @@ Implements byte pages to bytes.
 function byte_pages_write_at(bp, offset, src)
 ```
 
-Implements byte pages write at.
+Provide the byte pages write at compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1978,7 +1978,7 @@ Implements byte pages write at.
 function enc_bool(b)
 ```
 
-Implements enc bool.
+Provide the enc bool compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1994,7 +1994,7 @@ Implements enc bool.
 function enc_enum(enum_id, variant_id)
 ```
 
-Implements enc enum.
+Provide the enc enum compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2011,7 +2011,7 @@ Implements enc enum.
 function enc_int(x as int) returns int
 ```
 
-Implements enc int.
+Provide the enc int compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2029,7 +2029,7 @@ Implements enc int.
 function enc_void() returns int
 ```
 
-Implements enc void.
+Provide the enc void compiler utility operation.
 
 
 **Returns:** The resulting `int` value.
@@ -2060,7 +2060,7 @@ Encode the exact UTF-8 library spelling into a reversible assembler-label token.
 function fastmap_clear(mapv)
 ```
 
-Implements fastmap clear.
+Provide the fastmap clear compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2076,7 +2076,7 @@ Implements fastmap clear.
 function fastmap_get(mapv, key, defaultv)
 ```
 
-Implements fastmap get.
+Provide the fastmap get compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2094,7 +2094,7 @@ Implements fastmap get.
 function fastmap_has(mapv, key)
 ```
 
-Implements fastmap has.
+Provide the fastmap has compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2111,7 +2111,7 @@ Implements fastmap has.
 function fastmap_items(mapv)
 ```
 
-Implements fastmap items.
+Provide the fastmap items compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2159,7 +2159,7 @@ Reset a transient map including stale generations. Epoch-only clearing is O(1), 
 function fastmap_set(mapv, key, value)
 ```
 
-Implements fastmap set.
+Provide the fastmap set compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2177,7 +2177,7 @@ Implements fastmap set.
 function fastmap_size(mapv)
 ```
 
-Implements fastmap size.
+Provide the fastmap size compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2209,7 +2209,7 @@ Enable precise reference release only for phase-local maps. Production symbol an
 function try_enc_float_immediate(x)
 ```
 
-Implements try enc float immediate.
+Provide the try enc float immediate compiler utility operation.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

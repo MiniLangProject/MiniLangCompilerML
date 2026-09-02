@@ -23,7 +23,7 @@ Represents defer collect result.
 builder
 ```
 
-Stores the builder member of `DeferCollectResult`.
+Builder associated with `DeferCollectResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L807)
@@ -35,7 +35,7 @@ Stores the builder member of `DeferCollectResult`.
 count
 ```
 
-Stores the count member of `DeferCollectResult`.
+Count associated with `DeferCollectResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L809)
@@ -47,7 +47,7 @@ Stores the count member of `DeferCollectResult`.
 state
 ```
 
-Stores the state member of `DeferCollectResult`.
+State associated with `DeferCollectResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L805)

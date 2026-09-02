@@ -23,7 +23,7 @@ Lazy void coalescing (`left ?? right`).
 _filename
 ```
 
-Stores the filename member of `Coalesce`.
+Filename associated with `Coalesce`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L257)
@@ -35,7 +35,7 @@ Stores the filename member of `Coalesce`.
 _pos
 ```
 
-Stores the pos member of `Coalesce`.
+Pos associated with `Coalesce`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L255)
@@ -47,7 +47,7 @@ Stores the pos member of `Coalesce`.
 left
 ```
 
-Stores the left member of `Coalesce`.
+Left associated with `Coalesce`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L251)
@@ -59,7 +59,7 @@ Stores the left member of `Coalesce`.
 node_kind
 ```
 
-Stores the node kind member of `Coalesce`.
+Node kind associated with `Coalesce`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L249)
@@ -71,7 +71,7 @@ Stores the node kind member of `Coalesce`.
 right
 ```
 
-Stores the right member of `Coalesce`.
+Right associated with `Coalesce`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L253)

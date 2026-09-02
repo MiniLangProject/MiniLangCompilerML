@@ -23,7 +23,7 @@ Represents void lit.
 _filename
 ```
 
-Stores the filename member of `VoidLit`.
+Filename associated with `VoidLit`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L153)
@@ -35,7 +35,7 @@ Stores the filename member of `VoidLit`.
 _pos
 ```
 
-Stores the pos member of `VoidLit`.
+Pos associated with `VoidLit`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L151)
@@ -47,7 +47,7 @@ Stores the pos member of `VoidLit`.
 node_kind
 ```
 
-Stores the node kind member of `VoidLit`.
+Node kind associated with `VoidLit`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L149)

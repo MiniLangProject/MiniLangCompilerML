@@ -23,7 +23,7 @@ Represents extern sig.
 dll
 ```
 
-Stores the dll member of `ExternSig`.
+Dll associated with `ExternSig`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L259)
@@ -35,7 +35,7 @@ Stores the dll member of `ExternSig`.
 name
 ```
 
-Stores the name member of `ExternSig`.
+Name associated with `ExternSig`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L257)
@@ -47,7 +47,7 @@ Stores the name member of `ExternSig`.
 params
 ```
 
-Stores the params member of `ExternSig`.
+Params associated with `ExternSig`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L263)
@@ -59,7 +59,7 @@ Stores the params member of `ExternSig`.
 qname
 ```
 
-Stores the qname member of `ExternSig`.
+Qname associated with `ExternSig`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L255)
@@ -71,7 +71,7 @@ Stores the qname member of `ExternSig`.
 ret_ty
 ```
 
-Stores the ret ty member of `ExternSig`.
+Ret ty associated with `ExternSig`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L265)
@@ -83,7 +83,7 @@ Stores the ret ty member of `ExternSig`.
 symbol_name
 ```
 
-Stores the symbol name member of `ExternSig`.
+Symbol name associated with `ExternSig`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L261)

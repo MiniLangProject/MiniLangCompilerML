@@ -20,95 +20,95 @@ limitations under the License.
 package mlc.pe
 import mlc.tools as t
 
-/// Stores the kernel32.
+/// Track kernel32.
 const KERNEL32 = "kernel32.dll"
-/// Stores the msvcrt.
+/// Track msvcrt.
 const MSVCRT = "msvcrt.dll"
 
-/// Stores the image scn cnt code.
+/// Track image scn cnt code.
 const IMAGE_SCN_CNT_CODE = 0x00000020
-/// Stores the image scn cnt initialized data.
+/// Track image scn cnt initialized data.
 const IMAGE_SCN_CNT_INITIALIZED_DATA = 0x00000040
-/// Stores the image scn cnt uninitialized data.
+/// Track image scn cnt uninitialized data.
 const IMAGE_SCN_CNT_UNINITIALIZED_DATA = 0x00000080
 
 /// One fully laid-out PE section and its file/image coordinates.
 struct PESection
-  /// Stores the name member of `PESection`.
+  /// Name associated with `PESection`.
   name,
-  /// Stores the data member of `PESection`.
+  /// Backing data owned by `PESection`.
   data,
-  /// Stores the characteristics member of `PESection`.
+  /// Characteristics associated with `PESection`.
   characteristics,
-  /// Stores the virt addr member of `PESection`.
+  /// Virt addr associated with `PESection`.
   virt_addr,
-  /// Stores the virt size member of `PESection`.
+  /// Virt size associated with `PESection`.
   virt_size,
-  /// Stores the raw addr member of `PESection`.
+  /// Raw addr associated with `PESection`.
   raw_addr,
-  /// Stores the raw size member of `PESection`.
+  /// Raw size associated with `PESection`.
   raw_size,
 end struct
 
 /// Mutable PE32+ image plan populated before final serialization.
 struct PEBuilder
-  /// Stores the image base member of `PEBuilder`.
+  /// Image base associated with `PEBuilder`.
   image_base,
-  /// Stores the section alignment member of `PEBuilder`.
+  /// Section alignment associated with `PEBuilder`.
   section_alignment,
-  /// Stores the file alignment member of `PEBuilder`.
+  /// File alignment associated with `PEBuilder`.
   file_alignment,
-  /// Stores the sections member of `PEBuilder`.
+  /// Sections associated with `PEBuilder`.
   sections,
-  /// Stores the entry rva member of `PEBuilder`.
+  /// Entry rva associated with `PEBuilder`.
   entry_rva,
-  /// Stores the import rva member of `PEBuilder`.
+  /// Import rva associated with `PEBuilder`.
   import_rva,
-  /// Stores the import size member of `PEBuilder`.
+  /// Import size associated with `PEBuilder`.
   import_size,
-  /// Stores the subsystem member of `PEBuilder`.
+  /// Subsystem associated with `PEBuilder`.
   subsystem,
 end struct
 
 /// Small name/value record used by deterministic lookup tables.
 struct NamedInt
-  /// Stores the name member of `NamedInt`.
+  /// Name associated with `NamedInt`.
   name,
-  /// Stores the value member of `NamedInt`.
+  /// Value associated with `NamedInt`.
   value,
 end struct
 
 /// Imported DLL name and its ordered function list.
 struct ImportDll
-  /// Stores the dll member of `ImportDll`.
+  /// Dll associated with `ImportDll`.
   dll,
-  /// Stores the funcs member of `ImportDll`.
+  /// Funcs associated with `ImportDll`.
   funcs,
 end struct
 
 /// Resolved import-address-table RVA for one native symbol.
 struct IatSymbol
-  /// Stores the dll member of `IatSymbol`.
+  /// Dll associated with `IatSymbol`.
   dll,
-  /// Stores the func member of `IatSymbol`.
+  /// Func associated with `IatSymbol`.
   func,
-  /// Stores the rva member of `IatSymbol`.
+  /// Rva associated with `IatSymbol`.
   rva,
 end struct
 
 /// Serialized import section plus directory and symbol metadata.
 struct IdataResult
-  /// Stores the data member of `IdataResult`.
+  /// Backing data owned by `IdataResult`.
   data,
-  /// Stores the import dir rva member of `IdataResult`.
+  /// Import dir rva associated with `IdataResult`.
   import_dir_rva,
-  /// Stores the idata total size member of `IdataResult`.
+  /// Idata total size associated with `IdataResult`.
   idata_total_size,
-  /// Stores the iat symbols member of `IdataResult`.
+  /// Iat symbols associated with `IdataResult`.
   iat_symbols,
 end struct
 
-/// Implements bytes from array.
+/// Emit bytes from array in the Windows PE image.
 /// @internal
 function _bytes_from_array(arr)
   b = bytes(len(arr), 0)
@@ -119,20 +119,20 @@ function _bytes_from_array(arr)
   return b
 end function
 
-/// Implements bytes pad to.
+/// Emit bytes pad to in the Windows PE image.
 /// @internal
 function _bytes_pad_to(b, size)
   if len(b) >= size then return b end if
   return b + bytes(size - len(b), 0)
 end function
 
-/// Implements bytes ljust.
+/// Emit bytes ljust in the Windows PE image.
 /// @internal
 function _bytes_ljust(b, size)
   return _bytes_pad_to(b, size)
 end function
 
-/// Implements bytes write at.
+/// Emit bytes write at in the Windows PE image.
 /// @internal
 function _bytes_write_at(dst, offset, src)
   if len(src) <= 0 then return dst end if
@@ -140,7 +140,7 @@ function _bytes_write_at(dst, offset, src)
   return dst
 end function
 
-/// Implements named get.
+/// Emit named get in the Windows PE image.
 /// @internal
 function _named_get(arr, name, default_value)
   if typeof(arr) == "struct" then
@@ -153,7 +153,7 @@ function _named_get(arr, name, default_value)
   return default_value
 end function
 
-/// Implements named set.
+/// Emit named set in the Windows PE image.
 /// @internal
 function _named_set(arr, name, value)
   mapv = arr
@@ -171,7 +171,7 @@ function _named_set(arr, name, value)
   return t.fastmap_set(mapv, name, value)
 end function
 
-/// Implements imports get funcs.
+/// Emit imports get funcs in the Windows PE image.
 /// @internal
 function _imports_get_funcs(imports, dll)
   if len(imports) <= 0 then return [] end if
@@ -183,7 +183,7 @@ function _imports_get_funcs(imports, dll)
   return []
 end function
 
-/// Implements section name bytes.
+/// Emit section name bytes in the Windows PE image.
 /// @internal
 function _section_name_bytes(name)
   nm = bytes(name)
@@ -193,7 +193,7 @@ function _section_name_bytes(name)
   return _bytes_ljust(nm, 8)
 end function
 
-/// Implements next section raw addr.
+/// Emit next section raw addr in the Windows PE image.
 /// @internal
 function _next_section_raw_addr(pe)
   if len(pe.sections) <= 0 then

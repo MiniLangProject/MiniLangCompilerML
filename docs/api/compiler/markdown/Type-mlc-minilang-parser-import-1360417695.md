@@ -23,7 +23,7 @@ Statement/declaration AST shared by analysis and code generation.
 _filename
 ```
 
-Stores the filename member of `Import`.
+Filename associated with `Import`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L369)
@@ -35,7 +35,7 @@ Stores the filename member of `Import`.
 _pos
 ```
 
-Stores the pos member of `Import`.
+Pos associated with `Import`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L367)
@@ -47,7 +47,7 @@ Stores the pos member of `Import`.
 alias
 ```
 
-Stores the alias member of `Import`.
+Alias associated with `Import`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L363)
@@ -59,7 +59,7 @@ Stores the alias member of `Import`.
 module
 ```
 
-Stores the module member of `Import`.
+Module associated with `Import`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L365)
@@ -71,7 +71,7 @@ Stores the module member of `Import`.
 node_kind
 ```
 
-Stores the node kind member of `Import`.
+Node kind associated with `Import`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L359)
@@ -83,7 +83,7 @@ Stores the node kind member of `Import`.
 path
 ```
 
-Stores the path member of `Import`.
+Path associated with `Import`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L361)

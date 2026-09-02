@@ -23,7 +23,7 @@ Represents global decl.
 _filename
 ```
 
-Stores the filename member of `GlobalDecl`.
+Filename associated with `GlobalDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L715)
@@ -35,7 +35,7 @@ Stores the filename member of `GlobalDecl`.
 _pos
 ```
 
-Stores the pos member of `GlobalDecl`.
+Pos associated with `GlobalDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L713)
@@ -47,7 +47,7 @@ Stores the pos member of `GlobalDecl`.
 names
 ```
 
-Stores the names member of `GlobalDecl`.
+Names associated with `GlobalDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L711)
@@ -59,7 +59,7 @@ Stores the names member of `GlobalDecl`.
 node_kind
 ```
 
-Stores the node kind member of `GlobalDecl`.
+Node kind associated with `GlobalDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L709)

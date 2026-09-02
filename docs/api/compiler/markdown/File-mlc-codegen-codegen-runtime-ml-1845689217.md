@@ -24,7 +24,7 @@ Reachable from entry: **yes**
 function _emit_build_args_linux(state)
 ```
 
-Runs emit build args linux.
+Emit emit build args linux in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -40,7 +40,7 @@ Runs emit build args linux.
 function _emit_force_xmm0_to_float_value(state)
 ```
 
-Runs emit force xmm0 to float value.
+Emit emit force xmm0 to float value in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -108,7 +108,7 @@ Validate tagged arguments once before entering a raw CRC hot loop.
 function _emit_normalize_xmm0_to_value(state)
 ```
 
-Runs emit normalize xmm0 to value.
+Emit emit normalize xmm0 to value in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -124,7 +124,7 @@ Runs emit normalize xmm0 to value.
 function _emit_to_double_xmm(state, xmm, fail_label)
 ```
 
-Runs emit to double xmm.
+Emit emit to double xmm in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -142,7 +142,7 @@ Runs emit to double xmm.
 function _ensure_byte_search_table(state)
 ```
 
-Implements ensure byte search table.
+Emit ensure byte search table in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -158,7 +158,7 @@ Implements ensure byte search table.
 function _ensure_crc_tables(state)
 ```
 
-Implements ensure crc tables.
+Emit ensure crc tables in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -190,7 +190,7 @@ Creates make crc table.
 function cg_runtime_init(state)
 ```
 
-Implements cg runtime init.
+Emit cg runtime init in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -206,7 +206,7 @@ Implements cg runtime init.
 function emit_build_args_function(state)
 ```
 
-Runs emit build args function.
+Emit emit build args function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -238,7 +238,7 @@ Copy tagged array cells in one native bulk operation. Bounds and type handling d
 function emit_builtin_copyBytes_function(state)
 ```
 
-Runs emit builtin copy bytes function.
+Emit emit builtin copy bytes function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -254,7 +254,7 @@ Runs emit builtin copy bytes function.
 function emit_builtin_copyStringBytes_function(state)
 ```
 
-Runs emit builtin copy string bytes function.
+Emit emit builtin copy string bytes function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -270,7 +270,7 @@ Runs emit builtin copy string bytes function.
 function emit_builtin_fillBytes_function(state)
 ```
 
-Runs emit builtin fill bytes function.
+Emit emit builtin fill bytes function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -286,7 +286,7 @@ Runs emit builtin fill bytes function.
 function emit_builtin_gc_collect_function(state)
 ```
 
-Runs emit builtin gc collect function.
+Emit emit builtin gc collect function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -302,7 +302,7 @@ Runs emit builtin gc collect function.
 function emit_builtin_gc_set_limit_function(state)
 ```
 
-Runs emit builtin gc set limit function.
+Emit emit builtin gc set limit function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -318,7 +318,7 @@ Runs emit builtin gc set limit function.
 function emit_builtin_input_function(state)
 ```
 
-Runs emit builtin input function.
+Emit emit builtin input function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -334,7 +334,7 @@ Runs emit builtin input function.
 function emit_builtin_len_function(state)
 ```
 
-Runs emit builtin len function.
+Emit emit builtin len function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -350,7 +350,7 @@ Runs emit builtin len function.
 function emit_bytes_compare_function(state)
 ```
 
-Runs emit bytes compare function.
+Emit emit bytes compare function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -382,7 +382,7 @@ Compare byte buffers without value-dependent early exits.
 function emit_bytes_endswith_function(state)
 ```
 
-Runs emit bytes endswith function.
+Emit emit bytes endswith function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -398,7 +398,7 @@ Runs emit bytes endswith function.
 function emit_bytes_hash_function(state)
 ```
 
-Runs emit bytes hash function.
+Emit emit bytes hash function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -414,7 +414,7 @@ Runs emit bytes hash function.
 function emit_bytes_indexof_function(state)
 ```
 
-Runs emit bytes indexof function.
+Emit emit bytes indexof function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -430,7 +430,7 @@ Runs emit bytes indexof function.
 function emit_bytes_lastindexof_function(state)
 ```
 
-Runs emit bytes lastindexof function.
+Emit emit bytes lastindexof function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -446,7 +446,7 @@ Runs emit bytes lastindexof function.
 function emit_bytes_startswith_function(state)
 ```
 
-Runs emit bytes startswith function.
+Emit emit bytes startswith function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -462,7 +462,7 @@ Runs emit bytes startswith function.
 function emit_callStats_function(state)
 ```
 
-Runs emit call stats function.
+Emit emit call stats function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -478,7 +478,7 @@ Runs emit call stats function.
 function emit_copy_bytes_function(state)
 ```
 
-Runs emit copy bytes function.
+Emit emit copy bytes function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -494,7 +494,7 @@ Runs emit copy bytes function.
 function emit_cpu_init_function(state)
 ```
 
-Runs emit cpu init function.
+Emit emit cpu init function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -510,7 +510,7 @@ Runs emit cpu init function.
 function emit_crc32_update_raw_function(state)
 ```
 
-Runs emit crc32 update raw function.
+Emit emit crc32 update raw function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -526,7 +526,7 @@ Runs emit crc32 update raw function.
 function emit_crc32c_update_raw_function(state)
 ```
 
-Runs emit crc32c update raw function.
+Emit emit crc32c update raw function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -542,7 +542,7 @@ Runs emit crc32c update raw function.
 function emit_fill_bytes_function(state)
 ```
 
-Runs emit fill bytes function.
+Emit emit fill bytes function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -558,7 +558,7 @@ Runs emit fill bytes function.
 function emit_fill_qwords_function(state)
 ```
 
-Runs emit fill qwords function.
+Emit emit fill qwords function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -590,7 +590,7 @@ Raw dynamic byte search with AVX2, SSE2, and scalar dispatch.
 function emit_find_byte_reverse_function(state)
 ```
 
-Runs emit find byte reverse function.
+Emit emit find byte reverse function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -606,7 +606,7 @@ Runs emit find byte reverse function.
 function emit_init_argvw_function(state)
 ```
 
-Runs emit init argvw function.
+Emit emit init argvw function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -622,7 +622,7 @@ Runs emit init argvw function.
 function emit_int_to_dec_function(state)
 ```
 
-Runs emit int to dec function.
+Emit emit int to dec function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -638,7 +638,7 @@ Runs emit int to dec function.
 function emit_mem_eq_bytes_function(state)
 ```
 
-Runs emit mem eq bytes function.
+Emit emit mem eq bytes function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -670,7 +670,7 @@ Raw substring search built on SIMD first-byte candidate discovery.
 function emit_mem_lastindexof_function(state)
 ```
 
-Runs emit mem lastindexof function.
+Emit emit mem lastindexof function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -686,7 +686,7 @@ Runs emit mem lastindexof function.
 function emit_native_crc32_function(state)
 ```
 
-Runs emit native crc32 function.
+Emit emit native crc32 function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -702,7 +702,7 @@ Runs emit native crc32 function.
 function emit_native_crc32c_function(state)
 ```
 
-Runs emit native crc32c function.
+Emit emit native crc32c function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -718,7 +718,7 @@ Runs emit native crc32c function.
 function emit_runtime_cpu_active_features_function(state)
 ```
 
-Runs emit runtime cpu active features function.
+Emit emit runtime cpu active features function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -734,7 +734,7 @@ Runs emit runtime cpu active features function.
 function emit_runtime_cpu_features_function(state)
 ```
 
-Runs emit runtime cpu features function.
+Emit emit runtime cpu features function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -766,7 +766,7 @@ Limit dispatch to detected features. A negative mask restores all features.
 function emit_scan_byte2_bytes_function(state)
 ```
 
-Runs emit scan byte2 bytes function.
+Emit emit scan byte2 bytes function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -782,7 +782,7 @@ Runs emit scan byte2 bytes function.
 function emit_scan_nul_bytes_function(state)
 ```
 
-Runs emit scan nul bytes function.
+Emit emit scan nul bytes function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -798,7 +798,7 @@ Runs emit scan nul bytes function.
 function emit_scan_nul_wchars_function(state)
 ```
 
-Runs emit scan nul wchars function.
+Emit emit scan nul wchars function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -814,7 +814,7 @@ Runs emit scan nul wchars function.
 function emit_string_eq_function(state)
 ```
 
-Runs emit string eq function.
+Emit emit string eq function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -830,7 +830,7 @@ Runs emit string eq function.
 function emit_string_hash_function(state)
 ```
 
-Runs emit string hash function.
+Emit emit string hash function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -846,7 +846,7 @@ Runs emit string hash function.
 function emit_strlen_function(state)
 ```
 
-Runs emit strlen function.
+Emit emit strlen function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -862,7 +862,7 @@ Runs emit strlen function.
 function emit_toFloat_function(state)
 ```
 
-Runs emit to float function.
+Emit emit to float function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -878,7 +878,7 @@ Runs emit to float function.
 function emit_toNumber_function(state)
 ```
 
-Runs emit to number function.
+Emit emit to number function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -894,7 +894,7 @@ Runs emit to number function.
 function emit_typeName_function(state)
 ```
 
-Runs emit type name function.
+Emit emit type name function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -910,7 +910,7 @@ Runs emit type name function.
 function emit_typeof_function(state)
 ```
 
-Runs emit typeof function.
+Emit emit typeof function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -926,7 +926,7 @@ Runs emit typeof function.
 function emit_unhandled_error_exit_function(state)
 ```
 
-Runs emit unhandled error exit function.
+Emit emit unhandled error exit function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -942,7 +942,7 @@ Runs emit unhandled error exit function.
 function _emit_writefile(state2, lbl, ln)
 ```
 
-Runs emit writefile.
+Emit native x64 code for writefile.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -960,7 +960,7 @@ Runs emit writefile.
 function _emit_writefile_ptr_len(state2)
 ```
 
-Runs emit writefile ptr len.
+Emit native x64 code for writefile ptr len.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -976,7 +976,7 @@ Runs emit writefile ptr len.
 function emit_value_eq_function(state)
 ```
 
-Runs emit value eq function.
+Emit emit value eq function in the native runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

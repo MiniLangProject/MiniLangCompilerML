@@ -25,52 +25,52 @@ import std.string as s
 
 /// Represents runtime label.
 struct RuntimeLabel
-  /// Stores the name member of `RuntimeLabel`.
+  /// Name associated with `RuntimeLabel`.
   name,
-  /// Stores the offset member of `RuntimeLabel`.
+  /// Offset associated with `RuntimeLabel`.
   offset,
 end struct
 
 /// Represents dynamic import.
 struct DynamicImport
-  /// Stores the library member of `DynamicImport`.
+  /// Library associated with `DynamicImport`.
   library,
-  /// Stores the symbol name member of `DynamicImport`.
+  /// Symbol name associated with `DynamicImport`.
   symbol_name,
-  /// Stores the slot offset member of `DynamicImport`.
+  /// Slot offset associated with `DynamicImport`.
   slot_offset,
 end struct
 
 /// Represents dynamic imports result.
 struct DynamicImportsResult
-  /// Stores the state member of `DynamicImportsResult`.
+  /// State associated with `DynamicImportsResult`.
   state,
-  /// Stores the imports member of `DynamicImportsResult`.
+  /// Imports associated with `DynamicImportsResult`.
   imports,
 end struct
 
 /// Represents thunk destination.
 struct ThunkDestination
-  /// Stores the kind member of `ThunkDestination`.
+  /// Kind associated with `ThunkDestination`.
   kind,
-  /// Stores the value member of `ThunkDestination`.
+  /// Value associated with `ThunkDestination`.
   value,
 end struct
 
 /// Stable boundaries inside the checked-in syscall blob. The legacy thread implementation is excluded as one named range and replaced below; keeping these values together prevents unrelated slice/relocation magic numbers.
 const RUNTIME_EXIT_SYSCALL_OFFSET = 123
-/// Stores the runtime legacy thread start.
+/// Track runtime legacy thread start.
 const RUNTIME_LEGACY_THREAD_START = 497
-/// Stores the runtime legacy thread end.
+/// Track runtime legacy thread end.
 const RUNTIME_LEGACY_THREAD_END = 1361
-/// Stores the runtime pthread create patch.
+/// Track runtime pthread create patch.
 const RUNTIME_PTHREAD_CREATE_PATCH = 692
-/// Stores the runtime pthread wait patch.
+/// Track runtime pthread wait patch.
 const RUNTIME_PTHREAD_WAIT_PATCH = 1159
-/// Stores the runtime pthread close patch.
+/// Track runtime pthread close patch.
 const RUNTIME_PTHREAD_CLOSE_PATCH = 1441
 
-/// Implements extern dll base.
+/// Emit extern dll base for the Linux x64 runtime.
 /// @internal
 function _extern_dll_base(dll)
   return t.extern_library_label_token(dll)
@@ -128,7 +128,7 @@ function prepare_dynamic_imports(state)
   return DynamicImportsResult(state, imports)
 end function
 
-/// Runs emit startup.
+/// Emit emit startup for the Linux x64 runtime.
 /// @param state Value supplied for `state`.
 function emit_startup(state)
   if d.data_has_label(state.data, "linux_sigpipe_action") == false then
@@ -168,7 +168,7 @@ function emit_startup(state)
   return state
 end function
 
-/// Runs runtime labels.
+/// Emit runtime labels for the Linux x64 runtime.
 /// @internal
 function _runtime_labels()
   return [
@@ -197,7 +197,7 @@ function _runtime_labels()
   ]
 end function
 
-/// Runs runtime blob raw.
+/// Emit runtime blob raw for the Linux x64 runtime.
 /// @internal
 function _runtime_blob_raw()
   // Stable base blob for the syscall helpers surrounding the thread runtime.
@@ -224,7 +224,7 @@ function _pthread_runtime_blob()
 end function
 
 
-/// Implements extern param type.
+/// Emit extern param type for the Linux x64 runtime.
 /// @internal
 function _extern_param_type(param)
   if typeof(param) == "struct" then
@@ -237,7 +237,7 @@ function _extern_param_type(param)
   return s.toLowerAscii(s.trim("" + param))
 end function
 
-/// Implements array has.
+/// Emit array has for the Linux x64 runtime.
 /// @internal
 function _array_has(values, wanted)
   if len(values) <= 0 then return false end if
@@ -464,7 +464,7 @@ function _emit_extern_thunks(state)
   return state
 end function
 
-/// Runs emit runtime.
+/// Emit emit runtime for the Linux x64 runtime.
 /// @param state Value supplied for `state`.
 function emit_runtime(state)
   names = ["GetStdHandle", "ReadFile", "WriteFile", "WriteConsoleW", "MultiByteToWideChar", "SetConsoleOutputCP", "FreeConsole", "ExitProcess", "VirtualAlloc", "VirtualFree", "GetCommandLineW", "LocalFree", "WideCharToMultiByte", "CreateThread", "WaitForSingleObject", "CloseHandle", "Sleep", "InitializeCriticalSection", "EnterCriticalSection", "LeaveCriticalSection", "_gcvt", "fmod", "CommandLineToArgvW"]

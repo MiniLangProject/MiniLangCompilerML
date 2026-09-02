@@ -23,7 +23,7 @@ Represents while.
 _filename
 ```
 
-Stores the filename member of `While`.
+Filename associated with `While`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L647)
@@ -35,7 +35,7 @@ Stores the filename member of `While`.
 _pos
 ```
 
-Stores the pos member of `While`.
+Pos associated with `While`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L645)
@@ -47,7 +47,7 @@ Stores the pos member of `While`.
 body
 ```
 
-Stores the body member of `While`.
+Body associated with `While`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L643)
@@ -59,7 +59,7 @@ Stores the body member of `While`.
 cond
 ```
 
-Stores the cond member of `While`.
+Cond associated with `While`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L641)
@@ -71,7 +71,7 @@ Stores the cond member of `While`.
 node_kind
 ```
 
-Stores the node kind member of `While`.
+Node kind associated with `While`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L639)

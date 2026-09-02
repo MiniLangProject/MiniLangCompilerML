@@ -23,7 +23,7 @@ Capacity-backed mutable sequence for compiler-internal hot paths. MiniLang array
 cap
 ```
 
-Stores the cap member of `ArrayVector`.
+Allocated capacity of `ArrayVector`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L95)
@@ -35,7 +35,7 @@ Stores the cap member of `ArrayVector`.
 data
 ```
 
-Stores the data member of `ArrayVector`.
+Backing data owned by `ArrayVector`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L91)
@@ -47,7 +47,7 @@ Stores the data member of `ArrayVector`.
 size
 ```
 
-Stores the size member of `ArrayVector`.
+Current logical size of `ArrayVector`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L93)

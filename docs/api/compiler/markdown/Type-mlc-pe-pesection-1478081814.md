@@ -23,7 +23,7 @@ One fully laid-out PE section and its file/image coordinates.
 characteristics
 ```
 
-Stores the characteristics member of `PESection`.
+Characteristics associated with `PESection`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L42)
@@ -35,7 +35,7 @@ Stores the characteristics member of `PESection`.
 data
 ```
 
-Stores the data member of `PESection`.
+Backing data owned by `PESection`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L40)
@@ -47,7 +47,7 @@ Stores the data member of `PESection`.
 name
 ```
 
-Stores the name member of `PESection`.
+Name associated with `PESection`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L38)
@@ -59,7 +59,7 @@ Stores the name member of `PESection`.
 raw_addr
 ```
 
-Stores the raw addr member of `PESection`.
+Raw addr associated with `PESection`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L48)
@@ -71,7 +71,7 @@ Stores the raw addr member of `PESection`.
 raw_size
 ```
 
-Stores the raw size member of `PESection`.
+Raw size associated with `PESection`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L50)
@@ -83,7 +83,7 @@ Stores the raw size member of `PESection`.
 virt_addr
 ```
 
-Stores the virt addr member of `PESection`.
+Virt addr associated with `PESection`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L44)
@@ -95,7 +95,7 @@ Stores the virt addr member of `PESection`.
 virt_size
 ```
 
-Stores the virt size member of `PESection`.
+Virt size associated with `PESection`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L46)

@@ -23,7 +23,7 @@ Represents mlo object.
 asm_labels
 ```
 
-Stores the asm labels member of `MloObject`.
+Asm labels associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L311)
@@ -35,7 +35,7 @@ Stores the asm labels member of `MloObject`.
 asm_patches
 ```
 
-Stores the asm patches member of `MloObject`.
+Asm patches associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L313)
@@ -47,7 +47,7 @@ Stores the asm patches member of `MloObject`.
 bss_labels
 ```
 
-Stores the bss labels member of `MloObject`.
+Bss labels associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L323)
@@ -59,7 +59,7 @@ Stores the bss labels member of `MloObject`.
 bss_size
 ```
 
-Stores the bss size member of `MloObject`.
+Bss size associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L309)
@@ -71,7 +71,7 @@ Stores the bss size member of `MloObject`.
 data
 ```
 
-Stores the data member of `MloObject`.
+Backing data owned by `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L307)
@@ -83,7 +83,7 @@ Stores the data member of `MloObject`.
 data_labels
 ```
 
-Stores the data labels member of `MloObject`.
+Data labels associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L319)
@@ -95,7 +95,7 @@ Stores the data labels member of `MloObject`.
 data_patches
 ```
 
-Stores the data patches member of `MloObject`.
+Data patches associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L321)
@@ -107,7 +107,7 @@ Stores the data patches member of `MloObject`.
 entry_label
 ```
 
-Stores the entry label member of `MloObject`.
+Entry label associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L301)
@@ -119,7 +119,7 @@ Stores the entry label member of `MloObject`.
 imports
 ```
 
-Stores the imports member of `MloObject`.
+Imports associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L325)
@@ -131,7 +131,7 @@ Stores the imports member of `MloObject`.
 kind
 ```
 
-Stores the kind member of `MloObject`.
+Kind associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L297)
@@ -143,7 +143,7 @@ Stores the kind member of `MloObject`.
 module_file
 ```
 
-Stores the module file member of `MloObject`.
+Module file associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L299)
@@ -155,7 +155,7 @@ Stores the module file member of `MloObject`.
 rdata
 ```
 
-Stores the rdata member of `MloObject`.
+Rdata associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L305)
@@ -167,7 +167,7 @@ Stores the rdata member of `MloObject`.
 rdata_labels
 ```
 
-Stores the rdata labels member of `MloObject`.
+Rdata labels associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L315)
@@ -179,7 +179,7 @@ Stores the rdata labels member of `MloObject`.
 rdata_patches
 ```
 
-Stores the rdata patches member of `MloObject`.
+Rdata patches associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L317)
@@ -191,7 +191,7 @@ Stores the rdata patches member of `MloObject`.
 text
 ```
 
-Stores the text member of `MloObject`.
+Text associated with `MloObject`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L303)

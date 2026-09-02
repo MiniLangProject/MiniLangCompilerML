@@ -23,7 +23,7 @@ Represents var.
 _filename
 ```
 
-Stores the filename member of `Var`.
+Filename associated with `Var`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L165)
@@ -35,7 +35,7 @@ Stores the filename member of `Var`.
 _pos
 ```
 
-Stores the pos member of `Var`.
+Pos associated with `Var`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L163)
@@ -47,7 +47,7 @@ Stores the pos member of `Var`.
 name
 ```
 
-Stores the name member of `Var`.
+Name associated with `Var`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L161)
@@ -59,7 +59,7 @@ Stores the name member of `Var`.
 node_kind
 ```
 
-Stores the node kind member of `Var`.
+Node kind associated with `Var`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L159)

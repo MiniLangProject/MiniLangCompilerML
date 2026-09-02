@@ -23,7 +23,7 @@ Mutable state for one nested #if/#elif/#else group.
 active
 ```
 
-Stores the active member of `CompileFrame`.
+Active associated with `CompileFrame`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L897)
@@ -35,7 +35,7 @@ Stores the active member of `CompileFrame`.
 else_seen
 ```
 
-Stores the else seen member of `CompileFrame`.
+Else seen associated with `CompileFrame`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L901)
@@ -47,7 +47,7 @@ Stores the else seen member of `CompileFrame`.
 parent_active
 ```
 
-Stores the parent active member of `CompileFrame`.
+Parent active associated with `CompileFrame`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L895)
@@ -59,7 +59,7 @@ Stores the parent active member of `CompileFrame`.
 pos
 ```
 
-Stores the pos member of `CompileFrame`.
+Pos associated with `CompileFrame`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L903)
@@ -71,7 +71,7 @@ Stores the pos member of `CompileFrame`.
 taken
 ```
 
-Stores the taken member of `CompileFrame`.
+Taken associated with `CompileFrame`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L899)

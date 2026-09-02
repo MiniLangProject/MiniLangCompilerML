@@ -38,7 +38,7 @@ Creates alloc zero bytes keepalive.
 function _array_contains_text(arr, value)
 ```
 
-Implements array contains text.
+Encode or manage array contains text in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -55,7 +55,7 @@ Implements array contains text.
 function _byte_at(asm, idx)
 ```
 
-Implements byte at.
+Encode or manage byte at in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -72,7 +72,7 @@ Implements byte at.
 function _call_push(asm, label)
 ```
 
-Implements call push.
+Encode or manage call push in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ Implements call push.
 function _chunk_count(asm)
 ```
 
-Implements chunk count.
+Encode or manage chunk count in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -105,7 +105,7 @@ Implements chunk count.
 function _chunk_get(asm, idx)
 ```
 
-Implements chunk get.
+Encode or manage chunk get in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -122,7 +122,7 @@ Implements chunk get.
 function _chunk_push(asm, chunk)
 ```
 
-Implements chunk push.
+Encode or manage chunk push in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -139,7 +139,7 @@ Implements chunk push.
 function _chunk_set(asm, idx, chunk)
 ```
 
-Implements chunk set.
+Encode or manage chunk set in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -157,7 +157,7 @@ Implements chunk set.
 function _drop_last_patch(asm)
 ```
 
-Implements drop last patch.
+Encode or manage drop last patch in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -173,7 +173,7 @@ Implements drop last patch.
 function _emit(asm, b)
 ```
 
-Runs emit.
+Encode or manage emit in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -190,7 +190,7 @@ Runs emit.
 function _emit32(asm, x)
 ```
 
-Runs emit32.
+Encode or manage emit32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -207,7 +207,7 @@ Runs emit32.
 function _emit64(asm, x)
 ```
 
-Runs emit64.
+Encode or manage emit64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -224,7 +224,7 @@ Runs emit64.
 function _emit8(asm, x)
 ```
 
-Runs emit8.
+Encode or manage emit8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -241,7 +241,7 @@ Runs emit8.
 function _emit_bin_rr(asm, op, dst, src, w)
 ```
 
-Runs emit bin rr.
+Encode or manage emit bin rr in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -261,7 +261,7 @@ Runs emit bin rr.
 function _emit_bytes_u8(v)
 ```
 
-Runs emit bytes u8.
+Encode or manage emit bytes u8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -277,7 +277,7 @@ Runs emit bytes u8.
 function _emit_modrm(asm, mod, reg, rm)
 ```
 
-Runs emit modrm.
+Encode or manage emit modrm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -296,7 +296,7 @@ Runs emit modrm.
 function _emit_rex(asm, w, r, x, b, force)
 ```
 
-Runs emit rex.
+Encode or manage emit rex in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -317,7 +317,7 @@ Runs emit rex.
 function _emit_shift_imm8(asm, subop, reg_name, imm, w)
 ```
 
-Runs emit shift imm8.
+Encode or manage emit shift imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -337,7 +337,7 @@ Runs emit shift imm8.
 function _emit_sse_rr(asm, prefix1, prefix2, opcode, dst_xmm, src_xmm)
 ```
 
-Runs emit sse rr.
+Encode or manage emit sse rr in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -396,7 +396,7 @@ Converts encode mem bis.
 function _ensure_capacity(asm, need)
 ```
 
-Implements ensure capacity.
+Encode or manage ensure capacity in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -413,7 +413,7 @@ Implements ensure capacity.
 function _fits_i8(x as int) returns bool
 ```
 
-Implements fits i8.
+Encode or manage fits i8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -429,7 +429,7 @@ Implements fits i8.
 function _fmt_disp(disp)
 ```
 
-Implements fmt disp.
+Encode or manage fmt disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -445,7 +445,7 @@ Implements fmt disp.
 function _fmt_mem(base, disp)
 ```
 
-Implements fmt mem.
+Encode or manage fmt mem in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -462,7 +462,7 @@ Implements fmt mem.
 function _fmt_mem_sib(base, index_reg, scale, disp)
 ```
 
-Implements fmt mem sib.
+Encode or manage fmt mem sib in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -518,7 +518,7 @@ Converts format call.
 function _gc_tmp_context_offset(label)
 ```
 
-Implements gc tmp context offset.
+Encode or manage gc tmp context offset in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -534,7 +534,7 @@ Implements gc tmp context offset.
 function _grp1_imm(asm, size, subop, rm, imm)
 ```
 
-Implements grp1 imm.
+Encode or manage grp1 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -554,7 +554,7 @@ Implements grp1 imm.
 function _grp1_r8_imm8(asm, subop, reg8, imm)
 ```
 
-Implements grp1 r8 imm8.
+Encode or manage grp1 r8 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -621,7 +621,7 @@ Reports whether is r8 name.
 function _jcc_mnemonic(cc)
 ```
 
-Implements jcc mnemonic.
+Encode or manage jcc mnemonic in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -637,7 +637,7 @@ Implements jcc mnemonic.
 function _keepalive_barrier(value)
 ```
 
-Implements keepalive barrier.
+Encode or manage keepalive barrier in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -653,7 +653,7 @@ Implements keepalive barrier.
 function _label_index(labels, name)
 ```
 
-Implements label index.
+Encode or manage label index in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -670,7 +670,7 @@ Implements label index.
 function _label_pos(labels, name)
 ```
 
-Implements label pos.
+Encode or manage label pos in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -687,7 +687,7 @@ Implements label pos.
 function _label_push(asm, label)
 ```
 
-Implements label push.
+Encode or manage label push in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -704,7 +704,7 @@ Implements label push.
 function _last_patch(asm)
 ```
 
-Implements last patch.
+Encode or manage last patch in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -720,7 +720,7 @@ Implements last patch.
 function _materialize_buffer(asm)
 ```
 
-Implements materialize buffer.
+Encode or manage materialize buffer in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -736,7 +736,7 @@ Implements materialize buffer.
 _materialize_keepalive
 ```
 
-Stores the materialize keepalive compiler state.
+Track materialize keepalive compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L114)
@@ -748,7 +748,7 @@ Stores the materialize keepalive compiler state.
 function _modrm(mod, reg, rm)
 ```
 
-Implements modrm.
+Encode or manage modrm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -766,7 +766,7 @@ Implements modrm.
 function _modrm_byte(mod as int, reg as int, rm as int) returns int
 ```
 
-Implements modrm byte.
+Encode or manage modrm byte in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -784,7 +784,7 @@ Implements modrm byte.
 function _patch_push(asm, patch)
 ```
 
-Implements patch push.
+Encode or manage patch push in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -801,7 +801,7 @@ Implements patch push.
 function _patches_replace(asm, patches)
 ```
 
-Implements patches replace.
+Encode or manage patches replace in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -818,7 +818,7 @@ Implements patches replace.
 function _peephole_trim_tail(asm, n)
 ```
 
-Implements peephole trim tail.
+Encode or manage peephole trim tail in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -888,7 +888,7 @@ Materialization releases the paged backing store to reduce compiler peak memory.
 function _rex(w, r, x, b, force)
 ```
 
-Implements rex.
+Encode or manage rex in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -908,7 +908,7 @@ Implements rex.
 function _rid_any(name)
 ```
 
-Implements rid any.
+Encode or manage rid any in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -924,7 +924,7 @@ Implements rid any.
 function _scale_bits(scale)
 ```
 
-Implements scale bits.
+Encode or manage scale bits in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -958,7 +958,7 @@ Updates set chunk byte.
 function _sib(scale, index, base)
 ```
 
-Implements sib.
+Encode or manage sib in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -976,7 +976,7 @@ Implements sib.
 function _sib_byte(scale as int, index as int, base as int) returns int
 ```
 
-Implements sib byte.
+Encode or manage sib byte in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -994,7 +994,7 @@ Implements sib byte.
 function _spill_before_call(asm)
 ```
 
-Implements spill before call.
+Encode or manage spill before call in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1010,7 +1010,7 @@ Implements spill before call.
 function _starts_with_text(text, prefix)
 ```
 
-Implements starts with text.
+Encode or manage starts with text in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1027,7 +1027,7 @@ Implements starts with text.
 function _track_helper_label(asm, label)
 ```
 
-Implements track helper label.
+Encode or manage track helper label in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1044,7 +1044,7 @@ Implements track helper label.
 function _vex3(m, w, vvvv, l, pp, r, x, b)
 ```
 
-Implements vex3.
+Encode or manage vex3 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1067,7 +1067,7 @@ Implements vex3.
 function _xmm_id(name)
 ```
 
-Implements xmm id.
+Encode or manage xmm id in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1083,7 +1083,7 @@ Implements xmm id.
 function _ymm_id(name)
 ```
 
-Implements ymm id.
+Encode or manage ymm id in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1345,7 +1345,7 @@ Updates addsd xmm xmm.
 function and_r32_imm(asm, reg_name, imm)
 ```
 
-Implements and r32 imm.
+Encode or manage and r32 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1363,7 +1363,7 @@ Implements and r32 imm.
 function and_r32_r32(asm, dst, src)
 ```
 
-Implements and r32 r32.
+Encode or manage and r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1381,7 +1381,7 @@ Implements and r32 r32.
 function and_r64_imm(asm, reg_name, imm)
 ```
 
-Implements and r64 imm.
+Encode or manage and r64 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1399,7 +1399,7 @@ Implements and r64 imm.
 function and_r64_imm8(asm as struct, reg_name as string, imm as int) returns struct
 ```
 
-Implements and r64 imm8.
+Encode or manage and r64 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1419,7 +1419,7 @@ Implements and r64 imm8.
 function and_r64_r64(asm, dst, src)
 ```
 
-Implements and r64 r64.
+Encode or manage and r64 r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1437,7 +1437,7 @@ Implements and r64 r64.
 function and_r8_imm8(asm, reg8, imm)
 ```
 
-Implements and r8 imm8.
+Encode or manage and r8 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1455,7 +1455,7 @@ Implements and r8 imm8.
 function and_r8_r8(asm, dst, src)
 ```
 
-Implements and r8 r8.
+Encode or manage and r8 r8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1473,7 +1473,7 @@ Implements and r8 r8.
 function and_rax_imm8(asm, imm)
 ```
 
-Implements and rax imm8.
+Encode or manage and rax imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1493,7 +1493,7 @@ Implements and rax imm8.
 function bsf_r32_r32(asm, dst32, src32)
 ```
 
-Implements bsf r32 r32.
+Encode or manage bsf r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1511,7 +1511,7 @@ Implements bsf r32 r32.
 function bsr_r32_r32(asm, dst32, src32)
 ```
 
-Implements bsr r32 r32.
+Encode or manage bsr r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1529,7 +1529,7 @@ Implements bsr r32 r32.
 function call(asm, label)
 ```
 
-Implements call.
+Encode or manage call in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1546,7 +1546,7 @@ Implements call.
 function call_membase_disp(asm, base, disp)
 ```
 
-Implements call membase disp.
+Encode or manage call membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1564,7 +1564,7 @@ Implements call membase disp.
 function call_rax(asm)
 ```
 
-Implements call rax.
+Encode or manage call rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1580,7 +1580,7 @@ Implements call rax.
 function call_rip_qword(asm, label)
 ```
 
-Implements call rip qword.
+Encode or manage call rip qword in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1629,7 +1629,7 @@ Releases or resets clear tracked helpers.
 function cmp_membase_disp_imm8(asm, base, disp, imm)
 ```
 
-Implements cmp membase disp imm8.
+Encode or manage cmp membase disp imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1648,7 +1648,7 @@ Implements cmp membase disp imm8.
 function cmp_r32_imm(asm, reg_name, imm)
 ```
 
-Implements cmp r32 imm.
+Encode or manage cmp r32 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1666,7 +1666,7 @@ Implements cmp r32 imm.
 function cmp_r32_imm32(asm, reg_name, imm)
 ```
 
-Implements cmp r32 imm32.
+Encode or manage cmp r32 imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1684,7 +1684,7 @@ Implements cmp r32 imm32.
 function cmp_r32_r32(asm, left, right)
 ```
 
-Implements cmp r32 r32.
+Encode or manage cmp r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1702,7 +1702,7 @@ Implements cmp r32 r32.
 function cmp_r64_imm(asm, reg_name, imm)
 ```
 
-Implements cmp r64 imm.
+Encode or manage cmp r64 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1720,7 +1720,7 @@ Implements cmp r64 imm.
 function cmp_r64_imm32(asm, reg_name, imm)
 ```
 
-Implements cmp r64 imm32.
+Encode or manage cmp r64 imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1738,7 +1738,7 @@ Implements cmp r64 imm32.
 function cmp_r64_imm8(asm as struct, reg_name as string, imm as int) returns struct
 ```
 
-Implements cmp r64 imm8.
+Encode or manage cmp r64 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1758,7 +1758,7 @@ Implements cmp r64 imm8.
 function cmp_r64_r64(asm, left, right)
 ```
 
-Implements cmp r64 r64.
+Encode or manage cmp r64 r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1776,7 +1776,7 @@ Implements cmp r64 r64.
 function cmp_r8_imm8(asm, reg8, imm)
 ```
 
-Implements cmp r8 imm8.
+Encode or manage cmp r8 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1794,7 +1794,7 @@ Implements cmp r8 imm8.
 function cmp_r8_membase_disp(asm, reg8, base, disp)
 ```
 
-Implements cmp r8 membase disp.
+Encode or manage cmp r8 membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1813,7 +1813,7 @@ Implements cmp r8 membase disp.
 function cmp_rax_imm32(asm, imm)
 ```
 
-Implements cmp rax imm32.
+Encode or manage cmp rax imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1830,7 +1830,7 @@ Implements cmp rax imm32.
 function cmp_rax_imm8(asm as struct, imm as int) returns struct
 ```
 
-Implements cmp rax imm8.
+Encode or manage cmp rax imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1849,7 +1849,7 @@ Implements cmp rax imm8.
 function cmp_rax_r10(asm)
 ```
 
-Implements cmp rax r10.
+Encode or manage cmp rax r10 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1865,7 +1865,7 @@ Implements cmp rax r10.
 function cpuid(asm)
 ```
 
-Implements cpuid.
+Encode or manage cpuid in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1881,7 +1881,7 @@ Implements cpuid.
 function cqo(asm)
 ```
 
-Implements cqo.
+Encode or manage cqo in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1897,7 +1897,7 @@ Implements cqo.
 function crc32_r32_membase_disp8(asm, dst32, base, disp)
 ```
 
-Implements crc32 r32 membase disp8.
+Encode or manage crc32 r32 membase disp8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1935,7 +1935,7 @@ Emit SSE4.2 CRC32 r64, qword [base+disp]. Callers must dispatch on CPUID.SSE4.2;
 function cvtsd2ss_xmm_xmm(asm, dst, src)
 ```
 
-Implements cvtsd2ss xmm xmm.
+Encode or manage cvtsd2ss xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1953,7 +1953,7 @@ Implements cvtsd2ss xmm xmm.
 function cvtsi2sd_xmm_r64(asm, dst_xmm, src_reg)
 ```
 
-Implements cvtsi2sd xmm r64.
+Encode or manage cvtsi2sd xmm r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1971,7 +1971,7 @@ Implements cvtsi2sd xmm r64.
 function cvtss2sd_xmm_xmm(asm, dst, src)
 ```
 
-Implements cvtss2sd xmm xmm.
+Encode or manage cvtss2sd xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1989,7 +1989,7 @@ Implements cvtss2sd xmm xmm.
 function cvttsd2si_r64_xmm(asm, dst_reg, src_xmm)
 ```
 
-Implements cvttsd2si r64 xmm.
+Encode or manage cvttsd2si r64 xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2007,7 +2007,7 @@ Implements cvttsd2si r64 xmm.
 function dec_membase_disp_qword(asm, base, disp)
 ```
 
-Implements dec membase disp qword.
+Encode or manage dec membase disp qword in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2025,7 +2025,7 @@ Implements dec membase disp qword.
 function dec_r32(asm, reg_name)
 ```
 
-Implements dec r32.
+Encode or manage dec r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2042,7 +2042,7 @@ Implements dec r32.
 function dec_r64(asm, reg_name)
 ```
 
-Implements dec r64.
+Encode or manage dec r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2059,7 +2059,7 @@ Implements dec r64.
 function disable_listing(asm)
 ```
 
-Implements disable listing.
+Encode or manage disable listing in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2075,7 +2075,7 @@ Implements disable listing.
 function div_r64(asm, reg_name)
 ```
 
-Implements div r64.
+Encode or manage div r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2092,7 +2092,7 @@ Implements div r64.
 function divsd_xmm_xmm(asm, dst_xmm, src_xmm)
 ```
 
-Implements divsd xmm xmm.
+Encode or manage divsd xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2110,7 +2110,7 @@ Implements divsd xmm xmm.
 function emit(asm, b)
 ```
 
-Runs emit.
+Encode or manage emit in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2127,7 +2127,7 @@ Runs emit.
 function emit32(asm, x)
 ```
 
-Runs emit32.
+Encode or manage emit32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2144,7 +2144,7 @@ Runs emit32.
 function emit64(asm, x)
 ```
 
-Runs emit64.
+Encode or manage emit64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2161,7 +2161,7 @@ Runs emit64.
 function emit8(asm, x)
 ```
 
-Runs emit8.
+Encode or manage emit8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2178,7 +2178,7 @@ Runs emit8.
 function emit_placeholder(asm, text)
 ```
 
-Runs emit placeholder.
+Encode or manage emit placeholder in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2195,7 +2195,7 @@ Runs emit placeholder.
 function enable_listing(asm, path, show_addr, show_bytes, show_text)
 ```
 
-Implements enable listing.
+Encode or manage enable listing in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2216,7 +2216,7 @@ Implements enable listing.
 function finalize(asm)
 ```
 
-Implements finalize.
+Encode or manage finalize in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2296,7 +2296,7 @@ Returns get tracked helpers.
 function gpr(name)
 ```
 
-Implements gpr.
+Encode or manage gpr in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2313,7 +2313,7 @@ Implements gpr.
 function idiv_r64(asm, reg_name)
 ```
 
-Implements idiv r64.
+Encode or manage idiv r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2330,7 +2330,7 @@ Implements idiv r64.
 function imul_r64_r64(asm, dst, src)
 ```
 
-Implements imul r64 r64.
+Encode or manage imul r64 r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2348,7 +2348,7 @@ Implements imul r64 r64.
 function imul_r64_r64_imm(asm, dst, src, imm)
 ```
 
-Implements imul r64 r64 imm.
+Encode or manage imul r64 r64 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2367,7 +2367,7 @@ Implements imul r64 r64 imm.
 function inc_membase_disp_qword(asm, base, disp)
 ```
 
-Implements inc membase disp qword.
+Encode or manage inc membase disp qword in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2385,7 +2385,7 @@ Implements inc membase disp qword.
 function inc_r32(asm, reg_name)
 ```
 
-Implements inc r32.
+Encode or manage inc r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2402,7 +2402,7 @@ Implements inc r32.
 function inc_r64(asm, reg_name)
 ```
 
-Implements inc r64.
+Encode or manage inc r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2419,7 +2419,7 @@ Implements inc r64.
 function ja(asm, label)
 ```
 
-Implements ja.
+Encode or manage ja in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2436,7 +2436,7 @@ Implements ja.
 function jae(asm, label)
 ```
 
-Implements jae.
+Encode or manage jae in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2453,7 +2453,7 @@ Implements jae.
 function jb(asm, label)
 ```
 
-Implements jb.
+Encode or manage jb in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2470,7 +2470,7 @@ Implements jb.
 function jbe(asm, label)
 ```
 
-Implements jbe.
+Encode or manage jbe in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2487,7 +2487,7 @@ Implements jbe.
 function jcc(asm, cc, label)
 ```
 
-Implements jcc.
+Encode or manage jcc in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2505,7 +2505,7 @@ Implements jcc.
 function je(asm, label)
 ```
 
-Implements je.
+Encode or manage je in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2522,7 +2522,7 @@ Implements je.
 function jg(asm, label)
 ```
 
-Implements jg.
+Encode or manage jg in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2539,7 +2539,7 @@ Implements jg.
 function jge(asm, label)
 ```
 
-Implements jge.
+Encode or manage jge in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2556,7 +2556,7 @@ Implements jge.
 function jl(asm, label)
 ```
 
-Implements jl.
+Encode or manage jl in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2573,7 +2573,7 @@ Implements jl.
 function jle(asm, label)
 ```
 
-Implements jle.
+Encode or manage jle in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2590,7 +2590,7 @@ Implements jle.
 function jmp(asm, label)
 ```
 
-Implements jmp.
+Encode or manage jmp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2607,7 +2607,7 @@ Implements jmp.
 function jmp_r64(asm, reg)
 ```
 
-Implements jmp r64.
+Encode or manage jmp r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2624,7 +2624,7 @@ Implements jmp r64.
 function jne(asm, label)
 ```
 
-Implements jne.
+Encode or manage jne in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2641,7 +2641,7 @@ Implements jne.
 function jnz(asm, label)
 ```
 
-Implements jnz.
+Encode or manage jnz in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2658,7 +2658,7 @@ Implements jnz.
 function jz(asm, label)
 ```
 
-Implements jz.
+Encode or manage jz in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2675,7 +2675,7 @@ Implements jz.
 function lea_r11_rip(asm, label)
 ```
 
-Implements lea r11 rip.
+Encode or manage lea r11 rip in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2692,7 +2692,7 @@ Implements lea r11 rip.
 function lea_r64_mem_bis(asm, dst, base, index_reg, scale, disp)
 ```
 
-Implements lea r64 mem bis.
+Encode or manage lea r64 mem bis in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2713,7 +2713,7 @@ Implements lea r64 mem bis.
 function lea_r64_membase_disp(asm, dst, base, disp)
 ```
 
-Implements lea r64 membase disp.
+Encode or manage lea r64 membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2732,7 +2732,7 @@ Implements lea r64 membase disp.
 function lea_r64_rip(asm, dst, label)
 ```
 
-Implements lea r64 rip.
+Encode or manage lea r64 rip in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2750,7 +2750,7 @@ Implements lea r64 rip.
 function lea_r8_rip(asm, label)
 ```
 
-Implements lea r8 rip.
+Encode or manage lea r8 rip in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2767,7 +2767,7 @@ Implements lea r8 rip.
 function lea_r9_rip(asm, label)
 ```
 
-Implements lea r9 rip.
+Encode or manage lea r9 rip in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2784,7 +2784,7 @@ Implements lea r9 rip.
 function lea_rax_rip(asm as struct, label as string) returns struct
 ```
 
-Implements lea rax rip.
+Encode or manage lea rax rip in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2803,7 +2803,7 @@ Implements lea rax rip.
 function lea_rdx_rip(asm, label)
 ```
 
-Implements lea rdx rip.
+Encode or manage lea rdx rip in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2820,7 +2820,7 @@ Implements lea rdx rip.
 function leave(asm)
 ```
 
-Implements leave.
+Encode or manage leave in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2836,7 +2836,7 @@ Implements leave.
 function lock_cmpxchg_membase_disp_r32(asm, base, disp, src)
 ```
 
-Implements lock cmpxchg membase disp r32.
+Encode or manage lock cmpxchg membase disp r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2855,7 +2855,7 @@ Implements lock cmpxchg membase disp r32.
 function lock_cmpxchg_membase_disp_r64(asm, base, disp, src)
 ```
 
-Implements lock cmpxchg membase disp r64.
+Encode or manage lock cmpxchg membase disp r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2874,7 +2874,7 @@ Implements lock cmpxchg membase disp r64.
 function mark(asm, name)
 ```
 
-Implements mark.
+Encode or manage mark in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2891,7 +2891,7 @@ Implements mark.
 function materialize(asm)
 ```
 
-Implements materialize.
+Encode or manage materialize in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2907,7 +2907,7 @@ Implements materialize.
 function materialize_and_fold_local_patches(asm)
 ```
 
-Implements materialize and fold local patches.
+Encode or manage materialize and fold local patches in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2923,7 +2923,7 @@ Implements materialize and fold local patches.
 function mov_eax_rip_dword(asm, label)
 ```
 
-Implements mov eax rip dword.
+Encode or manage mov eax rip dword in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2940,7 +2940,7 @@ Implements mov eax rip dword.
 function mov_gs_qword_28_rax(asm)
 ```
 
-Implements mov gs qword 28 rax.
+Encode or manage mov gs qword 28 rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2956,7 +2956,7 @@ Implements mov gs qword 28 rax.
 function mov_mem_bis_r32(asm, base, index_reg, scale, disp, src)
 ```
 
-Implements mov mem bis r32.
+Encode or manage mov mem bis r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2977,7 +2977,7 @@ Implements mov mem bis r32.
 function mov_mem_bis_r64(asm, base, index_reg, scale, disp, src)
 ```
 
-Implements mov mem bis r64.
+Encode or manage mov mem bis r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2998,7 +2998,7 @@ Implements mov mem bis r64.
 function mov_membase_disp_imm32(asm, base, disp, imm, qword)
 ```
 
-Implements mov membase disp imm32.
+Encode or manage mov membase disp imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3018,7 +3018,7 @@ Implements mov membase disp imm32.
 function mov_membase_disp_imm8(asm, base, disp, imm)
 ```
 
-Implements mov membase disp imm8.
+Encode or manage mov membase disp imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3037,7 +3037,7 @@ Implements mov membase disp imm8.
 function mov_membase_disp_r32(asm, base, disp, src)
 ```
 
-Implements mov membase disp r32.
+Encode or manage mov membase disp r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3056,7 +3056,7 @@ Implements mov membase disp r32.
 function mov_membase_disp_r64(asm, base, disp, src)
 ```
 
-Implements mov membase disp r64.
+Encode or manage mov membase disp r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3075,7 +3075,7 @@ Implements mov membase disp r64.
 function mov_membase_disp_r8(asm, base, disp, src)
 ```
 
-Implements mov membase disp r8.
+Encode or manage mov membase disp r8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3094,7 +3094,7 @@ Implements mov membase disp r8.
 function mov_qword_ptr_rsp20_rax_zero(asm)
 ```
 
-Implements mov qword ptr rsp20 rax zero.
+Encode or manage mov qword ptr rsp20 rax zero in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3110,7 +3110,7 @@ Implements mov qword ptr rsp20 rax zero.
 function mov_r10_gs_qword_28(asm)
 ```
 
-Implements mov r10 gs qword 28.
+Encode or manage mov r10 gs qword 28 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3126,7 +3126,7 @@ Implements mov r10 gs qword 28.
 function mov_r10_rax(asm)
 ```
 
-Implements mov r10 rax.
+Encode or manage mov r10 rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3142,7 +3142,7 @@ Implements mov r10 rax.
 function mov_r11_gs_qword_28(asm)
 ```
 
-Implements mov r11 gs qword 28.
+Encode or manage mov r11 gs qword 28 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3158,7 +3158,7 @@ Implements mov r11 gs qword 28.
 function mov_r11_rax(asm)
 ```
 
-Implements mov r11 rax.
+Encode or manage mov r11 rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3174,7 +3174,7 @@ Implements mov r11 rax.
 function mov_r32_imm32(asm, dst, imm)
 ```
 
-Implements mov r32 imm32.
+Encode or manage mov r32 imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3192,7 +3192,7 @@ Implements mov r32 imm32.
 function mov_r32_mem_bis(asm, dst, base, index_reg, scale, disp)
 ```
 
-Implements mov r32 mem bis.
+Encode or manage mov r32 mem bis in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3213,7 +3213,7 @@ Implements mov r32 mem bis.
 function mov_r32_membase_disp(asm, dst, base, disp)
 ```
 
-Implements mov r32 membase disp.
+Encode or manage mov r32 membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3232,7 +3232,7 @@ Implements mov r32 membase disp.
 function mov_r32_r32(asm, dst, src)
 ```
 
-Implements mov r32 r32.
+Encode or manage mov r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3250,7 +3250,7 @@ Implements mov r32 r32.
 function mov_r64_imm64(asm, dst, imm)
 ```
 
-Implements mov r64 imm64.
+Encode or manage mov r64 imm64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3268,7 +3268,7 @@ Implements mov r64 imm64.
 function mov_r64_mem_bis(asm, dst, base, index_reg, scale, disp)
 ```
 
-Implements mov r64 mem bis.
+Encode or manage mov r64 mem bis in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3289,7 +3289,7 @@ Implements mov r64 mem bis.
 function mov_r64_membase_disp(asm, dst, base, disp)
 ```
 
-Implements mov r64 membase disp.
+Encode or manage mov r64 membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3308,7 +3308,7 @@ Implements mov r64 membase disp.
 function mov_r64_r64(asm, dst, src)
 ```
 
-Implements mov r64 r64.
+Encode or manage mov r64 r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3326,7 +3326,7 @@ Implements mov r64 r64.
 function mov_r64_tagged_int(asm, dst, value)
 ```
 
-Implements mov r64 tagged int.
+Encode or manage mov r64 tagged int in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3344,7 +3344,7 @@ Implements mov r64 tagged int.
 function mov_r64_u64_hi_lo_exact(asm, dst, hi32, lo32)
 ```
 
-Implements mov r64 u64 hi lo exact.
+Encode or manage mov r64 u64 hi lo exact in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3363,7 +3363,7 @@ Implements mov r64 u64 hi lo exact.
 function mov_r8_membase_disp(asm, dst, base, disp)
 ```
 
-Implements mov r8 membase disp.
+Encode or manage mov r8 membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3382,7 +3382,7 @@ Implements mov r8 membase disp.
 function mov_r8_r8(asm, dst, src)
 ```
 
-Implements mov r8 r8.
+Encode or manage mov r8 r8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3400,7 +3400,7 @@ Implements mov r8 r8.
 function mov_r8d_edx(asm)
 ```
 
-Implements mov r8d edx.
+Encode or manage mov r8d edx in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3416,7 +3416,7 @@ Implements mov r8d edx.
 function mov_r8d_imm32(asm, imm)
 ```
 
-Implements mov r8d imm32.
+Encode or manage mov r8d imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3433,7 +3433,7 @@ Implements mov r8d imm32.
 function mov_r9d_imm32(asm, imm)
 ```
 
-Implements mov r9d imm32.
+Encode or manage mov r9d imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3450,7 +3450,7 @@ Implements mov r9d imm32.
 function mov_rax_gs_qword_28(asm)
 ```
 
-Implements mov rax gs qword 28.
+Encode or manage mov rax gs qword 28 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3466,7 +3466,7 @@ Implements mov rax gs qword 28.
 function mov_rax_imm64(asm as struct, imm as int) returns struct
 ```
 
-Implements mov rax imm64.
+Encode or manage mov rax imm64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3485,7 +3485,7 @@ Implements mov rax imm64.
 function mov_rax_r10(asm)
 ```
 
-Implements mov rax r10.
+Encode or manage mov rax r10 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3501,7 +3501,7 @@ Implements mov rax r10.
 function mov_rax_r11(asm)
 ```
 
-Implements mov rax r11.
+Encode or manage mov rax r11 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3517,7 +3517,7 @@ Implements mov rax r11.
 function mov_rax_rip_qword(asm, label)
 ```
 
-Implements mov rax rip qword.
+Encode or manage mov rax rip qword in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3534,7 +3534,7 @@ Implements mov rax rip qword.
 function mov_rax_rsp_disp32(asm as struct, disp as int) returns struct
 ```
 
-Implements mov rax rsp disp32.
+Encode or manage mov rax rsp disp32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3553,7 +3553,7 @@ Implements mov rax rsp disp32.
 function mov_rax_rsp_disp8(asm, disp)
 ```
 
-Implements mov rax rsp disp8.
+Encode or manage mov rax rsp disp8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3570,7 +3570,7 @@ Implements mov rax rsp disp8.
 function mov_rax_tagged_int(asm as struct, value as int) returns struct
 ```
 
-Implements mov rax tagged int.
+Encode or manage mov rax tagged int in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3589,7 +3589,7 @@ Implements mov rax tagged int.
 function mov_rax_u64_hi_lo_exact(asm, hi32, lo32)
 ```
 
-Implements mov rax u64 hi lo exact.
+Encode or manage mov rax u64 hi lo exact in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3607,7 +3607,7 @@ Implements mov rax u64 hi lo exact.
 function mov_rbp_rsp(asm)
 ```
 
-Implements mov rbp rsp.
+Encode or manage mov rbp rsp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3623,7 +3623,7 @@ Implements mov rbp rsp.
 function mov_rbx_rax(asm)
 ```
 
-Implements mov rbx rax.
+Encode or manage mov rbx rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3639,7 +3639,7 @@ Implements mov rbx rax.
 function mov_rcx_imm32(asm as struct, imm as int) returns struct
 ```
 
-Implements mov rcx imm32.
+Encode or manage mov rcx imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3658,7 +3658,7 @@ Implements mov rcx imm32.
 function mov_rcx_rbx(asm)
 ```
 
-Implements mov rcx rbx.
+Encode or manage mov rcx rbx in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3674,7 +3674,7 @@ Implements mov rcx rbx.
 function mov_rdx_rax(asm)
 ```
 
-Implements mov rdx rax.
+Encode or manage mov rdx rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3690,7 +3690,7 @@ Implements mov rdx rax.
 function mov_rdx_rip_qword(asm, label)
 ```
 
-Implements mov rdx rip qword.
+Encode or manage mov rdx rip qword in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3707,7 +3707,7 @@ Implements mov rdx rip qword.
 function mov_rip_dword_eax(asm, label)
 ```
 
-Implements mov rip dword eax.
+Encode or manage mov rip dword eax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3724,7 +3724,7 @@ Implements mov rip dword eax.
 function mov_rip_qword_r11(asm, label)
 ```
 
-Implements mov rip qword r11.
+Encode or manage mov rip qword r11 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3741,7 +3741,7 @@ Implements mov rip qword r11.
 function mov_rip_qword_r8(asm, label)
 ```
 
-Implements mov rip qword r8.
+Encode or manage mov rip qword r8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3758,7 +3758,7 @@ Implements mov rip qword r8.
 function mov_rip_qword_r9(asm, label)
 ```
 
-Implements mov rip qword r9.
+Encode or manage mov rip qword r9 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3775,7 +3775,7 @@ Implements mov rip qword r9.
 function mov_rip_qword_rax(asm, label)
 ```
 
-Implements mov rip qword rax.
+Encode or manage mov rip qword rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3792,7 +3792,7 @@ Implements mov rip qword rax.
 function mov_rip_qword_rdx(asm, label)
 ```
 
-Implements mov rip qword rdx.
+Encode or manage mov rip qword rdx in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3809,7 +3809,7 @@ Implements mov rip qword rdx.
 function mov_rsp_disp32_rax(asm as struct, disp as int) returns struct
 ```
 
-Implements mov rsp disp32 rax.
+Encode or manage mov rsp disp32 rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3828,7 +3828,7 @@ Implements mov rsp disp32 rax.
 function mov_rsp_disp8_rax(asm, disp)
 ```
 
-Implements mov rsp disp8 rax.
+Encode or manage mov rsp disp8 rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3845,7 +3845,7 @@ Implements mov rsp disp8 rax.
 function movapd_xmm_xmm(asm, dst_xmm, src_xmm)
 ```
 
-Implements movapd xmm xmm.
+Encode or manage movapd xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3863,7 +3863,7 @@ Implements movapd xmm xmm.
 function movd_r32_xmm(asm, dst, src)
 ```
 
-Implements movd r32 xmm.
+Encode or manage movd r32 xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3881,7 +3881,7 @@ Implements movd r32 xmm.
 function movdqu_membase_disp_xmm(asm, base, disp, src)
 ```
 
-Implements movdqu membase disp xmm.
+Encode or manage movdqu membase disp xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3900,7 +3900,7 @@ Implements movdqu membase disp xmm.
 function movdqu_xmm_membase_disp(asm, dst, base, disp)
 ```
 
-Implements movdqu xmm membase disp.
+Encode or manage movdqu xmm membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3955,7 +3955,7 @@ Move one tagged 64-bit value into the low qword of an XMM register.
 function movsd_membase_disp_xmm(asm, base, disp, src_xmm)
 ```
 
-Implements movsd membase disp xmm.
+Encode or manage movsd membase disp xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3974,7 +3974,7 @@ Implements movsd membase disp xmm.
 function movsd_xmm_membase_disp(asm, dst_xmm, base, disp)
 ```
 
-Implements movsd xmm membase disp.
+Encode or manage movsd xmm membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3993,7 +3993,7 @@ Implements movsd xmm membase disp.
 function movsd_xmm_xmm(asm, dst_xmm, src_xmm)
 ```
 
-Implements movsd xmm xmm.
+Encode or manage movsd xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4011,7 +4011,7 @@ Implements movsd xmm xmm.
 function movzx_eax_al(asm as struct) returns struct
 ```
 
-Implements movzx eax al.
+Encode or manage movzx eax al in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4029,7 +4029,7 @@ Implements movzx eax al.
 function movzx_r32_membase_disp(asm, dst32, base, disp)
 ```
 
-Implements movzx r32 membase disp.
+Encode or manage movzx r32 membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4048,7 +4048,7 @@ Implements movzx r32 membase disp.
 function movzx_r32_r8(asm, dst, src8)
 ```
 
-Implements movzx r32 r8.
+Encode or manage movzx r32 r8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4066,7 +4066,7 @@ Implements movzx r32 r8.
 function mulsd_xmm_xmm(asm, dst_xmm, src_xmm)
 ```
 
-Implements mulsd xmm xmm.
+Encode or manage mulsd xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4084,7 +4084,7 @@ Implements mulsd xmm xmm.
 function neg_r64(asm, reg_name)
 ```
 
-Implements neg r64.
+Encode or manage neg r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4101,7 +4101,7 @@ Implements neg r64.
 function neg_rax(asm)
 ```
 
-Implements neg rax.
+Encode or manage neg rax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4141,7 +4141,7 @@ Code generation discovers runtime helpers separately and never consumes the comp
 function nop(asm)
 ```
 
-Implements nop.
+Encode or manage nop in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4157,7 +4157,7 @@ Implements nop.
 function or_r32_imm(asm, reg_name, imm)
 ```
 
-Implements or r32 imm.
+Encode or manage or r32 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4175,7 +4175,7 @@ Implements or r32 imm.
 function or_r32_r32(asm, dst, src)
 ```
 
-Implements or r32 r32.
+Encode or manage or r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4193,7 +4193,7 @@ Implements or r32 r32.
 function or_r64_imm(asm, reg_name, imm)
 ```
 
-Implements or r64 imm.
+Encode or manage or r64 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4211,7 +4211,7 @@ Implements or r64 imm.
 function or_r64_imm8(asm as struct, reg_name as string, imm as int) returns struct
 ```
 
-Implements or r64 imm8.
+Encode or manage or r64 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4231,7 +4231,7 @@ Implements or r64 imm8.
 function or_r64_r64(asm, dst, src)
 ```
 
-Implements or r64 r64.
+Encode or manage or r64 r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4249,7 +4249,7 @@ Implements or r64 r64.
 function or_r8_imm8(asm, reg8, imm)
 ```
 
-Implements or r8 imm8.
+Encode or manage or r8 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4267,7 +4267,7 @@ Implements or r8 imm8.
 function or_r8_r8(asm, dst, src)
 ```
 
-Implements or r8 r8.
+Encode or manage or r8 r8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4285,7 +4285,7 @@ Implements or r8 r8.
 function or_rax_imm8(asm, imm)
 ```
 
-Implements or rax imm8.
+Encode or manage or rax imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4302,7 +4302,7 @@ Implements or rax imm8.
 function pcmpeqb_xmm_xmm(asm, dst, src)
 ```
 
-Implements pcmpeqb xmm xmm.
+Encode or manage pcmpeqb xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4320,7 +4320,7 @@ Implements pcmpeqb xmm xmm.
 function pcmpeqw_xmm_xmm(asm, dst, src)
 ```
 
-Implements pcmpeqw xmm xmm.
+Encode or manage pcmpeqw xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4338,7 +4338,7 @@ Implements pcmpeqw xmm xmm.
 function pmovmskb_r32_xmm(asm, dst32, src)
 ```
 
-Implements pmovmskb r32 xmm.
+Encode or manage pmovmskb r32 xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4356,7 +4356,7 @@ Implements pmovmskb r32 xmm.
 function pop_r12(asm)
 ```
 
-Implements pop r12.
+Encode or manage pop r12 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4372,7 +4372,7 @@ Implements pop r12.
 function pop_r13(asm)
 ```
 
-Implements pop r13.
+Encode or manage pop r13 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4388,7 +4388,7 @@ Implements pop r13.
 function pop_r14(asm)
 ```
 
-Implements pop r14.
+Encode or manage pop r14 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4404,7 +4404,7 @@ Implements pop r14.
 function pop_r15(asm)
 ```
 
-Implements pop r15.
+Encode or manage pop r15 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4420,7 +4420,7 @@ Implements pop r15.
 function pop_rbp(asm)
 ```
 
-Implements pop rbp.
+Encode or manage pop rbp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4436,7 +4436,7 @@ Implements pop rbp.
 function pop_rbx(asm)
 ```
 
-Implements pop rbx.
+Encode or manage pop rbx in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4452,7 +4452,7 @@ Implements pop rbx.
 function pop_reg(asm, reg)
 ```
 
-Implements pop reg.
+Encode or manage pop reg in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4469,7 +4469,7 @@ Implements pop reg.
 function pos(asm as struct) returns int
 ```
 
-Implements pos.
+Encode or manage pos in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4487,7 +4487,7 @@ Implements pos.
 function punpcklqdq_xmm_xmm(asm, dst, src)
 ```
 
-Implements punpcklqdq xmm xmm.
+Encode or manage punpcklqdq xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4618,7 +4618,7 @@ Updates push reg.
 function pxor_xmm_xmm(asm, dst, src)
 ```
 
-Implements pxor xmm xmm.
+Encode or manage pxor xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4636,7 +4636,7 @@ Implements pxor xmm xmm.
 function rep_movsb(asm)
 ```
 
-Implements rep movsb.
+Encode or manage rep movsb in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4652,7 +4652,7 @@ Implements rep movsb.
 function rep_movsq(asm)
 ```
 
-Implements rep movsq.
+Encode or manage rep movsq in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4668,7 +4668,7 @@ Implements rep movsq.
 function rep_stosb(asm)
 ```
 
-Implements rep stosb.
+Encode or manage rep stosb in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4684,7 +4684,7 @@ Implements rep stosb.
 function rep_stosq(asm)
 ```
 
-Implements rep stosq.
+Encode or manage rep stosq in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4700,7 +4700,7 @@ Implements rep stosq.
 function repe_cmpsb(asm)
 ```
 
-Implements repe cmpsb.
+Encode or manage repe cmpsb in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4716,7 +4716,7 @@ Implements repe cmpsb.
 function resolve_all_defined_patches(asm)
 ```
 
-Implements resolve all defined patches.
+Encode or manage resolve all defined patches in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4732,7 +4732,7 @@ Implements resolve all defined patches.
 function resolve_defined_patches(asm)
 ```
 
-Implements resolve defined patches.
+Encode or manage resolve defined patches in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4748,7 +4748,7 @@ Implements resolve defined patches.
 function ret(asm)
 ```
 
-Implements ret.
+Encode or manage ret in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4764,7 +4764,7 @@ Implements ret.
 function roundsd_xmm_xmm_imm8(asm, dst_xmm, src_xmm, imm8)
 ```
 
-Implements roundsd xmm xmm imm8.
+Encode or manage roundsd xmm xmm imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4783,7 +4783,7 @@ Implements roundsd xmm xmm imm8.
 function sar_r32_imm8(asm, reg_name, imm)
 ```
 
-Implements sar r32 imm8.
+Encode or manage sar r32 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4801,7 +4801,7 @@ Implements sar r32 imm8.
 function sar_r64_cl(asm, reg_name)
 ```
 
-Implements sar r64 cl.
+Encode or manage sar r64 cl in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4818,7 +4818,7 @@ Implements sar r64 cl.
 function sar_r64_imm8(asm, reg_name, imm)
 ```
 
-Implements sar r64 imm8.
+Encode or manage sar r64 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4836,7 +4836,7 @@ Implements sar r64 imm8.
 function sar_rax_imm8(asm, imm)
 ```
 
-Implements sar rax imm8.
+Encode or manage sar rax imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4890,7 +4890,7 @@ Updates setcc r8.
 function shl_r32_imm8(asm, reg_name, imm)
 ```
 
-Implements shl r32 imm8.
+Encode or manage shl r32 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4908,7 +4908,7 @@ Implements shl r32 imm8.
 function shl_r64_cl(asm, reg_name)
 ```
 
-Implements shl r64 cl.
+Encode or manage shl r64 cl in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4925,7 +4925,7 @@ Implements shl r64 cl.
 function shl_r64_imm8(asm, reg_name, imm)
 ```
 
-Implements shl r64 imm8.
+Encode or manage shl r64 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4943,7 +4943,7 @@ Implements shl r64 imm8.
 function shl_rax_imm8(asm, imm)
 ```
 
-Implements shl rax imm8.
+Encode or manage shl rax imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4960,7 +4960,7 @@ Implements shl rax imm8.
 function shr_r32_imm8(asm, reg_name, imm)
 ```
 
-Implements shr r32 imm8.
+Encode or manage shr r32 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4978,7 +4978,7 @@ Implements shr r32 imm8.
 function shr_r64_cl(asm, reg_name)
 ```
 
-Implements shr r64 cl.
+Encode or manage shr r64 cl in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -4995,7 +4995,7 @@ Implements shr r64 cl.
 function shr_r64_imm8(asm, reg_name, imm)
 ```
 
-Implements shr r64 imm8.
+Encode or manage shr r64 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5013,7 +5013,7 @@ Implements shr r64 imm8.
 function sub_r32_imm(asm, reg_name, imm)
 ```
 
-Implements sub r32 imm.
+Encode or manage sub r32 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5031,7 +5031,7 @@ Implements sub r32 imm.
 function sub_r32_r32(asm, dst, src)
 ```
 
-Implements sub r32 r32.
+Encode or manage sub r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5049,7 +5049,7 @@ Implements sub r32 r32.
 function sub_r64_imm(asm, reg_name, imm)
 ```
 
-Implements sub r64 imm.
+Encode or manage sub r64 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5067,7 +5067,7 @@ Implements sub r64 imm.
 function sub_r64_imm8(asm, reg_name, imm)
 ```
 
-Implements sub r64 imm8.
+Encode or manage sub r64 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5085,7 +5085,7 @@ Implements sub r64 imm8.
 function sub_r64_r64(asm, dst, src)
 ```
 
-Implements sub r64 r64.
+Encode or manage sub r64 r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5103,7 +5103,7 @@ Implements sub r64 r64.
 function sub_r8_imm8(asm, reg8, imm)
 ```
 
-Implements sub r8 imm8.
+Encode or manage sub r8 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5121,7 +5121,7 @@ Implements sub r8 imm8.
 function sub_rax_imm8(asm, imm)
 ```
 
-Implements sub rax imm8.
+Encode or manage sub rax imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5138,7 +5138,7 @@ Implements sub rax imm8.
 function sub_rax_r11(asm)
 ```
 
-Implements sub rax r11.
+Encode or manage sub rax r11 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5154,7 +5154,7 @@ Implements sub rax r11.
 function sub_rsp_imm32(asm, imm)
 ```
 
-Implements sub rsp imm32.
+Encode or manage sub rsp imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5171,7 +5171,7 @@ Implements sub rsp imm32.
 function sub_rsp_imm8(asm, imm)
 ```
 
-Implements sub rsp imm8.
+Encode or manage sub rsp imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5188,7 +5188,7 @@ Implements sub rsp imm8.
 function subsd_xmm_xmm(asm, dst_xmm, src_xmm)
 ```
 
-Implements subsd xmm xmm.
+Encode or manage subsd xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5206,7 +5206,7 @@ Implements subsd xmm xmm.
 function test_r32_r32(asm, left, right)
 ```
 
-Implements test r32 r32.
+Encode or manage test r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5224,7 +5224,7 @@ Implements test r32 r32.
 function test_r64_imm32(asm, reg_name, imm)
 ```
 
-Implements test r64 imm32.
+Encode or manage test r64 imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5242,7 +5242,7 @@ Implements test r64 imm32.
 function test_r64_r64(asm, left, right)
 ```
 
-Implements test r64 r64.
+Encode or manage test r64 r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5260,7 +5260,7 @@ Implements test r64 r64.
 function test_r8_r8(asm, left, right)
 ```
 
-Implements test r8 r8.
+Encode or manage test r8 r8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5278,7 +5278,7 @@ Implements test r8 r8.
 function test_rax_imm32(asm, imm)
 ```
 
-Implements test rax imm32.
+Encode or manage test rax imm32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5295,7 +5295,7 @@ Implements test rax imm32.
 function ucomisd_xmm_xmm(asm as struct, left_xmm as string, right_xmm as string) returns struct
 ```
 
-Implements ucomisd xmm xmm.
+Encode or manage ucomisd xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5315,7 +5315,7 @@ Implements ucomisd xmm xmm.
 function vmovdqu_membase_disp_ymm(asm, base, disp, src)
 ```
 
-Implements vmovdqu membase disp ymm.
+Encode or manage vmovdqu membase disp ymm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5334,7 +5334,7 @@ Implements vmovdqu membase disp ymm.
 function vmovdqu_ymm_membase_disp(asm, dst, base, disp)
 ```
 
-Implements vmovdqu ymm membase disp.
+Encode or manage vmovdqu ymm membase disp in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5353,7 +5353,7 @@ Implements vmovdqu ymm membase disp.
 function vpcmpeqb_ymm_ymm_ymm(asm, dst, src1, src2)
 ```
 
-Implements vpcmpeqb ymm ymm ymm.
+Encode or manage vpcmpeqb ymm ymm ymm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5372,7 +5372,7 @@ Implements vpcmpeqb ymm ymm ymm.
 function vpcmpeqw_ymm_ymm_ymm(asm, dst, src1, src2)
 ```
 
-Implements vpcmpeqw ymm ymm ymm.
+Encode or manage vpcmpeqw ymm ymm ymm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5391,7 +5391,7 @@ Implements vpcmpeqw ymm ymm ymm.
 function vpmovmskb_r32_ymm(asm, dst32, src)
 ```
 
-Implements vpmovmskb r32 ymm.
+Encode or manage vpmovmskb r32 ymm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5409,7 +5409,7 @@ Implements vpmovmskb r32 ymm.
 function vpxor_ymm_ymm_ymm(asm, dst, src1, src2)
 ```
 
-Implements vpxor ymm ymm ymm.
+Encode or manage vpxor ymm ymm ymm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5428,7 +5428,7 @@ Implements vpxor ymm ymm ymm.
 function vzeroupper(asm)
 ```
 
-Implements vzeroupper.
+Encode or manage vzeroupper in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5461,7 +5461,7 @@ Updates write listing.
 function xgetbv(asm)
 ```
 
-Implements xgetbv.
+Encode or manage xgetbv in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5477,7 +5477,7 @@ Implements xgetbv.
 function xor_eax_eax(asm)
 ```
 
-Implements xor eax eax.
+Encode or manage xor eax eax in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5493,7 +5493,7 @@ Implements xor eax eax.
 function xor_ecx_ecx(asm)
 ```
 
-Implements xor ecx ecx.
+Encode or manage xor ecx ecx in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5509,7 +5509,7 @@ Implements xor ecx ecx.
 function xor_r32_imm(asm, reg_name, imm)
 ```
 
-Implements xor r32 imm.
+Encode or manage xor r32 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5527,7 +5527,7 @@ Implements xor r32 imm.
 function xor_r32_r32(asm, dst, src)
 ```
 
-Implements xor r32 r32.
+Encode or manage xor r32 r32 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5545,7 +5545,7 @@ Implements xor r32 r32.
 function xor_r64_imm(asm, reg_name, imm)
 ```
 
-Implements xor r64 imm.
+Encode or manage xor r64 imm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5563,7 +5563,7 @@ Implements xor r64 imm.
 function xor_r64_imm8(asm, reg_name, imm)
 ```
 
-Implements xor r64 imm8.
+Encode or manage xor r64 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5581,7 +5581,7 @@ Implements xor r64 imm8.
 function xor_r64_r64(asm, dst, src)
 ```
 
-Implements xor r64 r64.
+Encode or manage xor r64 r64 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5599,7 +5599,7 @@ Implements xor r64 r64.
 function xor_r8_imm8(asm, reg8, imm)
 ```
 
-Implements xor r8 imm8.
+Encode or manage xor r8 imm8 in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -5617,7 +5617,7 @@ Implements xor r8 imm8.
 function xorpd_xmm_xmm(asm as struct, dst_xmm as string, src_xmm as string) returns struct
 ```
 
-Implements xorpd xmm xmm.
+Encode or manage xorpd xmm xmm in the native x64 assembler.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

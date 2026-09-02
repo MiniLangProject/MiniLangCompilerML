@@ -24,7 +24,7 @@ Reachable from entry: **yes**
 function _array_has(values, wanted)
 ```
 
-Implements array has.
+Emit array has for the Linux x64 runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -57,7 +57,7 @@ Translate MiniLang's stable Win64-like native ABI to Linux SysV.
 function _extern_dll_base(dll)
 ```
 
-Implements extern dll base.
+Emit extern dll base for the Linux x64 runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ Implements extern dll base.
 function _extern_param_type(param)
 ```
 
-Implements extern param type.
+Emit extern param type for the Linux x64 runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -101,7 +101,7 @@ Generated pthread-backed replacement for the legacy CreateThread through CloseHa
 function _runtime_blob_raw()
 ```
 
-Runs runtime blob raw.
+Emit runtime blob raw for the Linux x64 runtime.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L202)
@@ -113,7 +113,7 @@ Runs runtime blob raw.
 function _runtime_labels()
 ```
 
-Runs runtime labels.
+Emit runtime labels for the Linux x64 runtime.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L173)
@@ -139,7 +139,7 @@ Split the stable non-thread helpers around the complete superseded native thread
 function emit_runtime(state)
 ```
 
-Runs emit runtime.
+Emit emit runtime for the Linux x64 runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -155,7 +155,7 @@ Runs emit runtime.
 function emit_startup(state)
 ```
 
-Runs emit startup.
+Emit emit startup for the Linux x64 runtime.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -199,7 +199,7 @@ Stable boundaries inside the checked-in syscall blob. The legacy thread implemen
 const RUNTIME_LEGACY_THREAD_END = 1361
 ```
 
-Stores the runtime legacy thread end.
+Track runtime legacy thread end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L65)
@@ -211,7 +211,7 @@ Stores the runtime legacy thread end.
 const RUNTIME_LEGACY_THREAD_START = 497
 ```
 
-Stores the runtime legacy thread start.
+Track runtime legacy thread start.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L63)
@@ -223,7 +223,7 @@ Stores the runtime legacy thread start.
 const RUNTIME_PTHREAD_CLOSE_PATCH = 1441
 ```
 
-Stores the runtime pthread close patch.
+Track runtime pthread close patch.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L71)
@@ -235,7 +235,7 @@ Stores the runtime pthread close patch.
 const RUNTIME_PTHREAD_CREATE_PATCH = 692
 ```
 
-Stores the runtime pthread create patch.
+Track runtime pthread create patch.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L67)
@@ -247,7 +247,7 @@ Stores the runtime pthread create patch.
 const RUNTIME_PTHREAD_WAIT_PATCH = 1159
 ```
 
-Stores the runtime pthread wait patch.
+Track runtime pthread wait patch.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L69)

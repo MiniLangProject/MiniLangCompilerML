@@ -23,7 +23,7 @@ Represents mlo import dll.
 dll
 ```
 
-Stores the dll member of `MloImportDll`.
+Dll associated with `MloImportDll`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L289)
@@ -35,7 +35,7 @@ Stores the dll member of `MloImportDll`.
 funcs
 ```
 
-Stores the funcs member of `MloImportDll`.
+Funcs associated with `MloImportDll`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L291)

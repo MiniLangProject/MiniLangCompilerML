@@ -23,7 +23,7 @@ Represents assign.
 _filename
 ```
 
-Stores the filename member of `Assign`.
+Filename associated with `Assign`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L425)
@@ -35,7 +35,7 @@ Stores the filename member of `Assign`.
 _pos
 ```
 
-Stores the pos member of `Assign`.
+Pos associated with `Assign`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L423)
@@ -47,7 +47,7 @@ Stores the pos member of `Assign`.
 declared_optional
 ```
 
-Stores the declared optional member of `Assign`.
+Declared optional associated with `Assign`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L421)
@@ -59,7 +59,7 @@ Stores the declared optional member of `Assign`.
 declared_type
 ```
 
-Stores the declared type member of `Assign`.
+Declared type associated with `Assign`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L419)
@@ -71,7 +71,7 @@ Stores the declared type member of `Assign`.
 expr
 ```
 
-Stores the expr member of `Assign`.
+Expr associated with `Assign`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L417)
@@ -83,7 +83,7 @@ Stores the expr member of `Assign`.
 name
 ```
 
-Stores the name member of `Assign`.
+Name associated with `Assign`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L415)
@@ -95,7 +95,7 @@ Stores the name member of `Assign`.
 node_kind
 ```
 
-Stores the node kind member of `Assign`.
+Node kind associated with `Assign`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L413)

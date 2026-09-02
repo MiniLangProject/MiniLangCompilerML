@@ -23,7 +23,7 @@ Represents array lit.
 _filename
 ```
 
-Stores the filename member of `ArrayLit`.
+Filename associated with `ArrayLit`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L181)
@@ -35,7 +35,7 @@ Stores the filename member of `ArrayLit`.
 _pos
 ```
 
-Stores the pos member of `ArrayLit`.
+Pos associated with `ArrayLit`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L179)
@@ -47,7 +47,7 @@ Stores the pos member of `ArrayLit`.
 items
 ```
 
-Stores the items member of `ArrayLit`.
+Items associated with `ArrayLit`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L173)
@@ -59,7 +59,7 @@ Stores the items member of `ArrayLit`.
 node_kind
 ```
 
-Stores the node kind member of `ArrayLit`.
+Node kind associated with `ArrayLit`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L171)
@@ -71,7 +71,7 @@ Stores the node kind member of `ArrayLit`.
 stack_variadic
 ```
 
-Internal-only marker: a proven non-escaping variadic tail may live in the caller's rooted expression stack instead of allocating a heap array. Stores the stack variadic member of `ArrayLit`.
+Internal-only marker: a proven non-escaping variadic tail may live in the caller's rooted expression stack instead of allocating a heap array. Stack variadic associated with `ArrayLit`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L177)

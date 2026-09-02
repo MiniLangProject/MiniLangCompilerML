@@ -23,7 +23,7 @@ import mlc.constants as c
 import mlc.data as d
 import mlc.tools as t
 
-/// Implements cg runtime init.
+/// Emit cg runtime init in the native runtime.
 /// @param state Value supplied for `state`.
 function cg_runtime_init(state)
   return state
@@ -55,7 +55,7 @@ function _emit_mov_rax_i64_max(state)
   return state
 end function
 
-/// Runs emit to double xmm.
+/// Emit emit to double xmm in the native runtime.
 /// @internal
 function _emit_to_double_xmm(state, xmm, fail_label)
   lid = state.label_id
@@ -111,7 +111,7 @@ function _emit_to_double_xmm(state, xmm, fail_label)
   return state
 end function
 
-/// Runs emit normalize xmm0 to value.
+/// Emit emit normalize xmm0 to value in the native runtime.
 /// @internal
 function _emit_normalize_xmm0_to_value(state)
   lid = state.label_id
@@ -150,7 +150,7 @@ function _emit_normalize_xmm0_to_value(state)
   return state
 end function
 
-/// Runs emit force xmm0 to float value.
+/// Emit emit force xmm0 to float value in the native runtime.
 /// @internal
 function _emit_force_xmm0_to_float_value(state)
   lid = state.label_id
@@ -175,7 +175,7 @@ function _emit_force_xmm0_to_float_value(state)
   return state
 end function
 
-/// Runs emit cpu init function.
+/// Emit emit cpu init function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_cpu_init_function(state)
   state.asm = a.mark(state.asm, "fn_cpu_init")
@@ -278,7 +278,7 @@ function emit_cpu_init_function(state)
   return state
 end function
 
-/// Runs emit runtime cpu features function.
+/// Emit emit runtime cpu features function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_runtime_cpu_features_function(state)
   state.asm = a.mark(state.asm, "fn_runtime_cpu_features")
@@ -289,7 +289,7 @@ function emit_runtime_cpu_features_function(state)
   return state
 end function
 
-/// Runs emit runtime cpu active features function.
+/// Emit emit runtime cpu active features function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_runtime_cpu_active_features_function(state)
   state.asm = a.mark(state.asm, "fn_runtime_cpu_active_features")
@@ -340,7 +340,7 @@ function emit_runtime_cpu_set_mask_function(state)
   return state
 end function
 
-/// Runs emit mem eq bytes function.
+/// Emit emit mem eq bytes function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_mem_eq_bytes_function(state)
   state.asm = a.mark(state.asm, "fn_mem_eq_bytes")
@@ -497,7 +497,7 @@ function emit_bytes_constant_time_eq_function(state)
   return state
 end function
 
-/// Implements ensure byte search table.
+/// Emit ensure byte search table in the native runtime.
 /// @internal
 function _ensure_byte_search_table(state)
   if d.rdata_has_label(state.rdata, "byte_broadcast_table") then return state end if
@@ -601,7 +601,7 @@ function emit_find_byte_forward_function(state)
   return state
 end function
 
-/// Runs emit find byte reverse function.
+/// Emit emit find byte reverse function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_find_byte_reverse_function(state)
   state = _ensure_byte_search_table(state)
@@ -757,7 +757,7 @@ function emit_mem_indexof_function(state)
   return state
 end function
 
-/// Runs emit mem lastindexof function.
+/// Emit emit mem lastindexof function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_mem_lastindexof_function(state)
   state.asm = a.mark(state.asm, "fn_mem_lastindexof")
@@ -834,7 +834,7 @@ function _make_crc_table(poly)
   return raw
 end function
 
-/// Implements ensure crc tables.
+/// Emit ensure crc tables in the native runtime.
 /// @internal
 function _ensure_crc_tables(state)
   if not d.rdata_has_label(state.rdata, "crc32c_table") then
@@ -846,7 +846,7 @@ function _ensure_crc_tables(state)
   return state
 end function
 
-/// Runs emit crc32c update raw function.
+/// Emit emit crc32c update raw function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_crc32c_update_raw_function(state)
   state = _ensure_crc_tables(state)
@@ -903,7 +903,7 @@ function emit_crc32c_update_raw_function(state)
   return state
 end function
 
-/// Runs emit crc32 update raw function.
+/// Emit emit crc32 update raw function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_crc32_update_raw_function(state)
   state = _ensure_crc_tables(state)
@@ -999,19 +999,19 @@ function _emit_native_crc_wrapper(state, label, raw_label)
   return state
 end function
 
-/// Runs emit native crc32c function.
+/// Emit emit native crc32c function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_native_crc32c_function(state)
   return _emit_native_crc_wrapper(state, "fn_native_crc32c", "fn_crc32c_update_raw")
 end function
 
-/// Runs emit native crc32 function.
+/// Emit emit native crc32 function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_native_crc32_function(state)
   return _emit_native_crc_wrapper(state, "fn_native_crc32", "fn_crc32_update_raw")
 end function
 
-/// Runs emit scan nul bytes function.
+/// Emit emit scan nul bytes function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_scan_nul_bytes_function(state)
   state.asm = a.mark(state.asm, "fn_scan_nul_bytes")
@@ -1104,7 +1104,7 @@ function emit_scan_nul_bytes_function(state)
   return state
 end function
 
-/// Runs emit scan byte2 bytes function.
+/// Emit emit scan byte2 bytes function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_scan_byte2_bytes_function(state)
   state.asm = a.mark(state.asm, "fn_scan_byte2_bytes")
@@ -1193,7 +1193,7 @@ function emit_scan_byte2_bytes_function(state)
   return state
 end function
 
-/// Runs emit scan nul wchars function.
+/// Emit emit scan nul wchars function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_scan_nul_wchars_function(state)
   state.asm = a.mark(state.asm, "fn_scan_nul_wchars")
@@ -1293,7 +1293,7 @@ function emit_scan_nul_wchars_function(state)
   return state
 end function
 
-/// Runs emit bytes hash function.
+/// Emit emit bytes hash function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_bytes_hash_function(state)
   state.asm = a.mark(state.asm, "fn_bytes_hash")
@@ -1337,7 +1337,7 @@ function emit_bytes_hash_function(state)
   return state
 end function
 
-/// Runs emit string hash function.
+/// Emit emit string hash function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_string_hash_function(state)
   state.asm = a.mark(state.asm, "fn_string_hash")
@@ -1381,7 +1381,7 @@ function emit_string_hash_function(state)
   return state
 end function
 
-/// Runs emit bytes startswith function.
+/// Emit emit bytes startswith function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_bytes_startswith_function(state)
   state.asm = a.mark(state.asm, "fn_bytes_startswith")
@@ -1437,7 +1437,7 @@ function emit_bytes_startswith_function(state)
   return state
 end function
 
-/// Runs emit bytes endswith function.
+/// Emit emit bytes endswith function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_bytes_endswith_function(state)
   state.asm = a.mark(state.asm, "fn_bytes_endswith")
@@ -1496,7 +1496,7 @@ function emit_bytes_endswith_function(state)
   return state
 end function
 
-/// Runs emit bytes indexof function.
+/// Emit emit bytes indexof function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_bytes_indexof_function(state)
   state.asm = a.mark(state.asm, "fn_bytes_indexof")
@@ -1589,7 +1589,7 @@ function emit_bytes_indexof_function(state)
   return state
 end function
 
-/// Runs emit bytes lastindexof function.
+/// Emit emit bytes lastindexof function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_bytes_lastindexof_function(state)
   state.asm = a.mark(state.asm, "fn_bytes_lastindexof")
@@ -1659,7 +1659,7 @@ function emit_bytes_lastindexof_function(state)
   return state
 end function
 
-/// Runs emit bytes compare function.
+/// Emit emit bytes compare function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_bytes_compare_function(state)
   state.asm = a.mark(state.asm, "fn_bytes_compare")
@@ -1737,7 +1737,7 @@ function emit_bytes_compare_function(state)
   return state
 end function
 
-/// Runs emit builtin copy string bytes function.
+/// Emit emit builtin copy string bytes function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_builtin_copyStringBytes_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_copyStringBytes")
@@ -1849,7 +1849,7 @@ function emit_builtin_copyStringBytes_function(state)
   return state
 end function
 
-/// Runs emit copy bytes function.
+/// Emit emit copy bytes function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_copy_bytes_function(state)
   state.asm = a.mark(state.asm, "fn_copy_bytes")
@@ -1973,7 +1973,7 @@ function emit_copy_bytes_function(state)
   return state
 end function
 
-/// Runs emit fill bytes function.
+/// Emit emit fill bytes function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_fill_bytes_function(state)
   state.asm = a.mark(state.asm, "fn_fill_bytes")
@@ -2077,7 +2077,7 @@ function emit_fill_bytes_function(state)
   return state
 end function
 
-/// Runs emit fill qwords function.
+/// Emit emit fill qwords function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_fill_qwords_function(state)
   state.asm = a.mark(state.asm, "fn_fill_qwords")
@@ -2124,7 +2124,7 @@ function emit_fill_qwords_function(state)
   return state
 end function
 
-/// Runs emit int to dec function.
+/// Emit emit int to dec function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_int_to_dec_function(state)
   state.asm = a.mark(state.asm, "fn_int_to_dec")
@@ -2179,7 +2179,7 @@ function emit_int_to_dec_function(state)
   return state
 end function
 
-/// Runs emit to number function.
+/// Emit emit to number function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_toNumber_function(state)
   state.asm = a.mark(state.asm, "fn_toNumber")
@@ -2374,7 +2374,7 @@ function emit_toNumber_function(state)
   return state
 end function
 
-/// Runs emit to float function.
+/// Emit emit to float function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_toFloat_function(state)
   state.asm = a.mark(state.asm, "fn_toFloat")
@@ -2402,7 +2402,7 @@ function emit_toFloat_function(state)
   return state
 end function
 
-/// Runs emit typeof function.
+/// Emit emit typeof function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_typeof_function(state)
   state.asm = a.mark(state.asm, "fn_typeof")
@@ -2535,7 +2535,7 @@ function emit_typeof_function(state)
   return state
 end function
 
-/// Runs emit type name function.
+/// Emit emit type name function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_typeName_function(state)
   state.asm = a.mark(state.asm, "fn_typeName")
@@ -2734,7 +2734,7 @@ function emit_typeName_function(state)
   return state
 end function
 
-/// Runs emit strlen function.
+/// Emit emit strlen function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_strlen_function(state)
   state.asm = a.mark(state.asm, "fn_strlen")
@@ -2744,7 +2744,7 @@ function emit_strlen_function(state)
   return state
 end function
 
-/// Runs emit string eq function.
+/// Emit emit string eq function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_string_eq_function(state)
   state.asm = a.mark(state.asm, "fn_str_eq")
@@ -2783,7 +2783,7 @@ function emit_string_eq_function(state)
   return state
 end function
 
-/// Runs emit value eq function.
+/// Emit emit value eq function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_value_eq_function(state)
   state.asm = a.mark(state.asm, "fn_val_eq")
@@ -3001,13 +3001,13 @@ function emit_value_eq_function(state)
   return state
 end function
 
-/// Runs emit unhandled error exit function.
+/// Emit emit unhandled error exit function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_unhandled_error_exit_function(state)
   state.asm = a.mark(state.asm, "fn_unhandled_error_exit")
   state.asm = a.sub_rsp_imm8(state.asm, 0x68)
 
-  /// Runs emit writefile ptr len.
+  /// Emit native x64 code for writefile ptr len.
   /// @internal
   function _emit_writefile_ptr_len(state2)
     state2.asm = a.mov_r64_r64(state2.asm, "rcx", "rbx")
@@ -3018,7 +3018,7 @@ function emit_unhandled_error_exit_function(state)
     return state2
   end function
 
-  /// Runs emit writefile.
+  /// Emit native x64 code for writefile.
   /// @internal
   function _emit_writefile(state2, lbl, ln)
     state2.asm = a.lea_rdx_rip(state2.asm, lbl)
@@ -3157,7 +3157,7 @@ function emit_unhandled_error_exit_function(state)
   return state
 end function
 
-/// Runs emit init argvw function.
+/// Emit emit init argvw function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_init_argvw_function(state)
   state.asm = a.mark(state.asm, "fn_init_argvw")
@@ -3192,7 +3192,7 @@ function emit_init_argvw_function(state)
   return state
 end function
 
-/// Runs emit build args linux.
+/// Emit emit build args linux in the native runtime.
 /// @internal
 function _emit_build_args_linux(state)
   state.asm = a.mark(state.asm, "fn_build_args")
@@ -3280,7 +3280,7 @@ function _emit_build_args_linux(state)
   return state
 end function
 
-/// Runs emit build args function.
+/// Emit emit build args function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_build_args_function(state)
   if state.is_linux_target then return _emit_build_args_linux(state) end if
@@ -3452,7 +3452,7 @@ function emit_build_args_function(state)
   return state
 end function
 
-/// Runs emit builtin copy bytes function.
+/// Emit emit builtin copy bytes function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_builtin_copyBytes_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_copyBytes")
@@ -3676,7 +3676,7 @@ function emit_builtin_copyArray_function(state)
   return state
 end function
 
-/// Runs emit builtin fill bytes function.
+/// Emit emit builtin fill bytes function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_builtin_fillBytes_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_fillBytes")
@@ -3757,7 +3757,7 @@ function emit_builtin_fillBytes_function(state)
   return state
 end function
 
-/// Runs emit builtin len function.
+/// Emit emit builtin len function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_builtin_len_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_len")
@@ -3798,7 +3798,7 @@ function emit_builtin_len_function(state)
   return state
 end function
 
-/// Runs emit builtin input function.
+/// Emit emit builtin input function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_builtin_input_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_input")
@@ -3824,7 +3824,7 @@ function emit_builtin_input_function(state)
   return state
 end function
 
-/// Runs emit builtin gc collect function.
+/// Emit emit builtin gc collect function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_builtin_gc_collect_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_gc_collect")
@@ -3834,7 +3834,7 @@ function emit_builtin_gc_collect_function(state)
   return state
 end function
 
-/// Runs emit builtin gc set limit function.
+/// Emit emit builtin gc set limit function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_builtin_gc_set_limit_function(state)
   // Retire prepaid allocation bytes so the new limit applies to the caller's
@@ -3898,7 +3898,7 @@ function emit_builtin_gc_set_limit_function(state)
   return state
 end function
 
-/// Runs emit call stats function.
+/// Emit emit call stats function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_callStats_function(state)
   state.asm = a.mark(state.asm, "fn_callStats")

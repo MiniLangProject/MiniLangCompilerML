@@ -23,7 +23,7 @@ Represents set index.
 _filename
 ```
 
-Stores the filename member of `SetIndex`.
+Filename associated with `SetIndex`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L487)
@@ -35,7 +35,7 @@ Stores the filename member of `SetIndex`.
 _pos
 ```
 
-Stores the pos member of `SetIndex`.
+Pos associated with `SetIndex`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L485)
@@ -47,7 +47,7 @@ Stores the pos member of `SetIndex`.
 expr
 ```
 
-Stores the expr member of `SetIndex`.
+Expr associated with `SetIndex`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L483)
@@ -59,7 +59,7 @@ Stores the expr member of `SetIndex`.
 index
 ```
 
-Stores the index member of `SetIndex`.
+Index associated with `SetIndex`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L481)
@@ -71,7 +71,7 @@ Stores the index member of `SetIndex`.
 node_kind
 ```
 
-Stores the node kind member of `SetIndex`.
+Node kind associated with `SetIndex`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L477)
@@ -83,7 +83,7 @@ Stores the node kind member of `SetIndex`.
 target
 ```
 
-Stores the target member of `SetIndex`.
+Target associated with `SetIndex`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L479)

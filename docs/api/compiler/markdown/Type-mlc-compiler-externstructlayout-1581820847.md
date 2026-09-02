@@ -23,7 +23,7 @@ Represents extern struct layout.
 align
 ```
 
-Stores the align member of `ExternStructLayout`.
+Align associated with `ExternStructLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5602)
@@ -35,7 +35,7 @@ Stores the align member of `ExternStructLayout`.
 fields
 ```
 
-Stores the fields member of `ExternStructLayout`.
+Fields associated with `ExternStructLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5594)
@@ -47,7 +47,7 @@ Stores the fields member of `ExternStructLayout`.
 offsets
 ```
 
-Stores the offsets member of `ExternStructLayout`.
+Offsets associated with `ExternStructLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5598)
@@ -59,7 +59,7 @@ Stores the offsets member of `ExternStructLayout`.
 qname
 ```
 
-Stores the qname member of `ExternStructLayout`.
+Qname associated with `ExternStructLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5592)
@@ -71,7 +71,7 @@ Stores the qname member of `ExternStructLayout`.
 size
 ```
 
-Stores the size member of `ExternStructLayout`.
+Current logical size of `ExternStructLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5600)
@@ -83,7 +83,7 @@ Stores the size member of `ExternStructLayout`.
 types
 ```
 
-Stores the types member of `ExternStructLayout`.
+Types associated with `ExternStructLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5596)

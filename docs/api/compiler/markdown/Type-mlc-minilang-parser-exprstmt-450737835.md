@@ -23,7 +23,7 @@ Represents expr stmt.
 _filename
 ```
 
-Stores the filename member of `ExprStmt`.
+Filename associated with `ExprStmt`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L513)
@@ -35,7 +35,7 @@ Stores the filename member of `ExprStmt`.
 _pos
 ```
 
-Stores the pos member of `ExprStmt`.
+Pos associated with `ExprStmt`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L511)
@@ -47,7 +47,7 @@ Stores the pos member of `ExprStmt`.
 expr
 ```
 
-Stores the expr member of `ExprStmt`.
+Expr associated with `ExprStmt`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L509)
@@ -59,7 +59,7 @@ Stores the expr member of `ExprStmt`.
 node_kind
 ```
 
-Stores the node kind member of `ExprStmt`.
+Node kind associated with `ExprStmt`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L507)

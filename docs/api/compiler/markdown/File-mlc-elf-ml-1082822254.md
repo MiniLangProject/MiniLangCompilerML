@@ -21,7 +21,7 @@ Reachable from entry: **yes**
 function _array_has(values, wanted)
 ```
 
-Implements array has.
+Emit array has in the Linux ELF image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

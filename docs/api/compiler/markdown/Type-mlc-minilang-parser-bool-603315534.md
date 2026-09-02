@@ -23,7 +23,7 @@ Represents bool.
 _filename
 ```
 
-Stores the filename member of `Bool`.
+Filename associated with `Bool`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L143)
@@ -35,7 +35,7 @@ Stores the filename member of `Bool`.
 _pos
 ```
 
-Stores the pos member of `Bool`.
+Pos associated with `Bool`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L141)
@@ -47,7 +47,7 @@ Stores the pos member of `Bool`.
 node_kind
 ```
 
-Stores the node kind member of `Bool`.
+Node kind associated with `Bool`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L137)
@@ -59,7 +59,7 @@ Stores the node kind member of `Bool`.
 value
 ```
 
-Stores the value member of `Bool`.
+Value associated with `Bool`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L139)

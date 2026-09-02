@@ -23,7 +23,7 @@ Represents for each.
 _filename
 ```
 
-Stores the filename member of `ForEach`.
+Filename associated with `ForEach`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L681)
@@ -35,7 +35,7 @@ Stores the filename member of `ForEach`.
 _pos
 ```
 
-Stores the pos member of `ForEach`.
+Pos associated with `ForEach`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L679)
@@ -47,7 +47,7 @@ Stores the pos member of `ForEach`.
 body
 ```
 
-Stores the body member of `ForEach`.
+Body associated with `ForEach`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L677)
@@ -59,7 +59,7 @@ Stores the body member of `ForEach`.
 iterable
 ```
 
-Stores the iterable member of `ForEach`.
+Iterable associated with `ForEach`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L675)
@@ -71,7 +71,7 @@ Stores the iterable member of `ForEach`.
 node_kind
 ```
 
-Stores the node kind member of `ForEach`.
+Node kind associated with `ForEach`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L671)
@@ -83,7 +83,7 @@ Stores the node kind member of `ForEach`.
 var
 ```
 
-Stores the var member of `ForEach`.
+Var associated with `ForEach`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L673)

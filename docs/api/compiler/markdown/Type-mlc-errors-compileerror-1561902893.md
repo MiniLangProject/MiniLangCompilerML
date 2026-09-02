@@ -23,7 +23,7 @@ Single fatal compiler error with optional source coordinates.
 filename
 ```
 
-Stores the filename member of `CompileError`.
+Filename associated with `CompileError`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L29)
@@ -35,7 +35,7 @@ Stores the filename member of `CompileError`.
 message
 ```
 
-Stores the message member of `CompileError`.
+Diagnostic message carried by `CompileError`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L25)
@@ -47,7 +47,7 @@ Stores the message member of `CompileError`.
 pos
 ```
 
-Stores the pos member of `CompileError`.
+Pos associated with `CompileError`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L27)

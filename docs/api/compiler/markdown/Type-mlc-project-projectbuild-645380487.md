@@ -23,7 +23,7 @@ Expanded project configuration carried through compilation and caching.
 cache_dir
 ```
 
-Stores the cache dir member of `ProjectBuild`.
+Cache dir associated with `ProjectBuild`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L67)
@@ -35,7 +35,7 @@ Stores the cache dir member of `ProjectBuild`.
 expanded_args
 ```
 
-Stores the expanded args member of `ProjectBuild`.
+Expanded args associated with `ProjectBuild`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L71)
@@ -47,7 +47,7 @@ Stores the expanded args member of `ProjectBuild`.
 incremental
 ```
 
-Stores the incremental member of `ProjectBuild`.
+Incremental associated with `ProjectBuild`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L69)
@@ -59,7 +59,7 @@ Stores the incremental member of `ProjectBuild`.
 manifest
 ```
 
-Stores the manifest member of `ProjectBuild`.
+Manifest associated with `ProjectBuild`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L65)

@@ -23,7 +23,7 @@ Represents synchronized decl.
 _filename
 ```
 
-Stores the filename member of `SynchronizedDecl`.
+Filename associated with `SynchronizedDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L439)
@@ -35,7 +35,7 @@ Stores the filename member of `SynchronizedDecl`.
 _pos
 ```
 
-Stores the pos member of `SynchronizedDecl`.
+Pos associated with `SynchronizedDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L437)
@@ -47,7 +47,7 @@ Stores the pos member of `SynchronizedDecl`.
 expr
 ```
 
-Stores the expr member of `SynchronizedDecl`.
+Expr associated with `SynchronizedDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L435)
@@ -59,7 +59,7 @@ Stores the expr member of `SynchronizedDecl`.
 name
 ```
 
-Stores the name member of `SynchronizedDecl`.
+Name associated with `SynchronizedDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L433)
@@ -71,7 +71,7 @@ Stores the name member of `SynchronizedDecl`.
 node_kind
 ```
 
-Stores the node kind member of `SynchronizedDecl`.
+Node kind associated with `SynchronizedDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L431)

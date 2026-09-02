@@ -25,79 +25,79 @@ import mlc.tools as t
 
 /// Native thread-context layout. Tagged managed values occupy qword fields and are scanned as GC roots; status and counters use native integer fields.
 const THREAD_TYPE = 0
-/// Stores the thread status.
+/// Track thread status.
 const THREAD_STATUS = 4
-/// Stores the thread handle.
+/// Track thread handle.
 const THREAD_HANDLE = 8
-/// Stores the thread id.
+/// Track thread id.
 const THREAD_ID = 16
-/// Stores the thread code.
+/// Track thread code.
 const THREAD_CODE = 24
-/// Stores the thread stop.
+/// Track thread stop.
 const THREAD_STOP = 32
-/// Stores the thread result.
+/// Track thread result.
 const THREAD_RESULT = 40
-/// Stores the thread roots.
+/// Track thread roots.
 const THREAD_ROOTS = 48
-/// Stores the thread tmp0.
+/// Track thread tmp0.
 const THREAD_TMP0 = 56
-/// Stores the thread next.
+/// Track thread next.
 const THREAD_NEXT = 120
-/// Stores the thread gc state.
+/// Track thread gc state.
 const THREAD_GC_STATE = 128
 /// Cursor for the four allocation-handoff roots at THREAD_TMP0+32.
 const THREAD_HANDOFF_CURSOR = 136
-/// Stores the thread alloc cursor.
+/// Track thread alloc cursor.
 const THREAD_ALLOC_CURSOR = THREAD_HANDOFF_CURSOR
-/// Stores the thread arg.
+/// Track thread arg.
 const THREAD_ARG = 144
-/// Stores the thread logical id.
+/// Track thread logical id.
 const THREAD_LOGICAL_ID = 152
-/// Stores the thread arity.
+/// Track thread arity.
 const THREAD_ARITY = 160
-/// Stores the thread heap bypass depth.
+/// Track thread heap bypass depth.
 const THREAD_HEAP_BYPASS_DEPTH = 168
 /// Per-thread allocation ranges carved from the shared process heap.
 const THREAD_TLAB_START = 176
-/// Stores the thread tlab cursor.
+/// Track thread tlab cursor.
 const THREAD_TLAB_CURSOR = 184
-/// Stores the thread tlab end.
+/// Track thread tlab end.
 const THREAD_TLAB_END = 192
 /// Active Join() operations retain THREAD_HANDLE until their native wait ends.
 const THREAD_HANDLE_USERS = 200
-/// Stores the thread context size.
+/// Track thread context size.
 const THREAD_CONTEXT_SIZE = 208
-/// Stores the thread context stride.
+/// Track thread context stride.
 const THREAD_CONTEXT_STRIDE = 208
-/// Stores the thread context pool size.
+/// Track thread context pool size.
 const THREAD_CONTEXT_POOL_SIZE = 0x10000
 
 /// Public lifecycle states stored in THREAD_STATUS.
 const THREAD_CREATED = 0
-/// Stores the thread running.
+/// Track thread running.
 const THREAD_RUNNING = 1
-/// Stores the thread stop requested.
+/// Track thread stop requested.
 const THREAD_STOP_REQUESTED = 2
-/// Stores the thread completed.
+/// Track thread completed.
 const THREAD_COMPLETED = 3
-/// Stores the thread stopped.
+/// Track thread stopped.
 const THREAD_STOPPED = 4
-/// Stores the thread failed.
+/// Track thread failed.
 const THREAD_FAILED = 5
 /// Private states used while publishing a native worker/configuration update. Status() maps them to stable public strings rather than exposing new states.
 const THREAD_STARTING = 6
-/// Stores the thread configuring.
+/// Track thread configuring.
 const THREAD_CONFIGURING = 7
 
 /// Collector-facing states used by cooperative stop-the-world coordination.
 const GC_THREAD_RUNNING = 0
-/// Stores the gc thread parked.
+/// Track gc thread parked.
 const GC_THREAD_PARKED = 1
-/// Stores the gc thread native.
+/// Track gc thread native.
 const GC_THREAD_NATIVE = 2
-/// Stores the gc thread inactive.
+/// Track gc thread inactive.
 const GC_THREAD_INACTIVE = 3
-/// Stores the gc thread collector.
+/// Track gc thread collector.
 const GC_THREAD_COLLECTOR = 4
 
 /// Reports whether has label.
@@ -240,7 +240,7 @@ function emit_thread_cancellation_poll(state)
   return state
 end function
 
-/// Runs emit managed thread count delta.
+/// Emit emit managed thread count delta in the native threading runtime.
 /// @internal
 function _emit_managed_thread_count_delta(state, delta)
   lid = _new_label_id(state)
@@ -801,7 +801,7 @@ function emit_thread_start_function(state)
   return state
 end function
 
-/// Runs emit thread stop function.
+/// Emit emit thread stop function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_stop_function(state)
   state.asm = a.mark(state.asm, "fn_thread_stop")
@@ -839,7 +839,7 @@ function emit_thread_stop_function(state)
   return state
 end function
 
-/// Runs emit thread join function.
+/// Emit emit thread join function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_join_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
@@ -935,7 +935,7 @@ function emit_thread_join_function(state)
   return state
 end function
 
-/// Runs emit thread alive function.
+/// Emit emit thread alive function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_alive_function(state)
   state.asm = a.mark(state.asm, "fn_thread_alive")
@@ -958,7 +958,7 @@ function emit_thread_alive_function(state)
   return state
 end function
 
-/// Runs emit thread id function.
+/// Emit emit thread id function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_id_function(state)
   state.asm = a.mark(state.asm, "fn_thread_id")
@@ -969,7 +969,7 @@ function emit_thread_id_function(state)
   return state
 end function
 
-/// Runs emit thread logical id function.
+/// Emit emit thread logical id function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_logical_id_function(state)
   state.asm = a.mark(state.asm, "fn_thread_logical_id")
@@ -978,7 +978,7 @@ function emit_thread_logical_id_function(state)
   return state
 end function
 
-/// Runs emit thread set logical id function.
+/// Emit emit thread set logical id function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_set_logical_id_function(state)
   state.asm = a.mark(state.asm, "fn_thread_set_logical_id")
@@ -1001,7 +1001,7 @@ function emit_thread_set_logical_id_function(state)
   return state
 end function
 
-/// Runs emit thread result function.
+/// Emit emit thread result function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_result_function(state)
   state.asm = a.mark(state.asm, "fn_thread_result")
@@ -1010,7 +1010,7 @@ function emit_thread_result_function(state)
   return state
 end function
 
-/// Runs emit thread current logical id function.
+/// Emit emit thread current logical id function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_current_logical_id_function(state)
   state.asm = a.mark(state.asm, "fn_thread_current_logical_id")
@@ -1020,7 +1020,7 @@ function emit_thread_current_logical_id_function(state)
   return state
 end function
 
-/// Runs emit thread status function.
+/// Emit emit thread status function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_status_function(state)
   names = ["obj_thread_created", "obj_thread_running", "obj_thread_stop_requested", "obj_thread_completed", "obj_thread_stopped", "obj_thread_failed"]
@@ -1054,7 +1054,7 @@ function emit_thread_status_function(state)
   return state
 end function
 
-/// Runs emit thread close function.
+/// Emit emit thread close function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_close_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_gc_native_enter")
@@ -1142,7 +1142,7 @@ function emit_thread_close_function(state)
   return state
 end function
 
-/// Runs emit thread stop requested function.
+/// Emit emit thread stop requested function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_stop_requested_function(state)
   state.asm = a.mark(state.asm, "fn_thread_stop_requested")
@@ -1165,7 +1165,7 @@ function emit_thread_stop_requested_function(state)
   return state
 end function
 
-/// Runs emit thread alloc function.
+/// Emit emit thread alloc function in the native threading runtime.
 /// @param state Value supplied for `state`.
 function emit_thread_alloc_function(state)
   state.used_helpers = _append_unique(state.used_helpers, "fn_alloc")

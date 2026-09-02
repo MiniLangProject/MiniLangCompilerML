@@ -34,29 +34,29 @@ import mlc.data as d
 import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
 
-/// Stores the compiler version.
-const COMPILER_VERSION = "1.2.2"
-/// Stores the compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.2"
-/// Stores the direct section label threshold.
+/// Track compiler version.
+const COMPILER_VERSION = "1.2.3"
+/// Track compiler version text.
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.3"
+/// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
-/// Stores the auto object pipeline score.
+/// Track auto object pipeline score.
 const AUTO_OBJECT_PIPELINE_SCORE = 262144
-/// Stores the object function batch size.
+/// Track object function batch size.
 const OBJECT_FUNCTION_BATCH_SIZE = 8
-/// Stores the object compiler batch size.
+/// Track object compiler batch size.
 const OBJECT_COMPILER_BATCH_SIZE = 4
 /// Moderate function streams benefit from shorter allocation waves. Very large streams already peak while their early semantic graph is live, so extra collections only add work; retain the wider stride for those programs.
 const OBJECT_EMISSION_GC_STRIDE = 32
-/// Stores the object large emission gc stride.
+/// Track object large emission gc stride.
 const OBJECT_LARGE_EMISSION_GC_STRIDE = 64
-/// Stores the object large emission function threshold.
+/// Track object large emission function threshold.
 const OBJECT_LARGE_EMISSION_FUNCTION_THRESHOLD = 2048
-/// Stores the link label gc object stride.
+/// Track link label gc object stride.
 const LINK_LABEL_GC_OBJECT_STRIDE = 128
-/// Stores the link section copy gc object stride.
+/// Track link section copy gc object stride.
 const LINK_SECTION_COPY_GC_OBJECT_STRIDE = 64
-/// Stores the mlo write batch bytes.
+/// Track mlo write batch bytes.
 const MLO_WRITE_BATCH_BYTES = 1048576
 
 #if TARGET_OS == "windows"
@@ -66,372 +66,372 @@ extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffe
 /// Creates create directory w.
 /// @internal
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" symbol "CreateDirectoryW" returns bool
-/// Implements host create process w.
+/// Perform the host create process w compiler phase.
 /// @internal
 extern function _host_CreateProcessW(applicationName as wstr, commandLine as wstr, processAttributes as ptr, threadAttributes as ptr, inheritHandles as bool, creationFlags as u32, environment as ptr, currentDirectory as ptr, startupInfo as bytes, processInformation as bytes) from "kernel32.dll" symbol "CreateProcessW" returns bool
-/// Implements host wait for single object.
+/// Perform the host wait for single object compiler phase.
 /// @internal
 extern function _host_WaitForSingleObject(handle as ptr, milliseconds as u32) from "kernel32.dll" symbol "WaitForSingleObject" returns u32
-/// Implements host get exit code process.
+/// Perform the host get exit code process compiler phase.
 /// @internal
 extern function _host_GetExitCodeProcess(handle as ptr, exitCode as bytes) from "kernel32.dll" symbol "GetExitCodeProcess" returns bool
-/// Implements host close handle.
+/// Perform the host close handle compiler phase.
 /// @internal
 extern function _host_CloseHandle(handle as ptr) from "kernel32.dll" symbol "CloseHandle" returns bool
-/// Implements mlo create file w.
+/// Perform the mlo create file w compiler phase.
 /// @internal
 extern function _mlo_CreateFileW(path as wstr, access as int, share as int, security as ptr, creation as int, flags as int, template as ptr) from "kernel32.dll" symbol "CreateFileW" returns ptr
-/// Implements mlo write file.
+/// Perform the mlo write file compiler phase.
 /// @internal
 extern function _mlo_WriteFile(handle as ptr, input as bytes, count as int, written as bytes, overlapped as ptr) from "kernel32.dll" symbol "WriteFile" returns bool
-/// Implements mlo close handle.
+/// Perform the mlo close handle compiler phase.
 /// @internal
 extern function _mlo_CloseHandle(handle as ptr) from "kernel32.dll" symbol "CloseHandle" returns bool
 #else
-/// Implements host mkdir.
+/// Perform the host mkdir compiler phase.
 /// @internal
 extern function _host_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
-/// Implements host system.
+/// Perform the host system compiler phase.
 /// @internal
 extern function _host_system(cmd as cstr) from "libc.so.6" symbol "system" returns i32
-/// Implements host chmod.
+/// Perform the host chmod compiler phase.
 /// @internal
 extern function _host_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
-/// Implements host stat.
+/// Perform the host stat compiler phase.
 /// @internal
 extern function _host_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
-/// Implements mlo open.
+/// Perform the mlo open compiler phase.
 /// @internal
 extern function _mlo_open(path as cstr, flags as int, mode as u32) from "libc.so.6" symbol "open" returns i32
-/// Implements mlo write.
+/// Perform the mlo write compiler phase.
 /// @internal
 extern function _mlo_write(fd as int, input as bytes, count as u64) from "libc.so.6" symbol "write" returns i64
-/// Implements mlo close.
+/// Perform the mlo close compiler phase.
 /// @internal
 extern function _mlo_close(fd as int) from "libc.so.6" symbol "close" returns i32
 #endif
 
 /// Frontend diagnostics and keep-going results.
 struct FrontDiag
-  /// Stores the kind member of `FrontDiag`.
+  /// Kind associated with `FrontDiag`.
   kind,
-  /// Stores the filename member of `FrontDiag`.
+  /// Filename associated with `FrontDiag`.
   filename,
-  /// Stores the pos member of `FrontDiag`.
+  /// Pos associated with `FrontDiag`.
   pos,
-  /// Stores the message member of `FrontDiag`.
+  /// Diagnostic message carried by `FrontDiag`.
   message,
 end struct
 
 /// Represents front check result.
 struct FrontCheckResult
-  /// Stores the diagnostics member of `FrontCheckResult`.
+  /// Diagnostics associated with `FrontCheckResult`.
   diagnostics,
-  /// Stores the visited member of `FrontCheckResult`.
+  /// Visited associated with `FrontCheckResult`.
   visited,
-  /// Stores the modules member of `FrontCheckResult`.
+  /// Modules associated with `FrontCheckResult`.
   modules,
-  /// Stores the aliases member of `FrontCheckResult`.
+  /// Aliases associated with `FrontCheckResult`.
   aliases,
-  /// Stores the parsed modules member of `FrontCheckResult`.
+  /// Parsed modules associated with `FrontCheckResult`.
   parsed_modules,
 end struct
 
 /// Parsed module graph nodes and resolution candidates.
 struct ModuleInfo
-  /// Stores the path member of `ModuleInfo`.
+  /// Path associated with `ModuleInfo`.
   path,
-  /// Stores the package name member of `ModuleInfo`.
+  /// Package name associated with `ModuleInfo`.
   package_name,
 end struct
 
 /// Represents parsed module.
 struct ParsedModule
-  /// Stores the path member of `ParsedModule`.
+  /// Path associated with `ParsedModule`.
   path,
-  /// Stores the source member of `ParsedModule`.
+  /// Source associated with `ParsedModule`.
   source,
-  /// Stores the program member of `ParsedModule`.
+  /// Program associated with `ParsedModule`.
   program,
 end struct
 
 /// Represents str pair.
 struct StrPair
-  /// Stores the key member of `StrPair`.
+  /// Key associated with `StrPair`.
   key,
-  /// Stores the value member of `StrPair`.
+  /// Value associated with `StrPair`.
   value,
 end struct
 
 /// Represents resolve cand.
 struct ResolveCand
-  /// Stores the path member of `ResolveCand`.
+  /// Path associated with `ResolveCand`.
   path,
-  /// Stores the kind member of `ResolveCand`.
+  /// Kind associated with `ResolveCand`.
   kind,
-  /// Stores the root member of `ResolveCand`.
+  /// Root associated with `ResolveCand`.
   root,
 end struct
 
 /// Represents resolve result.
 struct ResolveResult
-  /// Stores the resolved member of `ResolveResult`.
+  /// Resolved associated with `ResolveResult`.
   resolved,
-  /// Stores the tried member of `ResolveResult`.
+  /// Tried associated with `ResolveResult`.
   tried,
-  /// Stores the matches member of `ResolveResult`.
+  /// Matches associated with `ResolveResult`.
   matches,
-  /// Stores the resolved kind member of `ResolveResult`.
+  /// Resolved kind associated with `ResolveResult`.
   resolved_kind,
-  /// Stores the resolved root member of `ResolveResult`.
+  /// Resolved root associated with `ResolveResult`.
   resolved_root,
 end struct
 
 /// Represents path stack node.
 struct PathStackNode
-  /// Stores the path member of `PathStackNode`.
+  /// Path associated with `PathStackNode`.
   path,
-  /// Stores the parent member of `PathStackNode`.
+  /// Parent associated with `PathStackNode`.
   parent,
 end struct
 
 /// Represents decl check result.
 struct DeclCheckResult
-  /// Stores the diagnostics member of `DeclCheckResult`.
+  /// Diagnostics associated with `DeclCheckResult`.
   diagnostics,
-  /// Stores the failed member of `DeclCheckResult`.
+  /// Failed associated with `DeclCheckResult`.
   failed,
 end struct
 
 /// Represents load program result.
 struct LoadProgramResult
-  /// Stores the diagnostics member of `LoadProgramResult`.
+  /// Diagnostics associated with `LoadProgramResult`.
   diagnostics,
-  /// Stores the source member of `LoadProgramResult`.
+  /// Source associated with `LoadProgramResult`.
   source,
-  /// Stores the program member of `LoadProgramResult`.
+  /// Program associated with `LoadProgramResult`.
   program,
-  /// Stores the aliases member of `LoadProgramResult`.
+  /// Aliases associated with `LoadProgramResult`.
   aliases,
-  /// Stores the sources member of `LoadProgramResult`.
+  /// Sources associated with `LoadProgramResult`.
   sources,
-  /// Stores the visited member of `LoadProgramResult`.
+  /// Visited associated with `LoadProgramResult`.
   visited,
-  /// Stores the parsed modules member of `LoadProgramResult`.
+  /// Parsed modules associated with `LoadProgramResult`.
   parsed_modules,
 end struct
 
 /// Represents str int pair.
 struct StrIntPair
-  /// Stores the key member of `StrIntPair`.
+  /// Key associated with `StrIntPair`.
   key,
-  /// Stores the value member of `StrIntPair`.
+  /// Value associated with `StrIntPair`.
   value,
 end struct
 
 /// AST telemetry is opt-in so normal builds do not pay for a second tree walk.
 struct CompilerAstProfile
-  /// Stores the counts member of `CompilerAstProfile`.
+  /// Counts associated with `CompilerAstProfile`.
   counts,
-  /// Stores the total member of `CompilerAstProfile`.
+  /// Total associated with `CompilerAstProfile`.
   total,
-  /// Stores the max depth member of `CompilerAstProfile`.
+  /// Max depth associated with `CompilerAstProfile`.
   max_depth,
 end struct
 
 /// Normalized native ABI declarations used by validation and import planning.
 struct ExternSigParam
-  /// Stores the name member of `ExternSigParam`.
+  /// Name associated with `ExternSigParam`.
   name,
-  /// Stores the ty member of `ExternSigParam`.
+  /// Ty associated with `ExternSigParam`.
   ty,
-  /// Stores the is out member of `ExternSigParam`.
+  /// Whether `ExternSigParam.is_out` indicates out.
   is_out,
 end struct
 
 /// Represents extern sig.
 struct ExternSig
-  /// Stores the qname member of `ExternSig`.
+  /// Qname associated with `ExternSig`.
   qname,
-  /// Stores the name member of `ExternSig`.
+  /// Name associated with `ExternSig`.
   name,
-  /// Stores the dll member of `ExternSig`.
+  /// Dll associated with `ExternSig`.
   dll,
-  /// Stores the symbol name member of `ExternSig`.
+  /// Symbol name associated with `ExternSig`.
   symbol_name,
-  /// Stores the params member of `ExternSig`.
+  /// Params associated with `ExternSig`.
   params,
-  /// Stores the ret ty member of `ExternSig`.
+  /// Ret ty associated with `ExternSig`.
   ret_ty,
 end struct
 
 /// Serializable object-pipeline records consumed by the fresh linker process.
 struct MloLabel
-  /// Stores the name member of `MloLabel`.
+  /// Name associated with `MloLabel`.
   name,
-  /// Stores the offset member of `MloLabel`.
+  /// Offset associated with `MloLabel`.
   offset,
 end struct
 
 /// Represents mlo patch.
 struct MloPatch
-  /// Stores the offset member of `MloPatch`.
+  /// Offset associated with `MloPatch`.
   offset,
-  /// Stores the target member of `MloPatch`.
+  /// Target associated with `MloPatch`.
   target,
-  /// Stores the kind member of `MloPatch`.
+  /// Kind associated with `MloPatch`.
   kind,
 end struct
 
 /// Represents mlo import dll.
 struct MloImportDll
-  /// Stores the dll member of `MloImportDll`.
+  /// Dll associated with `MloImportDll`.
   dll,
-  /// Stores the funcs member of `MloImportDll`.
+  /// Funcs associated with `MloImportDll`.
   funcs,
 end struct
 
 /// Represents mlo object.
 struct MloObject
-  /// Stores the kind member of `MloObject`.
+  /// Kind associated with `MloObject`.
   kind,
-  /// Stores the module file member of `MloObject`.
+  /// Module file associated with `MloObject`.
   module_file,
-  /// Stores the entry label member of `MloObject`.
+  /// Entry label associated with `MloObject`.
   entry_label,
-  /// Stores the text member of `MloObject`.
+  /// Text associated with `MloObject`.
   text,
-  /// Stores the rdata member of `MloObject`.
+  /// Rdata associated with `MloObject`.
   rdata,
-  /// Stores the data member of `MloObject`.
+  /// Backing data owned by `MloObject`.
   data,
-  /// Stores the bss size member of `MloObject`.
+  /// Bss size associated with `MloObject`.
   bss_size,
-  /// Stores the asm labels member of `MloObject`.
+  /// Asm labels associated with `MloObject`.
   asm_labels,
-  /// Stores the asm patches member of `MloObject`.
+  /// Asm patches associated with `MloObject`.
   asm_patches,
-  /// Stores the rdata labels member of `MloObject`.
+  /// Rdata labels associated with `MloObject`.
   rdata_labels,
-  /// Stores the rdata patches member of `MloObject`.
+  /// Rdata patches associated with `MloObject`.
   rdata_patches,
-  /// Stores the data labels member of `MloObject`.
+  /// Data labels associated with `MloObject`.
   data_labels,
-  /// Stores the data patches member of `MloObject`.
+  /// Data patches associated with `MloObject`.
   data_patches,
-  /// Stores the bss labels member of `MloObject`.
+  /// Bss labels associated with `MloObject`.
   bss_labels,
-  /// Stores the imports member of `MloObject`.
+  /// Imports associated with `MloObject`.
   imports,
 end struct
 
 /// Metadata-only first-pass record. Section payloads are copied into their final combined buffers in a separate pass and never retained per object.
 struct MloLayoutScan
-  /// Stores the entry label member of `MloLayoutScan`.
+  /// Entry label associated with `MloLayoutScan`.
   entry_label,
-  /// Stores the text size member of `MloLayoutScan`.
+  /// Text size associated with `MloLayoutScan`.
   text_size,
-  /// Stores the rdata size member of `MloLayoutScan`.
+  /// Rdata size associated with `MloLayoutScan`.
   rdata_size,
-  /// Stores the data size member of `MloLayoutScan`.
+  /// Data size associated with `MloLayoutScan`.
   data_size,
-  /// Stores the bss size member of `MloLayoutScan`.
+  /// Bss size associated with `MloLayoutScan`.
   bss_size,
-  /// Stores the public label count member of `MloLayoutScan`.
+  /// Public label count associated with `MloLayoutScan`.
   public_label_count,
-  /// Stores the private label count member of `MloLayoutScan`.
+  /// Private label count associated with `MloLayoutScan`.
   private_label_count,
-  /// Stores the imports member of `MloLayoutScan`.
+  /// Imports associated with `MloLayoutScan`.
   imports,
 end struct
 
 /// Immutable section boundary used while one logical monolithic stream is spilled into independently serializable .mlo fragments.
 struct MloStateCheckpoint
-  /// Stores the rdata used member of `MloStateCheckpoint`.
+  /// Rdata used associated with `MloStateCheckpoint`.
   rdata_used,
-  /// Stores the data used member of `MloStateCheckpoint`.
+  /// Data used associated with `MloStateCheckpoint`.
   data_used,
-  /// Stores the bss size member of `MloStateCheckpoint`.
+  /// Bss size associated with `MloStateCheckpoint`.
   bss_size,
-  /// Stores the rdata label count member of `MloStateCheckpoint`.
+  /// Rdata label count associated with `MloStateCheckpoint`.
   rdata_label_count,
-  /// Stores the rdata patch count member of `MloStateCheckpoint`.
+  /// Rdata patch count associated with `MloStateCheckpoint`.
   rdata_patch_count,
-  /// Stores the data label count member of `MloStateCheckpoint`.
+  /// Data label count associated with `MloStateCheckpoint`.
   data_label_count,
-  /// Stores the data patch count member of `MloStateCheckpoint`.
+  /// Data patch count associated with `MloStateCheckpoint`.
   data_patch_count,
-  /// Stores the bss label count member of `MloStateCheckpoint`.
+  /// Bss label count associated with `MloStateCheckpoint`.
   bss_label_count,
 end struct
 
 /// Capacity-backed binary writer and reader for the .mlo file format.
 struct ObjBuf
-  /// Stores the parts member of `ObjBuf`.
+  /// Parts associated with `ObjBuf`.
   parts,
-  /// Stores the total member of `ObjBuf`.
+  /// Total associated with `ObjBuf`.
   total,
 end struct
 
 /// Represents obj reader.
 struct ObjReader
-  /// Stores the buf member of `ObjReader`.
+  /// Buf associated with `ObjReader`.
   buf,
-  /// Stores the pos member of `ObjReader`.
+  /// Pos associated with `ObjReader`.
   pos,
-  /// Stores the u32 result member of `ObjReader`.
+  /// U32 result associated with `ObjReader`.
   u32_result,
 end struct
 
-/// Stores the mem probe enabled compiler state.
+/// Track mem probe enabled compiler state.
 _mem_probe_enabled = false
-/// Stores the dump labels path compiler state.
+/// Track dump labels path compiler state.
 _dump_labels_path = ""
-/// Stores the path norm cache compiler state.
+/// Track path norm cache compiler state.
 _path_norm_cache = []
-/// Stores the front visited set compiler state.
+/// Track front visited set compiler state.
 _front_visited_set = []
-/// Stores the front resolve cache compiler state.
+/// Track front resolve cache compiler state.
 _front_resolve_cache = []
-/// Stores the mlo write scratch compiler state.
+/// Track mlo write scratch compiler state.
 _mlo_write_scratch = 0
-/// Stores the pe state keepalive compiler state.
+/// Track pe state keepalive compiler state.
 _pe_state_keepalive = 0
-/// Stores the compile codegen keepalive compiler state.
+/// Track compile codegen keepalive compiler state.
 _compile_codegen_keepalive = 0
-/// Stores the link patch keepalive compiler state.
+/// Track link patch keepalive compiler state.
 _link_patch_keepalive = 0
-/// Stores the object pipeline enabled compiler state.
+/// Track object pipeline enabled compiler state.
 _object_pipeline_enabled = false
-/// Stores the object emit only compiler state.
+/// Track object emit only compiler state.
 _object_emit_only = false
-/// Stores the asm listing enabled compiler state.
+/// Track asm listing enabled compiler state.
 _asm_listing_enabled = false
-/// Stores the asm listing path compiler state.
+/// Track asm listing path compiler state.
 _asm_listing_path = ""
-/// Stores the asm show addr compiler state.
+/// Track asm show addr compiler state.
 _asm_show_addr = true
-/// Stores the asm show bytes compiler state.
+/// Track asm show bytes compiler state.
 _asm_show_bytes = true
-/// Stores the asm show code compiler state.
+/// Track asm show code compiler state.
 _asm_show_code = true
-/// Stores the asm dump data compiler state.
+/// Track asm dump data compiler state.
 _asm_dump_data = false
-/// Stores the asm dump pe compiler state.
+/// Track asm dump pe compiler state.
 _asm_dump_pe = false
-/// Stores the compiler profile enabled compiler state.
+/// Track compiler profile enabled compiler state.
 _compiler_profile_enabled = false
-/// Stores the compiler profile batches enabled compiler state.
+/// Track compiler profile batches enabled compiler state.
 _compiler_profile_batches_enabled = false
-/// Stores the compiler profile ast enabled compiler state.
+/// Track compiler profile ast enabled compiler state.
 _compiler_profile_ast_enabled = false
-/// Stores the compile target compiler state.
+/// Track compile target compiler state.
 _compile_target = "windows-x64"
-/// Stores the compiler profile started compiler state.
+/// Track compiler profile started compiler state.
 _compiler_profile_started = 0
-/// Stores the compiler profile phase started compiler state.
+/// Track compiler profile phase started compiler state.
 _compiler_profile_phase_started = 0
-/// Stores the compiler profile phase name compiler state.
+/// Track compiler profile phase name compiler state.
 _compiler_profile_phase_name = ""
 
 /// Creates build line starts.
@@ -450,7 +450,7 @@ function _build_line_starts(source)
   return t.arr_chunk_finish(starts_b)
 end function
 
-/// Implements usage.
+/// Perform the usage compiler phase.
 /// @internal
 function _usage()
   print "MiniLang self-hosted compiler " + COMPILER_VERSION
@@ -492,16 +492,16 @@ function _get_flag_value(args, flag)
   return ""
 end function
 
-/// Runs compiler profile reset.
+/// Perform the compiler profile reset compiler phase.
 /// @internal
 function _compiler_profile_reset()
-  /// Stores the compiler profile started.
+  /// Current compiler profile started used by this routine.
   /// @internal
   global _compiler_profile_started
-  /// Stores the compiler profile phase started.
+  /// Current compiler profile phase started used by this routine.
   /// @internal
   global _compiler_profile_phase_started
-  /// Stores the compiler profile phase name.
+  /// Current compiler profile phase name used by this routine.
   /// @internal
   global _compiler_profile_phase_name
   if _compiler_profile_enabled == false then return void end if
@@ -512,13 +512,13 @@ function _compiler_profile_reset()
   return void
 end function
 
-/// Runs compiler profile phase.
+/// Perform the compiler profile phase compiler phase.
 /// @internal
 function _compiler_profile_phase(msg)
-  /// Stores the compiler profile phase started.
+  /// Current compiler profile phase started used by this routine.
   /// @internal
   global _compiler_profile_phase_started
-  /// Stores the compiler profile phase name.
+  /// Current compiler profile phase name used by this routine.
   /// @internal
   global _compiler_profile_phase_name
   if _compiler_profile_enabled == false then return void end if
@@ -531,16 +531,16 @@ function _compiler_profile_phase(msg)
   return void
 end function
 
-/// Runs compiler profile finish.
+/// Perform the compiler profile finish compiler phase.
 /// @internal
 function _compiler_profile_finish()
-  /// Stores the compiler profile started.
+  /// Current compiler profile started used by this routine.
   /// @internal
   global _compiler_profile_started
-  /// Stores the compiler profile phase started.
+  /// Current compiler profile phase started used by this routine.
   /// @internal
   global _compiler_profile_phase_started
-  /// Stores the compiler profile phase name.
+  /// Current compiler profile phase name used by this routine.
   /// @internal
   global _compiler_profile_phase_name
   if _compiler_profile_enabled == false then return void end if
@@ -553,7 +553,7 @@ function _compiler_profile_finish()
   return void
 end function
 
-/// Runs compiler ast profile count.
+/// Perform the compiler ast profile count compiler phase.
 /// @internal
 function _compiler_ast_profile_count(profile, kind)
   counts = profile.counts
@@ -575,7 +575,7 @@ function _compiler_ast_profile_count(profile, kind)
   return profile
 end function
 
-/// Runs compiler ast profile visit value.
+/// Perform the compiler ast profile visit value compiler phase.
 /// @internal
 function _compiler_ast_profile_visit_value(profile, value, depth)
   if t.ast_is_node(value) then return _compiler_ast_profile_visit_node(profile, value, depth) end if
@@ -624,10 +624,10 @@ function _compiler_ast_profile_visit_node(profile, node, depth)
   return profile
 end function
 
-/// Runs compiler ast profile report.
+/// Perform the compiler ast profile report compiler phase.
 /// @internal
 function _compiler_ast_profile_report(program, module_count)
-  /// Stores the compiler profile ast enabled.
+  /// Current compiler profile ast enabled used by this routine.
   /// @internal
   global _compiler_profile_ast_enabled
   if _compiler_profile_ast_enabled == false then return void end if
@@ -652,26 +652,26 @@ function _compiler_profile_owner(function_name)
   return s.substr(name, 0, split_at)
 end function
 
-/// Implements progress phase.
+/// Perform the progress phase compiler phase.
 /// @internal
 function _progress_phase(msg)
   _compiler_profile_phase(msg)
   print "[phase] " + msg
 end function
 
-/// Implements progress obj.
+/// Perform the progress obj compiler phase.
 /// @internal
 function _progress_obj(msg)
   print "[obj] " + msg
 end function
 
-/// Implements progress link.
+/// Perform the progress link compiler phase.
 /// @internal
 function _progress_link(msg)
   print "[link] " + msg
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _startsWith(text, pref)
   if typeof(text) != "string" or typeof(pref) != "string" then return false end if
@@ -682,7 +682,7 @@ function inline _startsWith(text, pref)
   return true
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _endsWith(text, suf)
   if typeof(text) != "string" or typeof(suf) != "string" then return false end if
@@ -694,7 +694,7 @@ function inline _endsWith(text, suf)
   return true
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _array_contains(arr, value)
   if len(arr) <= 0 then return false end if
@@ -704,7 +704,7 @@ function inline _array_contains(arr, value)
   return false
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _containsDot(txt)
   if typeof(txt) != "string" then return false end if
@@ -714,7 +714,7 @@ function inline _containsDot(txt)
   return false
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _last_segment_after_dot(txt)
   if typeof(txt) != "string" then return "" end if
@@ -728,7 +728,7 @@ function inline _last_segment_after_dot(txt)
   return txt
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _to_int_or(defv, text)
   n = toNumber(text)
@@ -736,7 +736,7 @@ function inline _to_int_or(defv, text)
   return n
 end function
 
-/// Implements path canon.
+/// Perform the path canon compiler phase.
 /// @internal
 function _path_canon(p)
   if typeof(p) != "string" then return "" end if
@@ -826,7 +826,7 @@ function _path_canon(p)
 #endif
 end function
 
-/// Implements path norm.
+/// Perform the path norm compiler phase.
 /// @internal
 function _path_norm(p)
 #if TARGET_OS == "linux"
@@ -836,7 +836,7 @@ function _path_norm(p)
 #endif
 end function
 
-/// Implements path abspath.
+/// Perform the path abspath compiler phase.
 /// @internal
 function _path_abspath(p)
   if typeof(p) != "string" or p == "" then return "" end if
@@ -857,7 +857,7 @@ function _path_abspath(p)
 #endif
 end function
 
-/// Implements self exe path.
+/// Perform the self exe path compiler phase.
 /// @internal
 function _self_exe_path()
   p = process.executablePath()
@@ -865,7 +865,7 @@ function _self_exe_path()
   return p
 end function
 
-/// Implements cmd quote arg.
+/// Perform the cmd quote arg compiler phase.
 /// @internal
 function _cmd_quote_arg(x)
   if typeof(x) != "string" then return "\"\"" end if
@@ -908,7 +908,7 @@ function _cmd_quote_arg(x)
 #endif
 end function
 
-/// Implements u64le host at.
+/// Perform the u64le host at compiler phase.
 /// @internal
 function _u64le_host_at(buf, offset)
   if typeof(buf) != "bytes" or typeof(offset) != "int" or offset < 0 or offset + 8 > len(buf) then return 0 end if
@@ -964,10 +964,10 @@ function _make_linux_output_executable(path)
   return true
 end function
 
-/// Implements path norm cached.
+/// Perform the path norm cached compiler phase.
 /// @internal
 function _path_norm_cached(p)
-  /// Stores the path norm cache.
+  /// Current path norm cache used by this routine.
   /// @internal
   global _path_norm_cache
   if typeof(p) != "string" then return _path_norm(p) end if
@@ -979,7 +979,7 @@ function _path_norm_cached(p)
   return n
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _path_eq(a, b)
   if a == b then return true end if
@@ -999,7 +999,7 @@ function _append_unique_path(arr, value)
   return arr +[value]
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _is_abs_path(p)
   if typeof(p) != "string" then return false end if
@@ -1009,7 +1009,7 @@ function inline _is_abs_path(p)
   return false
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _dirname(path)
   if typeof(path) != "string" then return "." end if
@@ -1025,7 +1025,7 @@ function inline _dirname(path)
   return "."
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _path_join(a, b)
   if typeof(a) != "string" or a == "" or a == "." then return b end if
@@ -1041,7 +1041,7 @@ function inline _path_join(a, b)
 #endif
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _basename(path)
   if typeof(path) != "string" or path == "" then return "" end if
@@ -1057,7 +1057,7 @@ function inline _basename(path)
   return path
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _file_stem(path)
   base = _basename(path)
@@ -1073,7 +1073,7 @@ function inline _file_stem(path)
   return base
 end function
 
-/// Implements sanitize fs component.
+/// Perform the sanitize fs component compiler phase.
 /// @internal
 function _sanitize_fs_component(text)
   if typeof(text) != "string" or text == "" then return "module" end if
@@ -1097,7 +1097,7 @@ function _sanitize_fs_component(text)
   return safe
 end function
 
-/// Implements ensure dir recursive.
+/// Perform the ensure dir recursive compiler phase.
 /// @internal
 function _ensure_dir_recursive(path)
   if typeof(path) != "string" or path == "" or path == "." then return true end if
@@ -1119,7 +1119,7 @@ function _ensure_dir_recursive(path)
   return fs.isDir(path)
 end function
 
-/// Implements tmp obj dir.
+/// Perform the tmp obj dir compiler phase.
 /// @internal
 function _tmp_obj_dir(output_exe)
   out_dir = _dirname(output_exe)
@@ -1129,7 +1129,7 @@ function _tmp_obj_dir(output_exe)
   return _path_join(tmp_root, stem)
 end function
 
-/// Implements tmp obj path.
+/// Perform the tmp obj path compiler phase.
 /// @internal
 function _tmp_obj_path(tmp_dir, index, module_path, kind)
   stem = "module"
@@ -1157,7 +1157,7 @@ function _clear_tmp_obj_dir(tmp_dir)
   return ok
 end function
 
-/// Implements section has payload.
+/// Perform the section has payload compiler phase.
 /// @internal
 function _section_has_payload(blob, labels, patches, size_hint)
   if typeof(blob) == "bytes" and len(blob) > 0 then return true end if
@@ -1174,7 +1174,7 @@ function _append_zero_pad(parts_b, pad_bytes)
   return t.arr_chunk_push(parts_b, bytes(pad_bytes, 0))
 end function
 
-/// Implements u32le at.
+/// Perform the u32le at compiler phase.
 /// @internal
 function _u32le_at(buf, off)
   if typeof(buf) != "bytes" then return 0 end if
@@ -1182,13 +1182,13 @@ function _u32le_at(buf, off)
   return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24)
 end function
 
-/// Implements objbuf new.
+/// Perform the objbuf new compiler phase.
 /// @internal
 function _objbuf_new()
   return ObjBuf(t.arr_chunk_new(64), 0)
 end function
 
-/// Implements objbuf push.
+/// Perform the objbuf push compiler phase.
 /// @internal
 function _objbuf_push(ob, b)
   if typeof(b) != "bytes" or len(b) <= 0 then return ob end if
@@ -1197,13 +1197,13 @@ function _objbuf_push(ob, b)
   return ob
 end function
 
-/// Implements objbuf u32.
+/// Perform the objbuf u32 compiler phase.
 /// @internal
 function _objbuf_u32(ob, value)
   return _objbuf_push(ob, t.u32(value))
 end function
 
-/// Implements objbuf bytes.
+/// Perform the objbuf bytes compiler phase.
 /// @internal
 function _objbuf_bytes(ob, b)
   if typeof(b) != "bytes" then b = bytes(0) end if
@@ -1211,7 +1211,7 @@ function _objbuf_bytes(ob, b)
   return _objbuf_push(ob, b)
 end function
 
-/// Implements objbuf string.
+/// Perform the objbuf string compiler phase.
 /// @internal
 function _objbuf_string(ob, text)
   raw = bytes("")
@@ -1219,7 +1219,7 @@ function _objbuf_string(ob, text)
   return _objbuf_bytes(ob, raw)
 end function
 
-/// Implements objbuf finish.
+/// Perform the objbuf finish compiler phase.
 /// @internal
 function _objbuf_finish(ob)
   buf = bytes(ob.total, 0)
@@ -1236,7 +1236,7 @@ function _objbuf_finish(ob)
   return buf
 end function
 
-/// Implements objreader new.
+/// Perform the objreader new compiler phase.
 /// @internal
 function _objreader_new(buf)
   // Reuse the hot two-value result for this reader. Every caller consumes the
@@ -1245,7 +1245,7 @@ function _objreader_new(buf)
   return ObjReader(buf, 0, [0, 0])
 end function
 
-/// Implements objreader read u32.
+/// Perform the objreader read u32 compiler phase.
 /// @internal
 function _objreader_read_u32(rd)
   if rd is not ObjReader or typeof(rd.buf) != "bytes" then
@@ -1263,7 +1263,7 @@ function _objreader_read_u32(rd)
   return result
 end function
 
-/// Implements objreader read bytes.
+/// Perform the objreader read bytes compiler phase.
 /// @internal
 function _objreader_read_bytes(rd)
   rlen = _objreader_read_u32(rd)
@@ -1282,7 +1282,7 @@ function _objreader_read_bytes(rd)
   return [rd, blob]
 end function
 
-/// Implements objreader read string.
+/// Perform the objreader read string compiler phase.
 /// @internal
 function _objreader_read_string(rd)
   rb = _objreader_read_bytes(rd)
@@ -1306,7 +1306,7 @@ function _objreader_skip_bytes(rd)
   return rd
 end function
 
-/// Implements objreader skip bytes len.
+/// Perform the objreader skip bytes len compiler phase.
 /// @internal
 function _objreader_skip_bytes_len(rd)
   rlen = _objreader_read_u32(rd)
@@ -1339,7 +1339,7 @@ function _objreader_copy_bytes_into(rd, destination, destination_offset)
   return [rd, n]
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _node_pos(st)
   if typeof(st) != "struct" then return 0 end if
@@ -1347,7 +1347,7 @@ function inline _node_pos(st)
   return 0
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _node_file(st, fallback)
   if typeof(st) == "struct" and typeof(st._filename) == "string" then
@@ -1368,7 +1368,7 @@ function _add_diag_from_stmt(diags, kind, st, fallback_file, message)
   return _add_diag(diags, kind, _node_file(st, fallback_file), _node_pos(st), message)
 end function
 
-/// Implements module get package.
+/// Perform the module get package compiler phase.
 /// @internal
 function _module_get_package(modules, path)
   if typeof(modules) == "struct" then
@@ -1386,7 +1386,7 @@ function _module_get_package(modules, path)
   return ""
 end function
 
-/// Implements module set package.
+/// Perform the module set package compiler phase.
 /// @internal
 function _module_set_package(modules, path, package_name)
   if typeof(modules) == "struct" then
@@ -1405,7 +1405,7 @@ function _module_set_package(modules, path, package_name)
   return modules +[ModuleInfo(path, package_name)]
 end function
 
-/// Implements inline.
+/// Perform the inline compiler phase.
 /// @internal
 function inline _alias_get(aliases, key)
   if typeof(aliases) == "struct" then
@@ -1420,7 +1420,7 @@ function inline _alias_get(aliases, key)
   return ""
 end function
 
-/// Implements alias set.
+/// Perform the alias set compiler phase.
 /// @internal
 function _alias_set(aliases, key, value)
   if typeof(aliases) == "struct" then
@@ -1438,7 +1438,7 @@ function _alias_set(aliases, key, value)
   return aliases +[StrPair(key, value)]
 end function
 
-/// Implements alias to array.
+/// Perform the alias to array compiler phase.
 /// @internal
 function _alias_to_array(aliases)
   if typeof(aliases) == "array" then return aliases end if
@@ -1459,7 +1459,7 @@ function _alias_to_array(aliases)
   return t.arr_chunked_finish(out_chunks, out_tail)
 end function
 
-/// Implements path to package.
+/// Perform the path to package compiler phase.
 /// @internal
 function _path_to_package(rel_path)
   if typeof(rel_path) != "string" then return "" end if
@@ -1499,7 +1499,7 @@ function _path_to_package(rel_path)
   return s.join(clean, ".")
 end function
 
-/// Implements relpath from root.
+/// Perform the relpath from root compiler phase.
 /// @internal
 function _relpath_from_root(path, root)
   p = s.replaceAll(path, "/", "\\")
@@ -1518,7 +1518,7 @@ function _relpath_from_root(path, root)
   return ""
 end function
 
-/// Implements expected package for file.
+/// Perform the expected package for file compiler phase.
 /// @internal
 function _expected_package_for_file(abs_path, resolved_kind, resolved_root)
   if resolved_kind != "rel" and resolved_kind != "include" then return "" end if
@@ -1540,7 +1540,7 @@ function _is_constexpr_binary(op)
   return op == "or" or op == "and" or op == "|" or op == "^" or op == "&" or op == "==" or op == "!=" or op == ">" or op == "<" or op == ">=" or op == "<=" or op == "<<" or op == ">>" or op == "+" or op == "-" or op == "*" or op == "/" or op == "%"
 end function
 
-/// Implements expr to qualname.
+/// Perform the expr to qualname compiler phase.
 /// @internal
 function _expr_to_qualname(expr)
   if t.ast_is_node(expr) == false then return "" end if
@@ -1582,7 +1582,7 @@ function _is_decl_stmt(st)
   return k == "FunctionDef" or k == "StructDef" or k == "InterfaceDef" or k == "EnumDef" or k == "NamespaceDef" or k == "NamespaceDecl" or k == "ExternFunctionDef" or k == "ExternFunctionDecl" or k == "ConstDecl" or k == "Assign" or k == "SynchronizedDecl" or k == "Import"
 end function
 
-/// Implements check decl stmt.
+/// Perform the check decl stmt compiler phase.
 /// @internal
 function _check_decl_stmt(st, module_path, diags, keep_going, max_errors)
   if len(diags) >= max_errors then return DeclCheckResult(diags, true) end if
@@ -1637,7 +1637,7 @@ function _check_decl_stmt(st, module_path, diags, keep_going, max_errors)
   return DeclCheckResult(diags, true)
 end function
 
-/// Implements declared package.
+/// Perform the declared package compiler phase.
 /// @internal
 function _declared_package(program)
   if typeof(program) != "array" or len(program) <= 0 then return "" end if
@@ -1650,7 +1650,7 @@ function _declared_package(program)
   return ""
 end function
 
-/// Implements extract imports.
+/// Perform the extract imports compiler phase.
 /// @internal
 function _extract_imports(program)
   imports_chunks = []
@@ -1668,7 +1668,7 @@ function _extract_imports(program)
   return t.arr_chunked_finish(imports_chunks, imports_tail)
 end function
 
-/// Implements split imports nonimports.
+/// Perform the split imports nonimports compiler phase.
 /// @internal
 function _split_imports_nonimports(program)
   imports_chunks = []
@@ -1695,7 +1695,7 @@ function _split_imports_nonimports(program)
   return [t.arr_chunked_finish(imports_chunks, imports_tail), t.arr_chunked_finish(body_chunks, body_tail)]
 end function
 
-/// Implements resolve import.
+/// Perform the resolve import compiler phase.
 /// @internal
 function _resolve_import(requested, base_dir, include_dirs)
   tried_seen = t.fastmap_new(128)
@@ -1770,7 +1770,7 @@ function _resolve_import(requested, base_dir, include_dirs)
   return ResolveResult(resolved, tried, matches, resolved_kind, resolved_root)
 end function
 
-/// Implements resolve import cache key.
+/// Perform the resolve import cache key compiler phase.
 /// @internal
 function _resolve_import_cache_key(requested, base_dir)
   req = requested
@@ -1782,10 +1782,10 @@ function _resolve_import_cache_key(requested, base_dir)
 #endif
 end function
 
-/// Implements resolve import cached.
+/// Perform the resolve import cached compiler phase.
 /// @internal
 function _resolve_import_cached(requested, base_dir, include_dirs)
-  /// Stores the front resolve cache.
+  /// Current front resolve cache used by this routine.
   /// @internal
   global _front_resolve_cache
   if typeof(_front_resolve_cache) != "struct" then _front_resolve_cache = t.fastmap_new(2048) end if
@@ -1797,7 +1797,7 @@ function _resolve_import_cached(requested, base_dir, include_dirs)
   return rr
 end function
 
-/// Implements stack contains.
+/// Perform the stack contains compiler phase.
 /// @internal
 function _stack_contains(stack, path)
   cur = stack
@@ -1808,20 +1808,20 @@ function _stack_contains(stack, path)
   return false
 end function
 
-/// Implements visited contains.
+/// Perform the visited contains compiler phase.
 /// @internal
 function _visited_contains(path)
-  /// Stores the front visited set.
+  /// Current front visited set used by this routine.
   /// @internal
   global _front_visited_set
   if typeof(_front_visited_set) != "struct" then return false end if
   return t.fastmap_has(_front_visited_set, _path_norm_cached(path))
 end function
 
-/// Implements visited add.
+/// Perform the visited add compiler phase.
 /// @internal
 function _visited_add(visited, path)
-  /// Stores the front visited set.
+  /// Current front visited set used by this routine.
   /// @internal
   global _front_visited_set
   np = _path_norm_cached(path)
@@ -1840,7 +1840,7 @@ function _visited_add(visited, path)
   return t.arr_chunk_push(visited, path)
 end function
 
-/// Implements visited finish.
+/// Perform the visited finish compiler phase.
 /// @internal
 function _visited_finish(visited, fallback_entry)
   resv = visited
@@ -1886,7 +1886,7 @@ function _parsed_module_set(parsed_modules, path, source, program)
   return t.fastmap_set(parsed_modules, _path_norm_cached(path), rec)
 end function
 
-/// Implements module visit.
+/// Perform the module visit compiler phase.
 /// @internal
 function _module_visit(path, entry_path, include_dirs, stack, visited, modules, aliases, parsed_modules, diags, keep_going, max_errors)
   if len(diags) >= max_errors then
@@ -2128,7 +2128,7 @@ function _module_visit(path, entry_path, include_dirs, stack, visited, modules, 
   return FrontCheckResult(diags, visited, modules, aliases, parsed_modules)
 end function
 
-/// Implements front body contains async.
+/// Perform the front body contains async compiler phase.
 /// @internal
 function _front_body_contains_async(body)
   if typeof(body) != "array" or len(body) <= 0 then return false end if
@@ -2181,10 +2181,10 @@ function _front_node_contains_async(node)
   return false
 end function
 
-/// Runs run frontcheck.
+/// Perform the run frontcheck compiler phase.
 /// @internal
 function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
-  /// Stores the path norm cache.
+  /// Current path norm cache used by this routine.
   /// @internal
   global _path_norm_cache, _front_visited_set, _front_resolve_cache
   _path_norm_cache = t.fastmap_new(4096)
@@ -2252,7 +2252,7 @@ function _run_frontcheck(entry, include_dirs, keep_going, max_errors)
   return FrontCheckResult(res.diagnostics, _visited_finish(res.visited, entry_abs), res.modules, _alias_to_array(res.aliases), res.parsed_modules)
 end function
 
-/// Implements print diag.
+/// Perform the print diag compiler phase.
 /// @internal
 function _print_diag(d)
   if typeof(d) != "struct" then
@@ -2281,7 +2281,7 @@ function _print_diag(d)
   print kind + ": " + msg + "\n  at " + fn + " pos=" + pos
 end function
 
-/// Implements collect include dirs.
+/// Perform the collect include dirs compiler phase.
 /// @internal
 function _collect_include_dirs(args)
   dirs =[]
@@ -2349,7 +2349,7 @@ function _get_max_errors(args)
   return 20
 end function
 
-/// Implements size suffix mul.
+/// Perform the size suffix mul compiler phase.
 /// @internal
 function _size_suffix_mul(ch)
   if ch == "k" then return 1024 end if
@@ -2394,7 +2394,7 @@ function _parse_size_text(txt)
   return ["", base * mul]
 end function
 
-/// Implements validate size flags.
+/// Perform the validate size flags compiler phase.
 /// @internal
 function _validate_size_flags(args)
   i = 0
@@ -2416,7 +2416,7 @@ function _validate_size_flags(args)
   return ""
 end function
 
-/// Implements cfg set.
+/// Perform the cfg set compiler phase.
 /// @internal
 function _cfg_set(cfg, key, value)
   if typeof(cfg) != "array" then cfg = [] end if
@@ -2436,7 +2436,7 @@ function _cfg_set(cfg, key, value)
   return cfg + [[key, value]]
 end function
 
-/// Implements cfg get int.
+/// Perform the cfg get int compiler phase.
 /// @internal
 function _cfg_get_int(cfg, key, defaultv)
   if typeof(cfg) != "array" or len(cfg) <= 0 then return defaultv end if
@@ -2454,7 +2454,7 @@ function _cfg_get_int(cfg, key, defaultv)
   return defaultv
 end function
 
-/// Implements collect runtime config.
+/// Perform the collect runtime config compiler phase.
 /// @internal
 function _collect_runtime_config(args)
   cfg = []
@@ -2495,7 +2495,7 @@ function _collect_runtime_config(args)
   return cfg
 end function
 
-/// Runs compiler gc limit from config.
+/// Perform the compiler gc limit from config compiler phase.
 /// @internal
 function _compiler_gc_limit_from_config(runtime_config)
   compiler_gc_limit = _cfg_get_int(runtime_config, "compiler_gc_limit_bytes", 0)
@@ -2566,14 +2566,14 @@ function _auto_object_pipeline_score_visit(path, include_dirs, seen, score)
   return [score, seen]
 end function
 
-/// Implements auto object pipeline score.
+/// Perform the auto object pipeline score compiler phase.
 /// @internal
 function _auto_object_pipeline_score(input_ml, include_dirs)
   result = _auto_object_pipeline_score_visit(input_ml, include_dirs, t.fastmap_new(128), 0)
   return result[0]
 end function
 
-/// Implements collect compile defines.
+/// Perform the collect compile defines compiler phase.
 /// @internal
 function _collect_compile_defines(args)
   specs = []
@@ -2596,7 +2596,7 @@ function _collect_compile_defines(args)
   return parser.set_compile_defines(specs)
 end function
 
-/// Implements fresh link gc limit from config.
+/// Perform the fresh link gc limit from config compiler phase.
 /// @internal
 function _fresh_link_gc_limit_from_config(runtime_config)
   limit = _compiler_gc_limit_from_config(runtime_config)
@@ -2633,14 +2633,14 @@ function _get_subsystem(args)
   return [true, 3]
 end function
 
-/// Implements stmt is import.
+/// Perform the stmt is import compiler phase.
 /// @internal
 function _stmt_is_import(st)
   if typeof(st) != "struct" then return false end if
   return st.node_kind == "Import"
 end function
 
-/// Implements compact codegen state for pe.
+/// Perform the compact codegen state for pe compiler phase.
 /// @internal
 function _compact_codegen_state_for_pe(st)
   if typeof(st) != "struct" then return st end if
@@ -2730,7 +2730,7 @@ function _compact_codegen_state_for_pe(st)
   return st
 end function
 
-/// Implements filter non import stmts.
+/// Perform the filter non import stmts compiler phase.
 /// @internal
 function _filter_non_import_stmts(program)
   vals_chunks = []
@@ -2747,13 +2747,13 @@ function _filter_non_import_stmts(program)
   return t.arr_chunked_finish(vals_chunks, vals_tail)
 end function
 
-/// Implements merge array chunks balanced.
+/// Perform the merge array chunks balanced compiler phase.
 /// @internal
 function _merge_array_chunks_balanced(chunks)
   return t.arr_merge_chunks_balanced(chunks)
 end function
 
-/// Implements label get.
+/// Perform the label get compiler phase.
 /// @internal
 function _label_get(arr, key, defaultv)
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
@@ -2769,7 +2769,7 @@ function _label_get(arr, key, defaultv)
   return defaultv
 end function
 
-/// Implements label set.
+/// Perform the label set compiler phase.
 /// @internal
 function _label_set(arr, key, value)
   if typeof(arr) != "array" then arr =[] end if
@@ -2785,7 +2785,7 @@ function _label_set(arr, key, value)
   return arr +[StrIntPair(key, value)]
 end function
 
-/// Implements label get chunked.
+/// Perform the label get chunked compiler phase.
 /// @internal
 function _label_get_chunked(chunks, tail, key, defaultv)
   if typeof(tail) == "array" and len(tail) > 0 then
@@ -2820,7 +2820,7 @@ function _label_get_chunked(chunks, tail, key, defaultv)
   return defaultv
 end function
 
-/// Implements imports to pe imports.
+/// Perform the imports to pe imports compiler phase.
 /// @internal
 function _imports_to_pe_imports(imports)
   vals_chunks = []
@@ -2846,13 +2846,13 @@ function _imports_to_pe_imports(imports)
   return t.arr_chunked_finish(vals_chunks, vals_tail)
 end function
 
-/// Implements dll base.
+/// Perform the dll base compiler phase.
 /// @internal
 function _dll_base(dll)
   return t.extern_library_label_token(s.toLowerAscii(s.trim("" + dll)))
 end function
 
-/// Implements coerce name.
+/// Perform the coerce name compiler phase.
 /// @internal
 function _coerce_name(v)
   if typeof(v) == "string" then return v end if
@@ -2881,14 +2881,14 @@ function _coerce_name(v)
   return typeof(v)
 end function
 
-/// Implements st file.
+/// Perform the st file compiler phase.
 /// @internal
 function _st_file(st)
   if typeof(st) == "struct" and typeof(st._filename) == "string" then return st._filename end if
   return ""
 end function
 
-/// Implements mlo import get funcs.
+/// Perform the mlo import get funcs compiler phase.
 /// @internal
 function _mlo_import_get_funcs(imports, dll)
   if typeof(imports) != "array" or len(imports) <= 0 then return [] end if
@@ -2902,7 +2902,7 @@ function _mlo_import_get_funcs(imports, dll)
   return []
 end function
 
-/// Implements mlo import set funcs.
+/// Perform the mlo import set funcs compiler phase.
 /// @internal
 function _mlo_import_set_funcs(imports, dll, funcs)
   if typeof(imports) != "array" then imports = [] end if
@@ -2919,7 +2919,7 @@ function _mlo_import_set_funcs(imports, dll, funcs)
   return imports + [[dll, funcs]]
 end function
 
-/// Implements mlo merge imports.
+/// Perform the mlo merge imports compiler phase.
 /// @internal
 function _mlo_merge_imports(dst, src)
   if typeof(src) != "array" or len(src) <= 0 then return dst end if
@@ -2947,7 +2947,7 @@ function _mlo_merge_imports(dst, src)
   return merged
 end function
 
-/// Implements mlo labels from arr.
+/// Perform the mlo labels from arr compiler phase.
 /// @internal
 function _mlo_labels_from_arr(arr)
   out_b = t.arr_chunk_new(64)
@@ -2971,7 +2971,7 @@ function _mlo_labels_from_arr(arr)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements mlo labels from asm labels.
+/// Perform the mlo labels from asm labels compiler phase.
 /// @internal
 function _mlo_labels_from_asm_labels(arr)
   out_b = t.arr_chunk_new(64)
@@ -3040,7 +3040,7 @@ function _mlo_patches_from_asm(arr, label_pos_map, text_buf)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements mlo patches from data.
+/// Perform the mlo patches from data compiler phase.
 /// @internal
 function _mlo_patches_from_data(arr)
   out_b = t.arr_chunk_new(64)
@@ -3065,7 +3065,7 @@ function _mlo_patches_from_data(arr)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements mlo imports from state.
+/// Perform the mlo imports from state compiler phase.
 /// @internal
 function _mlo_imports_from_state(imports)
   out_b = t.arr_chunk_new(16)
@@ -3084,7 +3084,7 @@ function _mlo_imports_from_state(imports)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements slice used bytes.
+/// Perform the slice used bytes compiler phase.
 /// @internal
 function _slice_used_bytes(buf, used)
   if typeof(buf) != "bytes" then return bytes(0) end if
@@ -3098,7 +3098,7 @@ function _slice_used_bytes(buf, used)
   return compact
 end function
 
-/// Implements mlo from state.
+/// Perform the mlo from state compiler phase.
 /// @internal
 function _mlo_from_state(kind, module_file, entry_label, st)
   asm_labels = []
@@ -3166,7 +3166,7 @@ function _mlo_from_state(kind, module_file, entry_label, st)
   )
 end function
 
-/// Implements mlo labels after.
+/// Perform the mlo labels after compiler phase.
 /// @internal
 function _mlo_labels_after(labels, prefix_off)
   out_b = t.arr_chunk_new(64)
@@ -3181,7 +3181,7 @@ function _mlo_labels_after(labels, prefix_off)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements mlo patches after.
+/// Perform the mlo patches after compiler phase.
 /// @internal
 function _mlo_patches_after(patches, prefix_off)
   out_b = t.arr_chunk_new(64)
@@ -3214,10 +3214,10 @@ function _mlo_is_exported_text_label(name, entry_label, required_targets)
   return false
 end function
 
-/// Implements mlo exported text labels.
+/// Perform the mlo exported text labels compiler phase.
 /// @internal
 function _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_patches)
-  /// Stores the dump labels path.
+  /// Current dump labels path used by this routine.
   /// @internal
   global _dump_labels_path
   // A label dump is a debugging contract and intentionally retains internal
@@ -3255,7 +3255,7 @@ function _mlo_exported_text_labels(asm_labels, entry_label, rdata_patches, data_
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements bss label offset map.
+/// Perform the bss label offset map compiler phase.
 /// @internal
 function _bss_label_offset_map(st)
   count = 0
@@ -3321,7 +3321,7 @@ function _mlo_linux_import_records(dynamic_imports)
   return records
 end function
 
-/// Implements mlo linux dynamic imports.
+/// Perform the mlo linux dynamic imports compiler phase.
 /// @internal
 function _mlo_linux_dynamic_imports(imports)
   ordered_b = t.arr_chunk_new(16)
@@ -3394,7 +3394,7 @@ function _get_target(args)
   return [true, "windows-x64"]
 end function
 
-/// Implements mlo label name at.
+/// Perform the mlo label name at compiler phase.
 /// @internal
 function _mlo_label_name_at(labels, offset)
   if typeof(labels) != "array" or len(labels) <= 0 then return "" end if
@@ -3427,7 +3427,7 @@ function _mlo_rdata_alias_map(labels, base_labels, prefix_off)
   return aliases
 end function
 
-/// Implements mlo resolve rdata alias patches.
+/// Perform the mlo resolve rdata alias patches compiler phase.
 /// @internal
 function _mlo_resolve_rdata_alias_patches(patches, rb)
   if typeof(patches) != "array" or len(patches) <= 0 then return patches end if
@@ -3452,7 +3452,7 @@ function _mlo_resolve_rdata_alias_patches(patches, rb)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements mlo state checkpoint.
+/// Perform the mlo state checkpoint compiler phase.
 /// @internal
 function _mlo_state_checkpoint(st)
   rdata_used = 0
@@ -3483,7 +3483,7 @@ function _mlo_state_checkpoint(st)
   return MloStateCheckpoint(rdata_used, data_used, bss_size, rdata_label_count, rdata_patch_count, data_label_count, data_patch_count, bss_label_count)
 end function
 
-/// Implements mlo align down8.
+/// Perform the mlo align down8 compiler phase.
 /// @internal
 function _mlo_align_down8(value)
   v = value
@@ -3491,7 +3491,7 @@ function _mlo_align_down8(value)
   return v - (v % 8)
 end function
 
-/// Implements mlo labels after cut.
+/// Perform the mlo labels after cut compiler phase.
 /// @internal
 function _mlo_labels_after_cut(labels, min_off, cut_off)
   out_b = t.arr_chunk_new(64)
@@ -3506,7 +3506,7 @@ function _mlo_labels_after_cut(labels, min_off, cut_off)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements mlo patches after cut.
+/// Perform the mlo patches after cut compiler phase.
 /// @internal
 function _mlo_patches_after_cut(patches, min_off, cut_off)
   out_b = t.arr_chunk_new(64)
@@ -3525,7 +3525,7 @@ function _mlo_patches_after_cut(patches, min_off, cut_off)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements mlo from state delta.
+/// Perform the mlo from state delta compiler phase.
 /// @internal
 function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
   if typeof(base_state) != "struct" then return _mlo_from_state(kind, module_file, entry_label, st) end if
@@ -3603,7 +3603,7 @@ function _mlo_from_state_delta(kind, module_file, entry_label, st, base_state)
   return obj
 end function
 
-/// Implements mlo from sparse state delta.
+/// Perform the mlo from sparse state delta compiler phase.
 /// @internal
 function _mlo_from_sparse_state_delta(kind, module_file, entry_label, st, base_state)
   obj = _mlo_from_state(kind, module_file, entry_label, st)
@@ -3619,7 +3619,7 @@ function _mlo_from_sparse_state_delta(kind, module_file, entry_label, st, base_s
   return obj
 end function
 
-/// Implements mlo preserve module label.
+/// Perform the mlo preserve module label compiler phase.
 /// @internal
 function _mlo_preserve_module_label(name)
   if typeof(name) != "string" or name == "" then return false end if
@@ -3637,7 +3637,7 @@ function _mlo_preserve_module_label(name)
   return false
 end function
 
-/// Implements mlo is shared runtime data label.
+/// Perform the mlo is shared runtime data label compiler phase.
 /// @internal
 function _mlo_is_shared_runtime_data_label(name)
   if typeof(name) != "string" or name == "" then return false end if
@@ -3651,7 +3651,7 @@ function _mlo_is_shared_runtime_data_label(name)
   return false
 end function
 
-/// Implements mlo strip shared runtime data labels.
+/// Perform the mlo strip shared runtime data labels compiler phase.
 /// @internal
 function _mlo_strip_shared_runtime_data_labels(labels)
   out_b = t.arr_chunk_new(64)
@@ -3667,14 +3667,14 @@ function _mlo_strip_shared_runtime_data_labels(labels)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements mlo label map add.
+/// Perform the mlo label map add compiler phase.
 /// @internal
 function _mlo_label_map_add(mapv, old_name, new_name)
   if old_name == new_name or old_name == "" or new_name == "" then return mapv end if
   return t.fastmap_set(mapv, old_name, new_name)
 end function
 
-/// Implements mlo rename labels.
+/// Perform the mlo rename labels compiler phase.
 /// @internal
 function _mlo_rename_labels(labels, prefix, preserve_public, label_map)
   renamed = labels
@@ -3692,7 +3692,7 @@ function _mlo_rename_labels(labels, prefix, preserve_public, label_map)
   return [renamed, label_map]
 end function
 
-/// Implements mlo rename patches.
+/// Perform the mlo rename patches compiler phase.
 /// @internal
 function _mlo_rename_patches(patches, label_map)
   if typeof(patches) != "array" or len(patches) <= 0 then return patches end if
@@ -3717,14 +3717,14 @@ function _mlo_rename_patches(patches, label_map)
   return t.arr_chunk_finish(renamed_b)
 end function
 
-/// Implements mlo label count.
+/// Perform the mlo label count compiler phase.
 /// @internal
 function _mlo_label_count(labels)
   if typeof(labels) != "array" then return 0 end if
   return len(labels)
 end function
 
-/// Implements mlo namespace object.
+/// Perform the mlo namespace object compiler phase.
 /// @internal
 function _mlo_namespace_object(obj, prefix, preserve_public)
   if typeof(obj) != "struct" then return obj end if
@@ -3757,7 +3757,7 @@ function _mlo_namespace_object(obj, prefix, preserve_public)
   return obj
 end function
 
-/// Implements mlo write labels.
+/// Perform the mlo write labels compiler phase.
 /// @internal
 function _mlo_write_labels(ob, labels)
   count = 0
@@ -3778,20 +3778,20 @@ function _mlo_write_labels(ob, labels)
   return ob
 end function
 
-/// Implements mlo bp push.
+/// Perform the mlo bp push compiler phase.
 /// @internal
 function _mlo_bp_push(bp, b)
   if typeof(b) != "bytes" or len(b) <= 0 then return bp end if
   return t.byte_pages_append(bp, b)
 end function
 
-/// Implements mlo bp u32.
+/// Perform the mlo bp u32 compiler phase.
 /// @internal
 function _mlo_bp_u32(bp as struct, value as int) returns struct
   return t.byte_pages_append_u32(bp, value)
 end function
 
-/// Implements mlo bp bytes.
+/// Perform the mlo bp bytes compiler phase.
 /// @internal
 function _mlo_bp_bytes(bp, b)
   raw = b
@@ -3800,7 +3800,7 @@ function _mlo_bp_bytes(bp, b)
   return _mlo_bp_push(bp, raw)
 end function
 
-/// Implements mlo bp string.
+/// Perform the mlo bp string compiler phase.
 /// @internal
 function _mlo_bp_string(bp, text)
   if typeof(text) != "string" then text = "" end if
@@ -3808,7 +3808,7 @@ function _mlo_bp_string(bp, text)
   return t.byte_pages_append_string(bp, text)
 end function
 
-/// Implements mlo bp write labels.
+/// Perform the mlo bp write labels compiler phase.
 /// @internal
 function _mlo_bp_write_labels(bp, labels)
   count = 0
@@ -3829,7 +3829,7 @@ function _mlo_bp_write_labels(bp, labels)
   return bp
 end function
 
-/// Implements mlo bp write patches.
+/// Perform the mlo bp write patches compiler phase.
 /// @internal
 function _mlo_bp_write_patches(bp, patches)
   count = 0
@@ -3862,7 +3862,7 @@ function _mlo_bp_write_patches(bp, patches)
   return bp
 end function
 
-/// Implements mlo bp write imports.
+/// Perform the mlo bp write imports compiler phase.
 /// @internal
 function _mlo_bp_write_imports(bp, imports)
   count = 0
@@ -3891,7 +3891,7 @@ function _mlo_bp_write_imports(bp, imports)
   return bp
 end function
 
-/// Implements mlo write patches.
+/// Perform the mlo write patches compiler phase.
 /// @internal
 function _mlo_write_patches(ob, patches)
   count = 0
@@ -3924,7 +3924,7 @@ function _mlo_write_patches(ob, patches)
   return ob
 end function
 
-/// Implements mlo write imports.
+/// Perform the mlo write imports compiler phase.
 /// @internal
 function _mlo_write_imports(ob, imports)
   count = 0
@@ -3953,10 +3953,10 @@ function _mlo_write_imports(ob, imports)
   return ob
 end function
 
-/// Implements mlo write scratch buffer.
+/// Perform the mlo write scratch buffer compiler phase.
 /// @internal
 function _mlo_write_scratch_buffer()
-  /// Stores the mlo write scratch.
+  /// Current mlo write scratch used by this routine.
   /// @internal
   global _mlo_write_scratch
   if typeof(_mlo_write_scratch) != "bytes" or len(_mlo_write_scratch) != MLO_WRITE_BATCH_BYTES then
@@ -4070,7 +4070,7 @@ function _write_mlo_file(path, obj)
   return _mlo_write_pages_file(path, bp)
 end function
 
-/// Implements mlo read labels.
+/// Perform the mlo read labels compiler phase.
 /// @internal
 function _mlo_read_labels(rd)
   rc = _objreader_read_u32(rd)
@@ -4094,7 +4094,7 @@ function _mlo_read_labels(rd)
   return [rd, t.arr_chunk_finish(out_b)]
 end function
 
-/// Implements mlo read patches.
+/// Perform the mlo read patches compiler phase.
 /// @internal
 function _mlo_read_patches(rd, version)
   rc = _objreader_read_u32(rd)
@@ -4142,7 +4142,7 @@ function _mlo_read_patches(rd, version)
   return [rd, t.arr_chunk_finish(out_b)]
 end function
 
-/// Implements mlo read imports.
+/// Perform the mlo read imports compiler phase.
 /// @internal
 function _mlo_read_imports(rd)
   rc = _objreader_read_u32(rd)
@@ -4270,7 +4270,7 @@ function _read_mlo_file(path)
   return MloObject(kind, module_file, entry_label, text, rdata, data, bss_size, asm_labels, asm_patches, rdata_labels, rdata_patches, data_labels, data_patches, bss_labels, imports)
 end function
 
-/// Implements debug validate patch names.
+/// Perform the debug validate patch names compiler phase.
 /// @internal
 function _debug_validate_patch_names(label, patches)
   if typeof(patches) != "array" or len(patches) <= 0 then return end if
@@ -4289,7 +4289,7 @@ function _debug_validate_patch_names(label, patches)
   end for
 end function
 
-/// Implements label lookup fallback.
+/// Perform the label lookup fallback compiler phase.
 /// @internal
 function _label_lookup_fallback(labels, name, defaultv)
   if typeof(name) != "string" or name == "" then return defaultv end if
@@ -4318,7 +4318,7 @@ function _label_lookup_fallback(labels, name, defaultv)
   return defaultv
 end function
 
-/// Implements link target obj index.
+/// Perform the link target obj index compiler phase.
 /// @internal
 function _link_target_obj_index(name)
   if typeof(name) != "string" or s.startsWith(name, "objm_") == false then return "" end if
@@ -4327,7 +4327,7 @@ function _link_target_obj_index(name)
   return s.substr(name, 5, p - 5)
 end function
 
-/// Implements link target obj index num.
+/// Perform the link target obj index num compiler phase.
 /// @internal
 function _link_target_obj_index_num(name)
   if typeof(name) != "string" or s.startsWith(name, "objm_") == false then return -1 end if
@@ -4349,7 +4349,7 @@ function _link_target_obj_index_num(name)
   return -1
 end function
 
-/// Implements link obj label map set.
+/// Perform the link obj label map set compiler phase.
 /// @internal
 function _link_obj_label_map_set(obj_index_map, name, value)
   idx = _link_target_obj_index_num(name)
@@ -4364,7 +4364,7 @@ function _link_obj_label_map_set(obj_index_map, name, value)
   return obj_index_map
 end function
 
-/// Implements link obj label map get.
+/// Perform the link obj label map get compiler phase.
 /// @internal
 function _link_obj_label_map_get(obj_index_map, name, defaultv)
   idx = _link_target_obj_index_num(name)
@@ -4374,7 +4374,7 @@ function _link_obj_label_map_get(obj_index_map, name, defaultv)
   return t.fastmap_get(lm, name, defaultv)
 end function
 
-/// Implements link obj label list set.
+/// Perform the link obj label list set compiler phase.
 /// @internal
 function _link_obj_label_list_set(obj_index_lists, name, value)
   idx = _link_target_obj_index_num(name)
@@ -4389,7 +4389,7 @@ function _link_obj_label_list_set(obj_index_lists, name, value)
   return obj_index_lists
 end function
 
-/// Implements link obj label list get.
+/// Perform the link obj label list get compiler phase.
 /// @internal
 function _link_obj_label_list_get(obj_index_lists, name, defaultv)
   idx = _link_target_obj_index_num(name)
@@ -4406,7 +4406,7 @@ function _link_obj_label_list_get(obj_index_lists, name, defaultv)
   return defaultv
 end function
 
-/// Implements link rec labels lookup.
+/// Perform the link rec labels lookup compiler phase.
 /// @internal
 function _link_rec_labels_lookup(recs, text_rva, rdata_rva, data_rva, bss_rva, name, defaultv)
   if typeof(name) != "string" or name == "" then return defaultv end if
@@ -4486,7 +4486,7 @@ function _link_rec_labels_lookup(recs, text_rva, rdata_rva, data_rva, bss_rva, n
   return defaultv
 end function
 
-/// Implements patch triplets for link.
+/// Perform the patch triplets for link compiler phase.
 /// @internal
 function _patch_triplets_for_link(patches, default_kind)
   out_b = t.arr_chunk_new(64)
@@ -4520,7 +4520,7 @@ function _patch_triplets_for_link(patches, default_kind)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements apply link patches.
+/// Perform the apply link patches compiler phase.
 /// @internal
 function _apply_link_patches(patches, obj_off, label_map, labels, obj_label_recs, text_rva, rdata_rva, data_rva, bss_rva, image_base, section_buf, is_rel32, patch_index, unknown_prefix, invalid_prefix)
   if typeof(patches) != "array" or len(patches) <= 0 then
@@ -4600,7 +4600,7 @@ function _apply_link_patches(patches, obj_off, label_map, labels, obj_label_recs
   return [0, label_map, patch_index]
 end function
 
-/// Implements char code local.
+/// Perform the char code local compiler phase.
 /// @internal
 function _char_code_local(ch)
   b = bytes(ch)
@@ -4608,7 +4608,7 @@ function _char_code_local(ch)
   return b[0]
 end function
 
-/// Implements mlo sort rank.
+/// Perform the mlo sort rank compiler phase.
 /// @internal
 function _mlo_sort_rank(name)
   if typeof(name) != "string" then name = _coerce_name(name) end if
@@ -4628,7 +4628,7 @@ function _mlo_sort_rank(name)
   return 2147483647
 end function
 
-/// Implements string leq.
+/// Perform the string leq compiler phase.
 /// @internal
 function _string_leq(a, b)
   if typeof(a) != "string" then a = _coerce_name(a) end if
@@ -4648,7 +4648,7 @@ function _string_leq(a, b)
   return na <= nb
 end function
 
-/// Implements sort strings inplace.
+/// Perform the sort strings inplace compiler phase.
 /// @internal
 function _sort_strings_inplace(items)
   if typeof(items) != "array" or len(items) <= 1 then return items end if
@@ -4670,7 +4670,7 @@ function _sort_strings_inplace(items)
   return items
 end function
 
-/// Implements collect mlo paths from dir.
+/// Perform the collect mlo paths from dir compiler phase.
 /// @internal
 function _collect_mlo_paths_from_dir(obj_dir)
   if typeof(obj_dir) != "string" or obj_dir == "" then
@@ -4701,7 +4701,7 @@ function _collect_mlo_paths_from_dir(obj_dir)
   return obj_paths
 end function
 
-/// Implements mlo skip labels.
+/// Perform the mlo skip labels compiler phase.
 /// @internal
 function _mlo_skip_labels(rd)
   rc = _objreader_read_u32(rd)
@@ -4721,7 +4721,7 @@ function _mlo_skip_labels(rd)
   return rd
 end function
 
-/// Implements mlo skip patches.
+/// Perform the mlo skip patches compiler phase.
 /// @internal
 function _mlo_skip_patches(rd, version)
   rc = _objreader_read_u32(rd)
@@ -4862,7 +4862,7 @@ function _read_mlo_layout_scan(path)
   return MloLayoutScan(entry_label, text_size, rdata_size, data_size, bss_size, public_labels, private_labels, rimports[1])
 end function
 
-/// Implements copy mlo sections from file.
+/// Perform the copy mlo sections from file compiler phase.
 /// @internal
 function _copy_mlo_sections_from_file(path, text_buf, text_off, rdata_buf, rdata_off, data_buf, data_off)
   raw = fs.readAllBytes(path)
@@ -5006,7 +5006,7 @@ function _read_mlo_file_for_layout(path)
   return MloObject(kind, module_file, entry_label, bytes(0), bytes(0), bytes(0), bss_size, asm_labels, [], rdata_labels, [], data_labels, [], bss_labels, imports)
 end function
 
-/// Implements label key.
+/// Perform the label key compiler phase.
 /// @internal
 function _label_key(name)
   txt = _coerce_name(name)
@@ -5014,7 +5014,7 @@ function _label_key(name)
   return txt
 end function
 
-/// Implements link resolve target.
+/// Perform the link resolve target compiler phase.
 /// @internal
 function _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, target)
   trg = t.fastmap_get(label_map, _label_key(target), -1)
@@ -5033,7 +5033,7 @@ function _link_resolve_target(label_map, labels, link_patch_recs, text_rva, rdat
   return [label_map, trg]
 end function
 
-/// Implements link local labels get.
+/// Perform the link local labels get compiler phase.
 /// @internal
 function _link_local_labels_get(local_label_map, local_labels, target)
   trg = t.fastmap_get(local_label_map, _label_key(target), -1)
@@ -5041,7 +5041,7 @@ function _link_local_labels_get(local_label_map, local_labels, target)
   return -1
 end function
 
-/// Implements link local patch target.
+/// Perform the link local patch target compiler phase.
 /// @internal
 function _link_local_patch_target(src_patch, target)
   if typeof(src_patch) != "string" or typeof(target) != "string" then return "" end if
@@ -5054,7 +5054,7 @@ function _link_local_patch_target(src_patch, target)
   return "objm_" + idx + "__" + target
 end function
 
-/// Implements link target prefers global.
+/// Perform the link target prefers global compiler phase.
 /// @internal
 function _link_target_prefers_global(target)
   if typeof(target) != "string" or target == "" then return true end if
@@ -5069,7 +5069,7 @@ function _link_target_prefers_global(target)
   return false
 end function
 
-/// Implements link resolve patch target.
+/// Perform the link resolve patch target compiler phase.
 /// @internal
 function _link_resolve_patch_target(label_map, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, target)
   if s.startsWith(target, "objm_") then
@@ -5113,7 +5113,7 @@ function _link_resolve_patch_target(label_map, obj_index_map, obj_index_lists, l
   return [label_map, trg]
 end function
 
-/// Implements link resolve patch target cached.
+/// Perform the link resolve patch target cached compiler phase.
 /// @internal
 function _link_resolve_patch_target_cached(label_map, target_cache, obj_index_map, obj_index_lists, local_label_map, local_labels, labels, link_patch_recs, text_rva, rdata_rva, data_rva, bss_rva, src_patch, target)
   cached = t.fastmap_get(target_cache, target, -1)
@@ -5130,7 +5130,7 @@ function _link_resolve_patch_target_cached(label_map, target_cache, obj_index_ma
   return [label_map, target_cache, trg]
 end function
 
-/// Implements link direct patch target.
+/// Perform the link direct patch target compiler phase.
 /// @internal
 function _link_direct_patch_target(label_map, obj_index_map, source_obj_map, source_obj_prefix, target)
   if s.startsWith(target, "objm_") then
@@ -5458,7 +5458,7 @@ function _apply_mlo_patches_from_file(src_patch, obj_text_off, obj_rdata_off, ob
   return [0, label_map, patch_index]
 end function
 
-/// Implements concat bytes parts.
+/// Perform the concat bytes parts compiler phase.
 /// @internal
 function _concat_bytes_parts(parts_builder)
   parts = t.arr_chunk_finish(parts_builder)
@@ -5481,7 +5481,7 @@ function _concat_bytes_parts(parts_builder)
   return buf
 end function
 
-/// Implements module init rec for file.
+/// Perform the module init rec for file compiler phase.
 /// @internal
 function _module_init_rec_for_file(module_init_recs, module_file)
   if typeof(module_init_recs) != "array" or len(module_init_recs) <= 0 then return 0 end if
@@ -5506,7 +5506,7 @@ function _find_main_name(state)
   return ""
 end function
 
-/// Implements merge string arrays.
+/// Perform the merge string arrays compiler phase.
 /// @internal
 function _merge_string_arrays(dst, src)
   merged = dst
@@ -5537,7 +5537,7 @@ function _is_internal_helper_label_local(lbl)
   return true
 end function
 
-/// Implements collect internal helper targets.
+/// Perform the collect internal helper targets compiler phase.
 /// @internal
 function _collect_internal_helper_targets(dst, patches)
   merged = dst
@@ -5558,28 +5558,28 @@ function _collect_internal_helper_targets(dst, patches)
   return merged
 end function
 
-/// Implements extern symbol default.
+/// Perform the extern symbol default compiler phase.
 /// @internal
 function _extern_symbol_default(qname)
   if typeof(qname) != "string" then return "" end if
   return _last_segment_after_dot(qname)
 end function
 
-/// Implements abi param type supported.
+/// Perform the abi param type supported compiler phase.
 /// @internal
 function _abi_param_type_supported(ty)
   t0 = s.toLowerAscii(s.trim(ty))
   return t0 == "int" or t0 == "i64" or t0 == "u64" or t0 == "i32" or t0 == "u32" or t0 == "i16" or t0 == "u16" or t0 == "i8" or t0 == "u8" or t0 == "double" or t0 == "bool" or t0 == "ptr" or t0 == "pointer" or t0 == "cstr" or t0 == "cstring" or t0 == "wstr" or t0 == "wstring" or t0 == "void" or t0 == "none" or t0 == "bytes" or t0 == "buffer" or t0 == "bytebuffer"
 end function
 
-/// Implements abi return type supported.
+/// Perform the abi return type supported compiler phase.
 /// @internal
 function _abi_return_type_supported(ty)
   t0 = s.toLowerAscii(s.trim(ty))
   return t0 == "void" or t0 == "none" or t0 == "bool" or t0 == "int" or t0 == "i64" or t0 == "u64" or t0 == "i32" or t0 == "u32" or t0 == "i16" or t0 == "u16" or t0 == "i8" or t0 == "u8" or t0 == "double" or t0 == "ptr" or t0 == "pointer" or t0 == "cstr" or t0 == "wstr"
 end function
 
-/// Implements extern struct field type supported.
+/// Perform the extern struct field type supported compiler phase.
 /// @internal
 function _extern_struct_field_type_supported(ty)
   t0 = s.toLowerAscii(s.trim(ty))
@@ -5588,21 +5588,21 @@ end function
 
 /// Represents extern struct layout.
 struct ExternStructLayout
-  /// Stores the qname member of `ExternStructLayout`.
+  /// Qname associated with `ExternStructLayout`.
   qname,
-  /// Stores the fields member of `ExternStructLayout`.
+  /// Fields associated with `ExternStructLayout`.
   fields,
-  /// Stores the types member of `ExternStructLayout`.
+  /// Types associated with `ExternStructLayout`.
   types,
-  /// Stores the offsets member of `ExternStructLayout`.
+  /// Offsets associated with `ExternStructLayout`.
   offsets,
-  /// Stores the size member of `ExternStructLayout`.
+  /// Current logical size of `ExternStructLayout`.
   size,
-  /// Stores the align member of `ExternStructLayout`.
+  /// Align associated with `ExternStructLayout`.
   align,
 end struct
 
-/// Implements extern struct type size.
+/// Perform the extern struct type size compiler phase.
 /// @internal
 function _extern_struct_type_size(ty)
   t0 = s.toLowerAscii(s.trim(ty))
@@ -5613,7 +5613,7 @@ function _extern_struct_type_size(ty)
   return 0
 end function
 
-/// Implements extern struct layout find.
+/// Perform the extern struct layout find compiler phase.
 /// @internal
 function _extern_struct_layout_find(layouts, qname)
   if typeof(layouts) != "array" or len(layouts) <= 0 then return 0 end if
@@ -5624,7 +5624,7 @@ function _extern_struct_layout_find(layouts, qname)
   return 0
 end function
 
-/// Implements collect file package prefixes.
+/// Perform the collect file package prefixes compiler phase.
 /// @internal
 function _collect_file_package_prefixes(program)
   acc = []
@@ -5670,7 +5670,7 @@ function _collect_file_package_prefixes(program)
   return acc
 end function
 
-/// Implements collect extern structs walk.
+/// Perform the collect extern structs walk compiler phase.
 /// @internal
 function _collect_extern_structs_walk(stmts, prefix, current_file, file_prefixes, names)
   if typeof(names) != "array" then names = [] end if
@@ -5742,7 +5742,7 @@ function collect_extern_structs(program)
   return _collect_extern_structs_walk(program, "", "", prefixes, [])
 end function
 
-/// Implements extern physical abi class.
+/// Perform the extern physical abi class compiler phase.
 /// @internal
 function _extern_physical_abi_class(ty, is_out)
   // Keep the result defined even for partially populated declarations from an
@@ -5859,7 +5859,7 @@ function validate_extern_sigs(extern_sigs, extern_struct_names)
   return ""
 end function
 
-/// Implements collect extern sigs walk.
+/// Perform the collect extern sigs walk compiler phase.
 /// @internal
 function _collect_extern_sigs_walk(stmts, prefix, current_file, file_prefixes, acc)
   if typeof(acc) != "struct" then acc = t.arr_chunk_new(64) end if
@@ -5958,10 +5958,10 @@ function collect_extern_sigs(program)
   return t.arr_chunk_finish(b)
 end function
 
-/// Implements heap probe.
+/// Perform the heap probe compiler phase.
 /// @internal
 function _heap_probe(tag)
-  /// Stores the mem probe enabled.
+  /// Current mem probe enabled used by this routine.
   /// @internal
   global _mem_probe_enabled
   if _mem_probe_enabled == false then return end if
@@ -5973,7 +5973,7 @@ end function
 /// End the parsing/semantic ownership phase in one operation. Generated code, relocations and runtime metadata no longer refer to compact AST NodeIds at the two call sites below, so the typed arenas and resolution caches can be unrooted before the next full collection instead of surviving until exit.
 /// @internal
 function _release_frontend_phase_arenas()
-  /// Stores the path norm cache.
+  /// Current path norm cache used by this routine.
   /// @internal
   global _path_norm_cache, _front_visited_set, _front_resolve_cache
   t.ast_arena_release()
@@ -6171,7 +6171,7 @@ function _link_build_label_maps(patch_file_recs, text_rva, rdata_rva, data_rva, 
   return [0, label_map, obj_index_map, obj_index_lists, t.arr_chunk_finish(labels_b), t.arr_chunk_finish(dump_b)]
 end function
 
-/// Implements link mlo linux sections.
+/// Perform the link mlo linux sections compiler phase.
 /// @internal
 function _link_mlo_linux_sections(obj_paths, output_exe, text_buf, rdata_buf, data_buf, bss_size, patch_file_recs, imports)
   dynamic_imports = _mlo_linux_dynamic_imports(imports)
@@ -6251,10 +6251,10 @@ end function
 /// Link canonical MLO fragments in input order while retaining only compact label/patch metadata; this ordering is part of byte-for-byte parity.
 /// @internal
 function _link_mlo_files(obj_paths, output_exe, subsystem)
-  /// Stores the dump labels path.
+  /// Current dump labels path used by this routine.
   /// @internal
   global _dump_labels_path
-  /// Stores the link patch keepalive.
+  /// Current link patch keepalive used by this routine.
   /// @internal
   global _link_patch_keepalive
   patch_file_recs_b = t.arr_chunk_new(64)
@@ -6527,30 +6527,30 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   return 0
 end function
 
-/// Implements subsystem cli name.
+/// Perform the subsystem cli name compiler phase.
 /// @internal
 function _subsystem_cli_name(subsystem)
   if subsystem == 2 then return "windows" end if
   return "console"
 end function
 
-/// Implements link should use fresh process.
+/// Perform the link should use fresh process compiler phase.
 /// @internal
 function _link_should_use_fresh_process(obj_paths)
   if typeof(obj_paths) != "array" then return false end if
   return len(obj_paths) > 128
 end function
 
-/// Implements link obj dir in fresh process.
+/// Perform the link obj dir in fresh process compiler phase.
 /// @internal
 function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem, runtime_config)
-  /// Stores the dump labels path.
+  /// Current dump labels path used by this routine.
   /// @internal
   global _dump_labels_path
-  /// Stores the compiler profile enabled.
+  /// Current compiler profile enabled used by this routine.
   /// @internal
   global _compiler_profile_enabled
-  /// Stores the compiler profile batches enabled.
+  /// Current compiler profile batches enabled used by this routine.
   /// @internal
   global _compiler_profile_batches_enabled
   self_exe = _self_exe_path()
@@ -6592,7 +6592,7 @@ function _link_obj_dir_in_fresh_process(input_ml, obj_dir, output_exe, subsystem
   return 0
 end function
 
-/// Implements finish module mlo.
+/// Perform the finish module mlo compiler phase.
 /// @internal
 function _finish_module_mlo(tmp_dir, obj_index, module_file, entry_label, mod_cg, base_state, helper_union, module_obj_paths_b)
   if typeof(mod_cg) != "struct" or typeof(mod_cg.state) != "struct" then
@@ -6799,13 +6799,13 @@ end function
 /// @param trace_calls Value supplied for `trace_calls`.
 /// @param subsystem Value supplied for `subsystem`.
 function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
-  /// Stores the dump labels path.
+  /// Current dump labels path used by this routine.
   /// @internal
   global _dump_labels_path
-  /// Stores the pe state keepalive.
+  /// Current pe state keepalive used by this routine.
   /// @internal
   global _pe_state_keepalive
-  /// Stores the compile codegen keepalive.
+  /// Current compile codegen keepalive used by this routine.
   /// @internal
   global _compile_codegen_keepalive
   compiler_gc_limit = _compiler_gc_limit_from_config(runtime_config)
@@ -7375,7 +7375,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   return 0
 end function
 
-/// Implements hex u32 fixed.
+/// Perform the hex u32 fixed compiler phase.
 /// @internal
 function _hex_u32_fixed(value)
   digits = "0123456789ABCDEF"
@@ -7389,7 +7389,7 @@ function _hex_u32_fixed(value)
   return out_text
 end function
 
-/// Implements asm default path.
+/// Perform the asm default path compiler phase.
 /// @internal
 function _asm_default_path(output_exe)
   if _endsWith(output_exe, ".exe") then
@@ -7398,7 +7398,7 @@ function _asm_default_path(output_exe)
   return output_exe + ".asm"
 end function
 
-/// Implements asm db text.
+/// Perform the asm db text compiler phase.
 /// @internal
 function _asm_db_text(hex_text)
   out_text = "db "
@@ -7413,7 +7413,7 @@ function _asm_db_text(hex_text)
   return out_text
 end function
 
-/// Implements asm append section.
+/// Perform the asm append section compiler phase.
 /// @internal
 function _asm_append_section(bld, name, buf, rva)
   bld.appendLine("; section " + name + " RVA=0x" + _hex_u32_fixed(rva) + " size=" + len(buf))
@@ -7475,13 +7475,13 @@ end function
 /// @param trace_calls Value supplied for `trace_calls`.
 /// @param subsystem Value supplied for `subsystem`.
 function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
-  /// Stores the dump labels path.
+  /// Current dump labels path used by this routine.
   /// @internal
   global _dump_labels_path
-  /// Stores the compile codegen keepalive.
+  /// Current compile codegen keepalive used by this routine.
   /// @internal
   global _compile_codegen_keepalive
-  /// Stores the object emit only.
+  /// Current object emit only used by this routine.
   /// @internal
   global _object_emit_only
   runtime_config = _cfg_set(runtime_config, "cg_object_pipeline", true)
@@ -7955,49 +7955,49 @@ end function
 /// Parse command-line arguments and execute project, compile or link mode.
 /// @param args Command-line or call arguments.
 function run_cli(args)
-  /// Stores the mem probe enabled.
+  /// Current mem probe enabled used by this routine.
   /// @internal
   global _mem_probe_enabled
-  /// Stores the dump labels path.
+  /// Current dump labels path used by this routine.
   /// @internal
   global _dump_labels_path
-  /// Stores the object pipeline enabled.
+  /// Current object pipeline enabled used by this routine.
   /// @internal
   global _object_pipeline_enabled
-  /// Stores the object emit only.
+  /// Current object emit only used by this routine.
   /// @internal
   global _object_emit_only
-  /// Stores the asm listing enabled.
+  /// Current asm listing enabled used by this routine.
   /// @internal
   global _asm_listing_enabled
-  /// Stores the asm listing path.
+  /// Current asm listing path used by this routine.
   /// @internal
   global _asm_listing_path
-  /// Stores the asm show addr.
+  /// Current asm show addr used by this routine.
   /// @internal
   global _asm_show_addr
-  /// Stores the asm show bytes.
+  /// Current asm show bytes used by this routine.
   /// @internal
   global _asm_show_bytes
-  /// Stores the asm show code.
+  /// Current asm show code used by this routine.
   /// @internal
   global _asm_show_code
-  /// Stores the asm dump data.
+  /// Current asm dump data used by this routine.
   /// @internal
   global _asm_dump_data
-  /// Stores the asm dump pe.
+  /// Current asm dump pe used by this routine.
   /// @internal
   global _asm_dump_pe
-  /// Stores the compiler profile enabled.
+  /// Current compiler profile enabled used by this routine.
   /// @internal
   global _compiler_profile_enabled
-  /// Stores the compiler profile batches enabled.
+  /// Current compiler profile batches enabled used by this routine.
   /// @internal
   global _compiler_profile_batches_enabled
-  /// Stores the compiler profile ast enabled.
+  /// Current compiler profile ast enabled used by this routine.
   /// @internal
   global _compiler_profile_ast_enabled
-  /// Stores the compile target.
+  /// Current compile target used by this routine.
   /// @internal
   global _compile_target
   if len(args) == 1 and (args[0] == "-version" or args[0] == "--version") then

@@ -23,7 +23,7 @@ Aggregate returned when multiple diagnostics must cross a phase boundary.
 diags
 ```
 
-Stores the diags member of `MultiCompileError`.
+Diags associated with `MultiCompileError`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/errors.ml#L49)

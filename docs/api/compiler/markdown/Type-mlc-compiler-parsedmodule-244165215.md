@@ -23,7 +23,7 @@ Represents parsed module.
 path
 ```
 
-Stores the path member of `ParsedModule`.
+Path associated with `ParsedModule`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L151)
@@ -35,7 +35,7 @@ Stores the path member of `ParsedModule`.
 program
 ```
 
-Stores the program member of `ParsedModule`.
+Program associated with `ParsedModule`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L155)
@@ -47,7 +47,7 @@ Stores the program member of `ParsedModule`.
 source
 ```
 
-Stores the source member of `ParsedModule`.
+Source associated with `ParsedModule`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L153)

@@ -23,7 +23,7 @@ Represents namespace def.
 _filename
 ```
 
-Stores the filename member of `NamespaceDef`.
+Filename associated with `NamespaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L395)
@@ -35,7 +35,7 @@ Stores the filename member of `NamespaceDef`.
 _pos
 ```
 
-Stores the pos member of `NamespaceDef`.
+Pos associated with `NamespaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L393)
@@ -47,7 +47,7 @@ Stores the pos member of `NamespaceDef`.
 body
 ```
 
-Stores the body member of `NamespaceDef`.
+Body associated with `NamespaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L391)
@@ -59,7 +59,7 @@ Stores the body member of `NamespaceDef`.
 name
 ```
 
-Stores the name member of `NamespaceDef`.
+Name associated with `NamespaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L389)
@@ -71,7 +71,7 @@ Stores the name member of `NamespaceDef`.
 node_kind
 ```
 
-Stores the node kind member of `NamespaceDef`.
+Node kind associated with `NamespaceDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L387)

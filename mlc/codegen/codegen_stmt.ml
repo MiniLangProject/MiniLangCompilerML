@@ -35,20 +35,20 @@ import mlc.codegen.codegen_threads as th
 // conservative for ordinary calls, but multi-thousand-function programs keep
 // AST entries alive across dozens of manual collections and exposed a stale
 // pointer in fn_typeof without this barrier.
-/// Stores the phase codegen keepalive compiler state.
+/// Track phase codegen keepalive compiler state.
 _phase_codegen_keepalive = 0
-/// Stores the module function entry index compiler state.
+/// Track module function entry index compiler state.
 _module_function_entry_index = 0
 
 /// Typed arena for the immutable function-definition roots consumed by object emission. The integer cursor is the NodeId; parallel byte/name/node columns avoid allocating one two-element descriptor array per function.
 struct FunctionNodeArena
-  /// Stores the kinds member of `FunctionNodeArena`.
+  /// Kinds associated with `FunctionNodeArena`.
   kinds,
-  /// Stores the names member of `FunctionNodeArena`.
+  /// Names associated with `FunctionNodeArena`.
   names,
-  /// Stores the nodes member of `FunctionNodeArena`.
+  /// Nodes associated with `FunctionNodeArena`.
   nodes,
-  /// Stores the count member of `FunctionNodeArena`.
+  /// Count associated with `FunctionNodeArena`.
   count,
 end struct
 
@@ -74,7 +74,7 @@ function _new_function_analysis_scratch()
   ]
 end function
 
-/// Implements prepare function analysis scratch.
+/// Lower prepare function analysis scratch statement behavior to native x64.
 /// @internal
 function _prepare_function_analysis_scratch(value)
   scratch = value
@@ -133,7 +133,7 @@ function _reset_analysis_map(mapv, minimum_capacity)
   return _new_analysis_map(need)
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _join_qname(prefix, name)
   if typeof(prefix) != "string" or prefix == "" then return name end if
@@ -143,7 +143,7 @@ function inline _join_qname(prefix, name)
   return prefix + "." + name
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _coerce_name(v)
   tv = typeof(v)
@@ -159,7 +159,7 @@ function inline _coerce_name(v)
   return ""
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _fn_codegen_key(fn_node)
   if typeof(fn_node) != "struct" then return "" end if
@@ -170,7 +170,7 @@ function inline _fn_codegen_key(fn_node)
   return file + "|" + pos + "|" + name
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _fn_codegen_name(state, fn_node)
   if typeof(fn_node) != "struct" then return "" end if
@@ -196,7 +196,7 @@ function _set_fn_codegen_name(state, fn_node, code_name)
   return state
 end function
 
-/// Implements mem probe.
+/// Lower mem probe statement behavior to native x64.
 /// @internal
 function _mem_probe(state, tag)
   if typeof(state) != "struct" then return state end if
@@ -207,7 +207,7 @@ function _mem_probe(state, tag)
   return state
 end function
 
-/// Implements chunked len.
+/// Lower chunked len statement behavior to native x64.
 /// @internal
 function _chunked_len(chunks, tail)
   n = 0
@@ -221,7 +221,7 @@ function _chunked_len(chunks, tail)
   return n
 end function
 
-/// Implements heap cfg get any.
+/// Lower heap cfg get any statement behavior to native x64.
 /// @internal
 function _heap_cfg_get_any(state, key)
   cfg = 0
@@ -239,7 +239,7 @@ function _heap_cfg_get_any(state, key)
   return 0
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _heap_cfg_get_int(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
@@ -247,7 +247,7 @@ function inline _heap_cfg_get_int(state, key, defaultv)
   return defaultv
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _heap_cfg_get_bool(state, key, defaultv)
   v = _heap_cfg_get_any(state, key)
@@ -310,7 +310,7 @@ function _set_user_function(state, qname, fn_node)
   return state
 end function
 
-/// Implements diag stmt loc.
+/// Lower diag stmt loc statement behavior to native x64.
 /// @internal
 function _diag_stmt_loc(st)
   if typeof(st) != "struct" then return "" end if
@@ -321,7 +321,7 @@ function _diag_stmt_loc(st)
   return ""
 end function
 
-/// Implements user function get node.
+/// Lower user function get node statement behavior to native x64.
 /// @internal
 function _user_function_get_node(state, qname)
   arr = state.user_functions
@@ -350,7 +350,7 @@ function _user_function_get_node(state, qname)
   return 0
 end function
 
-/// Implements user function keys sorted.
+/// Lower user function keys sorted statement behavior to native x64.
 /// @internal
 function _user_function_keys_sorted(state)
   keys_b = t.arr_chunk_new(128)
@@ -372,7 +372,7 @@ function _user_function_keys_sorted(state)
   return _sort_names(t.arr_chunk_finish(keys_b))
 end function
 
-/// Implements nested function get by codegen name.
+/// Lower nested function get by codegen name statement behavior to native x64.
 /// @internal
 function _nested_function_get_by_codegen_name(state, code_name)
   arr = state.nested_user_functions
@@ -385,7 +385,7 @@ function _nested_function_get_by_codegen_name(state, code_name)
   return 0
 end function
 
-/// Implements nested function codegen names sorted.
+/// Lower nested function codegen names sorted statement behavior to native x64.
 /// @internal
 function _nested_function_codegen_names_sorted(state)
   keys_b = t.arr_chunk_new(64)
@@ -400,7 +400,7 @@ function _nested_function_codegen_names_sorted(state)
   return _sort_names(t.arr_chunk_finish(keys_b))
 end function
 
-/// Implements prepare qualify cache.
+/// Lower prepare qualify cache statement behavior to native x64.
 /// @internal
 function _prepare_qualify_cache(cache, min_cap)
   need = min_cap
@@ -511,14 +511,14 @@ function release_emitted_function_entries(state, entries, start_index, count)
   return state
 end function
 
-/// Implements copy fn array field.
+/// Lower copy fn array field statement behavior to native x64.
 /// @internal
 function _copy_fn_array_field(v)
   if typeof(v) == "array" then return v end if
   return []
 end function
 
-/// Implements copy fn map or array field.
+/// Lower copy fn map or array field statement behavior to native x64.
 /// @internal
 function _copy_fn_map_or_array_field(v)
   if typeof(v) == "struct" then return v end if
@@ -526,7 +526,7 @@ function _copy_fn_map_or_array_field(v)
   return []
 end function
 
-/// Implements clone function node for emit.
+/// Lower clone function node for emit statement behavior to native x64.
 /// @internal
 function _clone_function_node_for_emit(fn_node)
   if typeof(fn_node) != "struct" then return fn_node end if
@@ -562,7 +562,7 @@ function _clone_function_node_for_emit(fn_node)
   )
 end function
 
-/// Implements forget nested function by codegen name.
+/// Lower forget nested function by codegen name statement behavior to native x64.
 /// @internal
 function _forget_nested_function_by_codegen_name(state, code_name)
   arr = state.nested_user_functions
@@ -579,10 +579,10 @@ function _forget_nested_function_by_codegen_name(state, code_name)
   return state
 end function
 
-/// Implements maybe phase gc.
+/// Lower maybe phase gc statement behavior to native x64.
 /// @internal
 function _maybe_phase_gc(state, tag, min_bytes)
-  /// Stores the phase codegen keepalive.
+  /// Current phase codegen keepalive used by this routine.
   /// @internal
   global _phase_codegen_keepalive
   need = min_bytes
@@ -598,7 +598,7 @@ function _maybe_phase_gc(state, tag, min_bytes)
   return state
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _foreach_body(st)
   if typeof(st) == "struct" and typeof(st.body) == "array" then
@@ -609,7 +609,7 @@ function inline _foreach_body(st)
   return 0
 end function
 
-/// Runs emit stmt list.
+/// Lower emit stmt list statement behavior to native x64.
 /// @internal
 function _emit_stmt_list(state, stmt_seq_emit)
   emit_items = stmt_seq_emit
@@ -629,7 +629,7 @@ function _emit_stmt_list(state, stmt_seq_emit)
   return state
 end function
 
-/// Implements rdata label offset.
+/// Lower rdata label offset statement behavior to native x64.
 /// @internal
 function _rdata_label_offset(rb, name)
   if typeof(rb) != "struct" then return -1 end if
@@ -644,7 +644,7 @@ function _rdata_label_offset(rb, name)
   return -1
 end function
 
-/// Implements for unroll budget take.
+/// Lower for unroll budget take statement behavior to native x64.
 /// @internal
 function _for_unroll_budget_take(budget)
   if typeof(budget) != "array" or len(budget) != 1 or budget[0] <= 0 then return false end if
@@ -667,7 +667,7 @@ function _for_unroll_expr_child_ok(child, budget)
   return _for_unroll_expr_ok(child, budget)
 end function
 
-/// Implements for unroll expr ok.
+/// Lower for unroll expr ok statement behavior to native x64.
 /// @internal
 function _for_unroll_expr_ok(expr, budget)
   if t.ast_is_node(expr) == false or _coerce_name(t.ast_kind(expr)) == "" then return true end if
@@ -688,7 +688,7 @@ function _for_unroll_expr_ok(expr, budget)
   return true
 end function
 
-/// Implements for unroll body ok budget.
+/// Lower for unroll body ok budget statement behavior to native x64.
 /// @internal
 function _for_unroll_body_ok_budget(stmts, loop_var, budget)
   if typeof(stmts) != "array" then return false end if
@@ -726,13 +726,13 @@ function _for_unroll_body_ok_budget(stmts, loop_var, budget)
   return true
 end function
 
-/// Implements for unroll body ok.
+/// Lower for unroll body ok statement behavior to native x64.
 /// @internal
 function _for_unroll_body_ok(stmts, loop_var)
   return _for_unroll_body_ok_budget(stmts, loop_var, [12])
 end function
 
-/// Implements for unroll values.
+/// Lower for unroll values statement behavior to native x64.
 /// @internal
 function _for_unroll_values(state, s)
   start_ex = s.start
@@ -769,7 +769,7 @@ function _for_unroll_values(state, s)
   return vals
 end function
 
-/// Runs emit condition nonvoid guard.
+/// Lower emit condition nonvoid guard statement behavior to native x64.
 /// @internal
 function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   if exprmod._opt_type_base(exprmod._opt_expr_known_type(state, cond_expr)) == "bool" then return state end if
@@ -785,7 +785,7 @@ function _emit_condition_nonvoid_guard(state, cond_expr, ok_label, false_label)
   return state
 end function
 
-/// Runs emit condition false jump.
+/// Lower emit condition false jump statement behavior to native x64.
 /// @internal
 function _emit_condition_false_jump(state, cond_expr, false_label)
   if exprmod._opt_type_base(exprmod._opt_expr_known_type(state, cond_expr)) == "bool" then
@@ -801,15 +801,15 @@ end function
 
 /// Represents defer collect result.
 struct DeferCollectResult
-  /// Stores the state member of `DeferCollectResult`.
+  /// State associated with `DeferCollectResult`.
   state,
-  /// Stores the builder member of `DeferCollectResult`.
+  /// Builder associated with `DeferCollectResult`.
   builder,
-  /// Stores the count member of `DeferCollectResult`.
+  /// Count associated with `DeferCollectResult`.
   count,
 end struct
 
-/// Implements synchronized block has crossing exit.
+/// Lower synchronized block has crossing exit statement behavior to native x64.
 /// @internal
 function _synchronized_block_has_crossing_exit(stmts, break_depth, loop_depth)
   if typeof(stmts) != "array" or len(stmts) == 0 then return false end if
@@ -857,7 +857,7 @@ function _synchronized_block_has_crossing_exit(stmts, break_depth, loop_depth)
   return false
 end function
 
-/// Implements collect defer walk.
+/// Lower collect defer walk statement behavior to native x64.
 /// @internal
 function _collect_defer_walk(state, stmts, in_loop, builder, count)
   if typeof(stmts) != "array" or len(stmts) <= 0 then
@@ -948,7 +948,7 @@ function _collect_defer_walk(state, stmts, in_loop, builder, count)
   return DeferCollectResult(state, builder, count)
 end function
 
-/// Implements collect defer sites.
+/// Lower collect defer sites statement behavior to native x64.
 /// @internal
 function _collect_defer_sites(state, fn_node)
   b = t.arr_chunk_new(8)
@@ -956,7 +956,7 @@ function _collect_defer_sites(state, fn_node)
   return [r.state, t.arr_chunk_finish(r.builder)]
 end function
 
-/// Implements defer static callee.
+/// Lower defer static callee statement behavior to native x64.
 /// @internal
 function _defer_static_callee(state, callee)
   if t.ast_is_node(callee) == false then return false end if
@@ -972,7 +972,7 @@ function _defer_static_callee(state, callee)
   return exprmod._qname_exists(state, qn)
 end function
 
-/// Runs emit defer registration.
+/// Lower emit defer registration statement behavior to native x64.
 /// @internal
 function _emit_defer_registration(state, stmt)
   call = try(stmt.expr)
@@ -1007,13 +1007,13 @@ function _emit_defer_registration(state, stmt)
   return state
 end function
 
-/// Implements defer capture node.
+/// Lower defer capture node statement behavior to native x64.
 /// @internal
 function _defer_capture_node(stmt, off)
   return ml.DeferredCapture("DeferredCapture", off, try(stmt._pos), try(stmt._filename))
 end function
 
-/// Implements defer replay call.
+/// Lower defer replay call statement behavior to native x64.
 /// @internal
 function _defer_replay_call(stmt)
   call = stmt.expr
@@ -1033,7 +1033,7 @@ function _defer_replay_call(stmt)
   return ml.Call("Call", callee, t.arr_chunk_finish(ab), [], try(stmt._pos), try(stmt._filename))
 end function
 
-/// Runs emit defer cleanup.
+/// Lower emit defer cleanup statement behavior to native x64.
 /// @internal
 function _emit_defer_cleanup(state, sites, ret_off)
   state.asm = a.mov_rsp_disp32_rax(state.asm, ret_off)
@@ -1078,7 +1078,7 @@ function _emit_defer_cleanup(state, sites, ret_off)
   return state
 end function
 
-/// Implements foreach store dword eax.
+/// Lower foreach store dword eax statement behavior to native x64.
 /// @internal
 function _foreach_store_dword_eax(state, name)
   b = scope.cg_resolve_binding(state, name)
@@ -1093,7 +1093,7 @@ function _foreach_store_dword_eax(state, name)
   return state
 end function
 
-/// Implements foreach load dword eax.
+/// Lower foreach load dword eax statement behavior to native x64.
 /// @internal
 function _foreach_load_dword_eax(state, name)
   b = scope.cg_resolve_binding(state, name)
@@ -1108,20 +1108,20 @@ function _foreach_load_dword_eax(state, name)
   return state
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _breakctx_make(kind, break_label, continue_label, break_depth, continue_depth)
   return [kind, break_label, continue_label, break_depth, continue_depth]
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _breakctx_kind(ctx)
   if typeof(ctx) == "array" and len(ctx) >= 1 and typeof(ctx[0]) == "string" then return ctx[0] end if
   return "loop"
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _breakctx_break_label(ctx)
   if typeof(ctx) == "array" then
@@ -1131,7 +1131,7 @@ function inline _breakctx_break_label(ctx)
   return ""
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _breakctx_continue_label(ctx)
   if typeof(ctx) == "array" then
@@ -1141,21 +1141,21 @@ function inline _breakctx_continue_label(ctx)
   return ""
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _breakctx_break_depth(ctx, fallback)
   if typeof(ctx) == "array" and len(ctx) >= 4 and typeof(ctx[3]) == "int" then return ctx[3] end if
   return fallback
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _breakctx_continue_depth(ctx, fallback)
   if typeof(ctx) == "array" and len(ctx) >= 5 and typeof(ctx[4]) == "int" then return ctx[4] end if
   return fallback
 end function
 
-/// Implements breakstack pop.
+/// Lower breakstack pop statement behavior to native x64.
 /// @internal
 function _breakstack_pop(state)
   if typeof(state.break_stack) != "array" or len(state.break_stack) <= 0 then return state end if
@@ -1171,7 +1171,7 @@ function _breakstack_pop(state)
   return state
 end function
 
-/// Runs emit switch stmt.
+/// Lower emit switch stmt statement behavior to native x64.
 /// @internal
 function _emit_switch_stmt(state, stmt)
   sid = state.label_id
@@ -1394,7 +1394,7 @@ function _emit_switch_stmt(state, stmt)
   return state
 end function
 
-/// Implements dotted name expr.
+/// Lower dotted name expr statement behavior to native x64.
 /// @internal
 function _dotted_name_expr(ex)
   if t.ast_is_node(ex) == false then return "" end if
@@ -1411,7 +1411,7 @@ function _dotted_name_expr(ex)
   return ""
 end function
 
-/// Runs emit struct field index dispatch local.
+/// Lower emit struct field index dispatch local statement behavior to native x64.
 /// @internal
 function _emit_struct_field_index_dispatch_local(state, field, struct_id_reg, out_reg, ok_label, fail_label, tag)
   pairs_b = t.arr_chunk_new(32)
@@ -1704,6 +1704,24 @@ function cg_emit_stmt(state, stmt)
     return state
   end if
 
+  if k == "GlobalDecl" or k == "ConstDecl" or k == "Assign" or k == "SynchronizedDecl" or k == "SetMember" or k == "SetIndex" then
+    return _emit_storage_stmt(state, stmt, k)
+  end if
+  if k == "ExprStmt" or k == "Print" or k == "While" or k == "DoWhile" then
+    return _emit_execution_stmt(state, stmt, k)
+  end if
+  if k == "For" or _is_foreach_stmt(stmt) then return _emit_for_stmt(state, stmt) end if
+  if k == "Break" or k == "Continue" or k == "Return" or k == "Defer" then
+    return _emit_control_stmt(state, stmt, k)
+  end if
+
+  state.diagnostics = state.diagnostics +["Unsupported statement in native backend: " + k]
+  return state
+end function
+
+/// Emit declarations and assignments that update program storage.
+/// @internal
+function _emit_storage_stmt(state, stmt, k)
   if k == "GlobalDecl" then
     if state.in_function == false then
       state.diagnostics = state.diagnostics +["'global' is only allowed inside functions"]
@@ -2036,6 +2054,13 @@ function cg_emit_stmt(state, stmt)
     return state
   end if
 
+  state.diagnostics = state.diagnostics +["Unsupported storage statement in native backend: " + k]
+  return state
+end function
+
+/// Emit executable statements that do not alter loop-control stacks directly.
+/// @internal
+function _emit_execution_stmt(state, stmt, k)
   if k == "ExprStmt" then
     return exprmod.cg_emit_expr(state, stmt.expr)
   end if
@@ -2367,6 +2392,14 @@ function cg_emit_stmt(state, stmt)
     return state
   end if
 
+  state.diagnostics = state.diagnostics +["Unsupported execution statement in native backend: " + k]
+  return state
+end function
+
+/// Emit numeric and collection `for` loops, including their optimized fast paths.
+/// @internal
+function _emit_for_stmt(state, stmt)
+  k = stmt.node_kind
   if k == "For" then
     v = _coerce_name(stmt.var)
     if v == "" then return state end if
@@ -2738,6 +2771,13 @@ function cg_emit_stmt(state, stmt)
     return state
   end if
 
+  state.diagnostics = state.diagnostics +["Unsupported for statement in native backend: " + k]
+  return state
+end function
+
+/// Emit transfers of control and deferred-cleanup registration.
+/// @internal
+function _emit_control_stmt(state, stmt, k)
   if k == "Break" then
     if typeof(state.break_stack) != "array" or len(state.break_stack) <= 0 then
       state.diagnostics = state.diagnostics +["break outside loop/switch"]
@@ -2823,7 +2863,7 @@ function cg_emit_stmt(state, stmt)
     return _emit_defer_registration(state, stmt)
   end if
 
-  state.diagnostics = state.diagnostics +["Unsupported statement in native backend: " + k]
+  state.diagnostics = state.diagnostics +["Unsupported control statement in native backend: " + k]
   return state
 end function
 
@@ -2835,19 +2875,19 @@ function inline _is_node(n, kind)
   return t.ast_kind(n) != ""
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _is_stmt(st)
   return _is_node(st, 0)
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _decl_st_file(st)
   return t.ast_filename(st)
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _dotted_name(parts)
   if typeof(parts) == "string" then return parts end if
@@ -2855,7 +2895,7 @@ function inline _dotted_name(parts)
   return s.join(parts, ".")
 end function
 
-/// Implements member qname.
+/// Lower member qname statement behavior to native x64.
 /// @internal
 function _member_qname(ex)
   if t.ast_is_node(ex) == false then return "" end if
@@ -2868,13 +2908,13 @@ function _member_qname(ex)
   return ""
 end function
 
-/// Implements expr to qualname.
+/// Lower expr to qualname statement behavior to native x64.
 /// @internal
 function _expr_to_qualname(state, ex)
   return exprmod._expr_to_qualname(state, ex)
 end function
 
-/// Implements flatten member chain.
+/// Lower flatten member chain statement behavior to native x64.
 /// @internal
 function _flatten_member_chain(state, ex)
   return _expr_to_qualname(state, ex)
@@ -2911,7 +2951,7 @@ function _is_constexpr_expr(state, ex)
   return false
 end function
 
-/// Implements collect constexpr refs.
+/// Lower collect constexpr refs statement behavior to native x64.
 /// @internal
 function _collect_constexpr_refs(ex, vals)
   if typeof(vals) != "array" then vals =[] end if
@@ -2941,7 +2981,7 @@ function _collect_constexpr_refs(ex, vals)
   return vals
 end function
 
-/// Implements resolve const binding for ref.
+/// Lower resolve const binding for ref statement behavior to native x64.
 /// @internal
 function _resolve_const_binding_for_ref(state, ref, node)
   if typeof(ref) != "string" then return 0 end if
@@ -2971,13 +3011,13 @@ function _build_constexpr_env(state, ex)
   return t.arr_chunk_finish(env_b)
 end function
 
-/// Implements eval constexpr.
+/// Lower eval constexpr statement behavior to native x64.
 /// @internal
 function _eval_constexpr(state, ex, env)
   return exprmod.cg_expr_try_const_value(state, ex)
 end function
 
-/// Implements pyval to lit expr.
+/// Lower pyval to lit expr statement behavior to native x64.
 /// @internal
 function _pyval_to_lit_expr(v)
   return v
@@ -2995,13 +3035,13 @@ function _set_const_binding_value(state, b_or_name, pyv)
   return state
 end function
 
-/// Implements truthy.
+/// Lower truthy statement behavior to native x64.
 /// @internal
 function _truthy(v)
   return exprmod._opt_truthy(v)
 end function
 
-/// Implements opt try truthy.
+/// Lower opt try truthy statement behavior to native x64.
 /// @internal
 function _opt_try_truthy(state, ex)
   r = exprmod.cg_expr_try_const_value(state, ex)
@@ -3020,13 +3060,13 @@ function _is_foreach_stmt(st)
   return false
 end function
 
-/// Implements foreach var name.
+/// Lower foreach var name statement behavior to native x64.
 /// @internal
 function _foreach_var_name(st)
   return _coerce_name(st.var)
 end function
 
-/// Implements foreach state names.
+/// Lower foreach state names statement behavior to native x64.
 /// @internal
 function _foreach_state_names(st)
   fid = "n_" + _foreach_var_name(st)
@@ -3049,7 +3089,7 @@ function _foreach_state_names(st)
   return names
 end function
 
-/// Implements for state names.
+/// Lower for state names statement behavior to native x64.
 /// @internal
 function _for_state_names(st)
   fid = "n_" + _foreach_var_name(st)
@@ -3068,7 +3108,7 @@ function _for_state_names(st)
   ]
 end function
 
-/// Implements opt try const int.
+/// Lower opt try const int statement behavior to native x64.
 /// @internal
 function _opt_try_const_int(state, ex)
   r = exprmod.cg_expr_try_const_value(state, ex)
@@ -3077,7 +3117,7 @@ function _opt_try_const_int(state, ex)
   return r.value
 end function
 
-/// Implements intflow map add.
+/// Lower intflow map add statement behavior to native x64.
 /// @internal
 function _intflow_map_add(items, name, value)
   if typeof(items) != "array" then items = [] end if
@@ -3097,7 +3137,7 @@ function _intflow_map_add(items, name, value)
   return items + [[name, [value]]]
 end function
 
-/// Implements intflow map get.
+/// Lower intflow map get statement behavior to native x64.
 /// @internal
 function _intflow_map_get(items, name)
   if typeof(items) != "array" or len(items) <= 0 then return [] end if
@@ -3111,7 +3151,7 @@ function _intflow_map_get(items, name)
   return []
 end function
 
-/// Implements intflow const int.
+/// Lower intflow const int statement behavior to native x64.
 /// @internal
 function _intflow_const_int(state, ex)
   if t.ast_is_node(ex) == false then return [false, 0] end if
@@ -3122,7 +3162,7 @@ function _intflow_const_int(state, ex)
   return [false, 0]
 end function
 
-/// Implements intflow expr is int.
+/// Lower intflow expr is int statement behavior to native x64.
 /// @internal
 function _intflow_expr_is_int(state, ex, known)
   if t.ast_is_node(ex) == false then return false end if
@@ -3326,7 +3366,7 @@ function _collect_function_flow_inputs(fn_node, analysis_scratch)
   return [int_assignments, value_assignments, direct_initializers, loop_bounds, loop_names, int_normal_names, value_normal_names, int_excluded, value_excluded, hot_names]
 end function
 
-/// Implements infer known int names.
+/// Lower infer known int names statement behavior to native x64.
 /// @internal
 function _infer_known_int_names(state, fn_node, flow_inputs, analysis_scratch)
   if typeof(fn_node) != "struct" then return [] end if
@@ -3402,7 +3442,7 @@ function _infer_known_int_names(state, fn_node, flow_inputs, analysis_scratch)
   return candidate_index
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _typeflow_base(type_name)
   if typeof(type_name) != "string" or type_name == "" then return "" end if
@@ -3412,7 +3452,7 @@ function inline _typeflow_base(type_name)
   return type_name
 end function
 
-/// Implements typeflow exact length.
+/// Lower typeflow exact length statement behavior to native x64.
 /// @internal
 function _typeflow_exact_length(type_name)
   if typeof(type_name) != "string" or type_name == "" then return -1 end if
@@ -3429,7 +3469,7 @@ function _typeflow_exact_length(type_name)
   return parsed
 end function
 
-/// Implements typeflow get.
+/// Lower typeflow get statement behavior to native x64.
 /// @internal
 function _typeflow_get(items, name)
   if typeof(items) == "struct" then
@@ -3445,7 +3485,7 @@ function _typeflow_get(items, name)
   return ""
 end function
 
-/// Implements typeflow set.
+/// Lower typeflow set statement behavior to native x64.
 /// @internal
 function _typeflow_set(items, name, value)
   if typeof(items) != "array" then items = [] end if
@@ -3461,7 +3501,7 @@ function _typeflow_set(items, name, value)
   return items + [[name, value]]
 end function
 
-/// Implements typeflow remove.
+/// Lower typeflow remove statement behavior to native x64.
 /// @internal
 function _typeflow_remove(items, name)
   kept_items = []
@@ -3473,7 +3513,7 @@ function _typeflow_remove(items, name)
   return kept_items
 end function
 
-/// Implements typeflow struct qname.
+/// Lower typeflow struct qname statement behavior to native x64.
 /// @internal
 function _typeflow_struct_qname(state, callee)
   raw = _member_qname(callee)
@@ -3489,7 +3529,7 @@ function _typeflow_struct_qname(state, callee)
   return ""
 end function
 
-/// Implements typeflow expr type.
+/// Lower typeflow expr type statement behavior to native x64.
 /// @internal
 function _typeflow_expr_type(state, ex, known)
   if t.ast_is_node(ex) == false then return "" end if
@@ -3604,7 +3644,7 @@ function _typeflow_expr_type(state, ex, known)
   return ""
 end function
 
-/// Implements typeflow merge.
+/// Lower typeflow merge statement behavior to native x64.
 /// @internal
 function _typeflow_merge(inferred)
   if typeof(inferred) != "array" or len(inferred) <= 0 then return "" end if
@@ -3628,7 +3668,7 @@ function _typeflow_merge(inferred)
   return ""
 end function
 
-/// Implements typeflow scan read expr.
+/// Lower typeflow scan read expr statement behavior to native x64.
 /// @internal
 function _typeflow_scan_read_expr(ex, tracked, initialized, read_before)
   if t.ast_is_node(ex) == false then return read_before end if
@@ -3658,7 +3698,7 @@ function _typeflow_scan_read_expr(ex, tracked, initialized, read_before)
   return read_before
 end function
 
-/// Implements typeflow scan read order.
+/// Lower typeflow scan read order statement behavior to native x64.
 /// @internal
 function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, direct)
   stmt_count = 0
@@ -3717,7 +3757,7 @@ function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, dir
   return [initialized, read_before]
 end function
 
-/// Implements typeflow dependency add.
+/// Lower typeflow dependency add statement behavior to native x64.
 /// @internal
 function _typeflow_dependency_add(dependents, dependency, owner)
   if dependency == "" or owner == "" then return dependents end if
@@ -3758,7 +3798,7 @@ function _typeflow_scan_expr_dependencies(dependents, owner, ex)
   return dependents
 end function
 
-/// Implements infer known value types.
+/// Lower infer known value types statement behavior to native x64.
 /// @internal
 function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   if typeof(fn_node) != "struct" then return [] end if
@@ -3986,7 +4026,7 @@ function _select_promoted_local_registers(state, fn_node, known_types, shared_ho
   return [state, assigned]
 end function
 
-/// Implements fast target add.
+/// Lower fast target add statement behavior to native x64.
 /// @internal
 function _fast_target_add(items, name, expr)
   if name == "" then return items end if
@@ -3995,7 +4035,7 @@ function _fast_target_add(items, name, expr)
   return items + [[name, expr]]
 end function
 
-/// Implements fast index scan expr.
+/// Lower fast index scan expr statement behavior to native x64.
 /// @internal
 function _fast_index_scan_expr(ex, index_name, targets)
   if t.ast_is_node(ex) == false then return targets end if
@@ -4022,7 +4062,7 @@ function _fast_index_scan_expr(ex, index_name, targets)
   return targets
 end function
 
-/// Implements fast index scan loop.
+/// Lower fast index scan loop statement behavior to native x64.
 /// @internal
 function _fast_index_scan_loop(loop_node, index_name)
   targets = []
@@ -4058,7 +4098,7 @@ function _fast_index_scan_loop(loop_node, index_name)
   return [targets, mutated]
 end function
 
-/// Implements for end proves index bounds.
+/// Lower for end proves index bounds statement behavior to native x64.
 /// @internal
 function _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, start_value)
   end_ex = try(loop_node.end_expr)
@@ -4076,7 +4116,7 @@ function _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, 
   return t.ast_kind(arg) == "Var" and _coerce_name(t.ast_name(arg)) == target_name
 end function
 
-/// Implements for index hoist plans.
+/// Lower for index hoist plans statement behavior to native x64.
 /// @internal
 function _for_index_hoist_plans(state, loop_node, index_binding)
   if state.in_function == false or typeof(index_binding) != "struct" then return [] end if
@@ -4111,7 +4151,7 @@ function _for_index_hoist_plans(state, loop_node, index_binding)
   return plans
 end function
 
-/// Implements opt emit known setindex.
+/// Lower opt emit known setindex statement behavior to native x64.
 /// @internal
 function _opt_emit_known_setindex(state, stmt, plan)
   kind = plan[0]
@@ -4230,7 +4270,7 @@ function _opt_emit_known_setindex(state, stmt, plan)
   return state
 end function
 
-/// Implements inline ref resolve.
+/// Lower inline ref resolve statement behavior to native x64.
 /// @internal
 function _inline_ref_resolve(state, ex, owner, inline_names)
   hits = []
@@ -4265,7 +4305,7 @@ function _inline_ref_resolve(state, ex, owner, inline_names)
   return hits
 end function
 
-/// Implements inline scan expr uses.
+/// Lower inline scan expr uses statement behavior to native x64.
 /// @internal
 function _inline_scan_expr_uses(state, ex, owner, inline_names, address_taken)
   if t.ast_is_node(ex) == false then return address_taken end if
@@ -4318,7 +4358,7 @@ function _inline_scan_expr_uses(state, ex, owner, inline_names, address_taken)
   return address_taken
 end function
 
-/// Implements inline scan stmt uses.
+/// Lower inline scan stmt uses statement behavior to native x64.
 /// @internal
 function _inline_scan_stmt_uses(state, stmts, owner, inline_names, address_taken)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return address_taken end if
@@ -4378,7 +4418,7 @@ function _inline_scan_stmt_uses(state, stmts, owner, inline_names, address_taken
   return address_taken
 end function
 
-/// Implements analyze inline only functions.
+/// Lower analyze inline only functions statement behavior to native x64.
 /// @internal
 function _analyze_inline_only_functions(state, program)
   // Native-body pruning is deliberately disabled. A source-level address scan
@@ -4445,19 +4485,19 @@ function _analyze_inline_only_functions(state, program)
   return kept
 end function
 
-/// Implements owner for.
+/// Lower owner for statement behavior to native x64.
 /// @internal
 function _owner_for(st)
   return _st_file(st)
 end function
 
-/// Implements tag ns.
+/// Lower tag ns statement behavior to native x64.
 /// @internal
 function _tag_ns(ns, name)
   return _join_qname(ns, name)
 end function
 
-/// Implements pref is method prefix.
+/// Lower pref is method prefix statement behavior to native x64.
 /// @internal
 function _pref_is_method_prefix(state, pref)
   if typeof(pref) != "string" then return false end if
@@ -4495,7 +4535,7 @@ function _has_reserved_segment(state, name)
   return false
 end function
 
-/// Implements collect decls.
+/// Lower collect decls statement behavior to native x64.
 /// @internal
 function _collect_decls(program)
   vals_b = t.arr_chunk_new(64)
@@ -4510,7 +4550,7 @@ function _collect_decls(program)
   return t.arr_chunk_finish(vals_b)
 end function
 
-/// Implements resolve global target.
+/// Lower resolve global target statement behavior to native x64.
 /// @internal
 function _resolve_global_target(state, name)
   if typeof(name) != "string" then return "" end if
@@ -4524,7 +4564,7 @@ function _resolve_global_target(state, name)
   return _join_qname(state.current_file_prefix, name)
 end function
 
-/// Implements qname parent prefix.
+/// Lower qname parent prefix statement behavior to native x64.
 /// @internal
 function _qname_parent_prefix(qn)
   if typeof(qn) != "string" then return "" end if
@@ -4537,7 +4577,7 @@ function _qname_parent_prefix(qn)
   return s.substr(qn, 0, dot + 1)
 end function
 
-/// Implements resolve global target scan.
+/// Lower resolve global target scan statement behavior to native x64.
 /// @internal
 function _resolve_global_target_scan(state, raw, qpref, fpref)
   raw2 = _coerce_name(raw)
@@ -4630,7 +4670,7 @@ function _scan_stmt_children_into(worklist, st)
   return stack
 end function
 
-/// Implements scan stmt for global decls lifo.
+/// Lower scan stmt for global decls lifo statement behavior to native x64.
 /// @internal
 function _scan_stmt_for_global_decls_lifo(state, st, qpref, fpref)
   if typeof(st) != "struct" then return state end if
@@ -4709,7 +4749,7 @@ function _scan_stmt_for_global_decls_lifo(state, st, qpref, fpref)
   return state
 end function
 
-/// Implements scan function for global decls.
+/// Lower scan function for global decls statement behavior to native x64.
 /// @internal
 function _scan_function_for_global_decls(state, fn_node)
   if typeof(fn_node) != "struct" then return state end if
@@ -4736,7 +4776,7 @@ function _scan_function_for_global_decls(state, fn_node)
   return state
 end function
 
-/// Implements walk stmt into.
+/// Lower walk stmt into statement behavior to native x64.
 /// @internal
 function _walk_stmt_into(st, vals_b)
   b = vals_b
@@ -4771,7 +4811,7 @@ function _walk_stmt_into(st, vals_b)
   return b
 end function
 
-/// Implements walk stmt.
+/// Lower walk stmt statement behavior to native x64.
 /// @internal
 function _walk_stmt(st, vals)
   vals_b = t.arr_chunk_new(64)
@@ -4782,7 +4822,7 @@ function _walk_stmt(st, vals)
   return t.arr_chunk_finish(vals_b)
 end function
 
-/// Implements tag ns prefix.
+/// Lower tag ns prefix statement behavior to native x64.
 /// @internal
 function _tag_ns_prefix(node, pref)
   if typeof(node) == "struct" and typeof(pref) == "string" then
@@ -4791,7 +4831,7 @@ function _tag_ns_prefix(node, pref)
   return node
 end function
 
-/// Implements flatten runtime inner.
+/// Lower flatten runtime inner statement behavior to native x64.
 /// @internal
 function _flatten_runtime_inner(state, stmts, prefix, current_file)
   vals_out_b = t.arr_chunk_new(64)
@@ -4905,13 +4945,13 @@ function _flatten_runtime_inner(state, stmts, prefix, current_file)
   return t.arr_chunk_finish(vals_out_b)
 end function
 
-/// Implements flatten runtime.
+/// Lower flatten runtime statement behavior to native x64.
 /// @internal
 function _flatten_runtime(state, value)
   return _flatten_runtime_inner(state, value, "", "")
 end function
 
-/// Implements group program by file.
+/// Lower group program by file statement behavior to native x64.
 /// @internal
 function _group_program_by_file(program)
   vals =[]
@@ -4935,7 +4975,7 @@ function _group_program_by_file(program)
   return vals
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _arr_has(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
@@ -4945,7 +4985,7 @@ function inline _arr_has(arr, value)
   return false
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _arr_add_unique(arr, value)
   if typeof(arr) != "array" then arr = [] end if
@@ -4953,7 +4993,7 @@ function inline _arr_add_unique(arr, value)
   return arr + [value]
 end function
 
-/// Implements arr remove value.
+/// Lower arr remove value statement behavior to native x64.
 /// @internal
 function _arr_remove_value(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return [] end if
@@ -4964,7 +5004,7 @@ function _arr_remove_value(arr, value)
   return t.arr_chunk_finish(vals_b)
 end function
 
-/// Implements arr union.
+/// Lower arr union statement behavior to native x64.
 /// @internal
 function _arr_union(a, b)
   vals_out = []
@@ -4981,13 +5021,13 @@ function _arr_union(a, b)
   return vals_out
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _name_set_new(initial_cap)
   return t.fastmap_new(initial_cap)
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _name_set_size(setv)
   if typeof(setv) == "struct" then return t.fastmap_size(setv) end if
@@ -4995,7 +5035,7 @@ function inline _name_set_size(setv)
   return 0
 end function
 
-/// Implements name set to array.
+/// Lower name set to array statement behavior to native x64.
 /// @internal
 function _name_set_to_array(setv)
   if typeof(setv) == "array" then return setv end if
@@ -5014,7 +5054,7 @@ function _name_set_to_array(setv)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _name_set_has(setv, value)
   if typeof(value) != "string" or value == "" then return false end if
@@ -5022,7 +5062,7 @@ function inline _name_set_has(setv, value)
   return _arr_has(setv, value)
 end function
 
-/// Implements name set add.
+/// Lower name set add statement behavior to native x64.
 /// @internal
 function _name_set_add(setv, value)
   if typeof(value) != "string" or value == "" then
@@ -5034,7 +5074,7 @@ function _name_set_add(setv, value)
   return _arr_add_unique(setv, value)
 end function
 
-/// Implements name set remove.
+/// Lower name set remove statement behavior to native x64.
 /// @internal
 function _name_set_remove(setv, value)
   if typeof(value) != "string" or value == "" then return setv end if
@@ -5054,7 +5094,7 @@ function _name_set_remove(setv, value)
   return _arr_remove_value(setv, value)
 end function
 
-/// Implements name set union.
+/// Lower name set union statement behavior to native x64.
 /// @internal
 function _name_set_union(a, b)
   if typeof(a) != "struct" and typeof(b) != "struct" then return _arr_union(a, b) end if
@@ -5074,7 +5114,7 @@ function _name_set_union(a, b)
   return outv
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _map_int_get(arr, key, defaultv)
   if typeof(arr) == "struct" then
@@ -5097,7 +5137,7 @@ function inline _map_int_get(arr, key, defaultv)
   return defaultv
 end function
 
-/// Implements map int set.
+/// Lower map int set statement behavior to native x64.
 /// @internal
 function _map_int_set(arr, key, value)
   if typeof(arr) == "struct" then return t.fastmap_set(arr, key, value) end if
@@ -5114,7 +5154,7 @@ function _map_int_set(arr, key, value)
   return arr + [[key, value]]
 end function
 
-/// Implements map int items.
+/// Lower map int items statement behavior to native x64.
 /// @internal
 function _map_int_items(arr)
   if typeof(arr) == "struct" then return t.fastmap_items(arr) end if
@@ -5122,7 +5162,7 @@ function _map_int_items(arr)
   return []
 end function
 
-/// Implements string gt.
+/// Lower string gt statement behavior to native x64.
 /// @internal
 function _string_gt(a, b)
   if typeof(a) != "string" or typeof(b) != "string" then return false end if
@@ -5141,7 +5181,7 @@ function _string_gt(a, b)
   return an > bn
 end function
 
-/// Implements sort names.
+/// Lower sort names statement behavior to native x64.
 /// @internal
 function _sort_names(vals)
   if typeof(vals) == "struct" then vals = _name_set_to_array(vals) end if
@@ -5211,7 +5251,7 @@ function _sort_names(vals)
   return t.arr_chunk_finish(unique_b)
 end function
 
-/// Implements func global mapped name.
+/// Lower func global mapped name statement behavior to native x64.
 /// @internal
 function _func_global_mapped_name(state, name)
   if typeof(state.func_global_map_index) == "struct" then
@@ -5228,7 +5268,7 @@ function _func_global_mapped_name(state, name)
   return ""
 end function
 
-/// Implements id label pair id.
+/// Lower id label pair id statement behavior to native x64.
 /// @internal
 function _id_label_pair_id(it)
   if typeof(it) == "array" and len(it) >= 2 and typeof(it[0]) == "int" then
@@ -5240,7 +5280,7 @@ function _id_label_pair_id(it)
   return -1
 end function
 
-/// Implements sort id label pairs.
+/// Lower sort id label pairs statement behavior to native x64.
 /// @internal
 function _sort_id_label_pairs(vals)
   if typeof(vals) != "array" or len(vals) <= 1 then return vals end if
@@ -5301,7 +5341,7 @@ function _sort_id_label_pairs(vals)
   return arr
 end function
 
-/// Implements analysis register local decl.
+/// Lower analysis register local decl statement behavior to native x64.
 /// @internal
 function _analysis_register_local_decl(state, decl_node, name)
   nm = _coerce_name(name)
@@ -5332,7 +5372,7 @@ function _analysis_register_local_decl(state, decl_node, name)
   return state
 end function
 
-/// Implements analysis register fresh local decl.
+/// Lower analysis register fresh local decl statement behavior to native x64.
 /// @internal
 function _analysis_register_fresh_local_decl(state, decl_node, name)
   nm = _coerce_name(name)
@@ -5346,7 +5386,7 @@ function _analysis_register_fresh_local_decl(state, decl_node, name)
   return state
 end function
 
-/// Implements analysis mark current binding boxed.
+/// Lower analysis mark current binding boxed statement behavior to native x64.
 /// @internal
 function _analysis_mark_current_binding_boxed(state, name)
   nm = _coerce_name(name)
@@ -5379,7 +5419,7 @@ function _analysis_mark_current_binding_boxed(state, name)
   return state
 end function
 
-/// Implements analysis member target.
+/// Lower analysis member target statement behavior to native x64.
 /// @internal
 function _analysis_member_target(ex)
   if typeof(ex) != "struct" then return 0 end if
@@ -5390,7 +5430,7 @@ function _analysis_member_target(ex)
   return 0
 end function
 
-/// Implements analysis call callee.
+/// Lower analysis call callee statement behavior to native x64.
 /// @internal
 function _analysis_call_callee(ex)
   if typeof(ex) != "struct" then return 0 end if
@@ -5401,7 +5441,7 @@ function _analysis_call_callee(ex)
   return 0
 end function
 
-/// Implements analysis call args.
+/// Lower analysis call args statement behavior to native x64.
 /// @internal
 function _analysis_call_args(ex)
   if typeof(ex) != "struct" then return [] end if
@@ -5410,7 +5450,7 @@ function _analysis_call_args(ex)
   return []
 end function
 
-/// Implements analysis for end expr.
+/// Lower analysis for end expr statement behavior to native x64.
 /// @internal
 function _analysis_for_end_expr(st)
   if typeof(st) != "struct" then return 0 end if
@@ -5419,7 +5459,7 @@ function _analysis_for_end_expr(st)
   return 0
 end function
 
-/// Implements analysis builtin has.
+/// Lower analysis builtin has statement behavior to native x64.
 /// @internal
 function _analysis_builtin_has(name)
   nm = _coerce_name(name)
@@ -5445,7 +5485,7 @@ function _analysis_builtin_has(name)
   return exprmod._builtin_label(nm) != ""
 end function
 
-/// Implements analysis known callable name.
+/// Lower analysis known callable name statement behavior to native x64.
 /// @internal
 function _analysis_known_callable_name(state, name)
   nm = _coerce_name(name)
@@ -5457,14 +5497,14 @@ function _analysis_known_callable_name(state, name)
   return false
 end function
 
-/// Implements analysis is type query name.
+/// Lower analysis is type query name statement behavior to native x64.
 /// @internal
 function _analysis_is_type_query_name(name)
   nm = _coerce_name(name)
   return nm == "typeof" or nm == "typeName"
 end function
 
-/// Implements analysis scan expr.
+/// Lower analysis scan expr statement behavior to native x64.
 /// @internal
 function _analysis_scan_expr(state, ex, allow_func_ident)
   if t.ast_is_node(ex) == false then return state end if
@@ -5634,7 +5674,7 @@ function _analysis_scan_expr(state, ex, allow_func_ident)
   return state
 end function
 
-/// Implements analysis scan stmt.
+/// Lower analysis scan stmt statement behavior to native x64.
 /// @internal
 function _analysis_scan_stmt(state, st)
   if typeof(st) != "struct" then return state end if
@@ -5824,7 +5864,7 @@ function _analysis_scan_stmt(state, st)
   return state
 end function
 
-/// Implements analysis scan block.
+/// Lower analysis scan block statement behavior to native x64.
 /// @internal
 function _analysis_scan_block(state, stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return state end if
@@ -5836,7 +5876,7 @@ function _analysis_scan_block(state, stmts)
   return state
 end function
 
-/// Implements analysis prepare function.
+/// Lower analysis prepare function statement behavior to native x64.
 /// @internal
 function _analysis_prepare_function(state, fn_node)
   boxed_names = fn_node._ml_boxed
@@ -5964,7 +6004,7 @@ function _analysis_prepare_function(state, fn_node)
   return state
 end function
 
-/// Implements closure expr reads.
+/// Lower closure expr reads statement behavior to native x64.
 /// @internal
 function _closure_expr_reads(ex, used)
   if typeof(used) != "array" and typeof(used) != "struct" then used = _name_set_new(64) end if
@@ -6046,7 +6086,7 @@ function _closure_expr_reads(ex, used)
   return used
 end function
 
-/// Implements closure collect locals walk.
+/// Lower closure collect locals walk statement behavior to native x64.
 /// @internal
 function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
   if typeof(locals_set) != "array" and typeof(locals_set) != "struct" then locals_set = _name_set_new(64) end if
@@ -6160,7 +6200,7 @@ function _closure_collect_locals_walk(stmts, locals_set, globals_decl, nested)
   return [locals_set, globals_decl, nested]
 end function
 
-/// Implements closure collect locals and nested.
+/// Lower closure collect locals and nested statement behavior to native x64.
 /// @internal
 function _closure_collect_locals_and_nested(fn_node)
   locals_set = _name_set_new(32)
@@ -6181,7 +6221,7 @@ function _closure_collect_locals_and_nested(fn_node)
   return _closure_collect_locals_walk(body, locals_set, globals_decl, nested)
 end function
 
-/// Implements closure collect uses.
+/// Lower closure collect uses statement behavior to native x64.
 /// @internal
 function _closure_collect_uses(stmts)
   used = _name_set_new(64)
@@ -6306,7 +6346,7 @@ function _closure_collect_uses(stmts)
   return used
 end function
 
-/// Implements closure collect writes.
+/// Lower closure collect writes statement behavior to native x64.
 /// @internal
 function _closure_collect_writes(fn_node)
   written = _name_set_new(64)
@@ -6376,7 +6416,7 @@ function _closure_collect_writes(fn_node)
   return written
 end function
 
-/// Implements note reads.
+/// Lower note reads statement behavior to native x64.
 /// @internal
 function _note_reads(read_before, written_yet, names)
   if typeof(read_before) != "array" and typeof(read_before) != "struct" then read_before = _name_set_new(64) end if
@@ -6393,7 +6433,7 @@ function _note_reads(read_before, written_yet, names)
   return read_before
 end function
 
-/// Implements closure collect rbfw walk.
+/// Lower closure collect rbfw walk statement behavior to native x64.
 /// @internal
 function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
   if typeof(read_before) != "array" and typeof(read_before) != "struct" then read_before = _name_set_new(64) end if
@@ -6568,7 +6608,7 @@ function _closure_collect_rbfw_walk(stmts, read_before, written_yet)
   return [read_before, written_yet]
 end function
 
-/// Implements closure collect read before first write.
+/// Lower closure collect read before first write statement behavior to native x64.
 /// @internal
 function _closure_collect_read_before_first_write(stmts, params_set)
   written_yet = _name_set_new(32)
@@ -6584,7 +6624,7 @@ function _closure_collect_read_before_first_write(stmts, params_set)
   return res[0]
 end function
 
-/// Implements closure owner for.
+/// Lower closure owner for statement behavior to native x64.
 /// @internal
 function _closure_owner_for(nf, depth)
   if depth <= 0 then return 0 end if
@@ -6598,7 +6638,7 @@ function _closure_owner_for(nf, depth)
   return cur
 end function
 
-/// Implements closure analyze function rec.
+/// Lower closure analyze function rec statement behavior to native x64.
 /// @internal
 function _closure_analyze_function_rec(state, fn_node, outer_scopes)
   if typeof(fn_node) != "struct" then return [state, [], fn_node] end if
@@ -6721,14 +6761,14 @@ function _closure_analyze_function_rec(state, fn_node, outer_scopes)
   return [state, t.arr_chunk_finish(found_b), fn_node]
 end function
 
-/// Implements closure analyze function.
+/// Lower closure analyze function statement behavior to native x64.
 /// @internal
 function _closure_analyze_function(state, fn_node)
   res = _closure_analyze_function_rec(state, fn_node, [])
   return res[0]
 end function
 
-/// Implements closure analyze program.
+/// Lower closure analyze program statement behavior to native x64.
 /// @internal
 function _closure_analyze_program(state, program)
   nested_all_b = t.arr_chunk_new(64)
@@ -6774,7 +6814,7 @@ function _closure_analyze_program(state, program)
   return state
 end function
 
-/// Implements closure collect all functions.
+/// Lower closure collect all functions statement behavior to native x64.
 /// @internal
 function _closure_collect_all_functions(state, nested_fns)
   allf_b = t.arr_chunk_new(64)
@@ -6801,7 +6841,7 @@ function _closure_collect_all_functions(state, nested_fns)
   return t.arr_chunk_finish(allf_b)
 end function
 
-/// Implements closure assign env layout.
+/// Lower closure assign env layout statement behavior to native x64.
 /// @internal
 function _closure_assign_env_layout(state, nested_fns)
   if typeof(nested_fns) != "array" then nested_fns = state.nested_user_functions end if
@@ -6932,13 +6972,13 @@ function _closure_assign_env_layout(state, nested_fns)
   return state
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _as_name(v)
   return _coerce_name(v)
 end function
 
-/// Implements closure declare capture bindings.
+/// Lower closure declare capture bindings statement behavior to native x64.
 /// @internal
 function _closure_declare_capture_bindings(state, fn_node)
   if typeof(fn_node) != "struct" then return state end if
@@ -7007,14 +7047,14 @@ function _closure_declare_capture_bindings(state, fn_node)
   return state
 end function
 
-/// Runs emit stmt.
+/// Lower emit stmt statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param st Value supplied for `st`.
 function emit_stmt(state, st)
   return cg_emit_stmt(state, st)
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _user_function_has(state, qname)
   if typeof(state.user_function_index) == "struct" then
@@ -7054,7 +7094,7 @@ function inline _user_function_has(state, qname)
   return false
 end function
 
-/// Implements expr uses this.
+/// Lower expr uses this statement behavior to native x64.
 /// @internal
 function _expr_uses_this(ex)
   if typeof(ex) == "array" then
@@ -7129,7 +7169,7 @@ function _expr_uses_this(ex)
   return false
 end function
 
-/// Implements stmt uses this.
+/// Lower stmt uses this statement behavior to native x64.
 /// @internal
 function _stmt_uses_this(st)
   if typeof(st) == "array" then
@@ -7277,7 +7317,7 @@ function _stmt_uses_this(st)
   return false
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _named_array_get(arr, key)
   if typeof(arr) == "struct" then return t.fastmap_get(arr, key, 0) end if
@@ -7294,7 +7334,7 @@ function inline _named_array_get(arr, key)
   return 0
 end function
 
-/// Implements named array set.
+/// Lower named array set statement behavior to native x64.
 /// @internal
 function _named_array_set(arr, key, values)
   if typeof(arr) == "struct" then return t.fastmap_set(arr, key, values) end if
@@ -7315,7 +7355,7 @@ function _named_array_set(arr, key, values)
   return arr + [[key, values]]
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _named_int_get(arr, key, defaultv)
   if typeof(arr) == "struct" then
@@ -7338,7 +7378,7 @@ function inline _named_int_get(arr, key, defaultv)
   return defaultv
 end function
 
-/// Implements named int set.
+/// Lower named int set statement behavior to native x64.
 /// @internal
 function _named_int_set(arr, key, value)
   if typeof(arr) == "struct" then return t.fastmap_set(arr, key, value) end if
@@ -7359,7 +7399,7 @@ function _named_int_set(arr, key, value)
   return arr + [[key, value]]
 end function
 
-/// Implements next struct id.
+/// Lower next struct id statement behavior to native x64.
 /// @internal
 function _next_struct_id(state)
   mx = 0
@@ -7375,7 +7415,7 @@ function _next_struct_id(state)
   return mx + 1
 end function
 
-/// Implements next enum id.
+/// Lower next enum id statement behavior to native x64.
 /// @internal
 function _next_enum_id(state)
   mx = 0
@@ -7391,13 +7431,13 @@ function _next_enum_id(state)
   return mx + 1
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _st_file(st)
   return t.ast_filename(st)
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _has_dot_name(name)
   if typeof(name) != "string" then return false end if
@@ -7407,7 +7447,7 @@ function inline _has_dot_name(name)
   return false
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _strpair_get(arr, key)
   if typeof(arr) == "struct" then
@@ -7430,7 +7470,7 @@ function inline _strpair_get(arr, key)
   return ""
 end function
 
-/// Implements strpair set.
+/// Lower strpair set statement behavior to native x64.
 /// @internal
 function _strpair_set(arr, key, value)
   mapv = arr
@@ -7838,7 +7878,7 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
   return [state, cur_file, file_prefixes, file_seen_nonpackage, next_sid, next_eid]
 end function
 
-/// Implements fn arity map.
+/// Lower fn arity map statement behavior to native x64.
 /// @internal
 function _fn_arity_map(state)
   vals =[]
@@ -7860,7 +7900,7 @@ function _fn_arity_map(state)
   return vals
 end function
 
-/// Implements member chain name.
+/// Lower member chain name statement behavior to native x64.
 /// @internal
 function _member_chain_name(ex)
   if t.ast_is_node(ex) == false then return "" end if
@@ -7876,7 +7916,7 @@ function _member_chain_name(ex)
   return ""
 end function
 
-/// Implements check expr semantics.
+/// Lower check expr semantics statement behavior to native x64.
 /// @internal
 function _check_expr_semantics(state, ex, fn_arities)
   if t.ast_is_node(ex) == false then return state end if
@@ -7966,7 +8006,7 @@ function _check_expr_semantics(state, ex, fn_arities)
   return state
 end function
 
-/// Implements check stmt semantics.
+/// Lower check stmt semantics statement behavior to native x64.
 /// @internal
 function _check_stmt_semantics(state, st, fn_arities)
   if typeof(st) != "struct" then return state end if
@@ -8174,7 +8214,7 @@ function _check_stmt_semantics(state, st, fn_arities)
   return state
 end function
 
-/// Implements check program semantics.
+/// Lower check program semantics statement behavior to native x64.
 /// @internal
 function _check_program_semantics(state, program)
   fn_arities = _fn_arity_map(state)
@@ -8185,7 +8225,7 @@ function _check_program_semantics(state, program)
   return state
 end function
 
-/// Implements binding global label.
+/// Lower binding global label statement behavior to native x64.
 /// @internal
 function _binding_global_label(state, qname)
   b = scope.resolve_binding(state, qname)
@@ -8195,7 +8235,7 @@ function _binding_global_label(state, qname)
   return ""
 end function
 
-/// Implements ensure global binding label.
+/// Lower ensure global binding label statement behavior to native x64.
 /// @internal
 function _ensure_global_binding_label(state, qname, decl_node)
   lbl = _binding_global_label(state, qname)
@@ -8205,7 +8245,7 @@ function _ensure_global_binding_label(state, qname, decl_node)
   return [state, lbl]
 end function
 
-/// Implements declare top level global bindings.
+/// Lower declare top level global bindings statement behavior to native x64.
 /// @internal
 function _declare_top_level_global_bindings(state, program)
   if typeof(program) != "array" or len(program) <= 0 then return state end if
@@ -8227,7 +8267,7 @@ function _declare_top_level_global_bindings(state, program)
   return state
 end function
 
-/// Implements declare object top level global bindings.
+/// Lower declare object top level global bindings statement behavior to native x64.
 /// @internal
 function _declare_object_top_level_global_bindings(state, program)
   // Function objects are emitted from independent state clones. Predeclare
@@ -8254,7 +8294,7 @@ function _declare_object_top_level_global_bindings(state, program)
   return state
 end function
 
-/// Implements precompute top level const bindings.
+/// Lower precompute top level const bindings statement behavior to native x64.
 /// @internal
 function _precompute_top_level_const_bindings(state, program)
   if typeof(program) != "array" or len(program) <= 0 then return state end if
@@ -8300,7 +8340,7 @@ function _precompute_top_level_const_bindings(state, program)
   return state
 end function
 
-/// Implements builtin specs.
+/// Lower builtin specs statement behavior to native x64.
 /// @internal
 function _builtin_specs()
   return [
@@ -8354,7 +8394,7 @@ function _builtin_specs()
   ]
 end function
 
-/// Implements reindex named array.
+/// Lower reindex named array statement behavior to native x64.
 /// @internal
 function _reindex_named_array(arr, cap_hint)
   cap = cap_hint
@@ -8380,7 +8420,7 @@ function _reindex_named_array(arr, cap_hint)
   return idx
 end function
 
-/// Implements reindex named int.
+/// Lower reindex named int statement behavior to native x64.
 /// @internal
 function _reindex_named_int(arr, cap_hint)
   cap = cap_hint
@@ -8408,7 +8448,7 @@ function _reindex_named_int(arr, cap_hint)
   return idx
 end function
 
-/// Implements reindex extern sigs.
+/// Lower reindex extern sigs statement behavior to native x64.
 /// @internal
 function _reindex_extern_sigs(arr, cap_hint)
   cap = cap_hint
@@ -8424,7 +8464,7 @@ function _reindex_extern_sigs(arr, cap_hint)
   return idx
 end function
 
-/// Implements reindex aliases.
+/// Lower reindex aliases statement behavior to native x64.
 /// @internal
 function _reindex_aliases(arr, cap_hint)
   cap = cap_hint
@@ -8450,7 +8490,7 @@ function _reindex_aliases(arr, cap_hint)
   return idx
 end function
 
-/// Implements rebuild lookup indexes.
+/// Lower rebuild lookup indexes statement behavior to native x64.
 /// @internal
 function _rebuild_lookup_indexes(state)
   n_sf = 0
@@ -8481,7 +8521,7 @@ function _rebuild_lookup_indexes(state)
   return state
 end function
 
-/// Implements all function entries.
+/// Lower all function entries statement behavior to native x64.
 /// @internal
 function _all_function_entries(state)
   uf_names = _user_function_keys_sorted(state)
@@ -8515,7 +8555,7 @@ function _all_function_entries(state)
   return FunctionNodeArena(kinds, names, nodes, total)
 end function
 
-/// Implements function entry count.
+/// Lower function entry count statement behavior to native x64.
 /// @param entries Value supplied for `entries`.
 function function_entry_count(entries)
   if typeof(entries) == "struct" and typeof(try(entries.count)) == "int" then return entries.count end if
@@ -8523,7 +8563,7 @@ function function_entry_count(entries)
   return 0
 end function
 
-/// Implements function entry name.
+/// Lower function entry name statement behavior to native x64.
 /// @param entries Value supplied for `entries`.
 /// @param node_id Value supplied for `node_id`.
 function function_entry_name(entries, node_id)
@@ -8539,7 +8579,7 @@ function function_entry_name(entries, node_id)
   return ""
 end function
 
-/// Implements function entry node.
+/// Lower function entry node statement behavior to native x64.
 /// @param entries Value supplied for `entries`.
 /// @param node_id Value supplied for `node_id`.
 function function_entry_node(entries, node_id)
@@ -8556,7 +8596,7 @@ function all_function_entries(state)
   return _all_function_entries(state)
 end function
 
-/// Implements program main name.
+/// Lower program main name statement behavior to native x64.
 /// @internal
 function _program_main_name(state)
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
@@ -8570,7 +8610,7 @@ function _program_main_name(state)
   return ""
 end function
 
-/// Runs emit program module inits all.
+/// Lower emit program module inits all statement behavior to native x64.
 /// @internal
 function _emit_program_module_inits_all(state, module_init_recs)
   if typeof(module_init_recs) == "array" and len(module_init_recs) > 0 then
@@ -8584,10 +8624,10 @@ function _emit_program_module_inits_all(state, module_init_recs)
   return state
 end function
 
-/// Runs emit program functions all.
+/// Lower emit program functions all statement behavior to native x64.
 /// @internal
 function _emit_program_functions_all(state)
-  /// Stores the phase codegen keepalive.
+  /// Current phase codegen keepalive used by this routine.
   /// @internal
   global _phase_codegen_keepalive
   entries = _all_function_entries(state)
@@ -8647,10 +8687,10 @@ function _clear_program_function_state(state)
   return state
 end function
 
-/// Runs emit program via objects.
+/// Lower emit program via objects statement behavior to native x64.
 /// @internal
 function _emit_program_via_objects(state, program)
-  /// Stores the phase codegen keepalive.
+  /// Current phase codegen keepalive used by this routine.
   /// @internal
   global _phase_codegen_keepalive
   prep = prepare_program_for_objects(state, program)
@@ -8677,14 +8717,14 @@ function _emit_program_via_objects(state, program)
   return state
 end function
 
-/// Runs emit program.
+/// Lower emit program statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param program Value supplied for `program`.
 function emit_program(state, program)
   return _emit_program_via_objects(state, program)
 end function
 
-/// Implements static obj label for global name.
+/// Lower static obj label for global name statement behavior to native x64.
 /// @internal
 function _static_obj_label_for_global_name(state, name)
   nm = _coerce_name(name)
@@ -8700,7 +8740,7 @@ function _static_obj_label_for_global_name(state, name)
   return ""
 end function
 
-/// Implements builtin code label for name.
+/// Lower builtin code label for name statement behavior to native x64.
 /// @internal
 function _builtin_code_label_for_name(state, name)
   nm = _coerce_name(name)
@@ -8716,7 +8756,7 @@ function _builtin_code_label_for_name(state, name)
   return ""
 end function
 
-/// Runs emit static global slot initializers from globals.
+/// Lower emit static global slot initializers from globals statement behavior to native x64.
 /// @internal
 function _emit_static_global_slot_initializers_from_globals(state)
   if typeof(state.globals) != "array" or len(state.globals) <= 0 then return state end if
@@ -8739,7 +8779,7 @@ function _emit_static_global_slot_initializers_from_globals(state)
   return state
 end function
 
-/// Runs emit static callable objects.
+/// Lower emit static callable objects statement behavior to native x64.
 /// @internal
 function _emit_static_callable_objects(state)
   state.function_static_obj_labels = []
@@ -8959,7 +8999,7 @@ function _build_module_init_recs(state, program)
   return [state, t.arr_chunk_finish(module_init_recs_b)]
 end function
 
-/// Implements expr uses native threads.
+/// Lower expr uses native threads statement behavior to native x64.
 /// @internal
 function _expr_uses_native_threads(ex)
   if t.ast_is_node(ex) == false then return false end if
@@ -9001,7 +9041,7 @@ function _expr_uses_native_threads(ex)
   return false
 end function
 
-/// Implements stmts use native threads.
+/// Lower stmts use native threads statement behavior to native x64.
 /// @internal
 function _stmts_use_native_threads(stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return false end if
@@ -9058,7 +9098,7 @@ function _stmts_use_native_threads(stmts)
   return false
 end function
 
-/// Implements prepare program for objects.
+/// Lower prepare program for objects statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param program Value supplied for `program`.
 function prepare_program_for_objects(state, program)
@@ -9336,7 +9376,7 @@ function prepare_program_for_objects(state, program)
   return [state, module_init_recs, max_call_args_main]
 end function
 
-/// Runs emit entry object.
+/// Lower emit entry object statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param module_init_recs Value supplied for `module_init_recs`.
 /// @param max_call_args_main Value supplied for `max_call_args_main`.
@@ -9477,7 +9517,7 @@ function emit_entry_object(state, module_init_recs, max_call_args_main, main_nam
   return state
 end function
 
-/// Implements module file eq.
+/// Lower module file eq statement behavior to native x64.
 /// @internal
 function _module_file_eq(a, b)
   aa = _coerce_name(a)
@@ -9486,7 +9526,7 @@ function _module_file_eq(a, b)
   return aa == bb
 end function
 
-/// Runs emit module init object.
+/// Lower emit module init object statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param module_rec Value supplied for `module_rec`.
 function emit_module_init_object(state, module_rec)
@@ -9655,7 +9695,7 @@ function emit_module_init_object(state, module_rec)
   return state
 end function
 
-/// Implements module function entry index add.
+/// Lower module function entry index add statement behavior to native x64.
 /// @internal
 function _module_function_entry_index_add(index, module_file, entry)
   if typeof(index) != "struct" then index = t.fastmap_new(128) end if
@@ -9667,10 +9707,10 @@ function _module_function_entry_index_add(index, module_file, entry)
   return t.fastmap_set(index, mfile, bucket)
 end function
 
-/// Implements rebuild module function entry index.
+/// Lower rebuild module function entry index statement behavior to native x64.
 /// @internal
 function _rebuild_module_function_entry_index(state)
-  /// Stores the module function entry index.
+  /// Current module function entry index used by this routine.
   /// @internal
   global _module_function_entry_index
   index = t.fastmap_new(128)
@@ -9699,11 +9739,11 @@ function _rebuild_module_function_entry_index(state)
   return state
 end function
 
-/// Implements module function entries.
+/// Lower module function entries statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param module_file Value supplied for `module_file`.
 function module_function_entries(state, module_file)
-  /// Stores the module function entry index.
+  /// Current module function entry index used by this routine.
   /// @internal
   global _module_function_entry_index
   if typeof(_module_function_entry_index) == "struct" then
@@ -9734,7 +9774,7 @@ function module_function_entries(state, module_file)
   return t.arr_chunk_finish(entries_b)
 end function
 
-/// Runs emit module function entries.
+/// Lower emit module function entries statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param entries Value supplied for `entries`.
 /// @param start_index Value supplied for `start_index`.
@@ -9774,7 +9814,7 @@ function emit_module_function_entries(state, entries, start_index, count, analys
   return state
 end function
 
-/// Runs emit module functions.
+/// Lower emit module functions statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param module_file Value supplied for `module_file`.
 function emit_module_functions(state, module_file)
@@ -9782,7 +9822,7 @@ function emit_module_functions(state, module_file)
   return emit_module_function_entries(state, entries, 0, function_entry_count(entries), _new_function_analysis_scratch())
 end function
 
-/// Runs emit user function.
+/// Lower emit user function statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param fn_node Value supplied for `fn_node`.
 /// @param analysis_scratch Value supplied for `analysis_scratch`.
@@ -10440,14 +10480,14 @@ function add(arr, value)
   return arr +[value]
 end function
 
-/// Implements analyze read var.
+/// Lower analyze read var statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 function analyze_read_var(state, name)
   return state
 end function
 
-/// Implements analyze write var.
+/// Lower analyze write var statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 function analyze_write_var(state, name)
@@ -10459,7 +10499,7 @@ function analyze_write_var(state, name)
   return scope.cg_declare_binding(state, qn, "local", false, 0, 0, 0)
 end function
 
-/// Implements analyze expr.
+/// Lower analyze expr statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param ex Value supplied for `ex`.
 function analyze_expr(state, ex)
@@ -10498,7 +10538,7 @@ function analyze_expr(state, ex)
   return state
 end function
 
-/// Implements analyze block.
+/// Lower analyze block statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param stmts Value supplied for `stmts`.
 function analyze_block(state, stmts)
@@ -10513,27 +10553,27 @@ function analyze_block(state, stmts)
   return state
 end function
 
-/// Implements expr.
+/// Lower expr statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param ex Value supplied for `ex`.
 function expr(state, ex)
   return analyze_expr(state, ex)
 end function
 
-/// Implements expr reads.
+/// Lower expr reads statement behavior to native x64.
 /// @param ex Value supplied for `ex`.
 function expr_reads(ex)
   return _collect_constexpr_refs(ex,[])
 end function
 
-/// Implements note reads.
+/// Lower note reads statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param names Value supplied for `names`.
 function note_reads(state, names)
   return state
 end function
 
-/// Implements struct methods any has.
+/// Lower struct methods any has statement behavior to native x64.
 /// @internal
 function _struct_methods_any_has(state, mname)
   if mname == "" then return false end if
@@ -10550,14 +10590,14 @@ function _struct_methods_any_has(state, mname)
   return false
 end function
 
-/// Implements inline.
+/// Lower inline statement behavior to native x64.
 /// @internal
 function inline _max_calls_int(a, b)
   if a > b then return a end if
   return b
 end function
 
-/// Implements max calls expr.
+/// Lower max calls expr statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param ex Value supplied for `ex`.
 function max_calls_expr(state, ex)
@@ -10618,7 +10658,7 @@ function max_calls_expr(state, ex)
   return 0
 end function
 
-/// Implements max calls stmts.
+/// Lower max calls stmts statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param stmts Value supplied for `stmts`.
 function max_calls_stmts(state, stmts)
@@ -10750,7 +10790,7 @@ function max_calls_stmts(state, stmts)
   return m
 end function
 
-/// Implements stmt list.
+/// Lower stmt list statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param stmts Value supplied for `stmts`.
 function stmt_list(state, stmts)

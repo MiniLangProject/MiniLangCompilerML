@@ -23,7 +23,7 @@ Internal marker that distinguishes spare capacity from a real void element.
 tag
 ```
 
-Stores the tag member of `ParserChunkVoidSentinel`.
+Tag associated with `ParserChunkVoidSentinel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L107)

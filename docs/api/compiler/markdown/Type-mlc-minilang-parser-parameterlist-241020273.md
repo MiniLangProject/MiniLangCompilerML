@@ -23,7 +23,7 @@ Compact parser results for rich parameter and call-argument lists.
 defaults
 ```
 
-Stores the defaults member of `ParameterList`.
+Defaults associated with `ParameterList`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L815)
@@ -35,7 +35,7 @@ Stores the defaults member of `ParameterList`.
 names
 ```
 
-Stores the names member of `ParameterList`.
+Names associated with `ParameterList`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L809)
@@ -47,7 +47,7 @@ Stores the names member of `ParameterList`.
 optionals
 ```
 
-Stores the optionals member of `ParameterList`.
+Optionals associated with `ParameterList`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L813)
@@ -59,7 +59,7 @@ Stores the optionals member of `ParameterList`.
 types
 ```
 
-Stores the types member of `ParameterList`.
+Types associated with `ParameterList`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L811)
@@ -71,7 +71,7 @@ Stores the types member of `ParameterList`.
 variadic_index
 ```
 
-Stores the variadic index member of `ParameterList`.
+Variadic index associated with `ParameterList`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L817)

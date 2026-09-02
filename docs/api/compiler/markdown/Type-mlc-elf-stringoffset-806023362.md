@@ -23,7 +23,7 @@ Represents string offset.
 offset
 ```
 
-Stores the offset member of `StringOffset`.
+Offset associated with `StringOffset`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L58)
@@ -35,7 +35,7 @@ Stores the offset member of `StringOffset`.
 value
 ```
 
-Stores the value member of `StringOffset`.
+Value associated with `StringOffset`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L56)

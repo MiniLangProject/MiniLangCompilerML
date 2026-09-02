@@ -23,7 +23,7 @@ Parser failure with absolute source offset and originating filename.
 filename
 ```
 
-Stores the filename member of `ParseError`.
+Filename associated with `ParseError`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L42)
@@ -35,7 +35,7 @@ Stores the filename member of `ParseError`.
 message
 ```
 
-Stores the message member of `ParseError`.
+Diagnostic message carried by `ParseError`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L38)
@@ -47,7 +47,7 @@ Stores the message member of `ParseError`.
 pos
 ```
 
-Stores the pos member of `ParseError`.
+Pos associated with `ParseError`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L40)

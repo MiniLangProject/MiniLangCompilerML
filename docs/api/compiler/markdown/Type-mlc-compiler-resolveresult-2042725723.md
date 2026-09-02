@@ -23,7 +23,7 @@ Represents resolve result.
 matches
 ```
 
-Stores the matches member of `ResolveResult`.
+Matches associated with `ResolveResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L183)
@@ -35,7 +35,7 @@ Stores the matches member of `ResolveResult`.
 resolved
 ```
 
-Stores the resolved member of `ResolveResult`.
+Resolved associated with `ResolveResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L179)
@@ -47,7 +47,7 @@ Stores the resolved member of `ResolveResult`.
 resolved_kind
 ```
 
-Stores the resolved kind member of `ResolveResult`.
+Resolved kind associated with `ResolveResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L185)
@@ -59,7 +59,7 @@ Stores the resolved kind member of `ResolveResult`.
 resolved_root
 ```
 
-Stores the resolved root member of `ResolveResult`.
+Resolved root associated with `ResolveResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L187)
@@ -71,7 +71,7 @@ Stores the resolved root member of `ResolveResult`.
 tried
 ```
 
-Stores the tried member of `ResolveResult`.
+Tried associated with `ResolveResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L181)

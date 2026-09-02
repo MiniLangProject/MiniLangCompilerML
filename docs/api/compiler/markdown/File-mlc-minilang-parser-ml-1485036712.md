@@ -23,7 +23,7 @@ Reachable from entry: **yes**
 function _advance()
 ```
 
-Implements advance.
+Parse or represent advance in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1816)
@@ -51,7 +51,7 @@ Reports whether canonical type name.
 function _charCode(ch)
 ```
 
-Implements char code.
+Parse or represent char code in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ Implements char code.
 function _charFromCode(v)
 ```
 
-Implements char from code.
+Parse or represent char from code in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -83,7 +83,7 @@ Implements char from code.
 function _chunked_finish(chunks, tail)
 ```
 
-Implements chunked finish.
+Parse or represent chunked finish in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -100,7 +100,7 @@ Implements chunked finish.
 function _chunked_merge_balanced(chunks)
 ```
 
-Implements chunked merge balanced.
+Parse or represent chunked merge balanced in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -116,7 +116,7 @@ Implements chunked merge balanced.
 function _chunked_merge_with_tail(chunks, tail_arr)
 ```
 
-Implements chunked merge with tail.
+Parse or represent chunked merge with tail in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -133,7 +133,7 @@ Implements chunked merge with tail.
 function _chunked_push(chunks, tail, value, cap)
 ```
 
-Implements chunked push.
+Parse or represent chunked push in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -164,7 +164,7 @@ Releases or resets clear error.
 _collect_errors
 ```
 
-Stores the collect errors compiler state.
+Track collect errors compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1687)
@@ -176,7 +176,7 @@ Stores the collect errors compiler state.
 function _compile_argument_pos(line, argument, line_start, hash_col)
 ```
 
-Runs compile argument pos.
+Parse or represent compile argument pos in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -195,7 +195,7 @@ Runs compile argument pos.
 function _compile_block_comment_state(line, in_block)
 ```
 
-Runs compile block comment state.
+Parse or represent compile block comment state in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -212,7 +212,7 @@ Runs compile block comment state.
 function _compile_env_find(env, name)
 ```
 
-Runs compile env find.
+Parse or represent compile env find in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -229,7 +229,7 @@ Runs compile env find.
 function _compile_env_get(env, name)
 ```
 
-Runs compile env get.
+Parse or represent compile env get in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -246,7 +246,7 @@ Runs compile env get.
 function _compile_env_has(env, name)
 ```
 
-Runs compile env has.
+Parse or represent compile env has in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -263,7 +263,7 @@ Runs compile env has.
 function _compile_env_set(env, name, value)
 ```
 
-Runs compile env set.
+Parse or represent compile env set in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -281,7 +281,7 @@ Runs compile env set.
 function _compile_eval(text, env, filename, base_pos)
 ```
 
-Runs compile eval.
+Parse or represent compile eval in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -300,7 +300,7 @@ Runs compile eval.
 function _compile_eval_node(expr, env, filename, base_pos)
 ```
 
-Runs compile eval node.
+Parse or represent compile eval node in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -319,7 +319,7 @@ Runs compile eval node.
 function _compile_external_has(name)
 ```
 
-Runs compile external has.
+Parse or represent compile external has in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -335,7 +335,7 @@ Runs compile external has.
 _compile_external_values
 ```
 
-Stores the compile external values compiler state.
+Track compile external values compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L907)
@@ -347,7 +347,7 @@ Stores the compile external values compiler state.
 function _compile_frames_active(frames)
 ```
 
-Runs compile frames active.
+Parse or represent compile frames active in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -363,7 +363,7 @@ Runs compile frames active.
 function _compile_frames_pop(frames)
 ```
 
-Runs compile frames pop.
+Parse or represent compile frames pop in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -379,7 +379,7 @@ Runs compile frames pop.
 function _compile_is_error(value)
 ```
 
-Runs compile is error.
+Parse or represent compile is error in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -395,7 +395,7 @@ Runs compile is error.
 function _compile_is_predefined(name)
 ```
 
-Runs compile is predefined.
+Parse or represent compile is predefined in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -411,7 +411,7 @@ Runs compile is predefined.
 function _compile_ltrim_index(line)
 ```
 
-Runs compile ltrim index.
+Parse or represent compile ltrim index in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -427,7 +427,7 @@ Runs compile ltrim index.
 function _compile_maybe_has_directive(code)
 ```
 
-Runs compile maybe has directive.
+Parse or represent compile maybe has directive in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -443,7 +443,7 @@ Runs compile maybe has directive.
 function _compile_node_pos(expr, base_pos)
 ```
 
-Runs compile node pos.
+Parse or represent compile node pos in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -460,7 +460,7 @@ Runs compile node pos.
 function _compile_numeric_text(raw)
 ```
 
-Runs compile numeric text.
+Parse or represent compile numeric text in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -476,7 +476,7 @@ Runs compile numeric text.
 function _compile_option_parts(argument, filename, argument_pos)
 ```
 
-Runs compile option parts.
+Parse or represent compile option parts in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -494,7 +494,7 @@ Runs compile option parts.
 function _compile_parse_cli_value(raw)
 ```
 
-Runs compile parse cli value.
+Parse or represent compile parse cli value in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -510,7 +510,7 @@ Runs compile parse cli value.
 function _compile_predefined_values()
 ```
 
-Runs compile predefined values.
+Parse or represent compile predefined values in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4173)
@@ -522,7 +522,7 @@ Runs compile predefined values.
 function _compile_split_command(body)
 ```
 
-Runs compile split command.
+Parse or represent compile split command in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -538,7 +538,7 @@ Runs compile split command.
 function _compile_string_compare(left, right)
 ```
 
-Runs compile string compare.
+Parse or represent compile string compare in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -555,7 +555,7 @@ Runs compile string compare.
 _compile_target_abi
 ```
 
-Stores the compile target abi compiler state.
+Track compile target abi compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L911)
@@ -567,7 +567,7 @@ Stores the compile target abi compiler state.
 _compile_target_format
 ```
 
-Stores the compile target format compiler state.
+Track compile target format compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L913)
@@ -579,7 +579,7 @@ Stores the compile target format compiler state.
 _compile_target_os
 ```
 
-Stores the compile target os compiler state.
+Track compile target os compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L909)
@@ -591,7 +591,7 @@ Stores the compile target os compiler state.
 function _compile_valid_name(name)
 ```
 
-Runs compile valid name.
+Parse or represent compile valid name in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -607,7 +607,7 @@ Runs compile valid name.
 function _compile_value_type(value)
 ```
 
-Runs compile value type.
+Parse or represent compile value type in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -689,7 +689,7 @@ Returns decode string token.
 _errors
 ```
 
-Stores the errors compiler state.
+Track errors compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1691)
@@ -701,7 +701,7 @@ Stores the errors compiler state.
 function _expect_block_nl()
 ```
 
-Implements expect block nl.
+Parse or represent expect block nl in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2585)
@@ -713,7 +713,7 @@ Implements expect block nl.
 function _expect_end_of(what)
 ```
 
-Implements expect end of.
+Parse or represent expect end of in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -729,7 +729,7 @@ Implements expect end of.
 function _expect_kind(kind)
 ```
 
-Implements expect kind.
+Parse or represent expect kind in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -745,7 +745,7 @@ Implements expect kind.
 function _expect_value(kind, value)
 ```
 
-Implements expect value.
+Parse or represent expect value in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -762,7 +762,7 @@ Implements expect value.
 _filename
 ```
 
-Stores the filename compiler state.
+Track filename compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1673)
@@ -774,7 +774,7 @@ Stores the filename compiler state.
 _func_depth
 ```
 
-Stores the func depth compiler state.
+Track func depth compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1679)
@@ -798,7 +798,7 @@ Reports whether has error.
 _has_last_error
 ```
 
-Stores the has last error compiler state.
+Track has last error compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1677)
@@ -810,7 +810,7 @@ Stores the has last error compiler state.
 function _hex_value(ch)
 ```
 
-Implements hex value.
+Parse or represent hex value in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -826,7 +826,7 @@ Implements hex value.
 _i
 ```
 
-Stores the i compiler state.
+Track i compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1669)
@@ -982,7 +982,7 @@ Reports whether is keyword.
 _keywords
 ```
 
-Stores the keywords compiler state.
+Track keywords compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L916)
@@ -994,7 +994,7 @@ Stores the keywords compiler state.
 function _lang_add_unique(items, value)
 ```
 
-Implements lang add unique.
+Parse or represent lang add unique in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1011,7 +1011,7 @@ Implements lang add unique.
 function _lang_apply_contracts(fn)
 ```
 
-Implements lang apply contracts.
+Parse or represent lang apply contracts in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1027,7 +1027,7 @@ Implements lang apply contracts.
 function _lang_apply_parameter_contracts(fn)
 ```
 
-Implements lang apply parameter contracts.
+Parse or represent lang apply parameter contracts in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1043,7 +1043,7 @@ Implements lang apply parameter contracts.
 function _lang_await_helper()
 ```
 
-Implements lang await helper.
+Parse or represent lang await helper in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5454)
@@ -1055,7 +1055,7 @@ Implements lang await helper.
 function _lang_call(name, args, node)
 ```
 
-Implements lang call.
+Parse or represent lang call in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1073,7 +1073,7 @@ Implements lang call.
 function _lang_collect_contracts(body, prefix)
 ```
 
-Implements lang collect contracts.
+Parse or represent lang collect contracts in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1090,7 +1090,7 @@ Implements lang collect contracts.
 function _lang_fail(message)
 ```
 
-Implements lang fail.
+Parse or represent lang fail in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1106,7 +1106,7 @@ Implements lang fail.
 function _lang_find_interface(raw_name, prefix)
 ```
 
-Implements lang find interface.
+Parse or represent lang find interface in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1123,7 +1123,7 @@ Implements lang find interface.
 function _lang_fresh(stem)
 ```
 
-Implements lang fresh.
+Parse or represent lang fresh in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1139,7 +1139,7 @@ Implements lang fresh.
 function _lang_guard_returns(body, return_type, return_optional)
 ```
 
-Implements lang guard returns.
+Parse or represent lang guard returns in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1157,7 +1157,7 @@ Implements lang guard returns.
 function _lang_interface_signature_matches(required, actual)
 ```
 
-Implements lang interface signature matches.
+Parse or represent lang interface signature matches in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1174,7 +1174,7 @@ Implements lang interface signature matches.
 function _lang_iterator_append(yield_stmt, fn, names)
 ```
 
-Implements lang iterator append.
+Parse or represent lang iterator append in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1192,7 +1192,7 @@ Implements lang iterator append.
 function _lang_lazy_collect_names(state, body)
 ```
 
-Implements lang lazy collect names.
+Parse or represent lang lazy collect names in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1209,7 +1209,7 @@ Implements lang lazy collect names.
 function _lang_lazy_compile_seq(state, body, cont, break_target, continue_target)
 ```
 
-Implements lang lazy compile seq.
+Parse or represent lang lazy compile seq in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1229,7 +1229,7 @@ Implements lang lazy compile seq.
 function _lang_lazy_contains_yield(st)
 ```
 
-Implements lang lazy contains yield.
+Parse or represent lang lazy contains yield in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1245,7 +1245,7 @@ Implements lang lazy contains yield.
 function _lang_lazy_jump(state, target, node)
 ```
 
-Implements lang lazy jump.
+Parse or represent lang lazy jump in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1263,7 +1263,7 @@ Implements lang lazy jump.
 function _lang_lazy_reserve(state)
 ```
 
-Implements lang lazy reserve.
+Parse or represent lang lazy reserve in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1279,7 +1279,7 @@ Implements lang lazy reserve.
 function _lang_lower_async(fn)
 ```
 
-Implements lang lower async.
+Parse or represent lang lower async in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1295,7 +1295,7 @@ Implements lang lower async.
 function _lang_lower_block(body, function_depth)
 ```
 
-Implements lang lower block.
+Parse or represent lang lower block in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1312,7 +1312,7 @@ Implements lang lower block.
 function _lang_lower_expr(expr, prelude)
 ```
 
-Implements lang lower expr.
+Parse or represent lang lower expr in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1329,7 +1329,7 @@ Implements lang lower expr.
 function _lang_lower_iterator(fn)
 ```
 
-Implements lang lower iterator.
+Parse or represent lang lower iterator in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1345,7 +1345,7 @@ Implements lang lower iterator.
 function _lang_lower_lazy_iterator(fn)
 ```
 
-Implements lang lower lazy iterator.
+Parse or represent lang lower lazy iterator in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1361,7 +1361,7 @@ Implements lang lower lazy iterator.
 function _lang_lower_stmt(st, function_depth)
 ```
 
-Implements lang lower stmt.
+Parse or represent lang lower stmt in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1378,7 +1378,7 @@ Implements lang lower stmt.
 function _lang_num(value, node)
 ```
 
-Implements lang num.
+Parse or represent lang num in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1395,7 +1395,7 @@ Implements lang num.
 function _lang_remove_interfaces(body)
 ```
 
-Implements lang remove interfaces.
+Parse or represent lang remove interfaces in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1411,7 +1411,7 @@ Implements lang remove interfaces.
 function _lang_rewrite_yields(body, fn, names)
 ```
 
-Implements lang rewrite yields.
+Parse or represent lang rewrite yields in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1429,7 +1429,7 @@ Implements lang rewrite yields.
 function _lang_select_helper()
 ```
 
-Implements lang select helper.
+Parse or represent lang select helper in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5472)
@@ -1441,7 +1441,7 @@ Implements lang select helper.
 function _lang_sort_strings(items)
 ```
 
-Implements lang sort strings.
+Parse or represent lang sort strings in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1457,7 +1457,7 @@ Implements lang sort strings.
 function _lang_validate_interfaces(program)
 ```
 
-Implements lang validate interfaces.
+Parse or represent lang validate interfaces in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1473,7 +1473,7 @@ Implements lang validate interfaces.
 function _lang_var(name, node)
 ```
 
-Implements lang var.
+Parse or represent lang var in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1490,7 +1490,7 @@ Implements lang var.
 function _lang_void(node)
 ```
 
-Implements lang void.
+Parse or represent lang void in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1506,7 +1506,7 @@ Implements lang void.
 _language_async_pool_name
 ```
 
-Stores the language async pool name compiler state.
+Track language async pool name compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4701)
@@ -1518,7 +1518,7 @@ Stores the language async pool name compiler state.
 _language_await_file
 ```
 
-Stores the language await file compiler state.
+Track language await file compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4705)
@@ -1530,7 +1530,7 @@ Stores the language await file compiler state.
 _language_await_pos
 ```
 
-Stores the language await pos compiler state.
+Track language await pos compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4703)
@@ -1542,7 +1542,7 @@ Stores the language await pos compiler state.
 _language_failure
 ```
 
-Stores the language failure compiler state.
+Track language failure compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4711)
@@ -1554,7 +1554,7 @@ Stores the language failure compiler state.
 _language_interfaces
 ```
 
-Stores the language interfaces compiler state.
+Track language interfaces compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5657)
@@ -1566,7 +1566,7 @@ Stores the language interfaces compiler state.
 _language_needs_async_pool
 ```
 
-Stores the language needs async pool compiler state.
+Track language needs async pool compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4699)
@@ -1578,7 +1578,7 @@ Stores the language needs async pool compiler state.
 _language_needs_await
 ```
 
-Stores the language needs await compiler state.
+Track language needs await compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4695)
@@ -1590,7 +1590,7 @@ Stores the language needs await compiler state.
 _language_needs_select
 ```
 
-Stores the language needs select compiler state.
+Track language needs select compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4697)
@@ -1602,7 +1602,7 @@ Stores the language needs select compiler state.
 _language_select_file
 ```
 
-Stores the language select file compiler state.
+Track language select file compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4709)
@@ -1614,7 +1614,7 @@ Stores the language select file compiler state.
 _language_select_pos
 ```
 
-Stores the language select pos compiler state.
+Track language select pos compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4707)
@@ -1626,7 +1626,7 @@ Stores the language select pos compiler state.
 _language_serial
 ```
 
-Stores the language serial compiler state.
+Track language serial compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4693)
@@ -1638,7 +1638,7 @@ Stores the language serial compiler state.
 _language_structs
 ```
 
-Stores the language structs compiler state.
+Track language structs compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5659)
@@ -1650,7 +1650,7 @@ Stores the language structs compiler state.
 _last_error
 ```
 
-Stores the last error compiler state.
+Track last error compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1675)
@@ -1662,7 +1662,7 @@ Stores the last error compiler state.
 function _line_col(source, pos)
 ```
 
-Implements line col.
+Parse or represent line col in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1679,7 +1679,7 @@ Implements line col.
 function _match_kind(kind)
 ```
 
-Implements match kind.
+Parse or represent match kind in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1695,7 +1695,7 @@ Implements match kind.
 function _match_number_has_dot(text)
 ```
 
-Implements match number has dot.
+Parse or represent match number has dot in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1711,7 +1711,7 @@ Implements match number has dot.
 function _match_value(kind, value)
 ```
 
-Implements match value.
+Parse or represent match value in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1728,7 +1728,7 @@ Implements match value.
 _max_errors
 ```
 
-Stores the max errors compiler state.
+Track max errors compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1689)
@@ -1771,7 +1771,7 @@ Keep compiler-internal closure fields centralized when surface syntax creates or
 _ns_depth
 ```
 
-Stores the ns depth compiler state.
+Track ns depth compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1681)
@@ -2562,7 +2562,7 @@ Returns parser chunk unwrap value.
 _parser_chunk_void_sentinel
 ```
 
-Stores the parser chunk void sentinel compiler state.
+Track parser chunk void sentinel compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1042)
@@ -2590,7 +2590,7 @@ Returns parser chunk wrap value.
 function _peek()
 ```
 
-Implements peek.
+Parse or represent peek in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1792)
@@ -2602,7 +2602,7 @@ Implements peek.
 function _peek2()
 ```
 
-Implements peek2.
+Parse or represent peek2 in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1804)
@@ -2614,7 +2614,7 @@ Implements peek2.
 function _peek3()
 ```
 
-Implements peek3.
+Parse or represent peek3 in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1987)
@@ -2626,7 +2626,7 @@ Implements peek3.
 function _peek_non_nl()
 ```
 
-Implements peek non nl.
+Parse or represent peek non nl in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2629)
@@ -2638,7 +2638,7 @@ Implements peek non nl.
 function _precedence(op)
 ```
 
-Implements precedence.
+Parse or represent precedence in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2654,7 +2654,7 @@ Implements precedence.
 function _record_error(err)
 ```
 
-Implements record error.
+Parse or represent record error in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2670,7 +2670,7 @@ Implements record error.
 function _repeat(text, n)
 ```
 
-Implements repeat.
+Parse or represent repeat in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2687,7 +2687,7 @@ Implements repeat.
 function _replaceDotsWithSlash(name)
 ```
 
-Implements replace dots with slash.
+Parse or represent replace dots with slash in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2723,7 +2723,7 @@ Releases or resets reset.
 _seen_nonpackage_toplevel_stmt
 ```
 
-Stores the seen nonpackage toplevel stmt compiler state.
+Track seen nonpackage toplevel stmt compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1685)
@@ -2735,7 +2735,7 @@ Stores the seen nonpackage toplevel stmt compiler state.
 _seen_package
 ```
 
-Stores the seen package compiler state.
+Track seen package compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1683)
@@ -2764,7 +2764,7 @@ Updates set error.
 function _skip_newlines()
 ```
 
-Implements skip newlines.
+Parse or represent skip newlines in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1868)
@@ -2776,7 +2776,7 @@ Implements skip newlines.
 function _skip_stmt_seps()
 ```
 
-Implements skip stmt seps.
+Parse or represent skip stmt seps in the MiniLang front end.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2575)
@@ -2788,7 +2788,7 @@ Implements skip stmt seps.
 _source
 ```
 
-Stores the source compiler state.
+Track source compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1671)
@@ -2800,7 +2800,7 @@ Stores the source compiler state.
 function _substr(text, start, length)
 ```
 
-Implements substr.
+Parse or represent substr in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2818,7 +2818,7 @@ Implements substr.
 function _sync_stmt(stop_keywords, end_type)
 ```
 
-Implements sync stmt.
+Parse or represent sync stmt in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2867,7 +2867,7 @@ Converts tok kind.
 inline function _tok_kind_id(tok)
 ```
 
-Implements inline.
+Parse or represent inline in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2883,7 +2883,7 @@ Implements inline.
 inline function _tok_pos(tok)
 ```
 
-Implements inline.
+Parse or represent inline in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2915,7 +2915,7 @@ Converts tok text part.
 inline function _tok_value(tok)
 ```
 
-Implements inline.
+Parse or represent inline in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2963,7 +2963,7 @@ Converts token arena new.
 inline function _token_count(tokens)
 ```
 
-Implements inline.
+Parse or represent inline in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -2979,7 +2979,7 @@ Implements inline.
 inline function _token_fixed_value(kind)
 ```
 
-Implements inline.
+Parse or represent inline in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3011,7 +3011,7 @@ Converts token kind name.
 inline function _token_pos_read(buf, index)
 ```
 
-Implements inline.
+Parse or represent inline in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3084,7 +3084,7 @@ Converts token text store.
 inline function _token_u32_read(buf, index)
 ```
 
-Implements inline.
+Parse or represent inline in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3119,7 +3119,7 @@ Converts token u32 write.
 _tokens
 ```
 
-Stores the tokens compiler state.
+Track tokens compiler state.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1667)
@@ -3131,7 +3131,7 @@ Stores the tokens compiler state.
 function _unknownChar(code, pos)
 ```
 
-Implements unknown char.
+Parse or represent unknown char in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3295,7 +3295,7 @@ Returns parse program keepgoing.
 function prepare_language_features(program)
 ```
 
-Implements prepare language features.
+Parse or represent prepare language features in the MiniLang front end.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -3371,7 +3371,7 @@ Select immutable values for subsequent source parses.
 const TK_COMMA = 12
 ```
 
-Stores the tk comma.
+Track tk comma.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1036)
@@ -3383,7 +3383,7 @@ Stores the tk comma.
 const TK_DOT = 7
 ```
 
-Stores the tk dot.
+Track tk dot.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1026)
@@ -3395,7 +3395,7 @@ Stores the tk dot.
 const TK_EOF = 14
 ```
 
-Stores the tk eof.
+Track tk eof.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1040)
@@ -3407,7 +3407,7 @@ Stores the tk eof.
 const TK_IDENT = 5
 ```
 
-Stores the tk ident.
+Track tk ident.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1022)
@@ -3419,7 +3419,7 @@ Stores the tk ident.
 const TK_KW = 4
 ```
 
-Stores the tk kw.
+Track tk kw.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1020)
@@ -3431,7 +3431,7 @@ Stores the tk kw.
 const TK_LBRACK = 10
 ```
 
-Stores the tk lbrack.
+Track tk lbrack.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1032)
@@ -3443,7 +3443,7 @@ Stores the tk lbrack.
 const TK_LPAREN = 8
 ```
 
-Stores the tk lparen.
+Track tk lparen.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1028)
@@ -3467,7 +3467,7 @@ Compact discriminants stored in the token arena's byte kind column.
 const TK_NUMBER = 2
 ```
 
-Stores the tk number.
+Track tk number.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1016)
@@ -3479,7 +3479,7 @@ Stores the tk number.
 const TK_OP = 6
 ```
 
-Stores the tk op.
+Track tk op.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1024)
@@ -3491,7 +3491,7 @@ Stores the tk op.
 const TK_RBRACK = 11
 ```
 
-Stores the tk rbrack.
+Track tk rbrack.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1034)
@@ -3503,7 +3503,7 @@ Stores the tk rbrack.
 const TK_RPAREN = 9
 ```
 
-Stores the tk rparen.
+Track tk rparen.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1030)
@@ -3515,7 +3515,7 @@ Stores the tk rparen.
 const TK_SEMI = 13
 ```
 
-Stores the tk semi.
+Track tk semi.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1038)
@@ -3527,7 +3527,7 @@ Stores the tk semi.
 const TK_STRING = 3
 ```
 
-Stores the tk string.
+Track tk string.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1018)

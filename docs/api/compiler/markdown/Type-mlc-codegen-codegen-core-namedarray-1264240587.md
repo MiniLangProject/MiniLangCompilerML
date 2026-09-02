@@ -23,7 +23,7 @@ Compatibility lookup records used where older compiler images pass arrays.
 key
 ```
 
-Stores the key member of `NamedArray`.
+Key associated with `NamedArray`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L277)
@@ -35,7 +35,7 @@ Stores the key member of `NamedArray`.
 values
 ```
 
-Stores the values member of `NamedArray`.
+Values associated with `NamedArray`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L279)

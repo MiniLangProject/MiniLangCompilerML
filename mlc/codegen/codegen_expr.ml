@@ -31,49 +31,49 @@ import mlc.codegen.codegen_threads as th
 
 /// Explicit success/value envelope for compile-time expression evaluation.
 struct ConstEvalResult
-  /// Stores the ok member of `ConstEvalResult`.
+  /// Whether `ConstEvalResult` represents a successful result.
   ok,
-  /// Stores the value member of `ConstEvalResult`.
+  /// Value associated with `ConstEvalResult`.
   value,
 end struct
 
 /// Cost and control-flow summary used by the bounded inliner.
 struct InlineStats
-  /// Stores the cost member of `InlineStats`.
+  /// Cost associated with `InlineStats`.
   cost,
-  /// Stores the stmt count member of `InlineStats`.
+  /// Stmt count associated with `InlineStats`.
   stmt_count,
-  /// Stores the call count member of `InlineStats`.
+  /// Call count associated with `InlineStats`.
   call_count,
-  /// Stores the branch count member of `InlineStats`.
+  /// Branch count associated with `InlineStats`.
   branch_count,
-  /// Stores the max call args member of `InlineStats`.
+  /// Max call args associated with `InlineStats`.
   max_call_args,
-  /// Stores the has loop member of `InlineStats`.
+  /// Whether `InlineStats.has_loop` contains loop.
   has_loop,
-  /// Stores the has switch member of `InlineStats`.
+  /// Whether `InlineStats.has_switch` contains switch.
   has_switch,
-  /// Stores the has nested fn member of `InlineStats`.
+  /// Whether `InlineStats.has_nested_fn` contains nested fn.
   has_nested_fn,
 end struct
 
 /// Represents arg normalize result.
 struct ArgNormalizeResult
-  /// Stores the ok member of `ArgNormalizeResult`.
+  /// Whether `ArgNormalizeResult` represents a successful result.
   ok,
-  /// Stores the args member of `ArgNormalizeResult`.
+  /// Args associated with `ArgNormalizeResult`.
   args,
-  /// Stores the message member of `ArgNormalizeResult`.
+  /// Diagnostic message carried by `ArgNormalizeResult`.
   message,
 end struct
 
-/// Implements variadic is direct var.
+/// Lower variadic is direct var expression behavior to native x64.
 /// @internal
 function _variadic_is_direct_var(ex, name)
   return t.ast_is_node(ex) and t.ast_kind(ex) == "Var" and _coerce_name(t.ast_name(ex)) == name
 end function
 
-/// Implements variadic expr safe.
+/// Lower variadic expr safe expression behavior to native x64.
 /// @internal
 function _variadic_expr_safe(ex, name, allow_direct)
   if typeof(ex) == "void" or ex == 0 then return true end if
@@ -122,7 +122,7 @@ function _variadic_expr_safe(ex, name, allow_direct)
   return true
 end function
 
-/// Implements variadic stmts safe.
+/// Lower variadic stmts safe expression behavior to native x64.
 /// @internal
 function _variadic_stmts_safe(body, name)
   if typeof(body) != "array" or len(body) <= 0 then return true end if
@@ -169,7 +169,7 @@ function _variadic_stmts_safe(body, name)
   return true
 end function
 
-/// Implements variadic param stack safe.
+/// Lower variadic param stack safe expression behavior to native x64.
 /// @internal
 function _variadic_param_stack_safe(fn)
   if typeof(fn) != "struct" then return false end if
@@ -179,7 +179,7 @@ function _variadic_param_stack_safe(fn)
   return _variadic_stmts_safe(try(fn.body), _coerce_name(params[index]))
 end function
 
-/// Implements normalize declared call args.
+/// Lower normalize declared call args expression behavior to native x64.
 /// @internal
 function _normalize_declared_call_args(expr, fn, implicit)
   supplied = try(expr.args)
@@ -266,7 +266,7 @@ function _normalize_declared_call_args(expr, fn, implicit)
   return ArgNormalizeResult(true, slots, "")
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _opt_truthy(v)
   tv = typeof(v)
@@ -279,7 +279,7 @@ function inline _opt_truthy(v)
   return true
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _is_number_no_bool(v)
   tv = typeof(v)
@@ -287,13 +287,13 @@ function inline _is_number_no_bool(v)
   return false
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _is_int_no_bool(v)
   return typeof(v) == "int"
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _coerce_name(v)
   tv = typeof(v)
@@ -309,7 +309,7 @@ function inline _coerce_name(v)
   return ""
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _named_array_get(arr, key)
   if typeof(arr) != "array" or len(arr) <= 0 then return 0 end if
@@ -325,7 +325,7 @@ function inline _named_array_get(arr, key)
   return 0
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _named_int_get(arr, key, defaultv)
   if typeof(arr) != "array" or len(arr) <= 0 then return defaultv end if
@@ -343,7 +343,7 @@ function inline _named_int_get(arr, key, defaultv)
   return defaultv
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _state_struct_id_get(state, key, defaultv)
   if typeof(state.struct_ids_index) == "struct" then
@@ -353,7 +353,7 @@ function inline _state_struct_id_get(state, key, defaultv)
   return _named_int_get(state.struct_ids, key, defaultv)
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _state_enum_id_get(state, key, defaultv)
   if typeof(state.enum_ids_index) == "struct" then
@@ -363,7 +363,7 @@ function inline _state_enum_id_get(state, key, defaultv)
   return _named_int_get(state.enum_ids, key, defaultv)
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _state_named_array_get(index_map, arr, key)
   if typeof(index_map) == "struct" then
@@ -372,37 +372,37 @@ function inline _state_named_array_get(index_map, arr, key)
   return _named_array_get(arr, key)
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _state_struct_fields_get(state, key)
   return _state_named_array_get(state.struct_fields_index, state.struct_fields, key)
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _state_struct_field_types_get(state, key)
   return _state_named_array_get(0, state.struct_field_types, key)
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _state_struct_methods_get(state, key)
   return _state_named_array_get(state.struct_methods_index, state.struct_methods, key)
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _state_enum_variants_get(state, key)
   return _state_named_array_get(state.enum_variants_index, state.enum_variants, key)
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _state_struct_static_methods_get(state, key)
   return _state_named_array_get(state.struct_static_methods_index, state.struct_static_methods, key)
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _strpair_get(arr, key)
   if typeof(arr) == "struct" then
@@ -425,7 +425,7 @@ function inline _strpair_get(arr, key)
   return ""
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _method_map_get(map_arr, method_name)
   if typeof(map_arr) == "struct" then
@@ -446,7 +446,7 @@ function inline _method_map_get(map_arr, method_name)
   return ""
 end function
 
-/// Implements user function get.
+/// Lower user function get expression behavior to native x64.
 /// @internal
 function _user_function_get(state, qname)
   arr = state.user_functions
@@ -562,7 +562,7 @@ function _has_any_global_prefix(state, base)
   return found
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _compile_symbol_has(state, key)
   if typeof(key) != "string" or key == "" then return false end if
@@ -573,7 +573,7 @@ function inline _compile_symbol_has(state, key)
   return false
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _builtin_label(name)
   nm = name
@@ -629,7 +629,7 @@ function inline _builtin_label(name)
   return ""
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _next_lid(state)
   lid = state.label_id
@@ -637,7 +637,7 @@ function inline _next_lid(state)
   return lid
 end function
 
-/// Implements native callback resolve user fn.
+/// Lower native callback resolve user fn expression behavior to native x64.
 /// @internal
 function _native_callback_resolve_user_fn(state, ex)
   qn = _expr_to_qualname(state, ex)
@@ -655,7 +655,7 @@ function _native_callback_resolve_user_fn(state, ex)
   return ""
 end function
 
-/// Runs emit native callback ret lresult.
+/// Lower emit native callback ret lresult expression behavior to native x64.
 /// @internal
 function _emit_native_callback_ret_lresult(state, l_zero, l_done)
   state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
@@ -677,7 +677,7 @@ function _emit_native_callback_ret_lresult(state, l_zero, l_done)
   return state
 end function
 
-/// Runs emit native callback wndproc.
+/// Lower emit native callback wndproc expression behavior to native x64.
 /// @internal
 function _emit_native_callback_wndproc(state, fn_qn)
   fn = _user_function_get(state, fn_qn)
@@ -746,7 +746,7 @@ function _emit_native_callback_wndproc(state, fn_qn)
   return state
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _alias_lookup(alias_map, key)
   if typeof(alias_map) == "struct" then
@@ -764,7 +764,7 @@ function inline _alias_lookup(alias_map, key)
   return ""
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _alias_lookup_array_exact(alias_map, key)
   if typeof(alias_map) != "array" or len(alias_map) <= 0 then return "" end if
@@ -777,7 +777,7 @@ function inline _alias_lookup_array_exact(alias_map, key)
   return ""
 end function
 
-/// Implements apply import alias.
+/// Lower apply import alias expression behavior to native x64.
 /// @internal
 function _apply_import_alias(state, qname)
   if typeof(qname) != "string" then return "" end if
@@ -811,7 +811,7 @@ function _apply_import_alias(state, qname)
   return target + "." + tail
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _arr_has_str(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
@@ -832,7 +832,7 @@ function _is_current_localish_name(state, name)
   return false
 end function
 
-/// Implements alias target for base.
+/// Lower alias target for base expression behavior to native x64.
 /// @internal
 function _alias_target_for_base(state, base)
   if typeof(base) != "string" or base == "" then return "" end if
@@ -848,7 +848,7 @@ function _alias_target_for_base(state, base)
   return target
 end function
 
-/// Implements member base alias shadowed.
+/// Lower member base alias shadowed expression behavior to native x64.
 /// @internal
 function _member_base_alias_shadowed(state, expr)
   cur = expr
@@ -872,7 +872,7 @@ function _member_base_alias_shadowed(state, expr)
   return _is_current_localish_name(state, base)
 end function
 
-/// Implements pool has key.
+/// Lower pool has key expression behavior to native x64.
 /// @internal
 function _pool_has_key(pool, key)
   if typeof(pool) != "array" or len(pool) <= 0 then return false end if
@@ -1023,7 +1023,7 @@ function _qualify_identifier(state, name)
   return n1
 end function
 
-/// Implements expr to qualname.
+/// Lower expr to qualname expression behavior to native x64.
 /// @internal
 function _expr_to_qualname(state, expr)
   if t.ast_is_node(expr) == false then return "" end if
@@ -1051,7 +1051,7 @@ function _expr_to_qualname(state, expr)
   return ""
 end function
 
-/// Implements extern sig get.
+/// Lower extern sig get expression behavior to native x64.
 /// @internal
 function _extern_sig_get(state, qname)
   if typeof(qname) != "string" or qname == "" then return 0 end if
@@ -1071,7 +1071,7 @@ function _extern_sig_get(state, qname)
   return 0
 end function
 
-/// Runs emit struct field index dispatch.
+/// Lower emit struct field index dispatch expression behavior to native x64.
 /// @internal
 function _emit_struct_field_index_dispatch(state, field, struct_id_reg, out_reg, ok_label, fail_label, tag)
   pairs_b = t.arr_chunk_new(64)
@@ -1141,7 +1141,7 @@ function _emit_struct_field_index_dispatch(state, field, struct_id_reg, out_reg,
   return state
 end function
 
-/// Implements resolve const value.
+/// Lower resolve const value expression behavior to native x64.
 /// @internal
 function _resolve_const_value(state, name)
   b = scope.cg_resolve_binding(state, name)
@@ -1157,7 +1157,7 @@ function _resolve_const_value(state, name)
   return ConstEvalResult(true, b.const_value_py)
 end function
 
-/// Implements try const bin.
+/// Lower try const bin expression behavior to native x64.
 /// @internal
 function _try_const_bin(op, lv, rv)
   if op == "and" then return ConstEvalResult(true, _opt_truthy(lv) and _opt_truthy(rv)) end if
@@ -1236,7 +1236,7 @@ function _try_const_bin(op, lv, rv)
   return ConstEvalResult(false, 0)
 end function
 
-/// Implements cg expr try const value.
+/// Lower cg expr try const value expression behavior to native x64.
 /// @internal
 function _cg_expr_try_const_value(state, expr, preserve_unary_float)
   if t.ast_is_node(expr) == false then return ConstEvalResult(false, 0) end if
@@ -1311,7 +1311,7 @@ function _cg_expr_try_const_value(state, expr, preserve_unary_float)
   return ConstEvalResult(false, 0)
 end function
 
-/// Implements opt try const immediate encoded.
+/// Lower opt try const immediate encoded expression behavior to native x64.
 /// @internal
 function _opt_try_const_immediate_encoded(state, expr)
   cv = cg_expr_try_const_value(state, expr)
@@ -1328,7 +1328,7 @@ function _opt_try_const_immediate_encoded(state, expr)
   return 0
 end function
 
-/// Implements opt try pure const array len.
+/// Lower opt try pure const array len expression behavior to native x64.
 /// @internal
 function _opt_try_pure_const_array_len(state, expr)
   if typeof(expr) != "struct" then return -1 end if
@@ -1343,7 +1343,7 @@ function _opt_try_pure_const_array_len(state, expr)
   return len(items)
 end function
 
-/// Implements opt try known type label.
+/// Lower opt try known type label expression behavior to native x64.
 /// @internal
 function _opt_try_known_type_label(state, expr, detailed)
   cv = cg_expr_try_const_value(state, expr)
@@ -1384,7 +1384,7 @@ function _opt_try_known_type_label(state, expr, detailed)
   return ""
 end function
 
-/// Implements qname parts any.
+/// Lower qname parts any expression behavior to native x64.
 /// @internal
 function _qname_parts_any(expr)
   if t.ast_is_node(expr) == false then return 0 end if
@@ -1408,7 +1408,7 @@ function _qname_parts_any(expr)
   return 0
 end function
 
-/// Runs emit std math roundlike intrinsic.
+/// Lower emit std math roundlike intrinsic expression behavior to native x64.
 /// @internal
 function _emit_std_math_roundlike_intrinsic(state, callee_name, arg)
   if callee_name != "std.math.floor" and callee_name != "std.math.ceil" and callee_name != "std.math.trunc" and callee_name != "std.math.round" then
@@ -1488,7 +1488,7 @@ function _emit_std_math_roundlike_intrinsic(state, callee_name, arg)
   return [state, true]
 end function
 
-/// Implements cg expr try const value.
+/// Lower cg expr try const value expression behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param expr Value supplied for `expr`.
 function cg_expr_try_const_value(state, expr)
@@ -1496,7 +1496,7 @@ function cg_expr_try_const_value(state, expr)
   return _cg_expr_try_const_value(state, expr, false)
 end function
 
-/// Implements cg expr try const decl value.
+/// Lower cg expr try const decl value expression behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param expr Value supplied for `expr`.
 function cg_expr_try_const_decl_value(state, expr)
@@ -1504,7 +1504,7 @@ function cg_expr_try_const_decl_value(state, expr)
   return _cg_expr_try_const_value(state, expr, true)
 end function
 
-/// Implements extern struct get.
+/// Lower extern struct get expression behavior to native x64.
 /// @internal
 function _extern_struct_get(state, qname)
   xs = state.extern_abi_structs
@@ -1528,7 +1528,7 @@ function _is_expr_list_separator_artifact(ex)
   return false
 end function
 
-/// Implements filter expr list separator artifacts.
+/// Lower filter expr list separator artifacts expression behavior to native x64.
 /// @internal
 function _filter_expr_list_separator_artifacts(items)
   if typeof(items) != "array" then return [] end if
@@ -1547,7 +1547,7 @@ function _filter_expr_list_separator_artifacts(items)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements cg emit expr.
+/// Lower cg emit expr expression behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param expr Value supplied for `expr`.
 function cg_emit_expr(state, expr)
@@ -1635,7 +1635,7 @@ function cg_emit_expr(state, expr)
   return _emit_expr_unsupported(state, expr, k)
 end function
 
-/// Runs emit expr coalesce.
+/// Lower emit expr coalesce expression behavior to native x64.
 /// @internal
 function _emit_expr_coalesce(state, expr)
   lid = _next_lid(state)
@@ -1648,7 +1648,7 @@ function _emit_expr_coalesce(state, expr)
   return state
 end function
 
-/// Runs emit expr safe member.
+/// Lower emit expr safe member expression behavior to native x64.
 /// @internal
 function _emit_expr_safe_member(state, expr)
   lid = _next_lid(state)
@@ -1670,7 +1670,7 @@ function _emit_expr_safe_member(state, expr)
   return state
 end function
 
-/// Runs emit expr safe call.
+/// Lower emit expr safe call expression behavior to native x64.
 /// @internal
 function _emit_expr_safe_call(state, expr)
   safe = expr.callee
@@ -1694,7 +1694,7 @@ function _emit_expr_safe_call(state, expr)
   return state
 end function
 
-/// Runs emit expr type guard.
+/// Lower emit expr type guard expression behavior to native x64.
 /// @internal
 function _emit_expr_type_guard(state, expr)
   lid = _next_lid(state)
@@ -1743,7 +1743,7 @@ function _emit_expr_type_guard(state, expr)
   return state
 end function
 
-/// Runs emit expr num.
+/// Lower emit expr num expression behavior to native x64.
 /// @internal
 function _emit_expr_num(state, expr)
   val_num = t.ast_value(expr)
@@ -1766,14 +1766,14 @@ function _emit_expr_num(state, expr)
   return state
 end function
 
-/// Runs emit expr bool.
+/// Lower emit expr bool expression behavior to native x64.
 /// @internal
 function _emit_expr_bool(state, expr)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(t.ast_value(expr)))
   return state
 end function
 
-/// Runs emit expr str.
+/// Lower emit expr str expression behavior to native x64.
 /// @internal
 function _emit_expr_str(state, expr)
   lbl_str = "objstr_" + _next_lid(state)
@@ -1782,14 +1782,14 @@ function _emit_expr_str(state, expr)
   return state
 end function
 
-/// Runs emit expr voidlit.
+/// Lower emit expr voidlit expression behavior to native x64.
 /// @internal
 function _emit_expr_voidlit(state, expr)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
   return state
 end function
 
-/// Runs emit expr is type.
+/// Lower emit expr is type expression behavior to native x64.
 /// @internal
 function _emit_expr_is_type(state, expr)
   ty_raw = _coerce_name(expr.type_name)
@@ -1987,7 +1987,7 @@ function _emit_expr_is_type(state, expr)
   return state
 end function
 
-/// Runs emit expr var.
+/// Lower emit expr var expression behavior to native x64.
 /// @internal
 function _emit_expr_var(state, expr)
   nm_raw = ""
@@ -2010,7 +2010,7 @@ function _emit_expr_var(state, expr)
   return scope.emit_load_var_scoped(state, nm)
 end function
 
-/// Runs emit expr member.
+/// Lower emit expr member expression behavior to native x64.
 /// @internal
 function _emit_expr_member(state, expr)
   mname = _coerce_name(try(expr.name))
@@ -2188,7 +2188,7 @@ function _emit_expr_member(state, expr)
   return state
 end function
 
-/// Runs emit expr index.
+/// Lower emit expr index expression behavior to native x64.
 /// @internal
 function _emit_expr_index(state, expr)
   fast_plan = _opt_known_index_plan(state, expr)
@@ -2361,7 +2361,7 @@ function _emit_expr_index(state, expr)
   return state
 end function
 
-/// Runs emit expr unary.
+/// Lower emit expr unary expression behavior to native x64.
 /// @internal
 function _emit_expr_unary(state, expr)
   state = cg_emit_expr(state, t.ast_right(expr))
@@ -2461,7 +2461,7 @@ function _emit_expr_unary(state, expr)
   return state
 end function
 
-/// Implements intflow name has.
+/// Lower intflow name has expression behavior to native x64.
 /// @internal
 function _intflow_name_has(arr, name)
   if typeof(arr) == "struct" then return t.fastmap_get(arr, name, 0) != 0 end if
@@ -2472,7 +2472,7 @@ function _intflow_name_has(arr, name)
   return false
 end function
 
-/// Implements opt const nonzero number.
+/// Lower opt const nonzero number expression behavior to native x64.
 /// @internal
 function _opt_const_nonzero_number(state, ex)
   cv = cg_expr_try_const_value(state, ex)
@@ -2481,14 +2481,14 @@ function _opt_const_nonzero_number(state, ex)
   return (tv == "int" or tv == "float") and cv.value != 0
 end function
 
-/// Implements opt const nonnegative int.
+/// Lower opt const nonnegative int expression behavior to native x64.
 /// @internal
 function _opt_const_nonnegative_int(state, ex)
   cv = cg_expr_try_const_value(state, ex)
   return typeof(cv) == "struct" and cv.ok and typeof(cv.value) == "int" and cv.value >= 0
 end function
 
-/// Implements opt expr known int.
+/// Lower opt expr known int expression behavior to native x64.
 /// @internal
 function _opt_expr_known_int(state, ex)
   if t.ast_is_node(ex) == false then return false end if
@@ -2523,7 +2523,7 @@ function _opt_expr_known_int(state, ex)
   return false
 end function
 
-/// Implements inline.
+/// Lower inline expression behavior to native x64.
 /// @internal
 function inline _opt_type_base(type_name)
   if typeof(type_name) != "string" or type_name == "" then return "" end if
@@ -2533,7 +2533,7 @@ function inline _opt_type_base(type_name)
   return type_name
 end function
 
-/// Implements opt type exact length.
+/// Lower opt type exact length expression behavior to native x64.
 /// @internal
 function _opt_type_exact_length(type_name)
   if typeof(type_name) != "string" or type_name == "" then return -1 end if
@@ -2550,7 +2550,7 @@ function _opt_type_exact_length(type_name)
   return value
 end function
 
-/// Implements opt type fact get.
+/// Lower opt type fact get expression behavior to native x64.
 /// @internal
 function _opt_type_fact_get(items, name)
   if typeof(items) == "struct" then
@@ -2566,7 +2566,7 @@ function _opt_type_fact_get(items, name)
   return ""
 end function
 
-/// Implements opt expr known type.
+/// Lower opt expr known type expression behavior to native x64.
 /// @internal
 function _opt_expr_known_type(state, ex)
   if t.ast_is_node(ex) == false then return "" end if
@@ -2639,7 +2639,7 @@ function _opt_expr_known_type(state, ex)
   return ""
 end function
 
-/// Implements opt type query can elide evaluation.
+/// Lower opt type query can elide evaluation expression behavior to native x64.
 /// @internal
 function _opt_type_query_can_elide_evaluation(ex)
   if t.ast_is_node(ex) == false then return false end if
@@ -2647,7 +2647,7 @@ function _opt_type_query_can_elide_evaluation(ex)
   return k == "Num" or k == "Bool" or k == "Str" or k == "Var"
 end function
 
-/// Implements opt known index plan.
+/// Lower opt known index plan expression behavior to native x64.
 /// @internal
 function _opt_known_index_plan(state, ex)
   if typeof(ex) != "struct" then return [] end if
@@ -2695,7 +2695,7 @@ function _opt_known_index_plan(state, ex)
   return [kind, base_slot, bounds_proven]
 end function
 
-/// Implements opt emit known index.
+/// Lower opt emit known index expression behavior to native x64.
 /// @internal
 function _opt_emit_known_index(state, expr, plan)
   kind = plan[0]
@@ -2796,7 +2796,7 @@ function _positive_power_of_two_shift(value)
   return shift
 end function
 
-/// Runs emit known int binop.
+/// Lower emit known int binop expression behavior to native x64.
 /// @internal
 function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
   // Operands in r10/r11 are proven tagged integers. Every specialization must
@@ -3020,7 +3020,7 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
   return state
 end function
 
-/// Runs emit known float binop.
+/// Lower emit known float binop expression behavior to native x64.
 /// @internal
 function _emit_known_float_binop(state, expr)
   op = _coerce_name(t.ast_op(expr))
@@ -4358,7 +4358,7 @@ function _emit_expr_bin(state, expr)
   return state
 end function
 
-/// Runs emit expr call.
+/// Lower emit expr call expression behavior to native x64.
 /// @internal
 function _emit_expr_call(state, expr)
   // Keep callsite line current so runtime-created errors carry correct origin.
@@ -5050,7 +5050,7 @@ function _emit_expr_call(state, expr)
   return _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime)
 end function
 
-/// Runs emit expr call early builtins.
+/// Lower emit expr call early builtins expression behavior to native x64.
 /// @internal
 function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, nargs)
   // Native string/bytes helpers use the same compact ABI path as the Python
@@ -6249,7 +6249,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
   return [state, false]
 end function
 
-/// Runs emit generic call builtin cases.
+/// Lower emit generic call builtin cases expression behavior to native x64.
 /// @internal
 function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, nargs, call_args_base)
   if callee == "array" then
@@ -7072,7 +7072,7 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
   return [state, false]
 end function
 
-/// Runs emit native value helper call.
+/// Lower emit native value helper call expression behavior to native x64.
 /// @internal
 function _emit_native_value_helper_call(state, callee, raw_name, call_args, nargs)
   nm = callee
@@ -7197,7 +7197,7 @@ function _emit_native_value_helper_call(state, callee, raw_name, call_args, narg
   return [state, true]
 end function
 
-/// Implements expr heap cfg bool.
+/// Lower expr heap cfg bool expression behavior to native x64.
 /// @internal
 function _expr_heap_cfg_bool(state, key, defaultv)
   if typeof(state) != "struct" or typeof(state.heap_config) != "array" or len(state.heap_config) <= 0 then return defaultv end if
@@ -7211,7 +7211,7 @@ function _expr_heap_cfg_bool(state, key, defaultv)
   return defaultv
 end function
 
-/// Implements direct user call enabled.
+/// Lower direct user call enabled expression behavior to native x64.
 /// @internal
 function _direct_user_call_enabled(state, qname)
   // Keep the old unguarded fast path available for controlled experiments,
@@ -7220,7 +7220,7 @@ function _direct_user_call_enabled(state, qname)
   return _expr_heap_cfg_bool(state, "cg_unguarded_direct_user_calls", false)
 end function
 
-/// Runs emit expr call generic.
+/// Select constructor, direct-call, extern, or indirect-call lowering for a generic call.
 /// @internal
 function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime)
   skip_call_args_eval = false
@@ -7365,7 +7365,19 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
       scallee = raw_name
     end if
   end if
-  if sid != 0 then
+  if sid != 0 then return _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs) end if
+  if direct_user_global and direct_user_name != "" then
+    return _emit_direct_user_call(state, direct_user_name, call_args, nargs)
+  end if
+  extern_result = _try_emit_direct_extern_call(state, cal, callee, raw_name, call_args, nargs)
+  state = extern_result[0]
+  if extern_result[1] then return state end if
+  return _emit_indirect_callable_call(state, cal, callee, raw_name, call_args, nargs, call_args_base, skip_call_args_eval)
+end function
+
+/// Emit a statically resolved struct construction while preserving field guards.
+/// @internal
+function _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs)
     expected = 0
     flds = _state_struct_fields_get(state, scallee)
     if typeof(flds) == "array" then expected = len(flds) end if
@@ -7439,9 +7451,11 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base_struct)
     if base_struct_ok then state = core.free_expr_temps(state, 8) end if
     return state
-  end if
+end function
 
-  if direct_user_global and direct_user_name != "" then
+/// Emit an unguarded direct call selected by the explicit compiler fast-path option.
+/// @internal
+function _emit_direct_user_call(state, direct_user_name, call_args, nargs)
     direct_fn = _user_function_get(state, direct_user_name)
     if typeof(direct_fn) == "struct" then
       direct_expected = 0
@@ -7485,8 +7499,12 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
       if direct_base_ok then state = core.free_expr_temps(state, nargs * 8) end if
       return state
     end if
-  end if
+    return state
+end function
 
+/// Try the shortened extern-call form that supplies omitted trailing `out` arguments.
+/// @internal
+function _try_emit_direct_extern_call(state, cal, callee, raw_name, call_args, nargs)
   // Direct extern calls may omit trailing `out` parameters. Full-arity calls
   // keep using the first-class OBJ_BUILTIN stub for backward compatibility.
   ext_name = callee
@@ -7512,16 +7530,21 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
         if ext_required != ext_total then want = "" + ext_required + ".." + ext_total end if
         state.diagnostics = state.diagnostics + ["Extern " + ext_name + " expects " + want + " args, got " + nargs]
         state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
-        return state
+        return [state, true]
       end if
       if nargs < ext_total then
         state = _emit_extern_call(state, cal, call_args, "", ext_name, t.ast_pos(cal))
         state = _emit_auto_errprop(state)
-        return state
+        return [state, true]
       end if
     end if
   end if
+  return [state, false]
+end function
 
+/// Emit the runtime-tag dispatch shared by first-class and member callables.
+/// @internal
+function _emit_indirect_callable_call(state, cal, callee, raw_name, call_args, nargs, call_args_base, skip_call_args_eval)
   // Indirect callable dispatch (first-class function values).
   state.call_indirect_count = state.call_indirect_count + 1
   callee_is_member = false
@@ -8049,7 +8072,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
 end function
 
 
-/// Runs emit expr array lit.
+/// Lower emit expr array lit expression behavior to native x64.
 /// @internal
 function _emit_expr_array_lit(state, expr)
   n = 0
@@ -8112,7 +8135,7 @@ function _emit_expr_array_lit(state, expr)
   return state
 end function
 
-/// Runs emit expr unsupported.
+/// Lower emit expr unsupported expression behavior to native x64.
 /// @internal
 function _emit_expr_unsupported(state, expr, k)
   loc = ""
@@ -8157,7 +8180,7 @@ function _abi_ty_to_str(abi_ty)
   return ""
 end function
 
-/// Implements qname parts.
+/// Lower qname parts expression behavior to native x64.
 /// @internal
 function _qname_parts(state, ex)
   qn = _expr_to_qualname(state, ex)
@@ -8165,7 +8188,7 @@ function _qname_parts(state, ex)
   return s.split(qn, ".")
 end function
 
-/// Implements qname of.
+/// Lower qname of expression behavior to native x64.
 /// @internal
 function _qname_of(state, ex)
   if t.ast_is_node(ex) == false then return "" end if
@@ -8294,7 +8317,7 @@ function _qname_of(state, ex)
   return ""
 end function
 
-/// Implements qname with prefixes.
+/// Lower qname with prefixes expression behavior to native x64.
 /// @internal
 function _qname_with_prefixes(state, qname)
   if typeof(qname) != "string" or qname == "" then return [] end if
@@ -8328,13 +8351,13 @@ function _qname_with_prefixes(state, qname)
   return vals
 end function
 
-/// Implements qualify dotted.
+/// Lower qualify dotted expression behavior to native x64.
 /// @internal
 function _qualify_dotted(state, name)
   return _qualify_identifier(state, name)
 end function
 
-/// Implements qname exists.
+/// Lower qname exists expression behavior to native x64.
 /// @internal
 function _qname_exists(state, qname)
   if typeof(qname) != "string" or qname == "" then return false end if
@@ -8397,7 +8420,7 @@ function _is_instance_method_qname(state, qname)
   return false
 end function
 
-/// Implements expr has this.
+/// Lower expr has this expression behavior to native x64.
 /// @internal
 function _expr_has_this(ex)
   if t.ast_is_node(ex) == false then return false end if
@@ -8454,7 +8477,7 @@ function _expr_has_this(ex)
   return false
 end function
 
-/// Implements stmt has this.
+/// Lower stmt has this expression behavior to native x64.
 /// @internal
 function _stmt_has_this(st)
   if typeof(st) != "struct" then return false end if
@@ -8596,7 +8619,7 @@ function _stmt_has_this(st)
   return false
 end function
 
-/// Implements fn uses this.
+/// Lower fn uses this expression behavior to native x64.
 /// @internal
 function _fn_uses_this(fn_node)
   if typeof(fn_node) != "struct" then return false end if
@@ -8657,7 +8680,7 @@ function _contains_nested_fn(node)
   return false
 end function
 
-/// Implements extern dll base.
+/// Lower extern dll base expression behavior to native x64.
 /// @internal
 function _extern_dll_base(dll, is_linux)
   identity = "" + dll
@@ -8674,13 +8697,13 @@ function _abi_param_is_double(abi_ty)
   return s.toLowerAscii(s.trim(_abi_ty_to_str(abi_ty))) == "double"
 end function
 
-/// Implements extern iat label.
+/// Lower extern iat label expression behavior to native x64.
 /// @internal
 function _extern_iat_label(dll, sym, is_linux)
   return "iat_" + _extern_dll_base(dll, is_linux) + "_" + sym
 end function
 
-/// Runs emit make error const.
+/// Lower emit make error const expression behavior to native x64.
 /// @internal
 function _emit_make_error_const(state, code, message)
   err_code = 0
@@ -8722,7 +8745,7 @@ function _emit_make_error_const(state, code, message)
   return state
 end function
 
-/// Runs emit auto errprop.
+/// Lower emit auto errprop expression behavior to native x64.
 /// @internal
 function _emit_auto_errprop(state)
   sup = 0
@@ -8771,7 +8794,7 @@ function _emit_auto_errprop(state)
   return state
 end function
 
-/// Runs emit auto errprop cold block.
+/// Lower emit auto errprop cold block expression behavior to native x64.
 /// @internal
 function _emit_auto_errprop_cold_block(state)
   if state.in_function and typeof(state.func_ret_label) == "string" and state.func_ret_label != "" then
@@ -8783,7 +8806,7 @@ function _emit_auto_errprop_cold_block(state)
   return state
 end function
 
-/// Runs emit extern arg to native.
+/// Lower emit extern arg to native expression behavior to native x64.
 /// @internal
 function _emit_extern_arg_to_native(state, abi_ty, fail_label, pos, wbuf_label)
   raw_ty = s.trim(_abi_ty_to_str(abi_ty))
@@ -8930,7 +8953,7 @@ function _emit_extern_arg_to_native(state, abi_ty, fail_label, pos, wbuf_label)
   return state
 end function
 
-/// Runs emit extern ret from native.
+/// Lower emit extern ret from native expression behavior to native x64.
 /// @internal
 function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
   ty = s.toLowerAscii(s.trim(_abi_ty_to_str(abi_ty)))
@@ -9160,7 +9183,7 @@ function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
   return state
 end function
 
-/// Runs emit extern out from stack.
+/// Lower emit extern out from stack expression behavior to native x64.
 /// @internal
 function _emit_extern_out_from_stack(state, abi_ty, stack_off, pos)
   ty_raw = s.trim(_abi_ty_to_str(abi_ty))
@@ -9528,7 +9551,7 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
   return state
 end function
 
-/// Implements inline collect expr stats.
+/// Lower inline collect expr stats expression behavior to native x64.
 /// @internal
 function _inline_collect_expr_stats(ex, stats)
   if t.ast_is_node(ex) == false then return 0 end if
@@ -9565,7 +9588,7 @@ function _inline_collect_expr_stats(ex, stats)
   return 8
 end function
 
-/// Implements inline collect stmt list stats.
+/// Lower inline collect stmt list stats expression behavior to native x64.
 /// @internal
 function _inline_collect_stmt_list_stats(stmts, stats)
   cost = 0
@@ -9576,7 +9599,7 @@ function _inline_collect_stmt_list_stats(stmts, stats)
   return cost
 end function
 
-/// Implements inline collect stmt stats.
+/// Lower inline collect stmt stats expression behavior to native x64.
 /// @internal
 function _inline_collect_stmt_stats(st, stats)
   if typeof(st) != "struct" then return 0 end if
@@ -9658,7 +9681,7 @@ function _inline_collect_stmt_stats(st, stats)
   return 6
 end function
 
-/// Implements function wants inline.
+/// Lower function wants inline expression behavior to native x64.
 /// @internal
 function _function_wants_inline(fn)
   if typeof(fn) != "struct" then return false end if
@@ -9691,7 +9714,7 @@ function _function_wants_inline(fn)
   return true
 end function
 
-/// Implements call args have stack variadic.
+/// Lower call args have stack variadic expression behavior to native x64.
 /// @internal
 function _call_args_have_stack_variadic(args)
   if typeof(args) != "array" or len(args) <= 0 then return false end if
@@ -9702,7 +9725,7 @@ function _call_args_have_stack_variadic(args)
   return false
 end function
 
-/// Implements inline declared type fact.
+/// Lower inline declared type fact expression behavior to native x64.
 /// @internal
 function _inline_declared_type_fact(state, raw_type)
   if typeof(raw_type) != "string" or raw_type == "" then return "" end if
@@ -9716,7 +9739,7 @@ function _inline_declared_type_fact(state, raw_type)
   return "struct:" + qualified
 end function
 
-/// Implements inline call eligible.
+/// Lower inline call eligible expression behavior to native x64.
 /// @internal
 function _inline_call_eligible(fn)
   if typeof(fn) != "struct" then return false end if
@@ -9731,7 +9754,7 @@ function _inline_call_eligible(fn)
   return true
 end function
 
-/// Runs emit inline call.
+/// Lower emit inline call expression behavior to native x64.
 /// @internal
 function _emit_inline_call(state, callee, args)
   // Inline expansion evaluates arguments left-to-right into persistent root
@@ -9930,13 +9953,13 @@ function _emit_inline_call(state, callee, args)
   return state
 end function
 
-/// Implements opt try const value.
+/// Lower opt try const value expression behavior to native x64.
 /// @internal
 function _opt_try_const_value(state, ex)
   return cg_expr_try_const_value(state, ex)
 end function
 
-/// Implements opt emit const value.
+/// Lower opt emit const value expression behavior to native x64.
 /// @internal
 function _opt_emit_const_value(state, value)
   tv = typeof(value)
@@ -9969,7 +9992,7 @@ function _opt_emit_const_value(state, value)
   return state
 end function
 
-/// Runs emit call args eval recursive.
+/// Lower emit call args eval recursive expression behavior to native x64.
 /// @internal
 function _emit_call_args_eval_recursive(state, call_args, idx, nargs, base_off)
   if typeof(nargs) != "int" then return state end if
@@ -9988,14 +10011,14 @@ function _emit_call_args_eval_recursive(state, call_args, idx, nargs, base_off)
   return _emit_call_args_eval_recursive(state, call_args, idx + 1, nargs, base_off)
 end function
 
-/// Runs emit expr.
+/// Lower emit expr expression behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param ex Value supplied for `ex`.
 function emit_expr(state, ex)
   return cg_emit_expr(state, ex)
 end function
 
-/// Runs emit extern stubs.
+/// Lower emit extern stubs expression behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_extern_stubs(state)
   threaded_native = state.native_threads_possible

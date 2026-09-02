@@ -23,7 +23,7 @@ Paged byte buffer used by large assembler and linker outputs.
 chunk_pages
 ```
 
-Stores the chunk pages member of `BytePages`.
+Chunk pages associated with `BytePages`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L101)
@@ -35,7 +35,7 @@ Stores the chunk pages member of `BytePages`.
 chunk_tail
 ```
 
-Stores the chunk tail member of `BytePages`.
+Chunk tail associated with `BytePages`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L103)
@@ -47,7 +47,7 @@ Stores the chunk tail member of `BytePages`.
 size
 ```
 
-Stores the size member of `BytePages`.
+Current logical size of `BytePages`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L105)

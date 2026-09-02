@@ -23,7 +23,7 @@ Mutable PE32+ image plan populated before final serialization.
 entry_rva
 ```
 
-Stores the entry rva member of `PEBuilder`.
+Entry rva associated with `PEBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L64)
@@ -35,7 +35,7 @@ Stores the entry rva member of `PEBuilder`.
 file_alignment
 ```
 
-Stores the file alignment member of `PEBuilder`.
+File alignment associated with `PEBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L60)
@@ -47,7 +47,7 @@ Stores the file alignment member of `PEBuilder`.
 image_base
 ```
 
-Stores the image base member of `PEBuilder`.
+Image base associated with `PEBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L56)
@@ -59,7 +59,7 @@ Stores the image base member of `PEBuilder`.
 import_rva
 ```
 
-Stores the import rva member of `PEBuilder`.
+Import rva associated with `PEBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L66)
@@ -71,7 +71,7 @@ Stores the import rva member of `PEBuilder`.
 import_size
 ```
 
-Stores the import size member of `PEBuilder`.
+Import size associated with `PEBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L68)
@@ -83,7 +83,7 @@ Stores the import size member of `PEBuilder`.
 section_alignment
 ```
 
-Stores the section alignment member of `PEBuilder`.
+Section alignment associated with `PEBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L58)
@@ -95,7 +95,7 @@ Stores the section alignment member of `PEBuilder`.
 sections
 ```
 
-Stores the sections member of `PEBuilder`.
+Sections associated with `PEBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L62)
@@ -107,7 +107,7 @@ Stores the sections member of `PEBuilder`.
 subsystem
 ```
 
-Stores the subsystem member of `PEBuilder`.
+Subsystem associated with `PEBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L70)

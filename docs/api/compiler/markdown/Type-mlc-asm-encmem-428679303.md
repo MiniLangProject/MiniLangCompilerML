@@ -23,7 +23,7 @@ Encoded ModRM/SIB memory operand tail and extension bits.
 rex_b
 ```
 
-Stores the rex b member of `EncMem`.
+Rex b associated with `EncMem`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L108)
@@ -35,7 +35,7 @@ Stores the rex b member of `EncMem`.
 rex_x
 ```
 
-Stores the rex x member of `EncMem`.
+Rex x associated with `EncMem`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L106)
@@ -47,7 +47,7 @@ Stores the rex x member of `EncMem`.
 tail
 ```
 
-Stores the tail member of `EncMem`.
+Tail associated with `EncMem`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L110)

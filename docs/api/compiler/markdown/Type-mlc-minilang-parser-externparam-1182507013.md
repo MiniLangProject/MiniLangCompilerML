@@ -23,7 +23,7 @@ Represents extern param.
 is_out
 ```
 
-Stores the is out member of `ExternParam`.
+Whether `ExternParam.is_out` indicates out.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L853)
@@ -35,7 +35,7 @@ Stores the is out member of `ExternParam`.
 name
 ```
 
-Stores the name member of `ExternParam`.
+Name associated with `ExternParam`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L849)
@@ -47,7 +47,7 @@ Stores the name member of `ExternParam`.
 node_kind
 ```
 
-Stores the node kind member of `ExternParam`.
+Node kind associated with `ExternParam`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L847)
@@ -59,7 +59,7 @@ Stores the node kind member of `ExternParam`.
 ty
 ```
 
-Stores the ty member of `ExternParam`.
+Ty associated with `ExternParam`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L851)

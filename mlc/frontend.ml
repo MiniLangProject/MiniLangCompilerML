@@ -24,33 +24,33 @@ import mlc.tools as t
 
 /// Source text, parsed program and normalized diagnostics returned together.
 struct FrontendParseResult
-  /// Stores the source member of `FrontendParseResult`.
+  /// Source associated with `FrontendParseResult`.
   source,
-  /// Stores the program member of `FrontendParseResult`.
+  /// Program associated with `FrontendParseResult`.
   program,
-  /// Stores the errors member of `FrontendParseResult`.
+  /// Errors associated with `FrontendParseResult`.
   errors,
 end struct
 
-/// Implements inline.
+/// Process inline in the shared MiniLang front end.
 /// @internal
 function inline _is_space_byte(ch)
   return ch == 32 or ch == 9 or ch == 10 or ch == 13
 end function
 
-/// Implements inline.
+/// Process inline in the shared MiniLang front end.
 /// @internal
 function inline _is_digit_byte(ch)
   return ch >= 48 and ch <= 57
 end function
 
-/// Implements inline.
+/// Process inline in the shared MiniLang front end.
 /// @internal
 function inline _is_alnum_byte(ch)
   return (ch >= 48 and ch <= 57) or (ch >= 65 and ch <= 90) or (ch >= 97 and ch <= 122)
 end function
 
-/// Implements normalize frontend error.
+/// Process normalize frontend error in the shared MiniLang front end.
 /// @internal
 function _normalize_frontend_error(err, fallback_path)
   if typeof(err) != "struct" then
@@ -73,7 +73,7 @@ function _normalize_frontend_error(err, fallback_path)
   return parser.newParseError(err.message, p, fallback_path)
 end function
 
-/// Implements normalize frontend errors.
+/// Process normalize frontend errors in the shared MiniLang front end.
 /// @internal
 function _normalize_frontend_errors(errors, fallback_path)
   if typeof(errors) != "array" or len(errors) <= 0 then

@@ -23,7 +23,7 @@ Represents extern function def.
 _filename
 ```
 
-Stores the filename member of `ExternFunctionDef`.
+Filename associated with `ExternFunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L873)
@@ -35,7 +35,7 @@ Stores the filename member of `ExternFunctionDef`.
 _pos
 ```
 
-Stores the pos member of `ExternFunctionDef`.
+Pos associated with `ExternFunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L871)
@@ -47,7 +47,7 @@ Stores the pos member of `ExternFunctionDef`.
 dll
 ```
 
-Stores the dll member of `ExternFunctionDef`.
+Dll associated with `ExternFunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L865)
@@ -59,7 +59,7 @@ Stores the dll member of `ExternFunctionDef`.
 name
 ```
 
-Stores the name member of `ExternFunctionDef`.
+Name associated with `ExternFunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L861)
@@ -71,7 +71,7 @@ Stores the name member of `ExternFunctionDef`.
 node_kind
 ```
 
-Stores the node kind member of `ExternFunctionDef`.
+Node kind associated with `ExternFunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L859)
@@ -83,7 +83,7 @@ Stores the node kind member of `ExternFunctionDef`.
 params
 ```
 
-Stores the params member of `ExternFunctionDef`.
+Params associated with `ExternFunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L863)
@@ -95,7 +95,7 @@ Stores the params member of `ExternFunctionDef`.
 ret_ty
 ```
 
-Stores the ret ty member of `ExternFunctionDef`.
+Ret ty associated with `ExternFunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L869)
@@ -107,7 +107,7 @@ Stores the ret ty member of `ExternFunctionDef`.
 symbol_name
 ```
 
-Stores the symbol name member of `ExternFunctionDef`.
+Symbol name associated with `ExternFunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L867)

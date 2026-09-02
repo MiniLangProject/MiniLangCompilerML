@@ -23,7 +23,7 @@ Represents call arguments.
 names
 ```
 
-Stores the names member of `CallArguments`.
+Names associated with `CallArguments`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L825)
@@ -35,7 +35,7 @@ Stores the names member of `CallArguments`.
 values
 ```
 
-Stores the values member of `CallArguments`.
+Values associated with `CallArguments`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L823)

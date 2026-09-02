@@ -23,7 +23,7 @@ Represents dynamic import.
 library
 ```
 
-Stores the library member of `DynamicImport`.
+Library associated with `DynamicImport`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L37)
@@ -35,7 +35,7 @@ Stores the library member of `DynamicImport`.
 slot_offset
 ```
 
-Stores the slot offset member of `DynamicImport`.
+Slot offset associated with `DynamicImport`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L41)
@@ -47,7 +47,7 @@ Stores the slot offset member of `DynamicImport`.
 symbol_name
 ```
 
-Stores the symbol name member of `DynamicImport`.
+Symbol name associated with `DynamicImport`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L39)

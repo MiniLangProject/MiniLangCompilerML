@@ -23,7 +23,7 @@ Runtime guard inserted at explicitly annotated type boundaries.
 _filename
 ```
 
-Stores the filename member of `TypeGuard`.
+Filename associated with `TypeGuard`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L243)
@@ -35,7 +35,7 @@ Stores the filename member of `TypeGuard`.
 _pos
 ```
 
-Stores the pos member of `TypeGuard`.
+Pos associated with `TypeGuard`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L241)
@@ -47,7 +47,7 @@ Stores the pos member of `TypeGuard`.
 expr
 ```
 
-Stores the expr member of `TypeGuard`.
+Expr associated with `TypeGuard`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L235)
@@ -59,7 +59,7 @@ Stores the expr member of `TypeGuard`.
 node_kind
 ```
 
-Stores the node kind member of `TypeGuard`.
+Node kind associated with `TypeGuard`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L233)
@@ -71,7 +71,7 @@ Stores the node kind member of `TypeGuard`.
 optional
 ```
 
-Stores the optional member of `TypeGuard`.
+Optional associated with `TypeGuard`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L239)
@@ -83,7 +83,7 @@ Stores the optional member of `TypeGuard`.
 type_name
 ```
 
-Stores the type name member of `TypeGuard`.
+Type name associated with `TypeGuard`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L237)

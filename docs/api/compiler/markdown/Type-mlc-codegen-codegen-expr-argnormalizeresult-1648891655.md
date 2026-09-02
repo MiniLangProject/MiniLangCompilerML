@@ -23,7 +23,7 @@ Represents arg normalize result.
 args
 ```
 
-Stores the args member of `ArgNormalizeResult`.
+Args associated with `ArgNormalizeResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L65)
@@ -35,7 +35,7 @@ Stores the args member of `ArgNormalizeResult`.
 message
 ```
 
-Stores the message member of `ArgNormalizeResult`.
+Diagnostic message carried by `ArgNormalizeResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L67)
@@ -47,7 +47,7 @@ Stores the message member of `ArgNormalizeResult`.
 ok
 ```
 
-Stores the ok member of `ArgNormalizeResult`.
+Whether `ArgNormalizeResult` represents a successful result.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L63)

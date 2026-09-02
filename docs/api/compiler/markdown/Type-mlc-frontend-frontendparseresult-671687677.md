@@ -23,7 +23,7 @@ Source text, parsed program and normalized diagnostics returned together.
 errors
 ```
 
-Stores the errors member of `FrontendParseResult`.
+Errors associated with `FrontendParseResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L32)
@@ -35,7 +35,7 @@ Stores the errors member of `FrontendParseResult`.
 program
 ```
 
-Stores the program member of `FrontendParseResult`.
+Program associated with `FrontendParseResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L30)
@@ -47,7 +47,7 @@ Stores the program member of `FrontendParseResult`.
 source
 ```
 
-Stores the source member of `FrontendParseResult`.
+Source associated with `FrontendParseResult`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L28)

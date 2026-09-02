@@ -34,39 +34,39 @@ extern function _parse_strtod(text as cstr, endptr as ptr) from "libc.so.6" symb
 
 /// Parser failure with absolute source offset and originating filename.
 struct ParseError
-  /// Stores the message member of `ParseError`.
+  /// Diagnostic message carried by `ParseError`.
   message,
-  /// Stores the pos member of `ParseError`.
+  /// Pos associated with `ParseError`.
   pos,
-  /// Stores the filename member of `ParseError`.
+  /// Filename associated with `ParseError`.
   filename,
 end struct
 
 /// Lexical token preserving raw value and absolute source offset.
 struct Token
-  /// Stores the kind member of `Token`.
+  /// Kind associated with `Token`.
   kind,
-  /// Stores the value member of `Token`.
+  /// Value associated with `Token`.
   value,
-  /// Stores the pos member of `Token`.
+  /// Pos associated with `Token`.
   pos,
 end struct
 
 /// Structure-of-arrays token arena. Parser cursors are integer IDs; kinds use one byte and positions/text IDs use packed u32 columns. Identifier, keyword and operator spellings are module-local symbols instead of per-token strings.
 struct TokenArena
-  /// Stores the kinds member of `TokenArena`.
+  /// Kinds associated with `TokenArena`.
   kinds,
-  /// Stores the value ids member of `TokenArena`.
+  /// Value ids associated with `TokenArena`.
   value_ids,
-  /// Stores the positions member of `TokenArena`.
+  /// Positions associated with `TokenArena`.
   positions,
-  /// Stores the texts member of `TokenArena`.
+  /// Texts associated with `TokenArena`.
   texts,
-  /// Stores the text index member of `TokenArena`.
+  /// Text index associated with `TokenArena`.
   text_index,
-  /// Stores the count member of `TokenArena`.
+  /// Count associated with `TokenArena`.
   count,
-  /// Stores the cap member of `TokenArena`.
+  /// Allocated capacity of `TokenArena`.
   cap,
 end struct
 
@@ -93,826 +93,826 @@ end function
 
 /// Capacity-backed parser list tail used to avoid repeated array concatenation.
 struct ParserChunkTail
-  /// Stores the data member of `ParserChunkTail`.
+  /// Backing data owned by `ParserChunkTail`.
   data,
-  /// Stores the used member of `ParserChunkTail`.
+  /// Number of populated entries in `ParserChunkTail`.
   used,
-  /// Stores the cap member of `ParserChunkTail`.
+  /// Allocated capacity of `ParserChunkTail`.
   cap,
 end struct
 
 /// Internal marker that distinguishes spare capacity from a real void element.
 struct ParserChunkVoidSentinel
-  /// Stores the tag member of `ParserChunkVoidSentinel`.
+  /// Tag associated with `ParserChunkVoidSentinel`.
   tag,
 end struct
 
 /// Expression AST. Every node carries source coordinates for later diagnostics.
 struct Num
-  /// Stores the node kind member of `Num`.
+  /// Node kind associated with `Num`.
   node_kind,
-  /// Stores the value member of `Num`.
+  /// Value associated with `Num`.
   value,
-  /// Stores the pos member of `Num`.
+  /// Pos associated with `Num`.
   _pos,
-  /// Stores the filename member of `Num`.
+  /// Filename associated with `Num`.
   _filename,
 end struct
 
 /// Represents str.
 struct Str
-  /// Stores the node kind member of `Str`.
+  /// Node kind associated with `Str`.
   node_kind,
-  /// Stores the value member of `Str`.
+  /// Value associated with `Str`.
   value,
-  /// Stores the pos member of `Str`.
+  /// Pos associated with `Str`.
   _pos,
-  /// Stores the filename member of `Str`.
+  /// Filename associated with `Str`.
   _filename,
 end struct
 
 /// Represents bool.
 struct Bool
-  /// Stores the node kind member of `Bool`.
+  /// Node kind associated with `Bool`.
   node_kind,
-  /// Stores the value member of `Bool`.
+  /// Value associated with `Bool`.
   value,
-  /// Stores the pos member of `Bool`.
+  /// Pos associated with `Bool`.
   _pos,
-  /// Stores the filename member of `Bool`.
+  /// Filename associated with `Bool`.
   _filename,
 end struct
 
 /// Represents void lit.
 struct VoidLit
-  /// Stores the node kind member of `VoidLit`.
+  /// Node kind associated with `VoidLit`.
   node_kind,
-  /// Stores the pos member of `VoidLit`.
+  /// Pos associated with `VoidLit`.
   _pos,
-  /// Stores the filename member of `VoidLit`.
+  /// Filename associated with `VoidLit`.
   _filename,
 end struct
 
 /// Represents var.
 struct Var
-  /// Stores the node kind member of `Var`.
+  /// Node kind associated with `Var`.
   node_kind,
-  /// Stores the name member of `Var`.
+  /// Name associated with `Var`.
   name,
-  /// Stores the pos member of `Var`.
+  /// Pos associated with `Var`.
   _pos,
-  /// Stores the filename member of `Var`.
+  /// Filename associated with `Var`.
   _filename,
 end struct
 
 /// Represents array lit.
 struct ArrayLit
-  /// Stores the node kind member of `ArrayLit`.
+  /// Node kind associated with `ArrayLit`.
   node_kind,
-  /// Stores the items member of `ArrayLit`.
+  /// Items associated with `ArrayLit`.
   items,
   // Internal-only marker: a proven non-escaping variadic tail may live in the
   // caller's rooted expression stack instead of allocating a heap array.
-  /// Stores the stack variadic member of `ArrayLit`.
+  /// Stack variadic associated with `ArrayLit`.
   stack_variadic,
-  /// Stores the pos member of `ArrayLit`.
+  /// Pos associated with `ArrayLit`.
   _pos,
-  /// Stores the filename member of `ArrayLit`.
+  /// Filename associated with `ArrayLit`.
   _filename,
 end struct
 
 /// Represents unary.
 struct Unary
-  /// Stores the node kind member of `Unary`.
+  /// Node kind associated with `Unary`.
   node_kind,
-  /// Stores the op member of `Unary`.
+  /// Op associated with `Unary`.
   op,
-  /// Stores the right member of `Unary`.
+  /// Right associated with `Unary`.
   right,
-  /// Stores the pos member of `Unary`.
+  /// Pos associated with `Unary`.
   _pos,
-  /// Stores the filename member of `Unary`.
+  /// Filename associated with `Unary`.
   _filename,
 end struct
 
 /// Represents bin.
 struct Bin
-  /// Stores the node kind member of `Bin`.
+  /// Node kind associated with `Bin`.
   node_kind,
-  /// Stores the left member of `Bin`.
+  /// Left associated with `Bin`.
   left,
-  /// Stores the op member of `Bin`.
+  /// Op associated with `Bin`.
   op,
-  /// Stores the right member of `Bin`.
+  /// Right associated with `Bin`.
   right,
-  /// Stores the pos member of `Bin`.
+  /// Pos associated with `Bin`.
   _pos,
-  /// Stores the filename member of `Bin`.
+  /// Filename associated with `Bin`.
   _filename,
 end struct
 
 /// Represents is type.
 struct IsType
-  /// Stores the node kind member of `IsType`.
+  /// Node kind associated with `IsType`.
   node_kind,
-  /// Stores the expr member of `IsType`.
+  /// Expr associated with `IsType`.
   expr,
-  /// Stores the type name member of `IsType`.
+  /// Type name associated with `IsType`.
   type_name,
-  /// Stores the negated member of `IsType`.
+  /// Negated associated with `IsType`.
   negated,
-  /// Stores the pos member of `IsType`.
+  /// Pos associated with `IsType`.
   _pos,
-  /// Stores the filename member of `IsType`.
+  /// Filename associated with `IsType`.
   _filename,
 end struct
 
 /// Runtime guard inserted at explicitly annotated type boundaries.
 struct TypeGuard
-  /// Stores the node kind member of `TypeGuard`.
+  /// Node kind associated with `TypeGuard`.
   node_kind,
-  /// Stores the expr member of `TypeGuard`.
+  /// Expr associated with `TypeGuard`.
   expr,
-  /// Stores the type name member of `TypeGuard`.
+  /// Type name associated with `TypeGuard`.
   type_name,
-  /// Stores the optional member of `TypeGuard`.
+  /// Optional associated with `TypeGuard`.
   optional,
-  /// Stores the pos member of `TypeGuard`.
+  /// Pos associated with `TypeGuard`.
   _pos,
-  /// Stores the filename member of `TypeGuard`.
+  /// Filename associated with `TypeGuard`.
   _filename,
 end struct
 
 /// Lazy void coalescing (`left ?? right`).
 struct Coalesce
-  /// Stores the node kind member of `Coalesce`.
+  /// Node kind associated with `Coalesce`.
   node_kind,
-  /// Stores the left member of `Coalesce`.
+  /// Left associated with `Coalesce`.
   left,
-  /// Stores the right member of `Coalesce`.
+  /// Right associated with `Coalesce`.
   right,
-  /// Stores the pos member of `Coalesce`.
+  /// Pos associated with `Coalesce`.
   _pos,
-  /// Stores the filename member of `Coalesce`.
+  /// Filename associated with `Coalesce`.
   _filename,
 end struct
 
 /// Represents call.
 struct Call
-  /// Stores the node kind member of `Call`.
+  /// Node kind associated with `Call`.
   node_kind,
-  /// Stores the callee member of `Call`.
+  /// Callee associated with `Call`.
   callee,
-  /// Stores the args member of `Call`.
+  /// Args associated with `Call`.
   args,
-  /// Stores the arg names member of `Call`.
+  /// Arg names associated with `Call`.
   arg_names,
-  /// Stores the pos member of `Call`.
+  /// Pos associated with `Call`.
   _pos,
-  /// Stores the filename member of `Call`.
+  /// Filename associated with `Call`.
   _filename,
 end struct
 
 /// Represents index.
 struct Index
-  /// Stores the node kind member of `Index`.
+  /// Node kind associated with `Index`.
   node_kind,
-  /// Stores the target member of `Index`.
+  /// Target associated with `Index`.
   target,
-  /// Stores the index member of `Index`.
+  /// Index associated with `Index`.
   index,
-  /// Stores the pos member of `Index`.
+  /// Pos associated with `Index`.
   _pos,
-  /// Stores the filename member of `Index`.
+  /// Filename associated with `Index`.
   _filename,
 end struct
 
 /// Represents member.
 struct Member
-  /// Stores the node kind member of `Member`.
+  /// Node kind associated with `Member`.
   node_kind,
-  /// Stores the target member of `Member`.
+  /// Target associated with `Member`.
   target,
-  /// Stores the name member of `Member`.
+  /// Name associated with `Member`.
   name,
-  /// Stores the pos member of `Member`.
+  /// Pos associated with `Member`.
   _pos,
-  /// Stores the filename member of `Member`.
+  /// Filename associated with `Member`.
   _filename,
 end struct
 
 /// Void-safe member access (`value?.member`).
 struct SafeMember
-  /// Stores the node kind member of `SafeMember`.
+  /// Node kind associated with `SafeMember`.
   node_kind,
-  /// Stores the target member of `SafeMember`.
+  /// Target associated with `SafeMember`.
   target,
-  /// Stores the name member of `SafeMember`.
+  /// Name associated with `SafeMember`.
   name,
-  /// Stores the pos member of `SafeMember`.
+  /// Pos associated with `SafeMember`.
   _pos,
-  /// Stores the filename member of `SafeMember`.
+  /// Filename associated with `SafeMember`.
   _filename,
 end struct
 
 /// Parser-only anonymous function lowered to an ordinary nested closure.
 struct Lambda
-  /// Stores the node kind member of `Lambda`.
+  /// Node kind associated with `Lambda`.
   node_kind,
-  /// Stores the params member of `Lambda`.
+  /// Params associated with `Lambda`.
   params,
-  /// Stores the body member of `Lambda`.
+  /// Body associated with `Lambda`.
   body,
-  /// Stores the param types member of `Lambda`.
+  /// Param types associated with `Lambda`.
   param_types,
-  /// Stores the param optional member of `Lambda`.
+  /// Param optional associated with `Lambda`.
   param_optional,
-  /// Stores the param defaults member of `Lambda`.
+  /// Param defaults associated with `Lambda`.
   param_defaults,
-  /// Stores the variadic index member of `Lambda`.
+  /// Variadic index associated with `Lambda`.
   variadic_index,
-  /// Stores the return type member of `Lambda`.
+  /// Return type associated with `Lambda`.
   return_type,
-  /// Stores the return optional member of `Lambda`.
+  /// Return optional associated with `Lambda`.
   return_optional,
-  /// Stores the pos member of `Lambda`.
+  /// Pos associated with `Lambda`.
   _pos,
-  /// Stores the filename member of `Lambda`.
+  /// Filename associated with `Lambda`.
   _filename,
 end struct
 
 /// Compiler-internal expression used while emitting deferred calls.
 struct DeferredCapture
-  /// Stores the node kind member of `DeferredCapture`.
+  /// Node kind associated with `DeferredCapture`.
   node_kind,
-  /// Stores the offset member of `DeferredCapture`.
+  /// Offset associated with `DeferredCapture`.
   offset,
-  /// Stores the pos member of `DeferredCapture`.
+  /// Pos associated with `DeferredCapture`.
   _pos,
-  /// Stores the filename member of `DeferredCapture`.
+  /// Filename associated with `DeferredCapture`.
   _filename,
 end struct
 
 /// Statement/declaration AST shared by analysis and code generation.
 struct Import
-  /// Stores the node kind member of `Import`.
+  /// Node kind associated with `Import`.
   node_kind,
-  /// Stores the path member of `Import`.
+  /// Path associated with `Import`.
   path,
-  /// Stores the alias member of `Import`.
+  /// Alias associated with `Import`.
   alias,
-  /// Stores the module member of `Import`.
+  /// Module associated with `Import`.
   module,
-  /// Stores the pos member of `Import`.
+  /// Pos associated with `Import`.
   _pos,
-  /// Stores the filename member of `Import`.
+  /// Filename associated with `Import`.
   _filename,
 end struct
 
 /// Represents namespace decl.
 struct NamespaceDecl
-  /// Stores the node kind member of `NamespaceDecl`.
+  /// Node kind associated with `NamespaceDecl`.
   node_kind,
-  /// Stores the name member of `NamespaceDecl`.
+  /// Name associated with `NamespaceDecl`.
   name,
-  /// Stores the pos member of `NamespaceDecl`.
+  /// Pos associated with `NamespaceDecl`.
   _pos,
-  /// Stores the filename member of `NamespaceDecl`.
+  /// Filename associated with `NamespaceDecl`.
   _filename,
 end struct
 
 /// Represents namespace def.
 struct NamespaceDef
-  /// Stores the node kind member of `NamespaceDef`.
+  /// Node kind associated with `NamespaceDef`.
   node_kind,
-  /// Stores the name member of `NamespaceDef`.
+  /// Name associated with `NamespaceDef`.
   name,
-  /// Stores the body member of `NamespaceDef`.
+  /// Body associated with `NamespaceDef`.
   body,
-  /// Stores the pos member of `NamespaceDef`.
+  /// Pos associated with `NamespaceDef`.
   _pos,
-  /// Stores the filename member of `NamespaceDef`.
+  /// Filename associated with `NamespaceDef`.
   _filename,
 end struct
 
 /// Represents print.
 struct Print
-  /// Stores the node kind member of `Print`.
+  /// Node kind associated with `Print`.
   node_kind,
-  /// Stores the expr member of `Print`.
+  /// Expr associated with `Print`.
   expr,
-  /// Stores the pos member of `Print`.
+  /// Pos associated with `Print`.
   _pos,
-  /// Stores the filename member of `Print`.
+  /// Filename associated with `Print`.
   _filename,
 end struct
 
 /// Represents assign.
 struct Assign
-  /// Stores the node kind member of `Assign`.
+  /// Node kind associated with `Assign`.
   node_kind,
-  /// Stores the name member of `Assign`.
+  /// Name associated with `Assign`.
   name,
-  /// Stores the expr member of `Assign`.
+  /// Expr associated with `Assign`.
   expr,
-  /// Stores the declared type member of `Assign`.
+  /// Declared type associated with `Assign`.
   declared_type,
-  /// Stores the declared optional member of `Assign`.
+  /// Declared optional associated with `Assign`.
   declared_optional,
-  /// Stores the pos member of `Assign`.
+  /// Pos associated with `Assign`.
   _pos,
-  /// Stores the filename member of `Assign`.
+  /// Filename associated with `Assign`.
   _filename,
 end struct
 
 /// Represents synchronized decl.
 struct SynchronizedDecl
-  /// Stores the node kind member of `SynchronizedDecl`.
+  /// Node kind associated with `SynchronizedDecl`.
   node_kind,
-  /// Stores the name member of `SynchronizedDecl`.
+  /// Name associated with `SynchronizedDecl`.
   name,
-  /// Stores the expr member of `SynchronizedDecl`.
+  /// Expr associated with `SynchronizedDecl`.
   expr,
-  /// Stores the pos member of `SynchronizedDecl`.
+  /// Pos associated with `SynchronizedDecl`.
   _pos,
-  /// Stores the filename member of `SynchronizedDecl`.
+  /// Filename associated with `SynchronizedDecl`.
   _filename,
 end struct
 
 /// Represents synchronized block.
 struct SynchronizedBlock
-  /// Stores the node kind member of `SynchronizedBlock`.
+  /// Node kind associated with `SynchronizedBlock`.
   node_kind,
-  /// Stores the lock member of `SynchronizedBlock`.
+  /// Lock associated with `SynchronizedBlock`.
   lock,
-  /// Stores the body member of `SynchronizedBlock`.
+  /// Body associated with `SynchronizedBlock`.
   body,
-  /// Stores the cleanup member of `SynchronizedBlock`.
+  /// Cleanup associated with `SynchronizedBlock`.
   cleanup,
-  /// Stores the pos member of `SynchronizedBlock`.
+  /// Pos associated with `SynchronizedBlock`.
   _pos,
-  /// Stores the filename member of `SynchronizedBlock`.
+  /// Filename associated with `SynchronizedBlock`.
   _filename,
 end struct
 
 /// Represents set member.
 struct SetMember
-  /// Stores the node kind member of `SetMember`.
+  /// Node kind associated with `SetMember`.
   node_kind,
-  /// Stores the obj member of `SetMember`.
+  /// Obj associated with `SetMember`.
   obj,
-  /// Stores the field member of `SetMember`.
+  /// Field associated with `SetMember`.
   field,
-  /// Stores the expr member of `SetMember`.
+  /// Expr associated with `SetMember`.
   expr,
-  /// Stores the pos member of `SetMember`.
+  /// Pos associated with `SetMember`.
   _pos,
-  /// Stores the filename member of `SetMember`.
+  /// Filename associated with `SetMember`.
   _filename,
 end struct
 
 /// Represents set index.
 struct SetIndex
-  /// Stores the node kind member of `SetIndex`.
+  /// Node kind associated with `SetIndex`.
   node_kind,
-  /// Stores the target member of `SetIndex`.
+  /// Target associated with `SetIndex`.
   target,
-  /// Stores the index member of `SetIndex`.
+  /// Index associated with `SetIndex`.
   index,
-  /// Stores the expr member of `SetIndex`.
+  /// Expr associated with `SetIndex`.
   expr,
-  /// Stores the pos member of `SetIndex`.
+  /// Pos associated with `SetIndex`.
   _pos,
-  /// Stores the filename member of `SetIndex`.
+  /// Filename associated with `SetIndex`.
   _filename,
 end struct
 
 /// Represents const decl.
 struct ConstDecl
-  /// Stores the node kind member of `ConstDecl`.
+  /// Node kind associated with `ConstDecl`.
   node_kind,
-  /// Stores the name member of `ConstDecl`.
+  /// Name associated with `ConstDecl`.
   name,
-  /// Stores the expr member of `ConstDecl`.
+  /// Expr associated with `ConstDecl`.
   expr,
-  /// Stores the pos member of `ConstDecl`.
+  /// Pos associated with `ConstDecl`.
   _pos,
-  /// Stores the filename member of `ConstDecl`.
+  /// Filename associated with `ConstDecl`.
   _filename,
 end struct
 
 /// Represents expr stmt.
 struct ExprStmt
-  /// Stores the node kind member of `ExprStmt`.
+  /// Node kind associated with `ExprStmt`.
   node_kind,
-  /// Stores the expr member of `ExprStmt`.
+  /// Expr associated with `ExprStmt`.
   expr,
-  /// Stores the pos member of `ExprStmt`.
+  /// Pos associated with `ExprStmt`.
   _pos,
-  /// Stores the filename member of `ExprStmt`.
+  /// Filename associated with `ExprStmt`.
   _filename,
 end struct
 
 /// Represents function def.
 struct FunctionDef
-  /// Stores the node kind member of `FunctionDef`.
+  /// Node kind associated with `FunctionDef`.
   node_kind,
-  /// Stores the name member of `FunctionDef`.
+  /// Name associated with `FunctionDef`.
   name,
-  /// Stores the params member of `FunctionDef`.
+  /// Params associated with `FunctionDef`.
   params,
-  /// Stores the body member of `FunctionDef`.
+  /// Body associated with `FunctionDef`.
   body,
-  /// Stores the is static member of `FunctionDef`.
+  /// Whether `FunctionDef.is_static` indicates static.
   is_static,
-  /// Stores the is inline member of `FunctionDef`.
+  /// Whether `FunctionDef.is_inline` indicates inline.
   is_inline,
-  /// Stores the is synchronized member of `FunctionDef`.
+  /// Whether `FunctionDef.is_synchronized` indicates synchronized.
   is_synchronized,
-  /// Stores the param types member of `FunctionDef`.
+  /// Param types associated with `FunctionDef`.
   param_types,
-  /// Stores the param optional member of `FunctionDef`.
+  /// Param optional associated with `FunctionDef`.
   param_optional,
-  /// Stores the param defaults member of `FunctionDef`.
+  /// Param defaults associated with `FunctionDef`.
   param_defaults,
-  /// Stores the variadic index member of `FunctionDef`.
+  /// Variadic index associated with `FunctionDef`.
   variadic_index,
-  /// Stores the return type member of `FunctionDef`.
+  /// Return type associated with `FunctionDef`.
   return_type,
-  /// Stores the return optional member of `FunctionDef`.
+  /// Return optional associated with `FunctionDef`.
   return_optional,
-  /// Stores the is async member of `FunctionDef`.
+  /// Whether `FunctionDef.is_async` indicates async.
   is_async,
-  /// Stores the is iterator member of `FunctionDef`.
+  /// Whether `FunctionDef.is_iterator` indicates iterator.
   is_iterator,
-  /// Stores the ml locals member of `FunctionDef`.
+  /// Ml locals associated with `FunctionDef`.
   _ml_locals,
-  /// Stores the ml globals declared member of `FunctionDef`.
+  /// Ml globals declared associated with `FunctionDef`.
   _ml_globals_declared,
-  /// Stores the ml captures member of `FunctionDef`.
+  /// Ml captures associated with `FunctionDef`.
   _ml_captures,
-  /// Stores the ml capture depth member of `FunctionDef`.
+  /// Ml capture depth associated with `FunctionDef`.
   _ml_capture_depth,
-  /// Stores the ml nested functions member of `FunctionDef`.
+  /// Ml nested functions associated with `FunctionDef`.
   _ml_nested_functions,
-  /// Stores the ml parent fn member of `FunctionDef`.
+  /// Ml parent fn associated with `FunctionDef`.
   _ml_parent_fn,
-  /// Stores the ml boxed member of `FunctionDef`.
+  /// Ml boxed associated with `FunctionDef`.
   _ml_boxed,
-  /// Stores the ml env slots member of `FunctionDef`.
+  /// Ml env slots associated with `FunctionDef`.
   _ml_env_slots,
-  /// Stores the ml env index member of `FunctionDef`.
+  /// Ml env index associated with `FunctionDef`.
   _ml_env_index,
-  /// Stores the ml capture index member of `FunctionDef`.
+  /// Ml capture index associated with `FunctionDef`.
   _ml_capture_index,
-  /// Stores the ml env hop member of `FunctionDef`.
+  /// Ml env hop associated with `FunctionDef`.
   _ml_env_hop,
-  /// Stores the pos member of `FunctionDef`.
+  /// Pos associated with `FunctionDef`.
   _pos,
-  /// Stores the filename member of `FunctionDef`.
+  /// Filename associated with `FunctionDef`.
   _filename,
 end struct
 
 /// Represents return.
 struct Return
-  /// Stores the node kind member of `Return`.
+  /// Node kind associated with `Return`.
   node_kind,
-  /// Stores the expr member of `Return`.
+  /// Expr associated with `Return`.
   expr,
-  /// Stores the pos member of `Return`.
+  /// Pos associated with `Return`.
   _pos,
-  /// Stores the filename member of `Return`.
+  /// Filename associated with `Return`.
   _filename,
 end struct
 
 /// Represents yield.
 struct Yield
-  /// Stores the node kind member of `Yield`.
+  /// Node kind associated with `Yield`.
   node_kind,
-  /// Stores the expr member of `Yield`.
+  /// Expr associated with `Yield`.
   expr,
-  /// Stores the pos member of `Yield`.
+  /// Pos associated with `Yield`.
   _pos,
-  /// Stores the filename member of `Yield`.
+  /// Filename associated with `Yield`.
   _filename,
 end struct
 
 /// Represents defer.
 struct Defer
-  /// Stores the node kind member of `Defer`.
+  /// Node kind associated with `Defer`.
   node_kind,
-  /// Stores the expr member of `Defer`.
+  /// Expr associated with `Defer`.
   expr,
-  /// Stores the site id member of `Defer`.
+  /// Site id associated with `Defer`.
   site_id,
-  /// Stores the offsets member of `Defer`.
+  /// Offsets associated with `Defer`.
   offsets,
-  /// Stores the capture kind member of `Defer`.
+  /// Capture kind associated with `Defer`.
   capture_kind,
-  /// Stores the pos member of `Defer`.
+  /// Pos associated with `Defer`.
   _pos,
-  /// Stores the filename member of `Defer`.
+  /// Filename associated with `Defer`.
   _filename,
 end struct
 
 /// Represents if.
 struct If
-  /// Stores the node kind member of `If`.
+  /// Node kind associated with `If`.
   node_kind,
-  /// Stores the cond member of `If`.
+  /// Cond associated with `If`.
   cond,
-  /// Stores the then body member of `If`.
+  /// Then body associated with `If`.
   then_body,
-  /// Stores the elifs member of `If`.
+  /// Elifs associated with `If`.
   elifs,
-  /// Stores the else body member of `If`.
+  /// Else body associated with `If`.
   else_body,
-  /// Stores the pos member of `If`.
+  /// Pos associated with `If`.
   _pos,
-  /// Stores the filename member of `If`.
+  /// Filename associated with `If`.
   _filename,
 end struct
 
 /// Represents while.
 struct While
-  /// Stores the node kind member of `While`.
+  /// Node kind associated with `While`.
   node_kind,
-  /// Stores the cond member of `While`.
+  /// Cond associated with `While`.
   cond,
-  /// Stores the body member of `While`.
+  /// Body associated with `While`.
   body,
-  /// Stores the pos member of `While`.
+  /// Pos associated with `While`.
   _pos,
-  /// Stores the filename member of `While`.
+  /// Filename associated with `While`.
   _filename,
 end struct
 
 /// Represents for.
 struct For
-  /// Stores the node kind member of `For`.
+  /// Node kind associated with `For`.
   node_kind,
-  /// Stores the var member of `For`.
+  /// Var associated with `For`.
   var,
-  /// Stores the start member of `For`.
+  /// Start associated with `For`.
   start,
-  /// Stores the end expr member of `For`.
+  /// End expr associated with `For`.
   end_expr,
-  /// Stores the body member of `For`.
+  /// Body associated with `For`.
   body,
-  /// Stores the pos member of `For`.
+  /// Pos associated with `For`.
   _pos,
-  /// Stores the filename member of `For`.
+  /// Filename associated with `For`.
   _filename,
 end struct
 
 /// Represents for each.
 struct ForEach
-  /// Stores the node kind member of `ForEach`.
+  /// Node kind associated with `ForEach`.
   node_kind,
-  /// Stores the var member of `ForEach`.
+  /// Var associated with `ForEach`.
   var,
-  /// Stores the iterable member of `ForEach`.
+  /// Iterable associated with `ForEach`.
   iterable,
-  /// Stores the body member of `ForEach`.
+  /// Body associated with `ForEach`.
   body,
-  /// Stores the pos member of `ForEach`.
+  /// Pos associated with `ForEach`.
   _pos,
-  /// Stores the filename member of `ForEach`.
+  /// Filename associated with `ForEach`.
   _filename,
 end struct
 
 /// Represents break.
 struct Break
-  /// Stores the node kind member of `Break`.
+  /// Node kind associated with `Break`.
   node_kind,
-  /// Stores the count member of `Break`.
+  /// Count associated with `Break`.
   count,
-  /// Stores the pos member of `Break`.
+  /// Pos associated with `Break`.
   _pos,
-  /// Stores the filename member of `Break`.
+  /// Filename associated with `Break`.
   _filename,
 end struct
 
 /// Represents continue.
 struct Continue
-  /// Stores the node kind member of `Continue`.
+  /// Node kind associated with `Continue`.
   node_kind,
-  /// Stores the pos member of `Continue`.
+  /// Pos associated with `Continue`.
   _pos,
-  /// Stores the filename member of `Continue`.
+  /// Filename associated with `Continue`.
   _filename,
 end struct
 
 /// Represents global decl.
 struct GlobalDecl
-  /// Stores the node kind member of `GlobalDecl`.
+  /// Node kind associated with `GlobalDecl`.
   node_kind,
-  /// Stores the names member of `GlobalDecl`.
+  /// Names associated with `GlobalDecl`.
   names,
-  /// Stores the pos member of `GlobalDecl`.
+  /// Pos associated with `GlobalDecl`.
   _pos,
-  /// Stores the filename member of `GlobalDecl`.
+  /// Filename associated with `GlobalDecl`.
   _filename,
 end struct
 
 /// Represents do while.
 struct DoWhile
-  /// Stores the node kind member of `DoWhile`.
+  /// Node kind associated with `DoWhile`.
   node_kind,
-  /// Stores the body member of `DoWhile`.
+  /// Body associated with `DoWhile`.
   body,
-  /// Stores the cond member of `DoWhile`.
+  /// Cond associated with `DoWhile`.
   cond,
-  /// Stores the pos member of `DoWhile`.
+  /// Pos associated with `DoWhile`.
   _pos,
-  /// Stores the filename member of `DoWhile`.
+  /// Filename associated with `DoWhile`.
   _filename,
 end struct
 
 /// Represents switch case.
 struct SwitchCase
-  /// Stores the node kind member of `SwitchCase`.
+  /// Node kind associated with `SwitchCase`.
   node_kind,
-  /// Stores the kind member of `SwitchCase`.
+  /// Kind associated with `SwitchCase`.
   kind,
-  /// Stores the values member of `SwitchCase`.
+  /// Values associated with `SwitchCase`.
   values,
-  /// Stores the range start member of `SwitchCase`.
+  /// Range start associated with `SwitchCase`.
   range_start,
-  /// Stores the range end member of `SwitchCase`.
+  /// Range end associated with `SwitchCase`.
   range_end,
-  /// Stores the body member of `SwitchCase`.
+  /// Body associated with `SwitchCase`.
   body,
-  /// Stores the pos member of `SwitchCase`.
+  /// Pos associated with `SwitchCase`.
   _pos,
-  /// Stores the filename member of `SwitchCase`.
+  /// Filename associated with `SwitchCase`.
   _filename,
 end struct
 
 /// Represents switch.
 struct Switch
-  /// Stores the node kind member of `Switch`.
+  /// Node kind associated with `Switch`.
   node_kind,
-  /// Stores the expr member of `Switch`.
+  /// Expr associated with `Switch`.
   expr,
-  /// Stores the cases member of `Switch`.
+  /// Cases associated with `Switch`.
   cases,
-  /// Stores the default body member of `Switch`.
+  /// Default body associated with `Switch`.
   default_body,
-  /// Stores the pos member of `Switch`.
+  /// Pos associated with `Switch`.
   _pos,
-  /// Stores the filename member of `Switch`.
+  /// Filename associated with `Switch`.
   _filename,
 end struct
 
 /// Represents struct def.
 struct StructDef
-  /// Stores the node kind member of `StructDef`.
+  /// Node kind associated with `StructDef`.
   node_kind,
-  /// Stores the name member of `StructDef`.
+  /// Name associated with `StructDef`.
   name,
-  /// Stores the fields member of `StructDef`.
+  /// Fields associated with `StructDef`.
   fields,
-  /// Stores the methods member of `StructDef`.
+  /// Methods associated with `StructDef`.
   methods,
-  /// Stores the field types member of `StructDef`.
+  /// Field types associated with `StructDef`.
   field_types,
-  /// Stores the field optional member of `StructDef`.
+  /// Field optional associated with `StructDef`.
   field_optional,
-  /// Stores the interfaces member of `StructDef`.
+  /// Interfaces associated with `StructDef`.
   interfaces,
-  /// Stores the extern field types member of `StructDef`.
+  /// Extern field types associated with `StructDef`.
   _extern_field_types,
-  /// Stores the pos member of `StructDef`.
+  /// Pos associated with `StructDef`.
   _pos,
-  /// Stores the filename member of `StructDef`.
+  /// Filename associated with `StructDef`.
   _filename,
 end struct
 
 /// Compile-time structural contract with no runtime representation.
 struct InterfaceDef
-  /// Stores the node kind member of `InterfaceDef`.
+  /// Node kind associated with `InterfaceDef`.
   node_kind,
-  /// Stores the name member of `InterfaceDef`.
+  /// Name associated with `InterfaceDef`.
   name,
-  /// Stores the methods member of `InterfaceDef`.
+  /// Methods associated with `InterfaceDef`.
   methods,
-  /// Stores the pos member of `InterfaceDef`.
+  /// Pos associated with `InterfaceDef`.
   _pos,
-  /// Stores the filename member of `InterfaceDef`.
+  /// Filename associated with `InterfaceDef`.
   _filename,
 end struct
 
 /// Compact parser results for rich parameter and call-argument lists.
 struct ParameterList
-  /// Stores the names member of `ParameterList`.
+  /// Names associated with `ParameterList`.
   names,
-  /// Stores the types member of `ParameterList`.
+  /// Types associated with `ParameterList`.
   types,
-  /// Stores the optionals member of `ParameterList`.
+  /// Optionals associated with `ParameterList`.
   optionals,
-  /// Stores the defaults member of `ParameterList`.
+  /// Defaults associated with `ParameterList`.
   defaults,
-  /// Stores the variadic index member of `ParameterList`.
+  /// Variadic index associated with `ParameterList`.
   variadic_index,
 end struct
 
 /// Represents call arguments.
 struct CallArguments
-  /// Stores the values member of `CallArguments`.
+  /// Values associated with `CallArguments`.
   values,
-  /// Stores the names member of `CallArguments`.
+  /// Names associated with `CallArguments`.
   names,
 end struct
 
 /// Represents enum def.
 struct EnumDef
-  /// Stores the node kind member of `EnumDef`.
+  /// Node kind associated with `EnumDef`.
   node_kind,
-  /// Stores the name member of `EnumDef`.
+  /// Name associated with `EnumDef`.
   name,
-  /// Stores the variants member of `EnumDef`.
+  /// Variants associated with `EnumDef`.
   variants,
-  /// Stores the values member of `EnumDef`.
+  /// Values associated with `EnumDef`.
   values,
-  /// Stores the pos member of `EnumDef`.
+  /// Pos associated with `EnumDef`.
   _pos,
-  /// Stores the filename member of `EnumDef`.
+  /// Filename associated with `EnumDef`.
   _filename,
 end struct
 
 /// Represents extern param.
 struct ExternParam
-  /// Stores the node kind member of `ExternParam`.
+  /// Node kind associated with `ExternParam`.
   node_kind,
-  /// Stores the name member of `ExternParam`.
+  /// Name associated with `ExternParam`.
   name,
-  /// Stores the ty member of `ExternParam`.
+  /// Ty associated with `ExternParam`.
   ty,
-  /// Stores the is out member of `ExternParam`.
+  /// Whether `ExternParam.is_out` indicates out.
   is_out,
 end struct
 
 /// Represents extern function def.
 struct ExternFunctionDef
-  /// Stores the node kind member of `ExternFunctionDef`.
+  /// Node kind associated with `ExternFunctionDef`.
   node_kind,
-  /// Stores the name member of `ExternFunctionDef`.
+  /// Name associated with `ExternFunctionDef`.
   name,
-  /// Stores the params member of `ExternFunctionDef`.
+  /// Params associated with `ExternFunctionDef`.
   params,
-  /// Stores the dll member of `ExternFunctionDef`.
+  /// Dll associated with `ExternFunctionDef`.
   dll,
-  /// Stores the symbol name member of `ExternFunctionDef`.
+  /// Symbol name associated with `ExternFunctionDef`.
   symbol_name,
-  /// Stores the ret ty member of `ExternFunctionDef`.
+  /// Ret ty associated with `ExternFunctionDef`.
   ret_ty,
-  /// Stores the pos member of `ExternFunctionDef`.
+  /// Pos associated with `ExternFunctionDef`.
   _pos,
-  /// Stores the filename member of `ExternFunctionDef`.
+  /// Filename associated with `ExternFunctionDef`.
   _filename,
 end struct
 
 /// Represents parse keep result.
 struct ParseKeepResult
-  /// Stores the program member of `ParseKeepResult`.
+  /// Program associated with `ParseKeepResult`.
   program,
-  /// Stores the errors member of `ParseKeepResult`.
+  /// Errors associated with `ParseKeepResult`.
   errors,
 end struct
 
 /// One typed value available while evaluating conditional-compilation directives.
 struct CompileValue
-  /// Stores the name member of `CompileValue`.
+  /// Name associated with `CompileValue`.
   name,
-  /// Stores the value member of `CompileValue`.
+  /// Value associated with `CompileValue`.
   value,
 end struct
 
 /// Mutable state for one nested #if/#elif/#else group.
 struct CompileFrame
-  /// Stores the parent active member of `CompileFrame`.
+  /// Parent active associated with `CompileFrame`.
   parent_active,
-  /// Stores the active member of `CompileFrame`.
+  /// Active associated with `CompileFrame`.
   active,
-  /// Stores the taken member of `CompileFrame`.
+  /// Taken associated with `CompileFrame`.
   taken,
-  /// Stores the else seen member of `CompileFrame`.
+  /// Else seen associated with `CompileFrame`.
   else_seen,
-  /// Stores the pos member of `CompileFrame`.
+  /// Pos associated with `CompileFrame`.
   pos,
 end struct
 
-/// Stores the compile external values compiler state.
+/// Track compile external values compiler state.
 _compile_external_values = []
-/// Stores the compile target os compiler state.
+/// Track compile target os compiler state.
 _compile_target_os = "windows"
-/// Stores the compile target abi compiler state.
+/// Track compile target abi compiler state.
 _compile_target_abi = "win64"
-/// Stores the compile target format compiler state.
+/// Track compile target format compiler state.
 _compile_target_format = "pe"
 
-/// Stores the keywords compiler state.
+/// Track keywords compiler state.
 _keywords =[
 "print", "if", "then", "else", "end", "while", "loop", "true", "false", "and", "or", "not",
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
@@ -943,7 +943,7 @@ function _new_function_node(name, params, body, is_static, is_inline, is_synchro
   return FunctionDef("FunctionDef", name, params, body, is_static, is_inline, is_synchronized, param_types, param_optional, param_defaults, variadic_index, return_type, return_optional, is_async, is_iterator, [], [], [], [], [], 0, [], [], [], [], false, pos, filename)
 end function
 
-/// Implements substr.
+/// Parse or represent substr in the MiniLang front end.
 /// @internal
 function _substr(text, start, length)
   if typeof(text) != "string" then return "" end if
@@ -952,7 +952,7 @@ function _substr(text, start, length)
   return s.substr(text, start, length)
 end function
 
-/// Implements char code.
+/// Parse or represent char code in the MiniLang front end.
 /// @internal
 function _charCode(ch)
   b = bytes(ch)
@@ -1004,7 +1004,7 @@ function _isKeyword(word)
   return false
 end function
 
-/// Implements unknown char.
+/// Parse or represent unknown char in the MiniLang front end.
 /// @internal
 function _unknownChar(code, pos)
   return ParseError("Unknown character: '" + _substr(code, pos, 10) + "'", pos, "")
@@ -1012,33 +1012,33 @@ end function
 
 /// Compact discriminants stored in the token arena's byte kind column.
 const TK_NL = 1
-/// Stores the tk number.
+/// Track tk number.
 const TK_NUMBER = 2
-/// Stores the tk string.
+/// Track tk string.
 const TK_STRING = 3
-/// Stores the tk kw.
+/// Track tk kw.
 const TK_KW = 4
-/// Stores the tk ident.
+/// Track tk ident.
 const TK_IDENT = 5
-/// Stores the tk op.
+/// Track tk op.
 const TK_OP = 6
-/// Stores the tk dot.
+/// Track tk dot.
 const TK_DOT = 7
-/// Stores the tk lparen.
+/// Track tk lparen.
 const TK_LPAREN = 8
-/// Stores the tk rparen.
+/// Track tk rparen.
 const TK_RPAREN = 9
-/// Stores the tk lbrack.
+/// Track tk lbrack.
 const TK_LBRACK = 10
-/// Stores the tk rbrack.
+/// Track tk rbrack.
 const TK_RBRACK = 11
-/// Stores the tk comma.
+/// Track tk comma.
 const TK_COMMA = 12
-/// Stores the tk semi.
+/// Track tk semi.
 const TK_SEMI = 13
-/// Stores the tk eof.
+/// Track tk eof.
 const TK_EOF = 14
-/// Stores the parser chunk void sentinel compiler state.
+/// Track parser chunk void sentinel compiler state.
 _parser_chunk_void_sentinel = ParserChunkVoidSentinel(0x50A9)
 
 /// Returns parser chunk wrap value.
@@ -1133,7 +1133,7 @@ function _parser_chunk_tail_to_array(tail)
   return outv
 end function
 
-/// Implements chunked push.
+/// Parse or represent chunked push in the MiniLang front end.
 /// @internal
 function _chunked_push(chunks, tail, value, cap)
   if typeof(chunks) != "array" then chunks = [] end if
@@ -1159,7 +1159,7 @@ function _chunked_push(chunks, tail, value, cap)
   return [chunks, t]
 end function
 
-/// Implements chunked merge balanced.
+/// Parse or represent chunked merge balanced in the MiniLang front end.
 /// @internal
 function _chunked_merge_balanced(chunks)
   if typeof(chunks) != "array" then return [] end if
@@ -1191,7 +1191,7 @@ function _chunked_merge_balanced(chunks)
   return outv
 end function
 
-/// Implements chunked merge with tail.
+/// Parse or represent chunked merge with tail in the MiniLang front end.
 /// @internal
 function _chunked_merge_with_tail(chunks, tail_arr)
   total = 0
@@ -1223,7 +1223,7 @@ function _chunked_merge_with_tail(chunks, tail_arr)
   return outv
 end function
 
-/// Implements chunked finish.
+/// Parse or represent chunked finish in the MiniLang front end.
 /// @internal
 function _chunked_finish(chunks, tail)
   if typeof(chunks) != "array" then chunks = [] end if
@@ -1275,7 +1275,7 @@ function _token_u32_write(buf, index, value)
   buf[off + 3] = (value >> 24) & 0xFF
 end function
 
-/// Implements inline.
+/// Parse or represent inline in the MiniLang front end.
 /// @internal
 function inline _token_u32_read(buf, index)
   off = index << 2
@@ -1288,7 +1288,7 @@ function _token_pos_write(buf, index, value)
   _token_u32_write(buf, index, value)
 end function
 
-/// Implements inline.
+/// Parse or represent inline in the MiniLang front end.
 /// @internal
 function inline _token_pos_read(buf, index)
   return _token_u32_read(buf, index)
@@ -1316,7 +1316,7 @@ function _token_text_store(arena, kind, value)
   return [arena, id]
 end function
 
-/// Implements inline.
+/// Parse or represent inline in the MiniLang front end.
 /// @internal
 function inline _token_fixed_value(kind)
   if kind == TK_NL then return "\\n" end if
@@ -1603,7 +1603,7 @@ function tokenize(code)
   return token_chunks
 end function
 
-/// Implements repeat.
+/// Parse or represent repeat in the MiniLang front end.
 /// @internal
 function _repeat(text, n)
   // MiniLang's inclusive `for` range also visits descending bounds. An empty
@@ -1617,7 +1617,7 @@ function _repeat(text, n)
   return rep
 end function
 
-/// Implements line col.
+/// Parse or represent line col in the MiniLang front end.
 /// @internal
 function _line_col(source, pos)
   if pos < 0 then pos = 0 end if
@@ -1663,43 +1663,43 @@ function format_error(source, filename, pos, message, kind)
   return kind + ": " + message + "\n" +"  at " + filename + ":" + line_no + ":" + col_no + "\n" +"  " + line_text + "\n" +"  " + caret
 end function
 
-/// Stores the tokens compiler state.
+/// Track tokens compiler state.
 _tokens =[]
-/// Stores the i compiler state.
+/// Track i compiler state.
 _i = 0
-/// Stores the source compiler state.
+/// Track source compiler state.
 _source = ""
-/// Stores the filename compiler state.
+/// Track filename compiler state.
 _filename = ""
-/// Stores the last error compiler state.
+/// Track last error compiler state.
 _last_error = 0
-/// Stores the has last error compiler state.
+/// Track has last error compiler state.
 _has_last_error = false
-/// Stores the func depth compiler state.
+/// Track func depth compiler state.
 _func_depth = 0
-/// Stores the ns depth compiler state.
+/// Track ns depth compiler state.
 _ns_depth = 0
-/// Stores the seen package compiler state.
+/// Track seen package compiler state.
 _seen_package = false
-/// Stores the seen nonpackage toplevel stmt compiler state.
+/// Track seen nonpackage toplevel stmt compiler state.
 _seen_nonpackage_toplevel_stmt = false
-/// Stores the collect errors compiler state.
+/// Track collect errors compiler state.
 _collect_errors = false
-/// Stores the max errors compiler state.
+/// Track max errors compiler state.
 _max_errors = 50
-/// Stores the errors compiler state.
+/// Track errors compiler state.
 _errors =[]
 
-/// Implements inline.
+/// Parse or represent inline in the MiniLang front end.
 /// @internal
 function inline _token_count(tokens)
   return tokens.count
 end function
 
-/// Implements inline.
+/// Parse or represent inline in the MiniLang front end.
 /// @internal
 function inline _tok_kind_id(tok)
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens
   if typeof(tok) == "int" and tok >= 0 and tok < _tokens.count then return _tokens.kinds[tok] end if
@@ -1712,10 +1712,10 @@ function _tok_kind(tok)
   return _token_kind_name(_tok_kind_id(tok))
 end function
 
-/// Implements inline.
+/// Parse or represent inline in the MiniLang front end.
 /// @internal
 function inline _tok_value(tok)
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens
   if typeof(tok) == "int" and tok >= 0 and tok < _tokens.count then
@@ -1727,10 +1727,10 @@ function inline _tok_value(tok)
   return
 end function
 
-/// Implements inline.
+/// Parse or represent inline in the MiniLang front end.
 /// @internal
 function inline _tok_pos(tok)
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens
   if typeof(tok) == "int" and tok >= 0 and tok < _tokens.count then return _token_pos_read(_tokens.positions, tok) end if
@@ -1740,7 +1740,7 @@ end function
 /// Updates set error.
 /// @internal
 function _set_error(message, pos)
-  /// Stores the last error.
+  /// Current last error used by this routine.
   /// @internal
   global _last_error, _has_last_error, _filename
   if _has_last_error then return end if
@@ -1751,7 +1751,7 @@ end function
 /// Releases or resets clear error.
 /// @internal
 function _clear_error()
-  /// Stores the last error.
+  /// Current last error used by this routine.
   /// @internal
   global _last_error, _has_last_error
   _last_error = 0
@@ -1761,7 +1761,7 @@ end function
 /// Reports whether has error.
 /// @internal
 function _has_error()
-  /// Stores the has last error.
+  /// Current has last error used by this routine.
   /// @internal
   global _has_last_error
   return _has_last_error
@@ -1770,7 +1770,7 @@ end function
 /// Releases or resets reset.
 /// @internal
 function _reset(tokens, source, filename, collect_errors, max_errors)
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens, _i, _source, _filename, _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _collect_errors, _max_errors, _errors
   _tokens = tokens
@@ -1787,10 +1787,10 @@ function _reset(tokens, source, filename, collect_errors, max_errors)
   _clear_error()
 end function
 
-/// Implements peek.
+/// Parse or represent peek in the MiniLang front end.
 /// @internal
 function _peek()
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens, _i
   count = _token_count(_tokens)
@@ -1799,10 +1799,10 @@ function _peek()
   return _i
 end function
 
-/// Implements peek2.
+/// Parse or represent peek2 in the MiniLang front end.
 /// @internal
 function _peek2()
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens, _i
   count = _token_count(_tokens)
@@ -1811,10 +1811,10 @@ function _peek2()
   return count - 1
 end function
 
-/// Implements advance.
+/// Parse or represent advance in the MiniLang front end.
 /// @internal
 function _advance()
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens, _i
   t = _peek()
@@ -1822,7 +1822,7 @@ function _advance()
   return t
 end function
 
-/// Implements match kind.
+/// Parse or represent match kind in the MiniLang front end.
 /// @internal
 function _match_kind(kind)
   t = _peek()
@@ -1831,7 +1831,7 @@ function _match_kind(kind)
   return true
 end function
 
-/// Implements match value.
+/// Parse or represent match value in the MiniLang front end.
 /// @internal
 function _match_value(kind, value)
   t = _peek()
@@ -1841,7 +1841,7 @@ function _match_value(kind, value)
   return true
 end function
 
-/// Implements expect kind.
+/// Parse or represent expect kind in the MiniLang front end.
 /// @internal
 function _expect_kind(kind)
   t = _peek()
@@ -1852,7 +1852,7 @@ function _expect_kind(kind)
   return _advance()
 end function
 
-/// Implements expect value.
+/// Parse or represent expect value in the MiniLang front end.
 /// @internal
 function _expect_value(kind, value)
   t = _peek()
@@ -1863,14 +1863,14 @@ function _expect_value(kind, value)
   return _advance()
 end function
 
-/// Implements skip newlines.
+/// Parse or represent skip newlines in the MiniLang front end.
 /// @internal
 function _skip_newlines()
   while _match_kind(TK_NL)
   end while
 end function
 
-/// Implements hex value.
+/// Parse or represent hex value in the MiniLang front end.
 /// @internal
 function _hex_value(ch)
   c = _charCode(ch)
@@ -1880,7 +1880,7 @@ function _hex_value(ch)
   return -1
 end function
 
-/// Implements char from code.
+/// Parse or represent char from code in the MiniLang front end.
 /// @internal
 function _charFromCode(v)
   // Build the UTF-8 sequence used by MiniLang strings. This also keeps \x
@@ -1982,10 +1982,10 @@ function _decode_string_raw(raw, pos)
   return decoded.toString()
 end function
 
-/// Implements peek3.
+/// Parse or represent peek3 in the MiniLang front end.
 /// @internal
 function _peek3()
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens, _i
   count = _token_count(_tokens)
@@ -2038,7 +2038,7 @@ function _parse_float_literal(raw)
   return _parse_strtod(raw, void)
 end function
 
-/// Implements precedence.
+/// Parse or represent precedence in the MiniLang front end.
 /// @internal
 function _precedence(op)
   if op == "??" then return 0 end if
@@ -2341,7 +2341,7 @@ function _parse_call_arguments()
   return CallArguments(_chunked_finish(values_chunks, values_tail), _chunked_finish(names_chunks, names_tail))
 end function
 
-/// Implements match number has dot.
+/// Parse or represent match number has dot in the MiniLang front end.
 /// @internal
 function _match_number_has_dot(text)
   if len(text) <= 0 then return false end if
@@ -2570,7 +2570,7 @@ function _parse_ident_list(end_kind)
   return _chunked_finish(items_chunks, items_tail)
 end function
 
-/// Implements skip stmt seps.
+/// Parse or represent skip stmt seps in the MiniLang front end.
 /// @internal
 function _skip_stmt_seps()
   while true
@@ -2580,7 +2580,7 @@ function _skip_stmt_seps()
   end while
 end function
 
-/// Implements expect block nl.
+/// Parse or represent expect block nl in the MiniLang front end.
 /// @internal
 function _expect_block_nl()
   if _match_kind(TK_NL) or _match_kind(TK_SEMI) then
@@ -2596,7 +2596,7 @@ function _is_end_of(what)
   return _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "end" and (next_kind == TK_KW or next_kind == TK_IDENT) and _tok_value(_peek2()) == what
 end function
 
-/// Implements expect end of.
+/// Parse or represent expect end of in the MiniLang front end.
 /// @internal
 function _expect_end_of(what)
   _expect_value(TK_KW, "end")
@@ -2624,10 +2624,10 @@ function _parse_dotted_name()
   return out_name
 end function
 
-/// Implements peek non nl.
+/// Parse or represent peek non nl in the MiniLang front end.
 /// @internal
 function _peek_non_nl()
-  /// Stores the tokens.
+  /// Current tokens used by this routine.
   /// @internal
   global _tokens, _i
   j = _i
@@ -2696,7 +2696,7 @@ end function
 /// Returns parse namespace def.
 /// @internal
 function _parse_namespace_def(start_pos)
-  /// Stores the ns depth.
+  /// Current ns depth used by this routine.
   /// @internal
   global _ns_depth, _func_depth
   _expect_value(TK_KW, "namespace")
@@ -2859,10 +2859,10 @@ function _contains(arr, value)
   return false
 end function
 
-/// Implements record error.
+/// Parse or represent record error in the MiniLang front end.
 /// @internal
 function _record_error(err)
-  /// Stores the errors.
+  /// Current errors used by this routine.
   /// @internal
   global _errors, _max_errors
   if typeof(err) != "struct" then return end if
@@ -2870,10 +2870,10 @@ function _record_error(err)
   _errors = _errors +[err]
 end function
 
-/// Implements sync stmt.
+/// Parse or represent sync stmt in the MiniLang front end.
 /// @internal
 function _sync_stmt(stop_keywords, end_type)
-  /// Stores the i.
+  /// Current i used by this routine.
   /// @internal
   global _i
   start_i = _i
@@ -2967,7 +2967,7 @@ end function
 /// Returns parse stmt.
 /// @internal
 function _parse_stmt()
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt
   t = _peek()
@@ -3074,7 +3074,7 @@ end function
 /// Returns parse stmt package.
 /// @internal
 function _parse_stmt_package(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth > 0 or _ns_depth > 0 then
@@ -3099,7 +3099,7 @@ end function
 /// Returns parse stmt namespace.
 /// @internal
 function _parse_stmt_namespace(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   return _parse_namespace_def(start_pos)
@@ -3108,7 +3108,7 @@ end function
 /// Returns parse stmt import.
 /// @internal
 function _parse_stmt_import(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth > 0 or _ns_depth > 0 then
@@ -3140,7 +3140,7 @@ end function
 /// Returns parse stmt const.
 /// @internal
 function _parse_stmt_const(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3156,7 +3156,7 @@ end function
 /// Returns parse stmt synchronized.
 /// @internal
 function _parse_stmt_synchronized(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3184,7 +3184,7 @@ end function
 /// Returns parse stmt print.
 /// @internal
 function _parse_stmt_print(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3196,7 +3196,7 @@ end function
 /// Returns parse stmt break.
 /// @internal
 function _parse_stmt_break(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3213,7 +3213,7 @@ end function
 /// Returns parse stmt continue.
 /// @internal
 function _parse_stmt_continue(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3223,7 +3223,7 @@ end function
 /// Returns parse stmt global.
 /// @internal
 function _parse_stmt_global(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth <= 0 then
@@ -3254,7 +3254,7 @@ end function
 /// Returns parse stmt return.
 /// @internal
 function _parse_stmt_return(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3273,7 +3273,7 @@ end function
 /// Returns parse stmt yield.
 /// @internal
 function _parse_stmt_yield(start_pos, tok)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth
   if _func_depth <= 0 then _set_error("'yield' is only allowed inside iterator functions", start_pos) return end if
@@ -3293,7 +3293,7 @@ end function
 /// Returns parse stmt defer.
 /// @internal
 function _parse_stmt_defer(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth <= 0 then
@@ -3313,7 +3313,7 @@ end function
 /// Returns parse stmt extern.
 /// @internal
 function _parse_stmt_extern(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   if _func_depth > 0 then
@@ -3407,7 +3407,7 @@ end function
 /// Returns parse stmt interface.
 /// @internal
 function _parse_stmt_interface(start_pos, tok)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth
   if _func_depth > 0 then _set_error("'interface' is only allowed at declaration scope", start_pos) return end if
@@ -3457,7 +3457,7 @@ end function
 /// Returns parse stmt struct.
 /// @internal
 function _parse_stmt_struct(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3619,7 +3619,7 @@ end function
 /// Returns parse stmt enum.
 /// @internal
 function _parse_stmt_enum(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3694,7 +3694,7 @@ end function
 /// Returns parse stmt function.
 /// @internal
 function _parse_stmt_function(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   prefix = _tok_value(t)
@@ -3752,10 +3752,10 @@ end function
 /// Returns parse stmt loop.
 /// @internal
 function _parse_stmt_loop(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
-  /// Stores the i.
+  /// Current i used by this routine.
   /// @internal
   global _i
   _advance()
@@ -3805,7 +3805,7 @@ end function
 /// Returns parse stmt switch.
 /// @internal
 function _parse_stmt_switch(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   block_kind = _tok_value(t)
@@ -3900,7 +3900,7 @@ end function
 /// Returns parse stmt if.
 /// @internal
 function _parse_stmt_if(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3942,7 +3942,7 @@ end function
 /// Returns parse stmt while.
 /// @internal
 function _parse_stmt_while(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3959,7 +3959,7 @@ end function
 /// Returns parse stmt for.
 /// @internal
 function _parse_stmt_for(start_pos, t)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   _advance()
@@ -3999,7 +3999,7 @@ end function
 /// Returns parse stmt ident.
 /// @internal
 function _parse_stmt_ident(start_pos, first_tok)
-  /// Stores the func depth.
+  /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
   expr = _parse_postfix()
@@ -4046,7 +4046,7 @@ end function
 /// Returns parse stmt recover.
 /// @internal
 function _parse_stmt_recover(stop_keywords, end_type)
-  /// Stores the i.
+  /// Current i used by this routine.
   /// @internal
   global _i
   start_i = _i
@@ -4064,7 +4064,7 @@ function _parse_stmt_recover(stop_keywords, end_type)
   return st
 end function
 
-/// Implements replace dots with slash.
+/// Parse or represent replace dots with slash in the MiniLang front end.
 /// @internal
 function _replaceDotsWithSlash(name)
   if len(name) <= 0 then return "" end if
@@ -4099,13 +4099,13 @@ function parse_expression(source, filename)
   return e
 end function
 
-/// Runs compile is error.
+/// Parse or represent compile is error in the MiniLang front end.
 /// @internal
 function _compile_is_error(value)
   return typeof(value) == "struct" and typeof(try(value.message)) == "string" and typeof(try(value.pos)) == "int"
 end function
 
-/// Runs compile valid name.
+/// Parse or represent compile valid name in the MiniLang front end.
 /// @internal
 function _compile_valid_name(name)
   if typeof(name) != "string" or len(name) <= 0 or _isIdentStart(name[0]) == false then return false end if
@@ -4117,7 +4117,7 @@ function _compile_valid_name(name)
   return true
 end function
 
-/// Runs compile value type.
+/// Parse or represent compile value type in the MiniLang front end.
 /// @internal
 function _compile_value_type(value)
   ty = typeof(value)
@@ -4125,13 +4125,13 @@ function _compile_value_type(value)
   return ""
 end function
 
-/// Runs compile is predefined.
+/// Parse or represent compile is predefined in the MiniLang front end.
 /// @internal
 function _compile_is_predefined(name)
   return name == "TARGET_OS" or name == "TARGET_ARCH" or name == "TARGET_ABI" or name == "TARGET_FORMAT" or name == "POINTER_SIZE" or name == "MINILANG_VERSION"
 end function
 
-/// Runs compile env find.
+/// Parse or represent compile env find in the MiniLang front end.
 /// @internal
 function _compile_env_find(env, name)
   if typeof(env) != "array" or len(env) <= 0 then return -1 end if
@@ -4141,13 +4141,13 @@ function _compile_env_find(env, name)
   return -1
 end function
 
-/// Runs compile env has.
+/// Parse or represent compile env has in the MiniLang front end.
 /// @internal
 function _compile_env_has(env, name)
   return _compile_env_find(env, name) >= 0
 end function
 
-/// Runs compile env get.
+/// Parse or represent compile env get in the MiniLang front end.
 /// @internal
 function _compile_env_get(env, name)
   idx = _compile_env_find(env, name)
@@ -4155,7 +4155,7 @@ function _compile_env_get(env, name)
   return env[idx].value
 end function
 
-/// Runs compile env set.
+/// Parse or represent compile env set in the MiniLang front end.
 /// @internal
 function _compile_env_set(env, name, value)
   idx = _compile_env_find(env, name)
@@ -4168,7 +4168,7 @@ function _compile_env_set(env, name, value)
   return env + [CompileValue(name, value)]
 end function
 
-/// Runs compile predefined values.
+/// Parse or represent compile predefined values in the MiniLang front end.
 /// @internal
 function _compile_predefined_values()
   return [
@@ -4177,20 +4177,20 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.2.2")
+    CompileValue("MINILANG_VERSION", "1.2.3")
   ]
 end function
 
 /// Select immutable values for subsequent source parses.
 /// @param target Value supplied for `target`.
 function set_compile_target(target)
-  /// Stores the compile target os.
+  /// Current compile target os used by this routine.
   /// @internal
   global _compile_target_os
-  /// Stores the compile target abi.
+  /// Current compile target abi used by this routine.
   /// @internal
   global _compile_target_abi
-  /// Stores the compile target format.
+  /// Current compile target format used by this routine.
   /// @internal
   global _compile_target_format
   normalized = s.toLowerAscii(s.trim("" + target))
@@ -4209,7 +4209,7 @@ function set_compile_target(target)
   return ParseError("unsupported target: " + normalized, 0, "<command-line>")
 end function
 
-/// Runs compile node pos.
+/// Parse or represent compile node pos in the MiniLang front end.
 /// @internal
 function _compile_node_pos(expr, base_pos)
   p = t.ast_pos(expr)
@@ -4217,7 +4217,7 @@ function _compile_node_pos(expr, base_pos)
   return base_pos + p
 end function
 
-/// Runs compile string compare.
+/// Parse or represent compile string compare in the MiniLang front end.
 /// @internal
 function _compile_string_compare(left, right)
   left_bytes = bytes(left)
@@ -4235,7 +4235,7 @@ function _compile_string_compare(left, right)
   return 0
 end function
 
-/// Runs compile eval node.
+/// Parse or represent compile eval node in the MiniLang front end.
 /// @internal
 function _compile_eval_node(expr, env, filename, base_pos)
   if t.ast_is_node(expr) == false then return ParseError("unsupported compile-time expression", base_pos, filename) end if
@@ -4339,7 +4339,7 @@ function _compile_eval_node(expr, env, filename, base_pos)
   return ParseError("unsupported compile-time expression", pos, filename)
 end function
 
-/// Runs compile eval.
+/// Parse or represent compile eval in the MiniLang front end.
 /// @internal
 function _compile_eval(text, env, filename, base_pos)
   expr = parse_expression(text, filename)
@@ -4350,7 +4350,7 @@ function _compile_eval(text, env, filename, base_pos)
   return _compile_eval_node(expr, env, filename, base_pos)
 end function
 
-/// Runs compile numeric text.
+/// Parse or represent compile numeric text in the MiniLang front end.
 /// @internal
 function _compile_numeric_text(raw)
   if typeof(raw) != "string" or len(raw) <= 0 then return false end if
@@ -4362,7 +4362,7 @@ function _compile_numeric_text(raw)
   return _isDigit(raw[i])
 end function
 
-/// Runs compile parse cli value.
+/// Parse or represent compile parse cli value in the MiniLang front end.
 /// @internal
 function _compile_parse_cli_value(raw)
   raw = s.trim(raw)
@@ -4383,7 +4383,7 @@ end function
 /// Install command-line/project values. Later -D occurrences override earlier ones.
 /// @param specs Value supplied for `specs`.
 function set_compile_defines(specs)
-  /// Stores the compile external values.
+  /// Current compile external values used by this routine.
   /// @internal
   global _compile_external_values
   values = []
@@ -4412,13 +4412,13 @@ function set_compile_defines(specs)
   return true
 end function
 
-/// Runs compile external has.
+/// Parse or represent compile external has in the MiniLang front end.
 /// @internal
 function _compile_external_has(name)
   return _compile_env_has(_compile_external_values, name)
 end function
 
-/// Runs compile ltrim index.
+/// Parse or represent compile ltrim index in the MiniLang front end.
 /// @internal
 function _compile_ltrim_index(line)
   i = 0
@@ -4428,7 +4428,7 @@ function _compile_ltrim_index(line)
   return i
 end function
 
-/// Runs compile split command.
+/// Parse or represent compile split command in the MiniLang front end.
 /// @internal
 function _compile_split_command(body)
   body = s.trim(body)
@@ -4440,7 +4440,7 @@ function _compile_split_command(body)
   return [command, s.trim(_substr(body, i, len(body) - i))]
 end function
 
-/// Runs compile block comment state.
+/// Parse or represent compile block comment state in the MiniLang front end.
 /// @internal
 function _compile_block_comment_state(line, in_block)
   i = 0
@@ -4482,14 +4482,14 @@ function _compile_block_comment_state(line, in_block)
   return in_block
 end function
 
-/// Runs compile frames active.
+/// Parse or represent compile frames active in the MiniLang front end.
 /// @internal
 function _compile_frames_active(frames)
   if typeof(frames) != "array" or len(frames) <= 0 then return true end if
   return frames[len(frames) - 1].active
 end function
 
-/// Runs compile frames pop.
+/// Parse or represent compile frames pop in the MiniLang front end.
 /// @internal
 function _compile_frames_pop(frames)
   if typeof(frames) != "array" or len(frames) <= 1 then return [] end if
@@ -4500,7 +4500,7 @@ function _compile_frames_pop(frames)
   return kept
 end function
 
-/// Runs compile argument pos.
+/// Parse or represent compile argument pos in the MiniLang front end.
 /// @internal
 function _compile_argument_pos(line, argument, line_start, hash_col)
   if argument == "" then return line_start + hash_col end if
@@ -4509,7 +4509,7 @@ function _compile_argument_pos(line, argument, line_start, hash_col)
   return line_start + p
 end function
 
-/// Runs compile option parts.
+/// Parse or represent compile option parts in the MiniLang front end.
 /// @internal
 function _compile_option_parts(argument, filename, argument_pos)
   eq = s.indexOf(argument, "=", 0)
@@ -4530,7 +4530,7 @@ function _compile_option_parts(argument, filename, argument_pos)
   return [name, declared_type, value_text]
 end function
 
-/// Runs compile maybe has directive.
+/// Parse or represent compile maybe has directive in the MiniLang front end.
 /// @internal
 function _compile_maybe_has_directive(code)
   search_from = 0
@@ -4689,65 +4689,65 @@ function preprocess_compile_directives(code, filename)
   return s.join(t.arr_chunked_finish(chunks, tail), "")
 end function
 
-/// Stores the language serial compiler state.
+/// Track language serial compiler state.
 _language_serial = 0
-/// Stores the language needs await compiler state.
+/// Track language needs await compiler state.
 _language_needs_await = false
-/// Stores the language needs select compiler state.
+/// Track language needs select compiler state.
 _language_needs_select = false
-/// Stores the language needs async pool compiler state.
+/// Track language needs async pool compiler state.
 _language_needs_async_pool = false
-/// Stores the language async pool name compiler state.
+/// Track language async pool name compiler state.
 _language_async_pool_name = "__ml_async_pool_global"
-/// Stores the language await pos compiler state.
+/// Track language await pos compiler state.
 _language_await_pos = 0
-/// Stores the language await file compiler state.
+/// Track language await file compiler state.
 _language_await_file = ""
-/// Stores the language select pos compiler state.
+/// Track language select pos compiler state.
 _language_select_pos = 0
-/// Stores the language select file compiler state.
+/// Track language select file compiler state.
 _language_select_file = ""
-/// Stores the language failure compiler state.
+/// Track language failure compiler state.
 _language_failure = ""
 
-/// Implements lang fail.
+/// Parse or represent lang fail in the MiniLang front end.
 /// @internal
 function _lang_fail(message)
-  /// Stores the language failure.
+  /// Current language failure used by this routine.
   /// @internal
   global _language_failure
   if _language_failure == "" then _language_failure = message end if
 end function
 
-/// Implements lang fresh.
+/// Parse or represent lang fresh in the MiniLang front end.
 /// @internal
 function _lang_fresh(stem)
-  /// Stores the language serial.
+  /// Current language serial used by this routine.
   /// @internal
   global _language_serial
   _language_serial = _language_serial + 1
   return "__ml_" + stem + "_" + _language_serial
 end function
 
-/// Implements lang var.
+/// Parse or represent lang var in the MiniLang front end.
 /// @internal
 function _lang_var(name, node)
   return t.ast_leaf_new("Var", name, t.ast_pos(node), t.ast_filename(node))
 end function
 
-/// Implements lang num.
+/// Parse or represent lang num in the MiniLang front end.
 /// @internal
 function _lang_num(value, node)
   return t.ast_leaf_new("Num", value, t.ast_pos(node), t.ast_filename(node))
 end function
 
-/// Implements lang void.
+/// Parse or represent lang void in the MiniLang front end.
 /// @internal
 function _lang_void(node)
   return t.ast_leaf_new("VoidLit", 0, t.ast_pos(node), t.ast_filename(node))
 end function
 
-/// Implements lang call.
+/// Parse or represent lang call in the MiniLang front end.
 /// @internal
 function _lang_call(name, args, node)
   // Calls introduced after source-line annotation intentionally have no own
@@ -4756,7 +4756,7 @@ function _lang_call(name, args, node)
   return Call("Call", _lang_var(name, node), args, [], t.ast_pos(node), "__ml_generated__")
 end function
 
-/// Implements lang guard returns.
+/// Parse or represent lang guard returns in the MiniLang front end.
 /// @internal
 function _lang_guard_returns(body, return_type, return_optional)
   if typeof(return_type) != "string" or typeof(body) != "array" then return body end if
@@ -4805,7 +4805,7 @@ function _lang_guard_returns(body, return_type, return_optional)
   return body
 end function
 
-/// Implements lang apply parameter contracts.
+/// Parse or represent lang apply parameter contracts in the MiniLang front end.
 /// @internal
 function _lang_apply_parameter_contracts(fn)
   guards = []
@@ -4829,7 +4829,7 @@ function _lang_apply_parameter_contracts(fn)
   return fn
 end function
 
-/// Implements lang apply contracts.
+/// Parse or represent lang apply contracts in the MiniLang front end.
 /// @internal
 function _lang_apply_contracts(fn)
   fn = _lang_apply_parameter_contracts(fn)
@@ -4837,10 +4837,10 @@ function _lang_apply_contracts(fn)
   return fn
 end function
 
-/// Implements lang lower expr.
+/// Parse or represent lang lower expr in the MiniLang front end.
 /// @internal
 function _lang_lower_expr(expr, prelude)
-  /// Stores the language needs await.
+  /// Current language needs await used by this routine.
   /// @internal
   global _language_needs_await, _language_needs_select, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file
   if t.ast_is_node(expr) == false then return [expr, prelude] end if
@@ -4932,7 +4932,7 @@ function _lang_lower_expr(expr, prelude)
   return [expr, prelude]
 end function
 
-/// Implements lang iterator append.
+/// Parse or represent lang iterator append in the MiniLang front end.
 /// @internal
 function _lang_iterator_append(yield_stmt, fn, names)
   buf = names[0]
@@ -4961,7 +4961,7 @@ function _lang_iterator_append(yield_stmt, fn, names)
   return [grow_if, store, count_assign]
 end function
 
-/// Implements lang rewrite yields.
+/// Parse or represent lang rewrite yields in the MiniLang front end.
 /// @internal
 function _lang_rewrite_yields(body, fn, names)
   if typeof(body) != "array" or len(body) <= 0 then return [] end if
@@ -5006,7 +5006,7 @@ function _lang_rewrite_yields(body, fn, names)
   return result_items
 end function
 
-/// Implements lang lower iterator.
+/// Parse or represent lang lower iterator in the MiniLang front end.
 /// @internal
 function _lang_lower_iterator(fn)
   if fn.is_async then _lang_fail("A function cannot be both async and iterator") return fn end if
@@ -5033,26 +5033,26 @@ end function
 
 /// Mutable construction state for a lazy iterator's pull-closure state machine. Integer state IDs keep suspension/resumption explicit and avoid materializing yielded elements in an intermediate array.
 struct LazyIteratorState
-  /// Stores the fn member of `LazyIteratorState`.
+  /// Fn associated with `LazyIteratorState`.
   fn,
-  /// Stores the state name member of `LazyIteratorState`.
+  /// State name associated with `LazyIteratorState`.
   state_name,
-  /// Stores the blocks member of `LazyIteratorState`.
+  /// Blocks associated with `LazyIteratorState`.
   blocks,
-  /// Stores the persistent member of `LazyIteratorState`.
+  /// Persistent associated with `LazyIteratorState`.
   persistent,
-  /// Stores the globals declared member of `LazyIteratorState`.
+  /// Globals declared associated with `LazyIteratorState`.
   globals_declared,
 end struct
 
-/// Implements lang add unique.
+/// Parse or represent lang add unique in the MiniLang front end.
 /// @internal
 function _lang_add_unique(items, value)
   if _contains(items, value) == false then items = items + [value] end if
   return items
 end function
 
-/// Implements lang sort strings.
+/// Parse or represent lang sort strings in the MiniLang front end.
 /// @internal
 function _lang_sort_strings(items)
   result = []
@@ -5078,14 +5078,14 @@ function _lang_sort_strings(items)
   return result
 end function
 
-/// Implements lang lazy reserve.
+/// Parse or represent lang lazy reserve in the MiniLang front end.
 /// @internal
 function _lang_lazy_reserve(state)
   state.blocks = state.blocks + [[]]
   return [state, len(state.blocks) - 1]
 end function
 
-/// Implements lang lazy jump.
+/// Parse or represent lang lazy jump in the MiniLang front end.
 /// @internal
 function _lang_lazy_jump(state, target, node)
   generated_file = "__ml_generated__"
@@ -5094,7 +5094,7 @@ function _lang_lazy_jump(state, target, node)
   return [assign_state, Continue("Continue", 0, generated_file)]
 end function
 
-/// Implements lang lazy contains yield.
+/// Parse or represent lang lazy contains yield in the MiniLang front end.
 /// @internal
 function _lang_lazy_contains_yield(st)
   kind = t.ast_kind(st)
@@ -5150,7 +5150,7 @@ function _lang_lazy_contains_yield(st)
   return false
 end function
 
-/// Implements lang lazy collect names.
+/// Parse or represent lang lazy collect names in the MiniLang front end.
 /// @internal
 function _lang_lazy_collect_names(state, body)
   if typeof(body) != "array" or len(body) <= 0 then return state end if
@@ -5196,7 +5196,7 @@ function _lang_lazy_collect_names(state, body)
   return state
 end function
 
-/// Implements lang lazy compile seq.
+/// Parse or represent lang lazy compile seq in the MiniLang front end.
 /// @internal
 function _lang_lazy_compile_seq(state, body, cont, break_target, continue_target)
   current = cont
@@ -5371,7 +5371,7 @@ function _lang_lazy_compile_seq(state, body, cont, break_target, continue_target
   return [state, current]
 end function
 
-/// Implements lang lower lazy iterator.
+/// Parse or represent lang lower lazy iterator in the MiniLang front end.
 /// @internal
 function _lang_lower_lazy_iterator(fn)
   if fn.is_async then _lang_fail("A function cannot be both async and iterator") return fn end if
@@ -5412,10 +5412,10 @@ function _lang_lower_lazy_iterator(fn)
   return fn
 end function
 
-/// Implements lang lower async.
+/// Parse or represent lang lower async in the MiniLang front end.
 /// @internal
 function _lang_lower_async(fn)
-  /// Stores the language needs async pool.
+  /// Current language needs async pool used by this routine.
   /// @internal
   global _language_needs_async_pool, _language_async_pool_name
   impl_name = _lang_fresh("async_impl")
@@ -5449,10 +5449,10 @@ function _lang_lower_async(fn)
   return [impl, entry, wrapper]
 end function
 
-/// Implements lang await helper.
+/// Parse or represent lang await helper in the MiniLang front end.
 /// @internal
 function _lang_await_helper()
-  /// Stores the language await pos.
+  /// Current language await pos used by this routine.
   /// @internal
   global _language_await_pos, _language_await_file
   node = _new_function_node("__ml_await", ["value"], [], false, false, false, [], [], [], -1, 0, false, false, false, _language_await_pos, _language_await_file)
@@ -5467,10 +5467,10 @@ function _lang_await_helper()
   return node
 end function
 
-/// Implements lang select helper.
+/// Parse or represent lang select helper in the MiniLang front end.
 /// @internal
 function _lang_select_helper()
-  /// Stores the language select pos.
+  /// Current language select pos used by this routine.
   /// @internal
   global _language_select_pos, _language_select_file
   node = _new_function_node("__ml_select", ["handles"], [], false, false, false, [], [], [], -1, 0, false, false, false, _language_select_pos, _language_select_file)
@@ -5498,7 +5498,7 @@ function _lang_select_helper()
   return node
 end function
 
-/// Implements lang lower stmt.
+/// Parse or represent lang lower stmt in the MiniLang front end.
 /// @internal
 function _lang_lower_stmt(st, function_depth)
   kind = t.ast_kind(st)
@@ -5634,7 +5634,7 @@ function _lang_lower_stmt(st, function_depth)
   return prelude + [st]
 end function
 
-/// Implements lang lower block.
+/// Parse or represent lang lower block in the MiniLang front end.
 /// @internal
 function _lang_lower_block(body, function_depth)
   if typeof(body) != "array" or len(body) <= 0 then return [] end if
@@ -5653,15 +5653,15 @@ function _lang_lower_block(body, function_depth)
   return _chunked_finish(chunks, tail)
 end function
 
-/// Stores the language interfaces compiler state.
+/// Track language interfaces compiler state.
 _language_interfaces = []
-/// Stores the language structs compiler state.
+/// Track language structs compiler state.
 _language_structs = []
 
-/// Implements lang collect contracts.
+/// Parse or represent lang collect contracts in the MiniLang front end.
 /// @internal
 function _lang_collect_contracts(body, prefix)
-  /// Stores the language interfaces.
+  /// Current language interfaces used by this routine.
   /// @internal
   global _language_interfaces, _language_structs
   if typeof(body) != "array" or len(body) <= 0 then return end if
@@ -5678,7 +5678,7 @@ function _lang_collect_contracts(body, prefix)
   end for
 end function
 
-/// Implements lang find interface.
+/// Parse or represent lang find interface in the MiniLang front end.
 /// @internal
 function _lang_find_interface(raw_name, prefix)
   if len(_language_interfaces) <= 0 then return void end if
@@ -5699,7 +5699,7 @@ function _lang_find_interface(raw_name, prefix)
   return unique
 end function
 
-/// Implements lang interface signature matches.
+/// Parse or represent lang interface signature matches in the MiniLang front end.
 /// @internal
 function _lang_interface_signature_matches(required, actual)
   if try(actual.is_static) == true then return false end if
@@ -5723,10 +5723,10 @@ function _lang_interface_signature_matches(required, actual)
   return true
 end function
 
-/// Implements lang validate interfaces.
+/// Parse or represent lang validate interfaces in the MiniLang front end.
 /// @internal
 function _lang_validate_interfaces(program)
-  /// Stores the language interfaces.
+  /// Current language interfaces used by this routine.
   /// @internal
   global _language_interfaces, _language_structs
   _language_interfaces = []
@@ -5762,7 +5762,7 @@ function _lang_validate_interfaces(program)
   return ""
 end function
 
-/// Implements lang remove interfaces.
+/// Parse or represent lang remove interfaces in the MiniLang front end.
 /// @internal
 function _lang_remove_interfaces(body)
   if typeof(body) != "array" or len(body) <= 0 then return [] end if
@@ -5776,10 +5776,10 @@ function _lang_remove_interfaces(body)
   return result_items
 end function
 
-/// Implements prepare language features.
+/// Parse or represent prepare language features in the MiniLang front end.
 /// @param program Value supplied for `program`.
 function prepare_language_features(program)
-  /// Stores the language serial.
+  /// Current language serial used by this routine.
   /// @internal
   global _language_serial, _language_needs_await, _language_needs_select, _language_needs_async_pool, _language_async_pool_name, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file, _language_failure
   _language_serial = 0

@@ -23,7 +23,7 @@ Encoded general-purpose-register number, width and REX requirement.
 force_rex
 ```
 
-Stores the force rex member of `GPR`.
+Force rex associated with `GPR`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L100)
@@ -35,7 +35,7 @@ Stores the force rex member of `GPR`.
 id
 ```
 
-Stores the id member of `GPR`.
+Id associated with `GPR`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L96)
@@ -47,7 +47,7 @@ Stores the id member of `GPR`.
 size
 ```
 
-Stores the size member of `GPR`.
+Current logical size of `GPR`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L98)

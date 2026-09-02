@@ -23,7 +23,7 @@ Represents elflayout.
 base
 ```
 
-Stores the base member of `ELFLayout`.
+Base associated with `ELFLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L26)
@@ -35,7 +35,7 @@ Stores the base member of `ELFLayout`.
 bss_off
 ```
 
-Stores the bss off member of `ELFLayout`.
+Bss off associated with `ELFLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L36)
@@ -47,7 +47,7 @@ Stores the bss off member of `ELFLayout`.
 data_off
 ```
 
-Stores the data off member of `ELFLayout`.
+Data off associated with `ELFLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L32)
@@ -59,7 +59,7 @@ Stores the data off member of `ELFLayout`.
 dynamic_off
 ```
 
-Stores the dynamic off member of `ELFLayout`.
+Dynamic off associated with `ELFLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L34)
@@ -71,7 +71,7 @@ Stores the dynamic off member of `ELFLayout`.
 rdata_off
 ```
 
-Stores the rdata off member of `ELFLayout`.
+Rdata off associated with `ELFLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L30)
@@ -83,7 +83,7 @@ Stores the rdata off member of `ELFLayout`.
 text_off
 ```
 
-Stores the text off member of `ELFLayout`.
+Text off associated with `ELFLayout`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L28)

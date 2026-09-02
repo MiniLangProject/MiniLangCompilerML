@@ -32,11 +32,11 @@ import mlc.tools as t
 
 /// Facade module that mirrors the Python `Codegen` composition surface. The actual implementation still lives in the mixin-style modules; this file only wires construction and program emission together.
 struct Codegen
-  /// Stores the state member of `Codegen`.
+  /// State associated with `Codegen`.
   state,
 end struct
 
-/// Implements arr has.
+/// Coordinate arr has in the native-codegen pipeline.
 /// @internal
 function _arr_has(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
@@ -46,7 +46,7 @@ function _arr_has(arr, value)
   return false
 end function
 
-/// Implements named array set.
+/// Coordinate named array set in the native-codegen pipeline.
 /// @internal
 function _named_array_set(arr, key, values)
   if typeof(arr) != "array" then arr = [] end if
@@ -60,7 +60,7 @@ function _named_array_set(arr, key, values)
   return arr + [core.NamedArray(key, values)]
 end function
 
-/// Implements named int set.
+/// Coordinate named int set in the native-codegen pipeline.
 /// @internal
 function _named_int_set(arr, key, value)
   if typeof(arr) != "array" then arr = [] end if
@@ -74,7 +74,7 @@ function _named_int_set(arr, key, value)
   return arr + [core.NamedInt(key, value)]
 end function
 
-/// Implements enable call profile metadata.
+/// Coordinate enable call profile metadata in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 function enable_call_profile_metadata(cg)
   if typeof(cg) != "struct" then return cg end if
@@ -92,7 +92,7 @@ function enable_call_profile_metadata(cg)
   return cg
 end function
 
-/// Implements copy bytes.
+/// Coordinate copy bytes in the native-codegen pipeline.
 /// @internal
 function _copy_bytes(buf)
   if typeof(buf) != "bytes" then return bytes(0) end if
@@ -103,14 +103,14 @@ function _copy_bytes(buf)
   return out_buf
 end function
 
-/// Implements copy array.
+/// Coordinate copy array in the native-codegen pipeline.
 /// @internal
 function _copy_array(arr)
   if typeof(arr) != "array" then return [] end if
   return arr + []
 end function
 
-/// Implements copy frame stack.
+/// Coordinate copy frame stack in the native-codegen pipeline.
 /// @internal
 function _copy_frame_stack(frames)
   if typeof(frames) != "array" then return [[]] end if
@@ -132,7 +132,7 @@ function _copy_frame_stack(frames)
   return outv
 end function
 
-/// Implements copy fastmap stack.
+/// Coordinate copy fastmap stack in the native-codegen pipeline.
 /// @internal
 function _copy_fastmap_stack(frames)
   if typeof(frames) != "array" then return [t.fastmap_new(128)] end if
@@ -152,7 +152,7 @@ function _copy_fastmap_stack(frames)
   return outv
 end function
 
-/// Implements copy fastmap.
+/// Coordinate copy fastmap in the native-codegen pipeline.
 /// @internal
 function _copy_fastmap(mapv)
   if typeof(mapv) != "struct" then return t.fastmap_new(16) end if
@@ -173,7 +173,7 @@ function _copy_fastmap(mapv)
   return out_map
 end function
 
-/// Implements copy data builder.
+/// Coordinate copy data builder in the native-codegen pipeline.
 /// @internal
 function _copy_data_builder(db)
   out_db = d.newDataBuilder()
@@ -185,7 +185,7 @@ function _copy_data_builder(db)
   return out_db
 end function
 
-/// Implements copy bss builder.
+/// Coordinate copy bss builder in the native-codegen pipeline.
 /// @internal
 function _copy_bss_builder(bb)
   out_bb = d.newBssBuilder()
@@ -195,7 +195,7 @@ function _copy_bss_builder(bb)
   return out_bb
 end function
 
-/// Implements copy rdata builder.
+/// Coordinate copy rdata builder in the native-codegen pipeline.
 /// @internal
 function _copy_rdata_builder(rb)
   out_rb = d.newRDataBuilder()
@@ -211,7 +211,7 @@ function _copy_rdata_builder(rb)
   return out_rb
 end function
 
-/// Implements sparse data builder.
+/// Coordinate sparse data builder in the native-codegen pipeline.
 /// @internal
 function _sparse_data_builder(base_db)
   out_db = d.newDataBuilder()
@@ -223,7 +223,7 @@ function _sparse_data_builder(base_db)
   return out_db
 end function
 
-/// Implements sparse rdata builder.
+/// Coordinate sparse rdata builder in the native-codegen pipeline.
 /// @internal
 function _sparse_rdata_builder(base_rb)
   out_rb = d.newRDataBuilder()
@@ -274,7 +274,7 @@ function set_target(cg, target)
   return cg
 end function
 
-/// Implements init.
+/// Coordinate init in the native-codegen pipeline.
 /// @internal
 function __init__(cg)
   if typeof(cg) != "struct" then return cg end if
@@ -284,7 +284,7 @@ function __init__(cg)
   return cg
 end function
 
-/// Runs emit program.
+/// Coordinate emit program in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param program Value supplied for `program`.
 function emit_program(cg, program)
@@ -299,7 +299,7 @@ function emit_program(cg, program)
   return cg
 end function
 
-/// Implements clone state for object.
+/// Coordinate clone state for object in the native-codegen pipeline.
 /// @internal
 function _clone_state_for_object(base, seed_runtime)
   if typeof(base) != "struct" then
@@ -441,7 +441,7 @@ function _clone_state_for_object(base, seed_runtime)
   return st
 end function
 
-/// Implements clone for object.
+/// Coordinate clone for object in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param seed_runtime Value supplied for `seed_runtime`.
 function clone_for_object(cg, seed_runtime)
@@ -460,7 +460,7 @@ function start_object_fragment(cg)
   return cg
 end function
 
-/// Implements prepare program for objects.
+/// Coordinate prepare program for objects in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param program Value supplied for `program`.
 function prepare_program_for_objects(cg, program)
@@ -480,7 +480,7 @@ function prepare_program_for_objects(cg, program)
   return [cg, prep[1], prep[2]]
 end function
 
-/// Runs emit entry object.
+/// Coordinate emit entry object in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param module_init_recs Value supplied for `module_init_recs`.
 /// @param max_call_args_main Value supplied for `max_call_args_main`.
@@ -493,7 +493,7 @@ function emit_entry_object(cg, module_init_recs, max_call_args_main, main_name)
   return cg
 end function
 
-/// Runs emit module init object.
+/// Coordinate emit module init object in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param module_rec Value supplied for `module_rec`.
 function emit_module_init_object(cg, module_rec)
@@ -504,7 +504,7 @@ function emit_module_init_object(cg, module_rec)
   return cg
 end function
 
-/// Runs emit module functions.
+/// Coordinate emit module functions in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param module_file Value supplied for `module_file`.
 function emit_module_functions(cg, module_file)
@@ -515,7 +515,7 @@ function emit_module_functions(cg, module_file)
   return cg
 end function
 
-/// Implements module function entries.
+/// Coordinate module function entries in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param module_file Value supplied for `module_file`.
 function module_function_entries(cg, module_file)
@@ -524,7 +524,7 @@ function module_function_entries(cg, module_file)
   return stmt.module_function_entries(cg.state, module_file)
 end function
 
-/// Implements all function entries.
+/// Coordinate all function entries in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 function all_function_entries(cg)
   if typeof(cg) != "struct" then return [] end if
@@ -532,13 +532,13 @@ function all_function_entries(cg)
   return stmt.all_function_entries(cg.state)
 end function
 
-/// Implements function entry count.
+/// Coordinate function entry count in the native-codegen pipeline.
 /// @param entries Value supplied for `entries`.
 function function_entry_count(entries)
   return stmt.function_entry_count(entries)
 end function
 
-/// Implements function entry name.
+/// Coordinate function entry name in the native-codegen pipeline.
 /// @param entries Value supplied for `entries`.
 /// @param node_id Value supplied for `node_id`.
 function function_entry_name(entries, node_id)
@@ -556,7 +556,7 @@ function release_function_analysis_scratch(value)
   return stmt._release_function_analysis_scratch(value)
 end function
 
-/// Runs emit module function entries.
+/// Coordinate emit module function entries in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param entries Value supplied for `entries`.
 /// @param start_index Value supplied for `start_index`.
@@ -582,7 +582,7 @@ function release_emitted_function_entries(cg, entries, start_index, count)
   return cg
 end function
 
-/// Runs emit extern stubs.
+/// Coordinate emit extern stubs in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 function emit_extern_stubs(cg)
   if typeof(cg) != "struct" then return cg end if
@@ -591,7 +591,7 @@ function emit_extern_stubs(cg)
   return cg
 end function
 
-/// Runs emit used helpers.
+/// Coordinate emit used helpers in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 function emit_used_helpers(cg)
   if typeof(cg) != "struct" then return cg end if
@@ -609,7 +609,7 @@ function clear_program_function_state(cg)
   return cg
 end function
 
-/// Implements track helper.
+/// Coordinate track helper in the native-codegen pipeline.
 /// @param cg Value supplied for `cg`.
 /// @param label Value supplied for `label`.
 function track_helper(cg, label)

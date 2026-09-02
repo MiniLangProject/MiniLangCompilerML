@@ -23,7 +23,7 @@ Compiler-internal open-addressing map with power-of-two capacity.
 cap
 ```
 
-Stores the cap member of `FastMap`.
+Allocated capacity of `FastMap`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L117)
@@ -35,7 +35,7 @@ Stores the cap member of `FastMap`.
 epoch
 ```
 
-Stores the epoch member of `FastMap`.
+Epoch associated with `FastMap`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L121)
@@ -47,7 +47,7 @@ Stores the epoch member of `FastMap`.
 keys
 ```
 
-Stores the keys member of `FastMap`.
+Keys associated with `FastMap`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L111)
@@ -59,7 +59,7 @@ Stores the keys member of `FastMap`.
 size
 ```
 
-Stores the size member of `FastMap`.
+Current logical size of `FastMap`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L119)
@@ -71,7 +71,7 @@ Stores the size member of `FastMap`.
 touched
 ```
 
-Stores the touched member of `FastMap`.
+Touched associated with `FastMap`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L123)
@@ -83,7 +83,7 @@ Stores the touched member of `FastMap`.
 used
 ```
 
-Stores the used member of `FastMap`.
+Number of populated entries in `FastMap`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L115)
@@ -95,7 +95,7 @@ Stores the used member of `FastMap`.
 values
 ```
 
-Stores the values member of `FastMap`.
+Values associated with `FastMap`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L113)

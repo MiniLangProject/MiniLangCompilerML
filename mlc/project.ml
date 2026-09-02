@@ -38,70 +38,70 @@ extern function GetFileAttributesW(path as wstr) from "kernel32.dll" returns u32
 /// Creates create directory w.
 /// @internal
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" returns bool
-/// Implements move file ex w.
+/// Resolve move file ex w during project and module loading.
 /// @internal
 extern function MoveFileExW(source as wstr, destination as wstr, flags as u32) from "kernel32.dll" returns bool
 #else
-/// Implements project mkdir.
+/// Resolve project mkdir during project and module loading.
 /// @internal
 extern function _project_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
-/// Implements project stat.
+/// Resolve project stat during project and module loading.
 /// @internal
 extern function _project_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
-/// Implements project lstat.
+/// Resolve project lstat during project and module loading.
 /// @internal
 extern function _project_lstat(path as cstr, info as bytes) from "libc.so.6" symbol "lstat" returns i32
-/// Implements project chmod.
+/// Resolve project chmod during project and module loading.
 /// @internal
 extern function _project_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
-/// Implements project rename.
+/// Resolve project rename during project and module loading.
 /// @internal
 extern function _project_rename(source as cstr, destination as cstr) from "libc.so.6" symbol "rename" returns i32
 #endif
 
 /// Expanded project configuration carried through compilation and caching.
 struct ProjectBuild
-  /// Stores the manifest member of `ProjectBuild`.
+  /// Manifest associated with `ProjectBuild`.
   manifest,
-  /// Stores the cache dir member of `ProjectBuild`.
+  /// Cache dir associated with `ProjectBuild`.
   cache_dir,
-  /// Stores the incremental member of `ProjectBuild`.
+  /// Incremental associated with `ProjectBuild`.
   incremental,
-  /// Stores the expanded args member of `ProjectBuild`.
+  /// Expanded args associated with `ProjectBuild`.
   expanded_args,
 end struct
 
 /// Success/error envelope for command-line manifest expansion.
 struct ProjectExpansion
-  /// Stores the ok member of `ProjectExpansion`.
+  /// Whether `ProjectExpansion` represents a successful result.
   ok,
-  /// Stores the args member of `ProjectExpansion`.
+  /// Args associated with `ProjectExpansion`.
   args,
-  /// Stores the project member of `ProjectExpansion`.
+  /// Project associated with `ProjectExpansion`.
   project,
-  /// Stores the message member of `ProjectExpansion`.
+  /// Diagnostic message carried by `ProjectExpansion`.
   message,
 end struct
 
 /// Two-lane deterministic hash state used for cache fingerprints.
 struct ProjectHash
-  /// Stores the a member of `ProjectHash`.
+  /// A associated with `ProjectHash`.
   a,
-  /// Stores the b member of `ProjectHash`.
+  /// B associated with `ProjectHash`.
   b,
 end struct
 
 /// Capacity-backed, indexed state for one recursive source-tree traversal.
 struct ProjectFileCollector
-  /// Stores the files member of `ProjectFileCollector`.
+  /// Files associated with `ProjectFileCollector`.
   files,
-  /// Stores the seen files member of `ProjectFileCollector`.
+  /// Seen files associated with `ProjectFileCollector`.
   seen_files,
-  /// Stores the seen dirs member of `ProjectFileCollector`.
+  /// Seen dirs associated with `ProjectFileCollector`.
   seen_dirs,
 end struct
 
-/// Implements dirname.
+/// Resolve dirname during project and module loading.
 /// @internal
 function _dirname(path)
   if typeof(path) != "string" then return "." end if
@@ -116,7 +116,7 @@ function _dirname(path)
   return "."
 end function
 
-/// Implements join.
+/// Resolve join during project and module loading.
 /// @internal
 function _join(a, b)
   if typeof(a) != "string" or a == "" or a == "." then return b end if
@@ -138,7 +138,7 @@ function _is_abs(path)
   return len(path) >= 1 and (path[0] == "\\" or path[0] == "/")
 end function
 
-/// Implements abspath.
+/// Resolve abspath during project and module loading.
 /// @internal
 function _abspath(path)
 #if TARGET_OS == "linux"
@@ -185,14 +185,14 @@ function _canon_linux(path)
   return tail
 end function
 
-/// Implements relative path.
+/// Resolve relative path during project and module loading.
 /// @internal
 function _relative_path(base, value)
   if _is_abs(value) then return _abspath(value) end if
   return _abspath(_join(base, value))
 end function
 
-/// Implements ensure dir.
+/// Resolve ensure dir during project and module loading.
 /// @internal
 function _ensure_dir(path)
   if typeof(path) != "string" or path == "" or path == "." then return true end if
@@ -209,7 +209,7 @@ function _ensure_dir(path)
   return fs.isDir(path)
 end function
 
-/// Implements unquote.
+/// Resolve unquote during project and module loading.
 /// @internal
 function _unquote(value)
   value = s.trim(value)
@@ -270,7 +270,7 @@ function _is_known_key(key)
   return key == "entry" or key == "input" or key == "output" or key == "include" or key == "import_paths" or key == "subsystem" or key == "target" or key == "object_pipeline" or key == "incremental" or key == "cache_dir" or key == "compiler_args"
 end function
 
-/// Implements valid define name.
+/// Resolve valid define name during project and module loading.
 /// @internal
 function _valid_define_name(name)
   if typeof(name) != "string" or len(name) <= 0 then return false end if
@@ -285,7 +285,7 @@ function _valid_define_name(name)
   return true
 end function
 
-/// Implements valid define value.
+/// Resolve valid define value during project and module loading.
 /// @internal
 function _valid_define_value(value)
   value = s.trim(value)
@@ -497,7 +497,7 @@ function _collect_ml_files_inner(path, excluded, collector, follow_directory_lin
   return collector
 end function
 
-/// Implements collect ml files.
+/// Resolve collect ml files during project and module loading.
 /// @internal
 function _collect_ml_files(path, excluded, collector)
   // An explicitly configured root may itself be a link; only links discovered
@@ -525,7 +525,7 @@ function _append_unique_path(paths, path)
   return paths + [path]
 end function
 
-/// Implements project word char.
+/// Resolve project word char during project and module loading.
 /// @internal
 function _project_word_char(source, index)
   if index < 0 or index >= len(source) then return false end if
@@ -562,7 +562,7 @@ function _skip_import_trivia(source, index)
   return i
 end function
 
-/// Implements skip project string.
+/// Resolve skip project string during project and module loading.
 /// @internal
 function _skip_project_string(source, index)
   i = index + 1
@@ -612,7 +612,7 @@ function _quoted_import_paths(source)
   return t.arr_vec_finish(result)
 end function
 
-/// Implements collector add import file.
+/// Resolve collector add import file during project and module loading.
 /// @internal
 function _collector_add_import_file(collector, path, excluded)
   absolute = _abspath(path)
@@ -659,7 +659,7 @@ function _collect_import_dependencies(collector, include_dirs, excluded)
   return collector
 end function
 
-/// Implements hex32.
+/// Resolve hex32 during project and module loading.
 /// @internal
 function _hex32(value)
   digits = "0123456789ABCDEF"
@@ -672,7 +672,7 @@ function _hex32(value)
   return hex_value
 end function
 
-/// Implements string less.
+/// Resolve string less during project and module loading.
 /// @internal
 function _string_less(left, right)
 #if TARGET_OS == "linux"
@@ -693,7 +693,7 @@ function _string_less(left, right)
   return len(left_bytes) < len(right_bytes)
 end function
 
-/// Implements project u32le.
+/// Resolve project u32le during project and module loading.
 /// @internal
 function _project_u32le(value, offset)
   return value[offset] | (value[offset + 1] << 8) | (value[offset + 2] << 16) | (value[offset + 3] << 24)
@@ -733,7 +733,7 @@ function _file_content_id(path)
   return _file_content_id_with_buffer(path, bytes(1048576, 0))
 end function
 
-/// Implements valid project digest.
+/// Resolve valid project digest during project and module loading.
 /// @internal
 function _valid_project_digest(value)
   if typeof(value) != "string" or len(value) != 16 then return false end if
@@ -744,7 +744,7 @@ function _valid_project_digest(value)
   return true
 end function
 
-/// Implements cache artifact path.
+/// Resolve cache artifact path during project and module loading.
 /// @internal
 function _cache_artifact_path(pb, digest)
   return _join(pb.cache_dir, "build." + digest + ".exe")
@@ -844,7 +844,7 @@ function restore(pb, digest, output_path)
   return typeof(copied) != "error"
 end function
 
-/// Implements object cache dir.
+/// Resolve object cache dir during project and module loading.
 /// @internal
 function _object_cache_dir(pb, digest)
   return _join(_join(pb.cache_dir, "objects"), digest)

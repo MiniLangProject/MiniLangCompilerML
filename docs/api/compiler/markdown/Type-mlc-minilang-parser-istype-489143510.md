@@ -23,7 +23,7 @@ Represents is type.
 _filename
 ```
 
-Stores the filename member of `IsType`.
+Filename associated with `IsType`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L227)
@@ -35,7 +35,7 @@ Stores the filename member of `IsType`.
 _pos
 ```
 
-Stores the pos member of `IsType`.
+Pos associated with `IsType`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L225)
@@ -47,7 +47,7 @@ Stores the pos member of `IsType`.
 expr
 ```
 
-Stores the expr member of `IsType`.
+Expr associated with `IsType`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L219)
@@ -59,7 +59,7 @@ Stores the expr member of `IsType`.
 negated
 ```
 
-Stores the negated member of `IsType`.
+Negated associated with `IsType`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L223)
@@ -71,7 +71,7 @@ Stores the negated member of `IsType`.
 node_kind
 ```
 
-Stores the node kind member of `IsType`.
+Node kind associated with `IsType`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L217)
@@ -83,7 +83,7 @@ Stores the node kind member of `IsType`.
 type_name
 ```
 
-Stores the type name member of `IsType`.
+Type name associated with `IsType`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L221)

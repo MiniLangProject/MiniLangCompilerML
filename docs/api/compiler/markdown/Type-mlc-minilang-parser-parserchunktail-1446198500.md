@@ -23,7 +23,7 @@ Capacity-backed parser list tail used to avoid repeated array concatenation.
 cap
 ```
 
-Stores the cap member of `ParserChunkTail`.
+Allocated capacity of `ParserChunkTail`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L101)
@@ -35,7 +35,7 @@ Stores the cap member of `ParserChunkTail`.
 data
 ```
 
-Stores the data member of `ParserChunkTail`.
+Backing data owned by `ParserChunkTail`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L97)
@@ -47,7 +47,7 @@ Stores the data member of `ParserChunkTail`.
 used
 ```
 
-Stores the used member of `ParserChunkTail`.
+Number of populated entries in `ParserChunkTail`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L99)

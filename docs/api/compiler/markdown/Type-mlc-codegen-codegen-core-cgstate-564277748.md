@@ -23,7 +23,7 @@ Complete mutable state threaded through every backend emission function. Collect
 _cold_block_stack
 ```
 
-Stores the cold block stack member of `CgState`.
+Cold block stack associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L231)
@@ -35,7 +35,7 @@ Stores the cold block stack member of `CgState`.
 _current_root_rec_off
 ```
 
-Stores the current root rec off member of `CgState`.
+Current root rec off associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L219)
@@ -47,7 +47,7 @@ Stores the current root rec off member of `CgState`.
 _current_root_static_qwords
 ```
 
-Stores the current root static qwords member of `CgState`.
+Current root static qwords associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L221)
@@ -59,7 +59,7 @@ Stores the current root static qwords member of `CgState`.
 _expr_temp_reg_live
 ```
 
-Stores the expr temp reg live member of `CgState`.
+Expr temp reg live associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L225)
@@ -71,7 +71,7 @@ Stores the expr temp reg live member of `CgState`.
 _expr_temp_reg_live_by_reg
 ```
 
-Stores the expr temp reg live by reg member of `CgState`.
+Expr temp reg live by reg associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L227)
@@ -83,7 +83,7 @@ Stores the expr temp reg live by reg member of `CgState`.
 _expr_temp_reg_order
 ```
 
-Stores the expr temp reg order member of `CgState`.
+Expr temp reg order associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L223)
@@ -95,7 +95,7 @@ Stores the expr temp reg order member of `CgState`.
 _expr_temp_reg_reserved
 ```
 
-Stores the expr temp reg reserved member of `CgState`.
+Expr temp reg reserved associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L229)
@@ -107,7 +107,7 @@ Stores the expr temp reg reserved member of `CgState`.
 _global_owner_file
 ```
 
-Stores the global owner file member of `CgState`.
+Global owner file associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L261)
@@ -119,7 +119,7 @@ Stores the global owner file member of `CgState`.
 _inline_call_stack
 ```
 
-Stores the inline call stack member of `CgState`.
+Inline call stack associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L235)
@@ -131,7 +131,7 @@ Stores the inline call stack member of `CgState`.
 _inline_emitted_bytes
 ```
 
-Stores the inline emitted bytes member of `CgState`.
+Inline emitted bytes associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L237)
@@ -143,7 +143,7 @@ Stores the inline emitted bytes member of `CgState`.
 _inline_param_stack
 ```
 
-Stores the inline param stack member of `CgState`.
+Inline param stack associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L233)
@@ -155,7 +155,7 @@ Stores the inline param stack member of `CgState`.
 _module_init_active
 ```
 
-Stores the module init active member of `CgState`.
+Module init active associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L257)
@@ -167,7 +167,7 @@ Stores the module init active member of `CgState`.
 _module_init_active_file
 ```
 
-Stores the module init active file member of `CgState`.
+Module init active file associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L259)
@@ -179,7 +179,7 @@ Stores the module init active file member of `CgState`.
 _module_init_status_labels
 ```
 
-Stores the module init status labels member of `CgState`.
+Module init status labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L263)
@@ -191,7 +191,7 @@ Stores the module init status labels member of `CgState`.
 analysis_mode
 ```
 
-Stores the analysis mode member of `CgState`.
+Analysis mode associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L195)
@@ -203,7 +203,7 @@ Stores the analysis mode member of `CgState`.
 asm
 ```
 
-Stores the asm member of `CgState`.
+Asm associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L57)
@@ -215,7 +215,7 @@ Stores the asm member of `CgState`.
 binding_id
 ```
 
-Stores the binding id member of `CgState`.
+Binding id associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L93)
@@ -227,7 +227,7 @@ Stores the binding id member of `CgState`.
 break_stack
 ```
 
-Stores the break stack member of `CgState`.
+Break stack associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L67)
@@ -239,7 +239,7 @@ Stores the break stack member of `CgState`.
 bss
 ```
 
-Stores the bss member of `CgState`.
+Bss associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L61)
@@ -251,7 +251,7 @@ Stores the bss member of `CgState`.
 builtin_global_labels
 ```
 
-Stores the builtin global labels member of `CgState`.
+Builtin global labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L135)
@@ -263,7 +263,7 @@ Stores the builtin global labels member of `CgState`.
 builtin_specs
 ```
 
-Stores the builtin specs member of `CgState`.
+Builtin specs associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L133)
@@ -275,7 +275,7 @@ Stores the builtin specs member of `CgState`.
 builtin_static_obj_labels
 ```
 
-Stores the builtin static obj labels member of `CgState`.
+Builtin static obj labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L145)
@@ -287,7 +287,7 @@ Stores the builtin static obj labels member of `CgState`.
 call_indirect_count
 ```
 
-Stores the call indirect count member of `CgState`.
+Call indirect count associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L153)
@@ -299,7 +299,7 @@ Stores the call indirect count member of `CgState`.
 call_profile
 ```
 
-Stores the call profile member of `CgState`.
+Call profile associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L49)
@@ -311,7 +311,7 @@ Stores the call profile member of `CgState`.
 call_temp_base
 ```
 
-Stores the call temp base member of `CgState`.
+Call temp base associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L215)
@@ -323,7 +323,7 @@ Stores the call temp base member of `CgState`.
 call_total_count
 ```
 
-Stores the call total count member of `CgState`.
+Call total count associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L151)
@@ -335,7 +335,7 @@ Stores the call total count member of `CgState`.
 callprof_entries
 ```
 
-Stores the callprof entries member of `CgState`.
+Callprof entries associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L155)
@@ -347,7 +347,7 @@ Stores the callprof entries member of `CgState`.
 callprof_index
 ```
 
-Stores the callprof index member of `CgState`.
+Callprof index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L157)
@@ -359,7 +359,7 @@ Stores the callprof index member of `CgState`.
 callprof_n
 ```
 
-Stores the callprof n member of `CgState`.
+Callprof n associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L161)
@@ -371,7 +371,7 @@ Stores the callprof n member of `CgState`.
 callprof_name_labels
 ```
 
-Stores the callprof name labels member of `CgState`.
+Callprof name labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L159)
@@ -383,7 +383,7 @@ Stores the callprof name labels member of `CgState`.
 current_env_root_off
 ```
 
-Stores the current env root off member of `CgState`.
+Current env root off associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L183)
@@ -395,7 +395,7 @@ Stores the current env root off member of `CgState`.
 current_file_prefix
 ```
 
-Stores the current file prefix member of `CgState`.
+Current file prefix associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L109)
@@ -407,7 +407,7 @@ Stores the current file prefix member of `CgState`.
 current_fn_boxed_names
 ```
 
-Stores the current fn boxed names member of `CgState`.
+Current fn boxed names associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L179)
@@ -419,7 +419,7 @@ Stores the current fn boxed names member of `CgState`.
 current_fn_env_index
 ```
 
-Stores the current fn env index member of `CgState`.
+Current fn env index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L181)
@@ -431,7 +431,7 @@ Stores the current fn env index member of `CgState`.
 current_qname_prefix
 ```
 
-Stores the current qname prefix member of `CgState`.
+Current qname prefix associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L107)
@@ -443,7 +443,7 @@ Stores the current qname prefix member of `CgState`.
 data
 ```
 
-Stores the data member of `CgState`.
+Backing data owned by `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L59)
@@ -455,7 +455,7 @@ Stores the data member of `CgState`.
 dbg_line_starts
 ```
 
-Stores the dbg line starts member of `CgState`.
+Dbg line starts associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L173)
@@ -467,7 +467,7 @@ Stores the dbg line starts member of `CgState`.
 decl_site_bindings
 ```
 
-Stores the decl site bindings member of `CgState`.
+Decl site bindings associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L253)
@@ -479,7 +479,7 @@ Stores the decl site bindings member of `CgState`.
 diagnostics
 ```
 
-Stores the diagnostics member of `CgState`.
+Diagnostics associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L149)
@@ -491,7 +491,7 @@ Stores the diagnostics member of `CgState`.
 emitted_helpers
 ```
 
-Stores the emitted helpers member of `CgState`.
+Emitted helpers associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L87)
@@ -503,7 +503,7 @@ Stores the emitted helpers member of `CgState`.
 enum_ids
 ```
 
-Stores the enum ids member of `CgState`.
+Enum ids associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L77)
@@ -515,7 +515,7 @@ Stores the enum ids member of `CgState`.
 enum_ids_index
 ```
 
-Stores the enum ids index member of `CgState`.
+Enum ids index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L205)
@@ -527,7 +527,7 @@ Stores the enum ids index member of `CgState`.
 enum_variants
 ```
 
-Stores the enum variants member of `CgState`.
+Enum variants associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L75)
@@ -539,7 +539,7 @@ Stores the enum variants member of `CgState`.
 enum_variants_index
 ```
 
-Stores the enum variants index member of `CgState`.
+Enum variants index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L203)
@@ -551,7 +551,7 @@ Stores the enum variants index member of `CgState`.
 errprop_suppression
 ```
 
-Stores the errprop suppression member of `CgState`.
+Errprop suppression associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L169)
@@ -563,7 +563,7 @@ Stores the errprop suppression member of `CgState`.
 errprop_sync_depth
 ```
 
-Stores the errprop sync depth member of `CgState`.
+Errprop sync depth associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L171)
@@ -575,7 +575,7 @@ Stores the errprop sync depth member of `CgState`.
 expr_temp_base
 ```
 
-Stores the expr temp base member of `CgState`.
+Expr temp base associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L175)
@@ -587,7 +587,7 @@ Stores the expr temp base member of `CgState`.
 expr_temp_max
 ```
 
-Stores the expr temp max member of `CgState`.
+Expr temp max associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L217)
@@ -599,7 +599,7 @@ Stores the expr temp max member of `CgState`.
 expr_temp_top
 ```
 
-Stores the expr temp top member of `CgState`.
+Expr temp top associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L177)
@@ -611,7 +611,7 @@ Stores the expr temp top member of `CgState`.
 ext_widebuf_labels
 ```
 
-Stores the ext widebuf labels member of `CgState`.
+Ext widebuf labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L251)
@@ -623,7 +623,7 @@ Stores the ext widebuf labels member of `CgState`.
 extern_abi_structs
 ```
 
-Stores the extern abi structs member of `CgState`.
+Extern abi structs associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L43)
@@ -635,7 +635,7 @@ Stores the extern abi structs member of `CgState`.
 extern_global_labels
 ```
 
-Stores the extern global labels member of `CgState`.
+Extern global labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L137)
@@ -647,7 +647,7 @@ Stores the extern global labels member of `CgState`.
 extern_sig_index
 ```
 
-Stores the extern sig index member of `CgState`.
+Extern sig index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L211)
@@ -659,7 +659,7 @@ Stores the extern sig index member of `CgState`.
 extern_sigs
 ```
 
-Stores the extern sigs member of `CgState`.
+Extern sigs associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L41)
@@ -671,7 +671,7 @@ Stores the extern sigs member of `CgState`.
 extern_static_obj_labels
 ```
 
-Stores the extern static obj labels member of `CgState`.
+Extern static obj labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L147)
@@ -683,7 +683,7 @@ Stores the extern static obj labels member of `CgState`.
 extern_structs
 ```
 
-Stores the extern structs member of `CgState`.
+Extern structs associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L45)
@@ -695,7 +695,7 @@ Stores the extern structs member of `CgState`.
 extern_stub_labels
 ```
 
-Stores the extern stub labels member of `CgState`.
+Extern stub labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L139)
@@ -707,7 +707,7 @@ Stores the extern stub labels member of `CgState`.
 file_prefix_map
 ```
 
-Stores the file prefix map member of `CgState`.
+File prefix map associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L111)
@@ -719,7 +719,7 @@ Stores the file prefix map member of `CgState`.
 filename
 ```
 
-Stores the filename member of `CgState`.
+Filename associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L37)
@@ -731,7 +731,7 @@ Stores the filename member of `CgState`.
 func_frame_size
 ```
 
-Stores the func frame size member of `CgState`.
+Func frame size associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L167)
@@ -743,7 +743,7 @@ Stores the func frame size member of `CgState`.
 func_global_map
 ```
 
-Stores the func global map member of `CgState`.
+Func global map associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L103)
@@ -755,7 +755,7 @@ Stores the func global map member of `CgState`.
 func_global_map_index
 ```
 
-Stores the func global map index member of `CgState`.
+Func global map index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L189)
@@ -767,7 +767,7 @@ Stores the func global map index member of `CgState`.
 func_globals
 ```
 
-Stores the func globals member of `CgState`.
+Func globals associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L101)
@@ -779,7 +779,7 @@ Stores the func globals member of `CgState`.
 func_ret_label
 ```
 
-Stores the func ret label member of `CgState`.
+Func ret label associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L165)
@@ -791,7 +791,7 @@ Stores the func ret label member of `CgState`.
 function_codegen_name_map
 ```
 
-Stores the function codegen name map member of `CgState`.
+Function codegen name map associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L193)
@@ -803,7 +803,7 @@ Stores the function codegen name map member of `CgState`.
 function_global_labels
 ```
 
-Stores the function global labels member of `CgState`.
+Function global labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L129)
@@ -815,7 +815,7 @@ Stores the function global labels member of `CgState`.
 function_local_ids
 ```
 
-Stores the function local ids member of `CgState`.
+Function local ids associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L255)
@@ -827,7 +827,7 @@ Stores the function local ids member of `CgState`.
 function_locals
 ```
 
-Stores the function locals member of `CgState`.
+Function locals associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L105)
@@ -839,7 +839,7 @@ Stores the function locals member of `CgState`.
 function_static_obj_labels
 ```
 
-Stores the function static obj labels member of `CgState`.
+Function static obj labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L141)
@@ -851,7 +851,7 @@ Stores the function static obj labels member of `CgState`.
 global_slots
 ```
 
-Stores the global slots member of `CgState`.
+Global slots associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L95)
@@ -863,7 +863,7 @@ Stores the global slots member of `CgState`.
 globals
 ```
 
-Stores the globals member of `CgState`.
+Globals associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L97)
@@ -875,7 +875,7 @@ Stores the globals member of `CgState`.
 heap_config
 ```
 
-Stores the heap config member of `CgState`.
+Heap config associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L47)
@@ -887,7 +887,7 @@ Stores the heap config member of `CgState`.
 import_alias_index
 ```
 
-Stores the import alias index member of `CgState`.
+Import alias index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L213)
@@ -899,7 +899,7 @@ Stores the import alias index member of `CgState`.
 import_aliases
 ```
 
-Stores the import aliases member of `CgState`.
+Import aliases associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L39)
@@ -911,7 +911,7 @@ Stores the import aliases member of `CgState`.
 imports
 ```
 
-Stores the imports member of `CgState`.
+Imports associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L55)
@@ -923,7 +923,7 @@ Stores the imports member of `CgState`.
 in_function
 ```
 
-Stores the in function member of `CgState`.
+In function associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L99)
@@ -935,7 +935,7 @@ Stores the in function member of `CgState`.
 inline_only_functions
 ```
 
-Stores the inline only functions member of `CgState`.
+Inline only functions associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L247)
@@ -947,7 +947,7 @@ Stores the inline only functions member of `CgState`.
 is_linux_target
 ```
 
-Stores the is linux target member of `CgState`.
+Whether `CgState.is_linux_target` indicates linux target.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L271)
@@ -959,7 +959,7 @@ Stores the is linux target member of `CgState`.
 is_windows_subsystem
 ```
 
-Stores the is windows subsystem member of `CgState`.
+Whether `CgState.is_windows_subsystem` indicates windows subsystem.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L163)
@@ -971,7 +971,7 @@ Stores the is windows subsystem member of `CgState`.
 known_int_names
 ```
 
-Stores the known int names member of `CgState`.
+Known int names associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L241)
@@ -983,7 +983,7 @@ Stores the known int names member of `CgState`.
 known_value_types
 ```
 
-Stores the known value types member of `CgState`.
+Known value types associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L243)
@@ -995,7 +995,7 @@ Stores the known value types member of `CgState`.
 label_id
 ```
 
-Stores the label id member of `CgState`.
+Label id associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L83)
@@ -1007,7 +1007,7 @@ Stores the label id member of `CgState`.
 loop_index_fast_stack
 ```
 
-Stores the loop index fast stack member of `CgState`.
+Loop index fast stack associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L245)
@@ -1019,7 +1019,7 @@ Stores the loop index fast stack member of `CgState`.
 max_inline_call_args_global
 ```
 
-Stores the max inline call args global member of `CgState`.
+Max inline call args global associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L239)
@@ -1031,7 +1031,7 @@ Stores the max inline call args global member of `CgState`.
 mem_probe
 ```
 
-Stores the mem probe member of `CgState`.
+Mem probe associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L53)
@@ -1043,7 +1043,7 @@ Stores the mem probe member of `CgState`.
 native_threads_possible
 ```
 
-Stores the native threads possible member of `CgState`.
+Native threads possible associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L265)
@@ -1055,7 +1055,7 @@ Stores the native threads possible member of `CgState`.
 nested_user_functions
 ```
 
-Stores the nested user functions member of `CgState`.
+Nested user functions associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L123)
@@ -1067,7 +1067,7 @@ Stores the nested user functions member of `CgState`.
 pruned_inline_functions
 ```
 
-Stores the pruned inline functions member of `CgState`.
+Pruned inline functions associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L249)
@@ -1079,7 +1079,7 @@ Stores the pruned inline functions member of `CgState`.
 qualify_cache
 ```
 
-Stores the qualify cache member of `CgState`.
+Qualify cache associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L197)
@@ -1091,7 +1091,7 @@ Stores the qualify cache member of `CgState`.
 rdata
 ```
 
-Stores the rdata member of `CgState`.
+Rdata associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L63)
@@ -1103,7 +1103,7 @@ Stores the rdata member of `CgState`.
 reserved_identifiers
 ```
 
-Stores the reserved identifiers member of `CgState`.
+Reserved identifiers associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L81)
@@ -1115,7 +1115,7 @@ Stores the reserved identifiers member of `CgState`.
 scope_declared
 ```
 
-Stores the scope declared member of `CgState`.
+Scope declared associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L91)
@@ -1127,7 +1127,7 @@ Stores the scope declared member of `CgState`.
 scope_declared_index_stack
 ```
 
-Stores the scope declared index stack member of `CgState`.
+Scope declared index stack associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L187)
@@ -1139,7 +1139,7 @@ Stores the scope declared index stack member of `CgState`.
 scope_index_stack
 ```
 
-Stores the scope index stack member of `CgState`.
+Scope index stack associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L185)
@@ -1151,7 +1151,7 @@ Stores the scope index stack member of `CgState`.
 scope_stack
 ```
 
-Stores the scope stack member of `CgState`.
+Scope stack associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L89)
@@ -1163,7 +1163,7 @@ Stores the scope stack member of `CgState`.
 source
 ```
 
-Stores the source member of `CgState`.
+Source associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L35)
@@ -1175,7 +1175,7 @@ Stores the source member of `CgState`.
 struct_field_types
 ```
 
-Stores the struct field types member of `CgState`.
+Struct field types associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L71)
@@ -1187,7 +1187,7 @@ Stores the struct field types member of `CgState`.
 struct_fields
 ```
 
-Stores the struct fields member of `CgState`.
+Struct fields associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L69)
@@ -1199,7 +1199,7 @@ Stores the struct fields member of `CgState`.
 struct_fields_index
 ```
 
-Stores the struct fields index member of `CgState`.
+Struct fields index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L199)
@@ -1211,7 +1211,7 @@ Stores the struct fields index member of `CgState`.
 struct_global_labels
 ```
 
-Stores the struct global labels member of `CgState`.
+Struct global labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L131)
@@ -1223,7 +1223,7 @@ Stores the struct global labels member of `CgState`.
 struct_ids
 ```
 
-Stores the struct ids member of `CgState`.
+Struct ids associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L73)
@@ -1235,7 +1235,7 @@ Stores the struct ids member of `CgState`.
 struct_ids_index
 ```
 
-Stores the struct ids index member of `CgState`.
+Struct ids index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L201)
@@ -1247,7 +1247,7 @@ Stores the struct ids index member of `CgState`.
 struct_methods
 ```
 
-Stores the struct methods member of `CgState`.
+Struct methods associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L125)
@@ -1259,7 +1259,7 @@ Stores the struct methods member of `CgState`.
 struct_methods_index
 ```
 
-Stores the struct methods index member of `CgState`.
+Struct methods index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L207)
@@ -1271,7 +1271,7 @@ Stores the struct methods index member of `CgState`.
 struct_static_methods
 ```
 
-Stores the struct static methods member of `CgState`.
+Struct static methods associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L127)
@@ -1283,7 +1283,7 @@ Stores the struct static methods member of `CgState`.
 struct_static_methods_index
 ```
 
-Stores the struct static methods index member of `CgState`.
+Struct static methods index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L209)
@@ -1295,7 +1295,7 @@ Stores the struct static methods index member of `CgState`.
 struct_static_obj_labels
 ```
 
-Stores the struct static obj labels member of `CgState`.
+Struct static obj labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L143)
@@ -1307,7 +1307,7 @@ Stores the struct static obj labels member of `CgState`.
 synchronized_globals
 ```
 
-Stores the synchronized globals member of `CgState`.
+Synchronized globals associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L267)
@@ -1319,7 +1319,7 @@ Stores the synchronized globals member of `CgState`.
 target
 ```
 
-Stores the target member of `CgState`.
+Target associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L269)
@@ -1331,7 +1331,7 @@ Stores the target member of `CgState`.
 trace_calls
 ```
 
-Stores the trace calls member of `CgState`.
+Trace calls associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L51)
@@ -1343,7 +1343,7 @@ Stores the trace calls member of `CgState`.
 typename_enum_by_id
 ```
 
-Stores the typename enum by id member of `CgState`.
+Typename enum by id associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L117)
@@ -1355,7 +1355,7 @@ Stores the typename enum by id member of `CgState`.
 typename_enum_by_qname
 ```
 
-Stores the typename enum by qname member of `CgState`.
+Typename enum by qname associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L119)
@@ -1367,7 +1367,7 @@ Stores the typename enum by qname member of `CgState`.
 typename_struct_by_id
 ```
 
-Stores the typename struct by id member of `CgState`.
+Typename struct by id associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L113)
@@ -1379,7 +1379,7 @@ Stores the typename struct by id member of `CgState`.
 typename_struct_by_qname
 ```
 
-Stores the typename struct by qname member of `CgState`.
+Typename struct by qname associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L115)
@@ -1391,7 +1391,7 @@ Stores the typename struct by qname member of `CgState`.
 used_helpers
 ```
 
-Stores the used helpers member of `CgState`.
+Used helpers associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L85)
@@ -1403,7 +1403,7 @@ Stores the used helpers member of `CgState`.
 user_function_index
 ```
 
-Stores the user function index member of `CgState`.
+User function index associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L191)
@@ -1415,7 +1415,7 @@ Stores the user function index member of `CgState`.
 user_functions
 ```
 
-Stores the user functions member of `CgState`.
+User functions associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L121)
@@ -1427,7 +1427,7 @@ Stores the user functions member of `CgState`.
 value_enum_values
 ```
 
-Stores the value enum values member of `CgState`.
+Value enum values associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L79)
@@ -1439,7 +1439,7 @@ Stores the value enum values member of `CgState`.
 var_slots
 ```
 
-Stores the var slots member of `CgState`.
+Var slots associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L65)

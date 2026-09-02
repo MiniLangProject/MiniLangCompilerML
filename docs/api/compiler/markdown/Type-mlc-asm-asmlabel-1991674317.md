@@ -23,7 +23,7 @@ Named code offset in the materialized instruction stream.
 name
 ```
 
-Stores the name member of `AsmLabel`.
+Name associated with `AsmLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L36)
@@ -35,7 +35,7 @@ Stores the name member of `AsmLabel`.
 pos
 ```
 
-Stores the pos member of `AsmLabel`.
+Pos associated with `AsmLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L38)

@@ -23,7 +23,7 @@ Serializable object-pipeline records consumed by the fresh linker process.
 name
 ```
 
-Stores the name member of `MloLabel`.
+Name associated with `MloLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L271)
@@ -35,7 +35,7 @@ Stores the name member of `MloLabel`.
 offset
 ```
 
-Stores the offset member of `MloLabel`.
+Offset associated with `MloLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L273)

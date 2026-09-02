@@ -23,7 +23,7 @@ Represents member.
 _filename
 ```
 
-Stores the filename member of `Member`.
+Filename associated with `Member`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L301)
@@ -35,7 +35,7 @@ Stores the filename member of `Member`.
 _pos
 ```
 
-Stores the pos member of `Member`.
+Pos associated with `Member`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L299)
@@ -47,7 +47,7 @@ Stores the pos member of `Member`.
 name
 ```
 
-Stores the name member of `Member`.
+Name associated with `Member`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L297)
@@ -59,7 +59,7 @@ Stores the name member of `Member`.
 node_kind
 ```
 
-Stores the node kind member of `Member`.
+Node kind associated with `Member`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L293)
@@ -71,7 +71,7 @@ Stores the node kind member of `Member`.
 target
 ```
 
-Stores the target member of `Member`.
+Target associated with `Member`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L295)

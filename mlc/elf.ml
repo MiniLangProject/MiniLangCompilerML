@@ -22,39 +22,39 @@ import mlc.tools as t
 
 /// Represents elflayout.
 struct ELFLayout
-  /// Stores the base member of `ELFLayout`.
+  /// Base associated with `ELFLayout`.
   base,
-  /// Stores the text off member of `ELFLayout`.
+  /// Text off associated with `ELFLayout`.
   text_off,
-  /// Stores the rdata off member of `ELFLayout`.
+  /// Rdata off associated with `ELFLayout`.
   rdata_off,
-  /// Stores the data off member of `ELFLayout`.
+  /// Data off associated with `ELFLayout`.
   data_off,
-  /// Stores the dynamic off member of `ELFLayout`.
+  /// Dynamic off associated with `ELFLayout`.
   dynamic_off,
-  /// Stores the bss off member of `ELFLayout`.
+  /// Bss off associated with `ELFLayout`.
   bss_off,
 end struct
 
 /// Represents dynamic blob.
 struct DynamicBlob
-  /// Stores the data member of `DynamicBlob`.
+  /// Backing data owned by `DynamicBlob`.
   data,
-  /// Stores the interp offset member of `DynamicBlob`.
+  /// Interp offset associated with `DynamicBlob`.
   interp_offset,
-  /// Stores the interp size member of `DynamicBlob`.
+  /// Interp size associated with `DynamicBlob`.
   interp_size,
-  /// Stores the table offset member of `DynamicBlob`.
+  /// Table offset associated with `DynamicBlob`.
   table_offset,
-  /// Stores the table size member of `DynamicBlob`.
+  /// Table size associated with `DynamicBlob`.
   table_size,
 end struct
 
 /// Represents string offset.
 struct StringOffset
-  /// Stores the value member of `StringOffset`.
+  /// Value associated with `StringOffset`.
   value,
-  /// Stores the offset member of `StringOffset`.
+  /// Offset associated with `StringOffset`.
   offset,
 end struct
 
@@ -72,7 +72,7 @@ function plan(text_size, rdata_size, data_size, dynamic_size)
   return ELFLayout(0x400000, text_off, rdata_off, data_off, dynamic_off, bss_off)
 end function
 
-/// Implements array has.
+/// Emit array has in the Linux ELF image.
 /// @internal
 function _array_has(values, wanted)
   if len(values) <= 0 then return false end if

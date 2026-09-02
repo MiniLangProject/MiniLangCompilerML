@@ -23,7 +23,7 @@ Append-only array builder that avoids copying a growing prefix.
 cap
 ```
 
-Stores the cap member of `ArrayChunkBuilder`.
+Allocated capacity of `ArrayChunkBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L69)
@@ -35,7 +35,7 @@ Stores the cap member of `ArrayChunkBuilder`.
 chunks
 ```
 
-Stores the chunks member of `ArrayChunkBuilder`.
+Chunks associated with `ArrayChunkBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L65)
@@ -47,7 +47,7 @@ Stores the chunks member of `ArrayChunkBuilder`.
 tail
 ```
 
-Stores the tail member of `ArrayChunkBuilder`.
+Tail associated with `ArrayChunkBuilder`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L67)

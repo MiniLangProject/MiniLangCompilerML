@@ -23,7 +23,7 @@ Void-safe member access (`value?.member`).
 _filename
 ```
 
-Stores the filename member of `SafeMember`.
+Filename associated with `SafeMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L315)
@@ -35,7 +35,7 @@ Stores the filename member of `SafeMember`.
 _pos
 ```
 
-Stores the pos member of `SafeMember`.
+Pos associated with `SafeMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L313)
@@ -47,7 +47,7 @@ Stores the pos member of `SafeMember`.
 name
 ```
 
-Stores the name member of `SafeMember`.
+Name associated with `SafeMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L311)
@@ -59,7 +59,7 @@ Stores the name member of `SafeMember`.
 node_kind
 ```
 
-Stores the node kind member of `SafeMember`.
+Node kind associated with `SafeMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L307)
@@ -71,7 +71,7 @@ Stores the node kind member of `SafeMember`.
 target
 ```
 
-Stores the target member of `SafeMember`.
+Target associated with `SafeMember`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L309)

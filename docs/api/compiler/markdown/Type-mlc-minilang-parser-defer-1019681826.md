@@ -23,7 +23,7 @@ Represents defer.
 _filename
 ```
 
-Stores the filename member of `Defer`.
+Filename associated with `Defer`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L615)
@@ -35,7 +35,7 @@ Stores the filename member of `Defer`.
 _pos
 ```
 
-Stores the pos member of `Defer`.
+Pos associated with `Defer`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L613)
@@ -47,7 +47,7 @@ Stores the pos member of `Defer`.
 capture_kind
 ```
 
-Stores the capture kind member of `Defer`.
+Capture kind associated with `Defer`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L611)
@@ -59,7 +59,7 @@ Stores the capture kind member of `Defer`.
 expr
 ```
 
-Stores the expr member of `Defer`.
+Expr associated with `Defer`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L605)
@@ -71,7 +71,7 @@ Stores the expr member of `Defer`.
 node_kind
 ```
 
-Stores the node kind member of `Defer`.
+Node kind associated with `Defer`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L603)
@@ -83,7 +83,7 @@ Stores the node kind member of `Defer`.
 offsets
 ```
 
-Stores the offsets member of `Defer`.
+Offsets associated with `Defer`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L609)
@@ -95,7 +95,7 @@ Stores the offsets member of `Defer`.
 site_id
 ```
 
-Stores the site id member of `Defer`.
+Site id associated with `Defer`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L607)

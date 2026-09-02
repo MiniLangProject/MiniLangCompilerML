@@ -23,7 +23,7 @@ Typed arena for the immutable function-definition roots consumed by object emiss
 count
 ```
 
-Stores the count member of `FunctionNodeArena`.
+Count associated with `FunctionNodeArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L52)
@@ -35,7 +35,7 @@ Stores the count member of `FunctionNodeArena`.
 kinds
 ```
 
-Stores the kinds member of `FunctionNodeArena`.
+Kinds associated with `FunctionNodeArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L46)
@@ -47,7 +47,7 @@ Stores the kinds member of `FunctionNodeArena`.
 names
 ```
 
-Stores the names member of `FunctionNodeArena`.
+Names associated with `FunctionNodeArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L48)
@@ -59,7 +59,7 @@ Stores the names member of `FunctionNodeArena`.
 nodes
 ```
 
-Stores the nodes member of `FunctionNodeArena`.
+Nodes associated with `FunctionNodeArena`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L50)

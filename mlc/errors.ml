@@ -21,31 +21,31 @@ package mlc.errors
 
 /// Single fatal compiler error with optional source coordinates.
 struct CompileError
-  /// Stores the message member of `CompileError`.
+  /// Diagnostic message carried by `CompileError`.
   message,
-  /// Stores the pos member of `CompileError`.
+  /// Pos associated with `CompileError`.
   pos,
-  /// Stores the filename member of `CompileError`.
+  /// Filename associated with `CompileError`.
   filename,
 end struct
 
 /// Recoverable diagnostic used by keep-going compilation.
 struct Diagnostic
-  /// Stores the kind member of `Diagnostic`.
+  /// Kind associated with `Diagnostic`.
   kind,
-  /// Stores the message member of `Diagnostic`.
+  /// Diagnostic message carried by `Diagnostic`.
   message,
-  /// Stores the filename member of `Diagnostic`.
+  /// Filename associated with `Diagnostic`.
   filename,
-  /// Stores the pos member of `Diagnostic`.
+  /// Pos associated with `Diagnostic`.
   pos,
-  /// Stores the source member of `Diagnostic`.
+  /// Source associated with `Diagnostic`.
   source,
 end struct
 
 /// Aggregate returned when multiple diagnostics must cross a phase boundary.
 struct MultiCompileError
-  /// Stores the diags member of `MultiCompileError`.
+  /// Diags associated with `MultiCompileError`.
   diags,
 end struct
 

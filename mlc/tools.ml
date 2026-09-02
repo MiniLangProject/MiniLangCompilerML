@@ -39,11 +39,11 @@ end function
 // collector is non-moving, so both managed objects remain stable for the
 // duration of this synchronous native copy.
 #if TARGET_OS == "windows"
-/// Implements copy native bytes.
+/// Provide the copy native bytes compiler utility operation.
 /// @internal
 extern function _copy_native_bytes(destination as ptr, source as ptr, count as u64) from "kernel32.dll" symbol "RtlMoveMemory" returns ptr
 #else
-/// Implements copy native bytes.
+/// Provide the copy native bytes compiler utility operation.
 /// @internal
 extern function _copy_native_bytes(destination as ptr, source as ptr, count as u64) from "libc.so.6" symbol "memmove" returns ptr
 #endif
@@ -61,122 +61,122 @@ end function
 
 /// Append-only array builder that avoids copying a growing prefix.
 struct ArrayChunkBuilder
-  /// Stores the chunks member of `ArrayChunkBuilder`.
+  /// Chunks associated with `ArrayChunkBuilder`.
   chunks,
-  /// Stores the tail member of `ArrayChunkBuilder`.
+  /// Tail associated with `ArrayChunkBuilder`.
   tail,
-  /// Stores the cap member of `ArrayChunkBuilder`.
+  /// Allocated capacity of `ArrayChunkBuilder`.
   cap,
 end struct
 
 /// Partially filled final chunk with explicit logical length.
 struct ArrayChunkTail
-  /// Stores the data member of `ArrayChunkTail`.
+  /// Backing data owned by `ArrayChunkTail`.
   data,
-  /// Stores the used member of `ArrayChunkTail`.
+  /// Number of populated entries in `ArrayChunkTail`.
   used,
-  /// Stores the cap member of `ArrayChunkTail`.
+  /// Allocated capacity of `ArrayChunkTail`.
   cap,
 end struct
 
 /// Internal marker that preserves actual void values inside spare capacity.
 struct ArrayChunkVoidSentinel
-  /// Stores the tag member of `ArrayChunkVoidSentinel`.
+  /// Tag associated with `ArrayChunkVoidSentinel`.
   tag,
 end struct
 
 /// Capacity-backed mutable sequence for compiler-internal hot paths. MiniLang arrays have exact length, so repeatedly doing `items = items + [value]` copies the complete prefix. ArrayVector grows geometrically and is materialized only at API boundaries.
 struct ArrayVector
-  /// Stores the data member of `ArrayVector`.
+  /// Backing data owned by `ArrayVector`.
   data,
-  /// Stores the size member of `ArrayVector`.
+  /// Current logical size of `ArrayVector`.
   size,
-  /// Stores the cap member of `ArrayVector`.
+  /// Allocated capacity of `ArrayVector`.
   cap,
 end struct
 
 /// Paged byte buffer used by large assembler and linker outputs.
 struct BytePages
-  /// Stores the chunk pages member of `BytePages`.
+  /// Chunk pages associated with `BytePages`.
   chunk_pages,
-  /// Stores the chunk tail member of `BytePages`.
+  /// Chunk tail associated with `BytePages`.
   chunk_tail,
-  /// Stores the size member of `BytePages`.
+  /// Current logical size of `BytePages`.
   size,
 end struct
 
 /// Compiler-internal open-addressing map with power-of-two capacity.
 struct FastMap
-  /// Stores the keys member of `FastMap`.
+  /// Keys associated with `FastMap`.
   keys,
-  /// Stores the values member of `FastMap`.
+  /// Values associated with `FastMap`.
   values,
-  /// Stores the used member of `FastMap`.
+  /// Number of populated entries in `FastMap`.
   used,
-  /// Stores the cap member of `FastMap`.
+  /// Allocated capacity of `FastMap`.
   cap,
-  /// Stores the size member of `FastMap`.
+  /// Current logical size of `FastMap`.
   size,
-  /// Stores the epoch member of `FastMap`.
+  /// Epoch associated with `FastMap`.
   epoch,
-  /// Stores the touched member of `FastMap`.
+  /// Touched associated with `FastMap`.
   touched,
 end struct
 
-/// Stores the arr void sentinel compiler state.
+/// Track arr void sentinel compiler state.
 _arr_void_sentinel = ArrayChunkVoidSentinel(0xA11D)
 
 /// Compact arena for immutable expression leaves. Negative integers are stable NodeIds; ordinary non-negative MiniLang values therefore never collide with compiler AST handles. The structure-of-arrays layout keeps source locations, variable symbols and kinds out of individual managed structs.
 const AST_LEAF_NUM = 1
-/// Stores the ast leaf str.
+/// Track ast leaf str.
 const AST_LEAF_STR = 2
-/// Stores the ast leaf bool.
+/// Track ast leaf bool.
 const AST_LEAF_BOOL = 3
-/// Stores the ast leaf void.
+/// Track ast leaf void.
 const AST_LEAF_VOID = 4
-/// Stores the ast leaf var.
+/// Track ast leaf var.
 const AST_LEAF_VAR = 5
-/// Stores the ast bin handle base.
+/// Track ast bin handle base.
 const AST_BIN_HANDLE_BASE = 1073741824
 
-/// Stores the ast leaf kinds compiler state.
+/// Track ast leaf kinds compiler state.
 _ast_leaf_kinds = bytes(0)
-/// Stores the ast leaf payloads compiler state.
+/// Track ast leaf payloads compiler state.
 _ast_leaf_payloads = []
-/// Stores the ast leaf positions compiler state.
+/// Track ast leaf positions compiler state.
 _ast_leaf_positions = bytes(0)
-/// Stores the ast leaf file ids compiler state.
+/// Track ast leaf file ids compiler state.
 _ast_leaf_file_ids = bytes(0)
-/// Stores the ast leaf symbol ids compiler state.
+/// Track ast leaf symbol ids compiler state.
 _ast_leaf_symbol_ids = bytes(0)
-/// Stores the ast leaf count compiler state.
+/// Track ast leaf count compiler state.
 _ast_leaf_count = 0
-/// Stores the ast leaf cap compiler state.
+/// Track ast leaf cap compiler state.
 _ast_leaf_cap = 0
-/// Stores the ast filenames compiler state.
+/// Track ast filenames compiler state.
 _ast_filenames = 0
-/// Stores the ast filename index compiler state.
+/// Track ast filename index compiler state.
 _ast_filename_index = 0
-/// Stores the ast symbols compiler state.
+/// Track ast symbols compiler state.
 _ast_symbols = 0
-/// Stores the ast symbol index compiler state.
+/// Track ast symbol index compiler state.
 _ast_symbol_index = 0
-/// Stores the ast bin lefts compiler state.
+/// Track ast bin lefts compiler state.
 _ast_bin_lefts = []
-/// Stores the ast bin rights compiler state.
+/// Track ast bin rights compiler state.
 _ast_bin_rights = []
-/// Stores the ast bin op ids compiler state.
+/// Track ast bin op ids compiler state.
 _ast_bin_op_ids = bytes(0)
-/// Stores the ast bin positions compiler state.
+/// Track ast bin positions compiler state.
 _ast_bin_positions = bytes(0)
-/// Stores the ast bin file ids compiler state.
+/// Track ast bin file ids compiler state.
 _ast_bin_file_ids = bytes(0)
-/// Stores the ast bin count compiler state.
+/// Track ast bin count compiler state.
 _ast_bin_count = 0
-/// Stores the ast bin cap compiler state.
+/// Track ast bin cap compiler state.
 _ast_bin_cap = 0
 
-/// Implements ast u32 write.
+/// Provide the ast u32 write compiler utility operation.
 /// @internal
 function _ast_u32_write(buf, index, value)
   off = index << 2
@@ -195,19 +195,19 @@ end function
 
 /// Drop every compilation-owned compact AST column and intern table. This is a bulk ownership boundary: callers must release only after code generation no longer holds or dereferences NodeIds from this arena.
 function ast_arena_release()
-  /// Stores the ast leaf kinds.
+  /// Current ast leaf kinds used by this routine.
   /// @internal
   global _ast_leaf_kinds, _ast_leaf_payloads, _ast_leaf_positions
-  /// Stores the ast leaf file ids.
+  /// Current ast leaf file ids used by this routine.
   /// @internal
   global _ast_leaf_file_ids, _ast_leaf_symbol_ids, _ast_leaf_count, _ast_leaf_cap
-  /// Stores the ast filenames.
+  /// Current ast filenames used by this routine.
   /// @internal
   global _ast_filenames, _ast_filename_index, _ast_symbols, _ast_symbol_index
-  /// Stores the ast bin lefts.
+  /// Current ast bin lefts used by this routine.
   /// @internal
   global _ast_bin_lefts, _ast_bin_rights, _ast_bin_op_ids
-  /// Stores the ast bin positions.
+  /// Current ast bin positions used by this routine.
   /// @internal
   global _ast_bin_positions, _ast_bin_file_ids, _ast_bin_count, _ast_bin_cap
   _ast_leaf_kinds = bytes(0)
@@ -230,9 +230,9 @@ function ast_arena_release()
   _ast_bin_cap = 0
 end function
 
-/// Implements ast leaf reset.
+/// Provide the ast leaf reset compiler utility operation.
 function ast_leaf_reset()
-  /// Stores the ast filenames.
+  /// Current ast filenames used by this routine.
   /// @internal
   global _ast_filenames, _ast_filename_index, _ast_symbols, _ast_symbol_index
   ast_arena_release()
@@ -242,13 +242,13 @@ function ast_leaf_reset()
   _ast_symbol_index = fastmap_new(2048)
 end function
 
-/// Implements ast bin ensure.
+/// Provide the ast bin ensure compiler utility operation.
 /// @internal
 function _ast_bin_ensure(need)
-  /// Stores the ast bin lefts.
+  /// Current ast bin lefts used by this routine.
   /// @internal
   global _ast_bin_lefts, _ast_bin_rights, _ast_bin_op_ids
-  /// Stores the ast bin positions.
+  /// Current ast bin positions used by this routine.
   /// @internal
   global _ast_bin_positions, _ast_bin_file_ids, _ast_bin_cap
   if need <= _ast_bin_cap then return void end if
@@ -277,13 +277,13 @@ function _ast_bin_ensure(need)
   _ast_bin_cap = next_cap
 end function
 
-/// Implements ast leaf ensure.
+/// Provide the ast leaf ensure compiler utility operation.
 /// @internal
 function _ast_leaf_ensure(need)
-  /// Stores the ast leaf kinds.
+  /// Current ast leaf kinds used by this routine.
   /// @internal
   global _ast_leaf_kinds, _ast_leaf_payloads, _ast_leaf_positions
-  /// Stores the ast leaf file ids.
+  /// Current ast leaf file ids used by this routine.
   /// @internal
   global _ast_leaf_file_ids, _ast_leaf_symbol_ids, _ast_leaf_cap
   if need <= _ast_leaf_cap then return void end if
@@ -312,7 +312,7 @@ function _ast_leaf_ensure(need)
   _ast_leaf_cap = next_cap
 end function
 
-/// Implements ast intern.
+/// Provide the ast intern compiler utility operation.
 /// @internal
 function _ast_intern(index_map, values, text)
   existing = fastmap_get(index_map, text, 0)
@@ -323,7 +323,7 @@ function _ast_intern(index_map, values, text)
   return [index_map, values, id]
 end function
 
-/// Implements ast leaf kind id.
+/// Provide the ast leaf kind id compiler utility operation.
 /// @internal
 function _ast_leaf_kind_id(kind)
   if kind == "Num" then return AST_LEAF_NUM end if
@@ -334,7 +334,7 @@ function _ast_leaf_kind_id(kind)
   return 0
 end function
 
-/// Implements ast leaf kind name.
+/// Provide the ast leaf kind name compiler utility operation.
 /// @internal
 function _ast_leaf_kind_name(kind_id)
   if kind_id == AST_LEAF_NUM then return "Num" end if
@@ -345,19 +345,19 @@ function _ast_leaf_kind_name(kind_id)
   return ""
 end function
 
-/// Implements ast leaf new.
+/// Provide the ast leaf new compiler utility operation.
 /// @param kind Value supplied for `kind`.
 /// @param value Value to process.
 /// @param pos Value supplied for `pos`.
 /// @param filename Value supplied for `filename`.
 function ast_leaf_new(kind, value, pos, filename)
-  /// Stores the ast leaf count.
+  /// Current ast leaf count used by this routine.
   /// @internal
   global _ast_leaf_count, _ast_leaf_payloads, _ast_filename_index, _ast_filenames
-  /// Stores the ast symbol index.
+  /// Current ast symbol index used by this routine.
   /// @internal
   global _ast_symbol_index, _ast_symbols
-  /// Stores the ast leaf kinds.
+  /// Current ast leaf kinds used by this routine.
   /// @internal
   global _ast_leaf_kinds, _ast_leaf_positions, _ast_leaf_file_ids, _ast_leaf_symbol_ids
   kind_id = _ast_leaf_kind_id(kind)
@@ -398,13 +398,13 @@ end function
 /// @param pos Value supplied for `pos`.
 /// @param filename Value supplied for `filename`.
 function ast_bin_new(left, op, right, pos, filename)
-  /// Stores the ast bin lefts.
+  /// Current ast bin lefts used by this routine.
   /// @internal
   global _ast_bin_lefts, _ast_bin_rights, _ast_bin_op_ids
-  /// Stores the ast bin positions.
+  /// Current ast bin positions used by this routine.
   /// @internal
   global _ast_bin_positions, _ast_bin_file_ids, _ast_bin_count
-  /// Stores the ast filename index.
+  /// Current ast filename index used by this routine.
   /// @internal
   global _ast_filename_index, _ast_filenames, _ast_symbol_index, _ast_symbols
   if typeof(_ast_filename_index) != "struct" then ast_leaf_reset() end if
@@ -445,14 +445,14 @@ function inline ast_is_bin(node)
   return slot >= 0 and slot < _ast_bin_count
 end function
 
-/// Implements ast is node.
+/// Provide the ast is node compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_is_node(node)
   if ast_is_leaf(node) or ast_is_bin(node) then return true end if
   return typeof(node) == "struct" and typeof(try(node.node_kind)) == "string"
 end function
 
-/// Implements ast kind.
+/// Provide the ast kind compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_kind(node)
   if ast_is_leaf(node) then
@@ -463,7 +463,7 @@ function ast_kind(node)
   return ""
 end function
 
-/// Implements ast value.
+/// Provide the ast value compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_value(node)
   if ast_is_leaf(node) then return _ast_leaf_payloads[(0 - node) - 1] end if
@@ -471,7 +471,7 @@ function ast_value(node)
   return void
 end function
 
-/// Implements ast name.
+/// Provide the ast name compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_name(node)
   if ast_is_leaf(node) then
@@ -484,7 +484,7 @@ function ast_name(node)
   return ""
 end function
 
-/// Implements ast pos.
+/// Provide the ast pos compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_pos(node)
   if ast_is_leaf(node) then return _ast_u32_read(_ast_leaf_positions, (0 - node) - 1) end if
@@ -493,7 +493,7 @@ function ast_pos(node)
   return 0
 end function
 
-/// Implements ast filename.
+/// Provide the ast filename compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_filename(node)
   if ast_is_leaf(node) then
@@ -508,7 +508,7 @@ function ast_filename(node)
   return ""
 end function
 
-/// Implements ast left.
+/// Provide the ast left compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_left(node)
   if ast_is_bin(node) then return _ast_bin_lefts[(0 - node) - AST_BIN_HANDLE_BASE - 1] end if
@@ -516,7 +516,7 @@ function ast_left(node)
   return void
 end function
 
-/// Implements ast right.
+/// Provide the ast right compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_right(node)
   if ast_is_bin(node) then return _ast_bin_rights[(0 - node) - AST_BIN_HANDLE_BASE - 1] end if
@@ -524,7 +524,7 @@ function ast_right(node)
   return void
 end function
 
-/// Implements ast op.
+/// Provide the ast op compiler utility operation.
 /// @param node Value supplied for `node`.
 function ast_op(node)
   if ast_is_bin(node) then
@@ -536,7 +536,7 @@ function ast_op(node)
   return ""
 end function
 
-/// Implements ast leaf stats.
+/// Provide the ast leaf stats compiler utility operation.
 function ast_leaf_stats()
   payload_bytes = _ast_leaf_cap * 8
   packed_bytes = _ast_leaf_cap * 13
@@ -551,7 +551,7 @@ function inline arr_vec_is(value) returns bool
   return value is ArrayVector
 end function
 
-/// Implements arr vec new.
+/// Provide the arr vec new compiler utility operation.
 /// @param initial_cap Value supplied for `initial_cap`.
 function arr_vec_new(initial_cap)
   ccap = initial_cap
@@ -559,7 +559,7 @@ function arr_vec_new(initial_cap)
   return ArrayVector(array(ccap, _arr_void_sentinel), 0, ccap)
 end function
 
-/// Implements arr vec count.
+/// Provide the arr vec count compiler utility operation.
 /// @param vec Value supplied for `vec`.
 function arr_vec_count(vec)
   if arr_vec_is(vec) == false then return 0 end if
@@ -599,7 +599,7 @@ function arr_vec_release_refs(vec)
   return v
 end function
 
-/// Implements arr vec get.
+/// Provide the arr vec get compiler utility operation.
 /// @param vec Value supplied for `vec`.
 /// @param idx Value supplied for `idx`.
 /// @param defaultv Value supplied for `defaultv`.
@@ -618,7 +618,7 @@ function inline arr_vec_get_trusted(vec, idx, defaultv)
   return _arr_unwrap_value(vec.data[idx])
 end function
 
-/// Implements arr vec set.
+/// Provide the arr vec set compiler utility operation.
 /// @param vec Value supplied for `vec`.
 /// @param idx Value supplied for `idx`.
 /// @param value Value to process.
@@ -640,7 +640,7 @@ function inline arr_vec_set_trusted(vec, idx, value)
   return v
 end function
 
-/// Implements arr vec push.
+/// Provide the arr vec push compiler utility operation.
 /// @param vec Value supplied for `vec`.
 /// @param value Value to process.
 function arr_vec_push(vec, value)
@@ -667,7 +667,7 @@ function arr_vec_push(vec, value)
   return v
 end function
 
-/// Implements arr vec from array.
+/// Provide the arr vec from array compiler utility operation.
 /// @param values Values to process.
 /// @param extra_cap Value supplied for `extra_cap`.
 function arr_vec_from_array(values, extra_cap)
@@ -685,7 +685,7 @@ function arr_vec_from_array(values, extra_cap)
   return v
 end function
 
-/// Implements arr vec finish.
+/// Provide the arr vec finish compiler utility operation.
 /// @param vec Value supplied for `vec`.
 function arr_vec_finish(vec)
   if arr_vec_is(vec) == false then
@@ -700,14 +700,14 @@ function arr_vec_finish(vec)
   return _arr_tail_to_array(ArrayChunkTail(vec.data, n, vec.cap))
 end function
 
-/// Implements u64 mask.
+/// Provide the u64 mask compiler utility operation.
 /// @internal
 function _u64_mask() returns int
   // All bits set without a large out-of-range source literal.
   return 0 - 1
 end function
 
-/// Implements fm next pow2.
+/// Provide the fm next pow2 compiler utility operation.
 /// @internal
 function _fm_next_pow2(n)
   p = 16
@@ -718,7 +718,7 @@ function _fm_next_pow2(n)
   return p
 end function
 
-/// Implements fm hash any.
+/// Provide the fm hash any compiler utility operation.
 /// @internal
 function _fm_hash_any(key)
   if typeof(key) == "int" then
@@ -774,7 +774,7 @@ function _fm_hash_any(key)
   return bytesHash(bs) & 0x7FFFFFFF
 end function
 
-/// Implements fm is valid.
+/// Provide the fm is valid compiler utility operation.
 /// @internal
 function _fm_is_valid(mapv)
   if typeof(mapv) != "struct" then return false end if
@@ -818,7 +818,7 @@ function fastmap_track_refs(mapv)
   return m
 end function
 
-/// Implements fastmap clear.
+/// Provide the fastmap clear compiler utility operation.
 /// @param mapv Value supplied for `mapv`.
 function fastmap_clear(mapv)
   m = mapv
@@ -874,7 +874,7 @@ function fastmap_release_refs(mapv)
   return m
 end function
 
-/// Implements fm probe slot.
+/// Provide the fm probe slot compiler utility operation.
 /// @internal
 function _fm_probe_slot(mapv, key)
   if _fm_is_valid(mapv) == false then return [-1, false] end if
@@ -890,7 +890,7 @@ function _fm_probe_slot(mapv, key)
   return [-1, false]
 end function
 
-/// Implements fm insert no resize.
+/// Provide the fm insert no resize compiler utility operation.
 /// @internal
 function _fm_insert_no_resize(mapv, key, value)
   used_arr = mapv.used
@@ -926,7 +926,7 @@ function _fm_insert_no_resize(mapv, key, value)
   return mapv
 end function
 
-/// Implements fm rehash.
+/// Provide the fm rehash compiler utility operation.
 /// @internal
 function _fm_rehash(mapv, new_cap)
   nm = fastmap_new(new_cap)
@@ -940,7 +940,7 @@ function _fm_rehash(mapv, new_cap)
   return nm
 end function
 
-/// Implements fastmap set.
+/// Provide the fastmap set compiler utility operation.
 /// @param mapv Value supplied for `mapv`.
 /// @param key Value supplied for `key`.
 /// @param value Value to process.
@@ -953,7 +953,7 @@ function fastmap_set(mapv, key, value)
   return _fm_insert_no_resize(m, key, value)
 end function
 
-/// Implements fastmap get.
+/// Provide the fastmap get compiler utility operation.
 /// @param mapv Value supplied for `mapv`.
 /// @param key Value supplied for `key`.
 /// @param defaultv Value supplied for `defaultv`.
@@ -971,7 +971,7 @@ function fastmap_get(mapv, key, defaultv)
   return defaultv
 end function
 
-/// Implements fastmap has.
+/// Provide the fastmap has compiler utility operation.
 /// @param mapv Value supplied for `mapv`.
 /// @param key Value supplied for `key`.
 function fastmap_has(mapv, key)
@@ -988,7 +988,7 @@ function fastmap_has(mapv, key)
   return false
 end function
 
-/// Implements fastmap size.
+/// Provide the fastmap size compiler utility operation.
 /// @param mapv Value supplied for `mapv`.
 function fastmap_size(mapv)
   if _fm_is_valid(mapv) == false then return 0 end if
@@ -996,7 +996,7 @@ function fastmap_size(mapv)
   return mapv.size
 end function
 
-/// Implements fastmap items.
+/// Provide the fastmap items compiler utility operation.
 /// @param mapv Value supplied for `mapv`.
 function fastmap_items(mapv)
   out_b = arr_chunk_new(64)
@@ -1017,7 +1017,7 @@ function align_up(n as int, a as int) returns int
   return (n +(a - 1)) & ~(a - 1)
 end function
 
-/// Implements align to mod.
+/// Provide the align to mod compiler utility operation.
 /// @param n Value supplied for `n`.
 /// @param mod Value supplied for `mod`.
 /// @param target Value supplied for `target`.
@@ -1065,14 +1065,14 @@ function u64(x)
   return b
 end function
 
-/// Implements enc int.
+/// Provide the enc int compiler utility operation.
 /// @param x Value supplied for `x`.
 /// @returns The resulting `int` value.
 function enc_int(x as int) returns int
   return ((x << 3) & _u64_mask()) | c.TAG_INT
 end function
 
-/// Implements enc bool.
+/// Provide the enc bool compiler utility operation.
 /// @param b Second input value.
 function enc_bool(b)
   if b then
@@ -1081,13 +1081,13 @@ function enc_bool(b)
   return c.TAG_BOOL
 end function
 
-/// Implements enc void.
+/// Provide the enc void compiler utility operation.
 /// @returns The resulting `int` value.
 function enc_void() returns int
   return c.TAG_VOID
 end function
 
-/// Implements enc enum.
+/// Provide the enc enum compiler utility operation.
 /// @param enum_id Value supplied for `enum_id`.
 /// @param variant_id Value supplied for `variant_id`.
 function enc_enum(enum_id, variant_id)
@@ -1101,7 +1101,7 @@ function inline _f32_is_nan(v)
   return typeof(v) == "float" and v != v
 end function
 
-/// Implements inline.
+/// Provide the inline compiler utility operation.
 /// @internal
 function inline _f32_is_inf(v)
   if typeof(v) != "float" then return false end if
@@ -1110,7 +1110,7 @@ function inline _f32_is_inf(v)
   return d != d
 end function
 
-/// Implements try enc float immediate.
+/// Provide the try enc float immediate compiler utility operation.
 /// @param x Value supplied for `x`.
 function try_enc_float_immediate(x)
   // Encode x as a tagged float32 immediate only when the value round-trips
@@ -1208,7 +1208,7 @@ function try_enc_float_immediate(x)
   return ((((sign << 31) | mant) << 3) | c.TAG_FLOAT)
 end function
 
-/// Implements arr fill.
+/// Provide the arr fill compiler utility operation.
 /// @internal
 function _arr_fill(n, fill)
   if typeof(n) != "int" or n <= 0 then return [] end if
@@ -1217,7 +1217,7 @@ function _arr_fill(n, fill)
   return array(n, fill)
 end function
 
-/// Implements arr copy prefix.
+/// Provide the arr copy prefix compiler utility operation.
 /// @internal
 function _arr_copy_prefix(arr, n)
   if typeof(arr) != "array" or n <= 0 then return [] end if
@@ -1228,7 +1228,7 @@ function _arr_copy_prefix(arr, n)
   return outv
 end function
 
-/// Implements arr wrap value.
+/// Provide the arr wrap value compiler utility operation.
 /// @internal
 function _arr_wrap_value(value)
   if typeof(value) == "void" then
@@ -1237,7 +1237,7 @@ function _arr_wrap_value(value)
   return value
 end function
 
-/// Implements arr unwrap value.
+/// Provide the arr unwrap value compiler utility operation.
 /// @internal
 function _arr_unwrap_value(value)
   if typeof(value) == "struct" and value == _arr_void_sentinel then
@@ -1249,7 +1249,7 @@ function _arr_unwrap_value(value)
   return value
 end function
 
-/// Implements arr tail new.
+/// Provide the arr tail new compiler utility operation.
 /// @internal
 function _arr_tail_new(cap)
   ccap = cap
@@ -1257,7 +1257,7 @@ function _arr_tail_new(cap)
   return ArrayChunkTail(_arr_fill(ccap, 0), 0, ccap)
 end function
 
-/// Implements arr tail from array.
+/// Provide the arr tail from array compiler utility operation.
 /// @internal
 function _arr_tail_from_array(arr, cap)
   t = _arr_tail_new(cap)
@@ -1284,7 +1284,7 @@ function inline arr_chunk_tail_len(tail)
   return n
 end function
 
-/// Implements arr chunk tail get.
+/// Provide the arr chunk tail get compiler utility operation.
 /// @param tail Value supplied for `tail`.
 /// @param idx Value supplied for `idx`.
 /// @param defaultv Value supplied for `defaultv`.
@@ -1300,7 +1300,7 @@ function arr_chunk_tail_get(tail, idx, defaultv)
   return _arr_unwrap_value(tail.data[idx])
 end function
 
-/// Implements arr chunk tail set.
+/// Provide the arr chunk tail set compiler utility operation.
 /// @param tail Value supplied for `tail`.
 /// @param idx Value supplied for `idx`.
 /// @param value Value to process.
@@ -1320,7 +1320,7 @@ function arr_chunk_tail_set(tail, idx, value)
   return t
 end function
 
-/// Implements arr concat chunks balanced.
+/// Provide the arr concat chunks balanced compiler utility operation.
 /// @internal
 function _arr_concat_chunks_balanced(parts)
   if typeof(parts) != "array" or len(parts) <= 0 then return [] end if
@@ -1341,7 +1341,7 @@ function _arr_concat_chunks_balanced(parts)
   return current[0]
 end function
 
-/// Implements arr tail to array.
+/// Provide the arr tail to array compiler utility operation.
 /// @internal
 function _arr_tail_to_array(tail)
   if typeof(tail) == "array" then return tail end if
@@ -1381,13 +1381,13 @@ function _arr_tail_to_array(tail)
   return outv
 end function
 
-/// Implements inline.
+/// Provide the inline compiler utility operation.
 /// @internal
 function inline _chunks_paged_tag()
   return "__acp__"
 end function
 
-/// Implements inline.
+/// Provide the inline compiler utility operation.
 /// @internal
 function inline _chunks_is_paged(chunks)
   if typeof(chunks) != "array" or len(chunks) < 3 then return false end if
@@ -1395,13 +1395,13 @@ function inline _chunks_is_paged(chunks)
   return chunks[0] == _chunks_paged_tag()
 end function
 
-/// Implements chunks paged new.
+/// Provide the chunks paged new compiler utility operation.
 /// @internal
 function _chunks_paged_new()
   return [_chunks_paged_tag(), [], _arr_tail_new(256)]
 end function
 
-/// Implements chunks paged push.
+/// Provide the chunks paged push compiler utility operation.
 /// @internal
 function _chunks_paged_push(chunks, chunk)
   p = chunks
@@ -1433,7 +1433,7 @@ function _chunks_paged_push(chunks, chunk)
   return p
 end function
 
-/// Implements chunks paged from array.
+/// Provide the chunks paged from array compiler utility operation.
 /// @internal
 function _chunks_paged_from_array(chunks)
   p = _chunks_paged_new()
@@ -1444,7 +1444,7 @@ function _chunks_paged_from_array(chunks)
   return p
 end function
 
-/// Implements chunks push chunk.
+/// Provide the chunks push chunk compiler utility operation.
 /// @internal
 function _chunks_push_chunk(chunks, chunk)
   if _chunks_is_paged(chunks) then
@@ -1460,7 +1460,7 @@ function _chunks_push_chunk(chunks, chunk)
   return _chunks_paged_push(p, chunk)
 end function
 
-/// Implements chunks materialize.
+/// Provide the chunks materialize compiler utility operation.
 /// @internal
 function _chunks_materialize(chunks)
   if _chunks_is_paged(chunks) == false then
@@ -1491,7 +1491,7 @@ function arr_chunk_new(cap)
   return ArrayChunkBuilder([], _arr_tail_new(ccap), ccap)
 end function
 
-/// Implements arr chunked push.
+/// Provide the arr chunked push compiler utility operation.
 /// @param chunks Value supplied for `chunks`.
 /// @param tail Value supplied for `tail`.
 /// @param value Value to process.
@@ -1530,7 +1530,7 @@ function arr_chunked_push(chunks, tail, value, cap)
   return [chunks, t]
 end function
 
-/// Implements arr chunk push.
+/// Provide the arr chunk push compiler utility operation.
 /// @param builder Value supplied for `builder`.
 /// @param value Value to process.
 function arr_chunk_push(builder, value)
@@ -1542,7 +1542,7 @@ function arr_chunk_push(builder, value)
   return b
 end function
 
-/// Implements arr merge chunks balanced.
+/// Provide the arr merge chunks balanced compiler utility operation.
 /// @param chunks Value supplied for `chunks`.
 function arr_merge_chunks_balanced(chunks)
   if typeof(chunks) != "array" or len(chunks) <= 0 then return [] end if
@@ -1633,7 +1633,7 @@ function arr_merge_variadic_parts(parts...)
   return outv
 end function
 
-/// Implements arr chunked finish.
+/// Provide the arr chunked finish compiler utility operation.
 /// @param chunks Value supplied for `chunks`.
 /// @param tail Value supplied for `tail`.
 function arr_chunked_finish(chunks, tail)
@@ -1665,7 +1665,7 @@ function arr_chunked_groups(chunks, tail)
   return all
 end function
 
-/// Implements arr chunked count.
+/// Provide the arr chunked count compiler utility operation.
 /// @param chunks Value supplied for `chunks`.
 /// @param tail Value supplied for `tail`.
 /// @param cap Value supplied for `cap`.
@@ -1688,7 +1688,7 @@ function arr_chunked_count(chunks, tail, cap)
   return chunk_count * ccap + arr_chunk_tail_len(tail)
 end function
 
-/// Implements arr chunked get.
+/// Provide the arr chunked get compiler utility operation.
 /// @param chunks Value supplied for `chunks`.
 /// @param tail Value supplied for `tail`.
 /// @param idx Value supplied for `idx`.
@@ -1735,7 +1735,7 @@ function arr_chunked_get(chunks, tail, idx, cap, defaultv)
   return arr_chunk_tail_get(tail, tail_index, defaultv)
 end function
 
-/// Implements arr chunk finish.
+/// Provide the arr chunk finish compiler utility operation.
 /// @param builder Value supplied for `builder`.
 function arr_chunk_finish(builder)
   b = builder
@@ -1743,14 +1743,14 @@ function arr_chunk_finish(builder)
   return arr_chunked_finish(b.chunks, b.tail)
 end function
 
-/// Implements arr chunk count.
+/// Provide the arr chunk count compiler utility operation.
 /// @param builder Value supplied for `builder`.
 function arr_chunk_count(builder)
   if typeof(builder) != "struct" then return 0 end if
   return arr_chunked_count(builder.chunks, builder.tail, builder.cap)
 end function
 
-/// Implements arr chunk get.
+/// Provide the arr chunk get compiler utility operation.
 /// @param builder Value supplied for `builder`.
 /// @param idx Value supplied for `idx`.
 /// @param defaultv Value supplied for `defaultv`.
@@ -1759,7 +1759,7 @@ function arr_chunk_get(builder, idx, defaultv)
   return arr_chunked_get(builder.chunks, builder.tail, idx, builder.cap, defaultv)
 end function
 
-/// Implements arr chunk push all.
+/// Provide the arr chunk push all compiler utility operation.
 /// @param builder Value supplied for `builder`.
 /// @param values Values to process.
 function arr_chunk_push_all(builder, values)
@@ -1776,7 +1776,7 @@ function byte_pages_new()
   return BytePages([], [], 0)
 end function
 
-/// Implements inline.
+/// Provide the inline compiler utility operation.
 /// @internal
 function inline _bp_chunk_count(bp)
   n = 0
@@ -1796,7 +1796,7 @@ function inline _bp_chunk_count(bp)
   return n
 end function
 
-/// Implements bp chunk get.
+/// Provide the bp chunk get compiler utility operation.
 /// @internal
 function _bp_chunk_get(bp, idx)
   pi = idx >> 8
@@ -1821,7 +1821,7 @@ function _bp_chunk_get(bp, idx)
   return bytes(65536, 0)
 end function
 
-/// Implements bp chunk set.
+/// Provide the bp chunk set compiler utility operation.
 /// @internal
 function _bp_chunk_set(bp, idx, page)
   pi = idx >> 8
@@ -1837,7 +1837,7 @@ function _bp_chunk_set(bp, idx, page)
   return bp
 end function
 
-/// Implements bp chunk push.
+/// Provide the bp chunk push compiler utility operation.
 /// @internal
 function _bp_chunk_push(bp, page)
   app = arr_chunked_push(bp.chunk_pages, bp.chunk_tail, page, 256)
@@ -1846,7 +1846,7 @@ function _bp_chunk_push(bp, page)
   return bp
 end function
 
-/// Implements bp ensure.
+/// Provide the bp ensure compiler utility operation.
 /// @internal
 function _bp_ensure(bp, need)
   if need <= 0 then return bp end if
@@ -1858,7 +1858,7 @@ function _bp_ensure(bp, need)
   return bp
 end function
 
-/// Implements byte pages len.
+/// Provide the byte pages len compiler utility operation.
 /// @param bp Value supplied for `bp`.
 function byte_pages_len(bp)
   if typeof(bp) != "struct" then return 0 end if
@@ -1877,7 +1877,7 @@ function byte_pages_page_count(bp)
   return count
 end function
 
-/// Implements byte pages page.
+/// Provide the byte pages page compiler utility operation.
 /// @param bp Value supplied for `bp`.
 /// @param page_index Value supplied for `page_index`.
 function byte_pages_page(bp, page_index)
@@ -1886,7 +1886,7 @@ function byte_pages_page(bp, page_index)
   return _bp_chunk_get(bp, page_index)
 end function
 
-/// Implements byte pages page used.
+/// Provide the byte pages page used compiler utility operation.
 /// @param bp Value supplied for `bp`.
 /// @param page_index Value supplied for `page_index`.
 function byte_pages_page_used(bp, page_index)
@@ -1899,7 +1899,7 @@ function byte_pages_page_used(bp, page_index)
   return used
 end function
 
-/// Implements byte pages append.
+/// Provide the byte pages append compiler utility operation.
 /// @param bp Value supplied for `bp`.
 /// @param src Value supplied for `src`.
 function byte_pages_append(bp, src)
@@ -2048,7 +2048,7 @@ function byte_pages_append_u64(bp, value)
   return b
 end function
 
-/// Implements byte pages write at.
+/// Provide the byte pages write at compiler utility operation.
 /// @param bp Value supplied for `bp`.
 /// @param offset Zero-based starting offset.
 /// @param src Value supplied for `src`.
@@ -2082,7 +2082,7 @@ function byte_pages_write_at(bp, offset, src)
   return b
 end function
 
-/// Implements byte pages to bytes.
+/// Provide the byte pages to bytes compiler utility operation.
 /// @param bp Value supplied for `bp`.
 function byte_pages_to_bytes(bp)
   if typeof(bp) != "struct" then return bytes(0) end if
@@ -2108,7 +2108,7 @@ function byte_pages_to_bytes(bp)
   return outv
 end function
 
-/// Implements byte pages set byte.
+/// Provide the byte pages set byte compiler utility operation.
 /// @param bp Value supplied for `bp`.
 /// @param idx Value supplied for `idx`.
 /// @param value Value to process.
@@ -2128,7 +2128,7 @@ function byte_pages_set_byte(bp, idx, value)
   return b
 end function
 
-/// Implements byte pages get byte.
+/// Provide the byte pages get byte compiler utility operation.
 /// @param bp Value supplied for `bp`.
 /// @param idx Value supplied for `idx`.
 /// @param defaultv Value supplied for `defaultv`.

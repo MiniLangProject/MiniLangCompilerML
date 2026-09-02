@@ -79,7 +79,7 @@ Updates append unique.
 function _apply_import_alias(state, qname)
 ```
 
-Implements apply import alias.
+Emit apply import alias as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -96,7 +96,7 @@ Implements apply import alias.
 function _arr_contains(arr, value)
 ```
 
-Implements arr contains.
+Emit arr contains as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -113,7 +113,7 @@ Implements arr contains.
 function _cold_block_frame_items(frame)
 ```
 
-Implements cold block frame items.
+Emit cold block frame items as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -129,7 +129,7 @@ Implements cold block frame items.
 function _collect_pending_helpers(state, emitted_index)
 ```
 
-Implements collect pending helpers.
+Emit collect pending helpers as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -146,7 +146,7 @@ Implements collect pending helpers.
 function _current_file_package_prefix(state)
 ```
 
-Implements current file package prefix.
+Emit current file package prefix as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -162,7 +162,7 @@ Implements current file package prefix.
 function _current_function_prefix(state)
 ```
 
-Implements current function prefix.
+Emit current function prefix as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -178,7 +178,7 @@ Implements current function prefix.
 function _emit_helper_by_label(state, lbl)
 ```
 
-Runs emit helper by label.
+Emit emit helper by label as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -195,7 +195,7 @@ Runs emit helper by label.
 function _emit_helper_by_label_group0(state, lbl)
 ```
 
-Runs emit helper by label group0.
+Emit emit helper by label group0 as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -212,7 +212,7 @@ Runs emit helper by label group0.
 function _emit_helper_by_label_group1(state, lbl)
 ```
 
-Runs emit helper by label group1.
+Emit emit helper by label group1 as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -229,7 +229,7 @@ Runs emit helper by label group1.
 function _emit_helper_by_label_group2(state, lbl)
 ```
 
-Runs emit helper by label group2.
+Emit emit helper by label group2 as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -246,7 +246,7 @@ Runs emit helper by label group2.
 function _emit_helper_by_label_group3(state, lbl)
 ```
 
-Runs emit helper by label group3.
+Emit emit helper by label group3 as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -263,7 +263,7 @@ Runs emit helper by label group3.
 function _emit_helper_by_label_group4(state, lbl)
 ```
 
-Runs emit helper by label group4.
+Emit emit helper by label group4 as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -280,7 +280,7 @@ Runs emit helper by label group4.
 function _emit_helper_by_label_group5(state, lbl)
 ```
 
-Runs emit helper by label group5.
+Emit emit helper by label group5 as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -297,7 +297,7 @@ Runs emit helper by label group5.
 function _emit_helper_by_label_group6(state, lbl)
 ```
 
-Runs emit helper by label group6.
+Emit emit helper by label group6 as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -314,7 +314,7 @@ Runs emit helper by label group6.
 function _emit_helper_by_label_other(state, lbl)
 ```
 
-Runs emit helper by label other.
+Emit emit helper by label other as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -331,7 +331,7 @@ Runs emit helper by label other.
 function _expr_temp_live_by_reg_get(state, reg)
 ```
 
-Implements expr temp live by reg get.
+Emit expr temp live by reg get as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -348,7 +348,7 @@ Implements expr temp live by reg get.
 function _expr_temp_live_by_reg_remove(state, reg)
 ```
 
-Implements expr temp live by reg remove.
+Emit expr temp live by reg remove as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -365,7 +365,7 @@ Implements expr temp live by reg remove.
 function _expr_temp_live_by_reg_set(state, reg, tmp)
 ```
 
-Implements expr temp live by reg set.
+Emit expr temp live by reg set as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -383,7 +383,7 @@ Implements expr temp live by reg set.
 function _expr_temp_named_get(entries, key, defaultv)
 ```
 
-Implements expr temp named get.
+Emit expr temp named get as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -401,7 +401,7 @@ Implements expr temp named get.
 function _expr_temp_named_remove(entries, key)
 ```
 
-Implements expr temp named remove.
+Emit expr temp named remove as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -418,7 +418,7 @@ Implements expr temp named remove.
 function _expr_temp_named_set(entries, key, value)
 ```
 
-Implements expr temp named set.
+Emit expr temp named set as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -436,7 +436,7 @@ Implements expr temp named set.
 function _expr_temp_reserved_dec(state, reg)
 ```
 
-Implements expr temp reserved dec.
+Emit expr temp reserved dec as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -453,7 +453,7 @@ Implements expr temp reserved dec.
 function _expr_temp_reserved_get(state, reg)
 ```
 
-Implements expr temp reserved get.
+Emit expr temp reserved get as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -470,7 +470,7 @@ Implements expr temp reserved get.
 function _expr_temp_reserved_set(state, reg, value)
 ```
 
-Implements expr temp reserved set.
+Emit expr temp reserved set as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -488,7 +488,7 @@ Implements expr temp reserved set.
 function _flatten_member_chain_as_qualname(expr)
 ```
 
-Implements flatten member chain as qualname.
+Emit flatten member chain as qualname as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -504,7 +504,7 @@ Implements flatten member chain as qualname.
 function _helper_rank(lbl)
 ```
 
-Implements helper rank.
+Emit helper rank as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -520,7 +520,7 @@ Implements helper rank.
 function _helper_supported(lbl)
 ```
 
-Implements helper supported.
+Emit helper supported as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -536,7 +536,7 @@ Implements helper supported.
 function _import_pair_gt(a, b)
 ```
 
-Implements import pair gt.
+Emit import pair gt as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -553,7 +553,7 @@ Implements import pair gt.
 function _import_string_gt(a, b)
 ```
 
-Implements import string gt.
+Emit import string gt as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -570,7 +570,7 @@ Implements import string gt.
 function _imports_get_funcs(imports, dll)
 ```
 
-Implements imports get funcs.
+Emit imports get funcs as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -587,7 +587,7 @@ Implements imports get funcs.
 function _imports_set_funcs(imports, dll, funcs)
 ```
 
-Implements imports set funcs.
+Emit imports set funcs as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -621,7 +621,7 @@ Reports whether is internal helper label.
 function _line_from_pos(state, pos, filename)
 ```
 
-Implements line from pos.
+Emit line from pos as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -639,7 +639,7 @@ Implements line from pos.
 function _pos(node)
 ```
 
-Implements pos.
+Emit pos as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -655,7 +655,7 @@ Implements pos.
 function _pretty_script(state, p)
 ```
 
-Implements pretty script.
+Emit pretty script as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -672,7 +672,7 @@ Implements pretty script.
 function _qualify_identifier(state, name, node, kind)
 ```
 
-Implements qualify identifier.
+Emit qualify identifier as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -691,7 +691,7 @@ Implements qualify identifier.
 function _seed_data(cg)
 ```
 
-Implements seed data.
+Emit seed data as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -707,7 +707,7 @@ Implements seed data.
 function _seed_rdata(cg)
 ```
 
-Implements seed rdata.
+Emit seed rdata as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -723,7 +723,7 @@ Implements seed rdata.
 function _sort_import_pairs(pairs)
 ```
 
-Implements sort import pairs.
+Emit sort import pairs as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -739,7 +739,7 @@ Implements sort import pairs.
 function _source_for_dbg_filename(state, filename)
 ```
 
-Implements source for dbg filename.
+Emit source for dbg filename as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -756,7 +756,7 @@ Implements source for dbg filename.
 function _spill_live_expr_value_temps(state)
 ```
 
-Implements spill live expr value temps.
+Emit spill live expr value temps as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -772,7 +772,7 @@ Implements spill live expr value temps.
 function _starts_with(text, prefix)
 ```
 
-Implements starts with.
+Emit starts with as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -789,7 +789,7 @@ Implements starts with.
 function _str_less_ascii(a, b)
 ```
 
-Implements str less ascii.
+Emit str less ascii as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -806,7 +806,7 @@ Implements str less ascii.
 function _sync_asm_before_call_live(state)
 ```
 
-Implements sync asm before call live.
+Emit sync asm before call live as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -822,7 +822,7 @@ Implements sync asm before call live.
 function _sync_expr_temp_root_count(state)
 ```
 
-Implements sync expr temp root count.
+Emit sync expr temp root count as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -838,7 +838,7 @@ Implements sync expr temp root count.
 function _track_call_label(state, lbl)
 ```
 
-Implements track call label.
+Emit track call label as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -907,7 +907,7 @@ Creates alloc expr value temp.
 function cg_core_init(state)
 ```
 
-Implements cg core init.
+Emit cg core init as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -923,7 +923,7 @@ Implements cg core init.
 function cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target, heap_config)
 ```
 
-Implements cg core new.
+Emit cg core new as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -946,7 +946,7 @@ Implements cg core new.
 function core_error(state, msg, node)
 ```
 
-Implements core error.
+Emit core error as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -964,7 +964,7 @@ Implements core error.
 function defer_cold_block(state, label, emitter)
 ```
 
-Implements defer cold block.
+Emit defer cold block as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -982,7 +982,7 @@ Implements defer cold block.
 function emit_dbg_line(state, node)
 ```
 
-Runs emit dbg line.
+Emit emit dbg line as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -999,7 +999,7 @@ Runs emit dbg line.
 function emit_deferred_cold_blocks(state)
 ```
 
-Runs emit deferred cold blocks.
+Emit emit deferred cold blocks as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1015,7 +1015,7 @@ Runs emit deferred cold blocks.
 function emit_force_xmm0_to_float_value(state)
 ```
 
-Runs emit force xmm0 to float value.
+Emit emit force xmm0 to float value as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1031,7 +1031,7 @@ Runs emit force xmm0 to float value.
 function emit_jmp_if_false_rax(state, false_label)
 ```
 
-Runs emit jmp if false rax.
+Emit emit jmp if false rax as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1048,7 +1048,7 @@ Runs emit jmp if false rax.
 function emit_load_var(state, name, node)
 ```
 
-Runs emit load var.
+Emit emit load var as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1066,7 +1066,7 @@ Runs emit load var.
 function emit_normalize_xmm0_to_value(state)
 ```
 
-Runs emit normalize xmm0 to value.
+Emit emit normalize xmm0 to value as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1082,7 +1082,7 @@ Runs emit normalize xmm0 to value.
 function emit_store_var(state, name, node)
 ```
 
-Runs emit store var.
+Emit emit store var as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1100,7 +1100,7 @@ Runs emit store var.
 function emit_struct_field_dispatch(state, field)
 ```
 
-Runs emit struct field dispatch.
+Emit emit struct field dispatch as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1117,7 +1117,7 @@ Runs emit struct field dispatch.
 function emit_struct_field_index_dispatch(state, field)
 ```
 
-Runs emit struct field index dispatch.
+Emit emit struct field index dispatch as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1134,7 +1134,7 @@ Runs emit struct field index dispatch.
 function emit_to_double_xmm(state, xmm, fail_label)
 ```
 
-Runs emit to double xmm.
+Emit emit to double xmm as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1152,7 +1152,7 @@ Runs emit to double xmm.
 function emit_used_helpers(state)
 ```
 
-Runs emit used helpers.
+Emit emit used helpers as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1168,7 +1168,7 @@ Runs emit used helpers.
 function emit_writefile(state, buf_label, length)
 ```
 
-Runs emit writefile.
+Emit emit writefile as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1186,7 +1186,7 @@ Runs emit writefile.
 function emit_writefile_ptr_len(state)
 ```
 
-Runs emit writefile ptr len.
+Emit emit writefile ptr len as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1202,7 +1202,7 @@ Runs emit writefile ptr len.
 function emit_writefile_ptr_len_stderr(state)
 ```
 
-Runs emit writefile ptr len stderr.
+Emit emit writefile ptr len stderr as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1218,7 +1218,7 @@ Runs emit writefile ptr len stderr.
 function emit_writefile_stderr(state, buf_label, length)
 ```
 
-Runs emit writefile stderr.
+Emit emit writefile stderr as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1236,7 +1236,7 @@ Runs emit writefile stderr.
 function ensure_var(state, name)
 ```
 
-Implements ensure var.
+Emit ensure var as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1253,7 +1253,7 @@ Implements ensure var.
 function expr_value_temp_load(state, dst, tmp)
 ```
 
-Implements expr value temp load.
+Emit expr value temp load as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1271,7 +1271,7 @@ Implements expr value temp load.
 function expr_value_temp_offset(state, tmp)
 ```
 
-Implements expr value temp offset.
+Emit expr value temp offset as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1288,7 +1288,7 @@ Implements expr value temp offset.
 function expr_value_temp_store_rax(state, tmp)
 ```
 
-Implements expr value temp store rax.
+Emit expr value temp store rax as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1305,7 +1305,7 @@ Implements expr value temp store rax.
 function expr_value_temp_store_reg(state, tmp, reg)
 ```
 
-Implements expr value temp store reg.
+Emit expr value temp store reg as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1358,7 +1358,7 @@ Releases or resets free expr value temp.
 function in_function(state)
 ```
 
-Implements in function.
+Emit in function as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1393,7 +1393,7 @@ Creates new label id.
 function pop_cold_block_scope(state)
 ```
 
-Implements pop cold block scope.
+Emit pop cold block scope as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1459,7 +1459,7 @@ Releases or resets release expr temps.
 function reserve_expr_temp_regs(state, regs)
 ```
 
-Implements reserve expr temp regs.
+Emit reserve expr temp regs as shared native-codegen support.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

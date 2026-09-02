@@ -23,7 +23,7 @@ Represents resolve cand.
 kind
 ```
 
-Stores the kind member of `ResolveCand`.
+Kind associated with `ResolveCand`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L171)
@@ -35,7 +35,7 @@ Stores the kind member of `ResolveCand`.
 path
 ```
 
-Stores the path member of `ResolveCand`.
+Path associated with `ResolveCand`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L169)
@@ -47,7 +47,7 @@ Stores the path member of `ResolveCand`.
 root
 ```
 
-Stores the root member of `ResolveCand`.
+Root associated with `ResolveCand`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L173)

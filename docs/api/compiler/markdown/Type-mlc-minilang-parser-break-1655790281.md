@@ -23,7 +23,7 @@ Represents break.
 _filename
 ```
 
-Stores the filename member of `Break`.
+Filename associated with `Break`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L693)
@@ -35,7 +35,7 @@ Stores the filename member of `Break`.
 _pos
 ```
 
-Stores the pos member of `Break`.
+Pos associated with `Break`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L691)
@@ -47,7 +47,7 @@ Stores the pos member of `Break`.
 count
 ```
 
-Stores the count member of `Break`.
+Count associated with `Break`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L689)
@@ -59,7 +59,7 @@ Stores the count member of `Break`.
 node_kind
 ```
 
-Stores the node kind member of `Break`.
+Node kind associated with `Break`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L687)

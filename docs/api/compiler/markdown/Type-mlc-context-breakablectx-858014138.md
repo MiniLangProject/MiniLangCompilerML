@@ -23,7 +23,7 @@ Unified loop/switch target plus cleanup depths for non-local exits.
 break_depth
 ```
 
-Stores the break depth member of `BreakableCtx`.
+Break depth associated with `BreakableCtx`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L51)
@@ -35,7 +35,7 @@ Stores the break depth member of `BreakableCtx`.
 break_label
 ```
 
-Stores the break label member of `BreakableCtx`.
+Break label associated with `BreakableCtx`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L47)
@@ -47,7 +47,7 @@ Stores the break label member of `BreakableCtx`.
 continue_depth
 ```
 
-Stores the continue depth member of `BreakableCtx`.
+Continue depth associated with `BreakableCtx`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L53)
@@ -59,7 +59,7 @@ Stores the continue depth member of `BreakableCtx`.
 continue_label
 ```
 
-Stores the continue label member of `BreakableCtx`.
+Continue label associated with `BreakableCtx`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L49)
@@ -71,7 +71,7 @@ Stores the continue label member of `BreakableCtx`.
 kind
 ```
 
-Stores the kind member of `BreakableCtx`.
+Kind associated with `BreakableCtx`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L45)

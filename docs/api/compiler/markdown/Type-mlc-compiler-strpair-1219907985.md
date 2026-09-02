@@ -23,7 +23,7 @@ Represents str pair.
 key
 ```
 
-Stores the key member of `StrPair`.
+Key associated with `StrPair`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L161)
@@ -35,7 +35,7 @@ Stores the key member of `StrPair`.
 value
 ```
 
-Stores the value member of `StrPair`.
+Value associated with `StrPair`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L163)

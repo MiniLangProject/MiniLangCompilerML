@@ -23,7 +23,7 @@ Represents dynamic blob.
 data
 ```
 
-Stores the data member of `DynamicBlob`.
+Backing data owned by `DynamicBlob`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L42)
@@ -35,7 +35,7 @@ Stores the data member of `DynamicBlob`.
 interp_offset
 ```
 
-Stores the interp offset member of `DynamicBlob`.
+Interp offset associated with `DynamicBlob`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L44)
@@ -47,7 +47,7 @@ Stores the interp offset member of `DynamicBlob`.
 interp_size
 ```
 
-Stores the interp size member of `DynamicBlob`.
+Interp size associated with `DynamicBlob`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L46)
@@ -59,7 +59,7 @@ Stores the interp size member of `DynamicBlob`.
 table_offset
 ```
 
-Stores the table offset member of `DynamicBlob`.
+Table offset associated with `DynamicBlob`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L48)
@@ -71,7 +71,7 @@ Stores the table offset member of `DynamicBlob`.
 table_size
 ```
 
-Stores the table size member of `DynamicBlob`.
+Table size associated with `DynamicBlob`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/elf.ml#L50)

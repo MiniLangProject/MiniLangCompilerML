@@ -23,7 +23,7 @@ Represents path stack node.
 parent
 ```
 
-Stores the parent member of `PathStackNode`.
+Parent associated with `PathStackNode`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L195)
@@ -35,7 +35,7 @@ Stores the parent member of `PathStackNode`.
 path
 ```
 
-Stores the path member of `PathStackNode`.
+Path associated with `PathStackNode`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L193)

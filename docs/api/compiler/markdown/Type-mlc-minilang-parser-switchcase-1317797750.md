@@ -23,7 +23,7 @@ Represents switch case.
 _filename
 ```
 
-Stores the filename member of `SwitchCase`.
+Filename associated with `SwitchCase`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L749)
@@ -35,7 +35,7 @@ Stores the filename member of `SwitchCase`.
 _pos
 ```
 
-Stores the pos member of `SwitchCase`.
+Pos associated with `SwitchCase`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L747)
@@ -47,7 +47,7 @@ Stores the pos member of `SwitchCase`.
 body
 ```
 
-Stores the body member of `SwitchCase`.
+Body associated with `SwitchCase`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L745)
@@ -59,7 +59,7 @@ Stores the body member of `SwitchCase`.
 kind
 ```
 
-Stores the kind member of `SwitchCase`.
+Kind associated with `SwitchCase`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L737)
@@ -71,7 +71,7 @@ Stores the kind member of `SwitchCase`.
 node_kind
 ```
 
-Stores the node kind member of `SwitchCase`.
+Node kind associated with `SwitchCase`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L735)
@@ -83,7 +83,7 @@ Stores the node kind member of `SwitchCase`.
 range_end
 ```
 
-Stores the range end member of `SwitchCase`.
+Range end associated with `SwitchCase`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L743)
@@ -95,7 +95,7 @@ Stores the range end member of `SwitchCase`.
 range_start
 ```
 
-Stores the range start member of `SwitchCase`.
+Range start associated with `SwitchCase`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L741)
@@ -107,7 +107,7 @@ Stores the range start member of `SwitchCase`.
 values
 ```
 
-Stores the values member of `SwitchCase`.
+Values associated with `SwitchCase`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L739)

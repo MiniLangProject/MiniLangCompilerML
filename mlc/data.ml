@@ -23,89 +23,89 @@ import mlc.tools as t
 
 /// Named offset into a writable or zero-initialized section.
 struct DataLabel
-  /// Stores the name member of `DataLabel`.
+  /// Name associated with `DataLabel`.
   name,
-  /// Stores the offset member of `DataLabel`.
+  /// Offset associated with `DataLabel`.
   offset,
 end struct
 
 /// Named offset and byte length into read-only data.
 struct DataRangeLabel
-  /// Stores the name member of `DataRangeLabel`.
+  /// Name associated with `DataRangeLabel`.
   name,
-  /// Stores the offset member of `DataRangeLabel`.
+  /// Offset associated with `DataRangeLabel`.
   offset,
-  /// Stores the length member of `DataRangeLabel`.
+  /// Length associated with `DataRangeLabel`.
   length,
 end struct
 
 /// Deduplication entry for pooled constants.
 struct PoolEntry
-  /// Stores the key member of `PoolEntry`.
+  /// Key associated with `PoolEntry`.
   key,
-  /// Stores the offset member of `PoolEntry`.
+  /// Offset associated with `PoolEntry`.
   offset,
-  /// Stores the length member of `PoolEntry`.
+  /// Length associated with `PoolEntry`.
   length,
-  /// Stores the label member of `PoolEntry`.
+  /// Label associated with `PoolEntry`.
   label,
 end struct
 
 /// Deferred absolute-address relocation inside a data section.
 struct DataPatch
-  /// Stores the offset member of `DataPatch`.
+  /// Offset associated with `DataPatch`.
   offset,
-  /// Stores the target member of `DataPatch`.
+  /// Target associated with `DataPatch`.
   target,
-  /// Stores the kind member of `DataPatch`.
+  /// Kind associated with `DataPatch`.
   kind,
 end struct
 
 /// Chunked writable-data builder with indexed labels and relocations.
 struct DataBuilder
-  /// Stores the data member of `DataBuilder`.
+  /// Backing data owned by `DataBuilder`.
   data,
-  /// Stores the labels member of `DataBuilder`.
+  /// Labels associated with `DataBuilder`.
   labels,
-  /// Stores the label index member of `DataBuilder`.
+  /// Label index associated with `DataBuilder`.
   label_index,
-  /// Stores the reference label index member of `DataBuilder`.
+  /// Reference label index associated with `DataBuilder`.
   reference_label_index,
-  /// Stores the patches member of `DataBuilder`.
+  /// Patches associated with `DataBuilder`.
   patches,
-  /// Stores the used member of `DataBuilder`.
+  /// Number of populated entries in `DataBuilder`.
   used,
 end struct
 
 /// Size-only builder for the zero-initialized section.
 struct BssBuilder
-  /// Stores the size member of `BssBuilder`.
+  /// Current logical size of `BssBuilder`.
   size,
-  /// Stores the labels member of `BssBuilder`.
+  /// Labels associated with `BssBuilder`.
   labels,
 end struct
 
 /// Chunked read-only builder with typed constant-deduplication pools.
 struct RDataBuilder
-  /// Stores the data member of `RDataBuilder`.
+  /// Backing data owned by `RDataBuilder`.
   data,
-  /// Stores the labels member of `RDataBuilder`.
+  /// Labels associated with `RDataBuilder`.
   labels,
-  /// Stores the label index member of `RDataBuilder`.
+  /// Label index associated with `RDataBuilder`.
   label_index,
-  /// Stores the reference label index member of `RDataBuilder`.
+  /// Reference label index associated with `RDataBuilder`.
   reference_label_index,
-  /// Stores the patches member of `RDataBuilder`.
+  /// Patches associated with `RDataBuilder`.
   patches,
-  /// Stores the pool raw member of `RDataBuilder`.
+  /// Pool raw associated with `RDataBuilder`.
   pool_raw,
-  /// Stores the pool obj string member of `RDataBuilder`.
+  /// Pool obj string associated with `RDataBuilder`.
   pool_obj_string,
-  /// Stores the pool obj float member of `RDataBuilder`.
+  /// Pool obj float associated with `RDataBuilder`.
   pool_obj_float,
-  /// Stores the alias index member of `RDataBuilder`.
+  /// Alias index associated with `RDataBuilder`.
   alias_index,
-  /// Stores the used member of `RDataBuilder`.
+  /// Number of populated entries in `RDataBuilder`.
   used,
 end struct
 
@@ -121,7 +121,7 @@ function _find_data_label_index(labels, name)
   return -1
 end function
 
-/// Implements upsert data label.
+/// Build or query upsert data label in native data sections.
 /// @internal
 function _upsert_data_label(labels, name, offset)
   idx = _find_data_label_index(labels, name)
@@ -144,7 +144,7 @@ function _find_range_label_index(labels, name)
   return -1
 end function
 
-/// Implements upsert range label.
+/// Build or query upsert range label in native data sections.
 /// @internal
 function _upsert_range_label(labels, name, offset, length)
   idx = _find_range_label_index(labels, name)
@@ -199,7 +199,7 @@ function newDataBuilder()
   return DataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), 0, t.arr_chunk_new(1024), 0)
 end function
 
-/// Implements data get labels.
+/// Build or query data get labels in native data sections.
 /// @param db Value supplied for `db`.
 function data_get_labels(db)
   if typeof(db) != "struct" then return [] end if
@@ -208,7 +208,7 @@ function data_get_labels(db)
   return []
 end function
 
-/// Implements data get labels after.
+/// Build or query data get labels after in native data sections.
 /// @param db Value supplied for `db`.
 /// @param start_index Value supplied for `start_index`.
 function data_get_labels_after(db, start_index)
@@ -226,7 +226,7 @@ function data_get_labels_after(db, start_index)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements data label count.
+/// Build or query data label count in native data sections.
 /// @param db Value supplied for `db`.
 function data_label_count(db)
   if typeof(db) != "struct" then return 0 end if
@@ -234,7 +234,7 @@ function data_label_count(db)
   return len(data_get_labels(db))
 end function
 
-/// Implements data label record.
+/// Build or query data label record in native data sections.
 /// @param db Value supplied for `db`.
 /// @param name Name of the requested item.
 function data_label_record(db, name)
@@ -257,7 +257,7 @@ function data_label_record(db, name)
   return 0
 end function
 
-/// Implements data has label.
+/// Build or query data has label in native data sections.
 /// @param db Value supplied for `db`.
 /// @param name Name of the requested item.
 /// @returns The resulting `bool` value.
@@ -265,7 +265,7 @@ function data_has_label(db as struct, name as string) returns bool
   return typeof(data_label_record(db, name)) == "struct"
 end function
 
-/// Implements data set labels.
+/// Build or query data set labels in native data sections.
 /// @param db Value supplied for `db`.
 /// @param labels Value supplied for `labels`.
 function data_set_labels(db, labels)
@@ -286,13 +286,13 @@ function data_set_labels(db, labels)
   return db
 end function
 
-/// Implements data clear labels.
+/// Build or query data clear labels in native data sections.
 /// @param db Value supplied for `db`.
 function data_clear_labels(db)
   return data_set_labels(db, [])
 end function
 
-/// Implements data upsert label.
+/// Build or query data upsert label in native data sections.
 /// @internal
 function _data_upsert_label(db, name, offset)
   if typeof(db) != "struct" or typeof(name) != "string" or name == "" then return db end if
@@ -320,7 +320,7 @@ function newRDataBuilder()
   return RDataBuilder(bytes(16384, 0), t.arr_chunk_new(1024), t.fastmap_new(2048), 0, t.arr_chunk_new(1024), t.fastmap_new(2048), t.fastmap_new(1024), t.fastmap_new(1024), t.fastmap_new(1024), 0)
 end function
 
-/// Implements data get patches.
+/// Build or query data get patches in native data sections.
 /// @param db Value supplied for `db`.
 function data_get_patches(db)
   if typeof(db) != "struct" then return [] end if
@@ -329,7 +329,7 @@ function data_get_patches(db)
   return []
 end function
 
-/// Implements data patch count.
+/// Build or query data patch count in native data sections.
 /// @param db Value supplied for `db`.
 function data_patch_count(db)
   if typeof(db) != "struct" then return 0 end if
@@ -338,7 +338,7 @@ function data_patch_count(db)
   return 0
 end function
 
-/// Implements data get patches after.
+/// Build or query data get patches after in native data sections.
 /// @param db Value supplied for `db`.
 /// @param start_index Value supplied for `start_index`.
 function data_get_patches_after(db, start_index)
@@ -356,7 +356,7 @@ function data_get_patches_after(db, start_index)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements data set patches.
+/// Build or query data set patches in native data sections.
 /// @param db Value supplied for `db`.
 /// @param patches Value supplied for `patches`.
 function data_set_patches(db, patches)
@@ -370,13 +370,13 @@ function data_set_patches(db, patches)
   return db
 end function
 
-/// Implements data clear patches.
+/// Build or query data clear patches in native data sections.
 /// @param db Value supplied for `db`.
 function data_clear_patches(db)
   return data_set_patches(db, [])
 end function
 
-/// Implements rdata get patches.
+/// Build or query rdata get patches in native data sections.
 /// @param rb Value supplied for `rb`.
 function rdata_get_patches(rb)
   if typeof(rb) != "struct" then return [] end if
@@ -385,7 +385,7 @@ function rdata_get_patches(rb)
   return []
 end function
 
-/// Implements rdata patch count.
+/// Build or query rdata patch count in native data sections.
 /// @param rb Value supplied for `rb`.
 function rdata_patch_count(rb)
   if typeof(rb) != "struct" then return 0 end if
@@ -394,7 +394,7 @@ function rdata_patch_count(rb)
   return 0
 end function
 
-/// Implements rdata get patches after.
+/// Build or query rdata get patches after in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param start_index Value supplied for `start_index`.
 function rdata_get_patches_after(rb, start_index)
@@ -412,7 +412,7 @@ function rdata_get_patches_after(rb, start_index)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements rdata set patches.
+/// Build or query rdata set patches in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param patches Value supplied for `patches`.
 function rdata_set_patches(rb, patches)
@@ -426,13 +426,13 @@ function rdata_set_patches(rb, patches)
   return rb
 end function
 
-/// Implements rdata clear patches.
+/// Build or query rdata clear patches in native data sections.
 /// @param rb Value supplied for `rb`.
 function rdata_clear_patches(rb)
   return rdata_set_patches(rb, [])
 end function
 
-/// Implements rdata get labels.
+/// Build or query rdata get labels in native data sections.
 /// @param rb Value supplied for `rb`.
 function rdata_get_labels(rb)
   if typeof(rb) != "struct" then return [] end if
@@ -441,7 +441,7 @@ function rdata_get_labels(rb)
   return []
 end function
 
-/// Implements rdata get labels after.
+/// Build or query rdata get labels after in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param start_index Value supplied for `start_index`.
 function rdata_get_labels_after(rb, start_index)
@@ -459,7 +459,7 @@ function rdata_get_labels_after(rb, start_index)
   return t.arr_chunk_finish(out_b)
 end function
 
-/// Implements rdata resolve alias.
+/// Build or query rdata resolve alias in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 function rdata_resolve_alias(rb, name)
@@ -468,7 +468,7 @@ function rdata_resolve_alias(rb, name)
   return t.fastmap_get(rb.alias_index, name, name)
 end function
 
-/// Implements rdata label count.
+/// Build or query rdata label count in native data sections.
 /// @param rb Value supplied for `rb`.
 function rdata_label_count(rb)
   if typeof(rb) != "struct" then return 0 end if
@@ -477,7 +477,7 @@ function rdata_label_count(rb)
   return len(labels)
 end function
 
-/// Implements rdata label record.
+/// Build or query rdata label record in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 function rdata_label_record(rb, name)
@@ -500,14 +500,14 @@ function rdata_label_record(rb, name)
   return 0
 end function
 
-/// Implements rdata has label.
+/// Build or query rdata has label in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 function rdata_has_label(rb, name)
   return typeof(rdata_label_record(rb, name)) == "struct"
 end function
 
-/// Implements rdata label length.
+/// Build or query rdata label length in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 function rdata_label_length(rb, name)
@@ -516,7 +516,7 @@ function rdata_label_length(rb, name)
   return 0
 end function
 
-/// Implements rdata set labels.
+/// Build or query rdata set labels in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param labels Value supplied for `labels`.
 function rdata_set_labels(rb, labels)
@@ -537,13 +537,13 @@ function rdata_set_labels(rb, labels)
   return rb
 end function
 
-/// Implements rdata clear labels.
+/// Build or query rdata clear labels in native data sections.
 /// @param rb Value supplied for `rb`.
 function rdata_clear_labels(rb)
   return rdata_set_labels(rb, [])
 end function
 
-/// Implements rdata upsert label.
+/// Build or query rdata upsert label in native data sections.
 /// @internal
 function _rdata_upsert_label(rb, name, offset, length)
   if typeof(rb) != "struct" or typeof(name) != "string" or name == "" then return rb end if
@@ -562,7 +562,7 @@ function _rdata_upsert_label(rb, name, offset, length)
   return rb
 end function
 
-/// Implements buf used.
+/// Build or query buf used in native data sections.
 /// @internal
 function _buf_used(db)
   if typeof(db.used) == "int" and db.used >= 0 then return db.used end if
@@ -570,13 +570,13 @@ function _buf_used(db)
   return 0
 end function
 
-/// Implements rdata used.
+/// Build or query rdata used in native data sections.
 /// @param rb Value supplied for `rb`.
 function rdata_used(rb)
   return _buf_used(rb)
 end function
 
-/// Implements buf ensure.
+/// Build or query buf ensure in native data sections.
 /// @internal
 function _buf_ensure(db, need)
   if typeof(db.data) != "bytes" then db.data = bytes(0) end if
@@ -599,7 +599,7 @@ function _buf_ensure(db, need)
   return db
 end function
 
-/// Implements buf append.
+/// Build or query buf append in native data sections.
 /// @internal
 function _buf_append(db, b)
   if typeof(b) != "bytes" or len(b) <= 0 then return db end if
@@ -612,7 +612,7 @@ function _buf_append(db, b)
   return db
 end function
 
-/// Implements data add u32.
+/// Build or query data add u32 in native data sections.
 /// @param db Value supplied for `db`.
 /// @param name Name of the requested item.
 /// @param value Value to process.
@@ -623,7 +623,7 @@ function data_add_u32(db, name, value)
   return db
 end function
 
-/// Implements data add u64.
+/// Build or query data add u64 in native data sections.
 /// @param db Value supplied for `db`.
 /// @param name Name of the requested item.
 /// @param value Value to process.
@@ -634,7 +634,7 @@ function data_add_u64(db, name, value)
   return db
 end function
 
-/// Implements data add bytes.
+/// Build or query data add bytes in native data sections.
 /// @param db Value supplied for `db`.
 /// @param name Name of the requested item.
 /// @param b Second input value.
@@ -645,7 +645,7 @@ function data_add_bytes(db, name, b)
   return db
 end function
 
-/// Implements data add abs64 patch.
+/// Build or query data add abs64 patch in native data sections.
 /// @param db Value supplied for `db`.
 /// @param offset Zero-based starting offset.
 /// @param target Value supplied for `target`.
@@ -655,7 +655,7 @@ function data_add_abs64_patch(db, offset, target)
   return db
 end function
 
-/// Implements data pad align.
+/// Build or query data pad align in native data sections.
 /// @param db Value supplied for `db`.
 /// @param align Value supplied for `align`.
 function data_pad_align(db, align)
@@ -668,7 +668,7 @@ function data_pad_align(db, align)
   return db
 end function
 
-/// Implements bss pad align.
+/// Build or query bss pad align in native data sections.
 /// @param bb Value supplied for `bb`.
 /// @param align Value supplied for `align`.
 function bss_pad_align(bb, align)
@@ -680,7 +680,7 @@ function bss_pad_align(bb, align)
   return bb
 end function
 
-/// Implements bss reserve.
+/// Build or query bss reserve in native data sections.
 /// @param bb Value supplied for `bb`.
 /// @param name Name of the requested item.
 /// @param size Value supplied for `size`.
@@ -695,7 +695,7 @@ function bss_reserve(bb, name, size, align)
   return bb
 end function
 
-/// Implements rdata pad align.
+/// Build or query rdata pad align in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param align Value supplied for `align`.
 function rdata_pad_align(rb, align)
@@ -707,7 +707,7 @@ function rdata_pad_align(rb, align)
   return rb
 end function
 
-/// Implements rdata intern raw.
+/// Build or query rdata intern raw in native data sections.
 /// @internal
 function _rdata_intern_raw(rb, name, raw)
   hit = _find_pool_entry(rb.pool_raw, raw)
@@ -727,7 +727,7 @@ function _rdata_intern_raw(rb, name, raw)
   return rb
 end function
 
-/// Implements rdata add str.
+/// Build or query rdata add str in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 /// @param text Text to process.
@@ -735,7 +735,7 @@ function rdata_add_str(rb, name, text)
   return rdata_add_str_nl(rb, name, text, true)
 end function
 
-/// Implements rdata add str nl.
+/// Build or query rdata add str nl in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 /// @param text Text to process.
@@ -748,7 +748,7 @@ function rdata_add_str_nl(rb, name, text, add_newline)
   return _rdata_intern_raw(rb, name, bytes(s))
 end function
 
-/// Implements rdata add bytes.
+/// Build or query rdata add bytes in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 /// @param raw Value supplied for `raw`.
@@ -756,7 +756,7 @@ function rdata_add_bytes(rb, name, raw)
   return _rdata_intern_raw(rb, name, raw)
 end function
 
-/// Implements rdata add bytes unique.
+/// Build or query rdata add bytes unique in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 /// @param raw Value supplied for `raw`.
@@ -769,7 +769,7 @@ function rdata_add_bytes_unique(rb, name, raw)
   return rb
 end function
 
-/// Implements rdata add abs64 patch.
+/// Build or query rdata add abs64 patch in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param offset Zero-based starting offset.
 /// @param target Value supplied for `target`.
@@ -779,7 +779,7 @@ function rdata_add_abs64_patch(rb, offset, target)
   return rb
 end function
 
-/// Implements float to f64le.
+/// Build or query float to f64le in native data sections.
 /// @internal
 function _float_to_f64le(value)
   v = value
@@ -860,7 +860,7 @@ function _float_to_f64le(value)
   return b
 end function
 
-/// Implements rdata add obj string.
+/// Build or query rdata add obj string in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 /// @param text Text to process.
@@ -888,7 +888,7 @@ function rdata_add_obj_string(rb, name, text)
   return rb
 end function
 
-/// Implements rdata add obj string unique.
+/// Build or query rdata add obj string unique in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 /// @param text Text to process.
@@ -916,7 +916,7 @@ function rdata_add_obj_string_unique(rb, name, text)
   return rb
 end function
 
-/// Implements rdata add obj float.
+/// Build or query rdata add obj float in native data sections.
 /// @param rb Value supplied for `rb`.
 /// @param name Name of the requested item.
 /// @param value Value to process.

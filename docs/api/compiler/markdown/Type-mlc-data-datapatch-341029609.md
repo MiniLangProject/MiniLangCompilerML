@@ -23,7 +23,7 @@ Deferred absolute-address relocation inside a data section.
 kind
 ```
 
-Stores the kind member of `DataPatch`.
+Kind associated with `DataPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L61)
@@ -35,7 +35,7 @@ Stores the kind member of `DataPatch`.
 offset
 ```
 
-Stores the offset member of `DataPatch`.
+Offset associated with `DataPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L57)
@@ -47,7 +47,7 @@ Stores the offset member of `DataPatch`.
 target
 ```
 
-Stores the target member of `DataPatch`.
+Target associated with `DataPatch`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L59)

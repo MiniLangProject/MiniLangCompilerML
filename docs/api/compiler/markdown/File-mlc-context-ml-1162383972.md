@@ -17,7 +17,7 @@ Reachable from entry: **no**
 function _normalizeBreakableCtx(kind, break_label, continue_label, break_depth, continue_depth)
 ```
 
-Implements normalize breakable ctx.
+Track normalize breakable ctx in the compiler context.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -37,7 +37,7 @@ Implements normalize breakable ctx.
 const BREAKABLE_CTX_DEFAULT_BREAK_DEPTH = 0
 ```
 
-Stores the breakable ctx default break depth.
+Track breakable ctx default break depth.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L30)
@@ -49,7 +49,7 @@ Stores the breakable ctx default break depth.
 const BREAKABLE_CTX_DEFAULT_CONTINUE_DEPTH = 0
 ```
 
-Stores the breakable ctx default continue depth.
+Track breakable ctx default continue depth.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L32)
@@ -61,7 +61,7 @@ Stores the breakable ctx default continue depth.
 const BREAKABLE_CTX_DEFAULT_CONTINUE_LABEL = void
 ```
 
-Stores the breakable ctx default continue label.
+Track breakable ctx default continue label.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L28)
@@ -73,7 +73,7 @@ Stores the breakable ctx default continue label.
 const BREAKABLE_KIND_LOOP = "loop"
 ```
 
-Stores the breakable kind loop.
+Track breakable kind loop.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L23)
@@ -85,7 +85,7 @@ Stores the breakable kind loop.
 const BREAKABLE_KIND_SWITCH = "switch"
 ```
 
-Stores the breakable kind switch.
+Track breakable kind switch.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L25)

@@ -31,277 +31,277 @@ import mlc.codegen.codegen_threads as th
 
 /// Complete mutable state threaded through every backend emission function. Collection fields use indexed/capacity-backed representations on hot paths.
 struct CgState
-  /// Stores the source member of `CgState`.
+  /// Source associated with `CgState`.
   source,
-  /// Stores the filename member of `CgState`.
+  /// Filename associated with `CgState`.
   filename,
-  /// Stores the import aliases member of `CgState`.
+  /// Import aliases associated with `CgState`.
   import_aliases,
-  /// Stores the extern sigs member of `CgState`.
+  /// Extern sigs associated with `CgState`.
   extern_sigs,
-  /// Stores the extern abi structs member of `CgState`.
+  /// Extern abi structs associated with `CgState`.
   extern_abi_structs,
-  /// Stores the extern structs member of `CgState`.
+  /// Extern structs associated with `CgState`.
   extern_structs,
-  /// Stores the heap config member of `CgState`.
+  /// Heap config associated with `CgState`.
   heap_config,
-  /// Stores the call profile member of `CgState`.
+  /// Call profile associated with `CgState`.
   call_profile,
-  /// Stores the trace calls member of `CgState`.
+  /// Trace calls associated with `CgState`.
   trace_calls,
-  /// Stores the mem probe member of `CgState`.
+  /// Mem probe associated with `CgState`.
   mem_probe,
-  /// Stores the imports member of `CgState`.
+  /// Imports associated with `CgState`.
   imports,
-  /// Stores the asm member of `CgState`.
+  /// Asm associated with `CgState`.
   asm,
-  /// Stores the data member of `CgState`.
+  /// Backing data owned by `CgState`.
   data,
-  /// Stores the bss member of `CgState`.
+  /// Bss associated with `CgState`.
   bss,
-  /// Stores the rdata member of `CgState`.
+  /// Rdata associated with `CgState`.
   rdata,
-  /// Stores the var slots member of `CgState`.
+  /// Var slots associated with `CgState`.
   var_slots,
-  /// Stores the break stack member of `CgState`.
+  /// Break stack associated with `CgState`.
   break_stack,
-  /// Stores the struct fields member of `CgState`.
+  /// Struct fields associated with `CgState`.
   struct_fields,
-  /// Stores the struct field types member of `CgState`.
+  /// Struct field types associated with `CgState`.
   struct_field_types,
-  /// Stores the struct ids member of `CgState`.
+  /// Struct ids associated with `CgState`.
   struct_ids,
-  /// Stores the enum variants member of `CgState`.
+  /// Enum variants associated with `CgState`.
   enum_variants,
-  /// Stores the enum ids member of `CgState`.
+  /// Enum ids associated with `CgState`.
   enum_ids,
-  /// Stores the value enum values member of `CgState`.
+  /// Value enum values associated with `CgState`.
   value_enum_values,
-  /// Stores the reserved identifiers member of `CgState`.
+  /// Reserved identifiers associated with `CgState`.
   reserved_identifiers,
-  /// Stores the label id member of `CgState`.
+  /// Label id associated with `CgState`.
   label_id,
-  /// Stores the used helpers member of `CgState`.
+  /// Used helpers associated with `CgState`.
   used_helpers,
-  /// Stores the emitted helpers member of `CgState`.
+  /// Emitted helpers associated with `CgState`.
   emitted_helpers,
-  /// Stores the scope stack member of `CgState`.
+  /// Scope stack associated with `CgState`.
   scope_stack,
-  /// Stores the scope declared member of `CgState`.
+  /// Scope declared associated with `CgState`.
   scope_declared,
-  /// Stores the binding id member of `CgState`.
+  /// Binding id associated with `CgState`.
   binding_id,
-  /// Stores the global slots member of `CgState`.
+  /// Global slots associated with `CgState`.
   global_slots,
-  /// Stores the globals member of `CgState`.
+  /// Globals associated with `CgState`.
   globals,
-  /// Stores the in function member of `CgState`.
+  /// In function associated with `CgState`.
   in_function,
-  /// Stores the func globals member of `CgState`.
+  /// Func globals associated with `CgState`.
   func_globals,
-  /// Stores the func global map member of `CgState`.
+  /// Func global map associated with `CgState`.
   func_global_map,
-  /// Stores the function locals member of `CgState`.
+  /// Function locals associated with `CgState`.
   function_locals,
-  /// Stores the current qname prefix member of `CgState`.
+  /// Current qname prefix associated with `CgState`.
   current_qname_prefix,
-  /// Stores the current file prefix member of `CgState`.
+  /// Current file prefix associated with `CgState`.
   current_file_prefix,
-  /// Stores the file prefix map member of `CgState`.
+  /// File prefix map associated with `CgState`.
   file_prefix_map,
-  /// Stores the typename struct by id member of `CgState`.
+  /// Typename struct by id associated with `CgState`.
   typename_struct_by_id,
-  /// Stores the typename struct by qname member of `CgState`.
+  /// Typename struct by qname associated with `CgState`.
   typename_struct_by_qname,
-  /// Stores the typename enum by id member of `CgState`.
+  /// Typename enum by id associated with `CgState`.
   typename_enum_by_id,
-  /// Stores the typename enum by qname member of `CgState`.
+  /// Typename enum by qname associated with `CgState`.
   typename_enum_by_qname,
-  /// Stores the user functions member of `CgState`.
+  /// User functions associated with `CgState`.
   user_functions,
-  /// Stores the nested user functions member of `CgState`.
+  /// Nested user functions associated with `CgState`.
   nested_user_functions,
-  /// Stores the struct methods member of `CgState`.
+  /// Struct methods associated with `CgState`.
   struct_methods,
-  /// Stores the struct static methods member of `CgState`.
+  /// Struct static methods associated with `CgState`.
   struct_static_methods,
-  /// Stores the function global labels member of `CgState`.
+  /// Function global labels associated with `CgState`.
   function_global_labels,
-  /// Stores the struct global labels member of `CgState`.
+  /// Struct global labels associated with `CgState`.
   struct_global_labels,
-  /// Stores the builtin specs member of `CgState`.
+  /// Builtin specs associated with `CgState`.
   builtin_specs,
-  /// Stores the builtin global labels member of `CgState`.
+  /// Builtin global labels associated with `CgState`.
   builtin_global_labels,
-  /// Stores the extern global labels member of `CgState`.
+  /// Extern global labels associated with `CgState`.
   extern_global_labels,
-  /// Stores the extern stub labels member of `CgState`.
+  /// Extern stub labels associated with `CgState`.
   extern_stub_labels,
-  /// Stores the function static obj labels member of `CgState`.
+  /// Function static obj labels associated with `CgState`.
   function_static_obj_labels,
-  /// Stores the struct static obj labels member of `CgState`.
+  /// Struct static obj labels associated with `CgState`.
   struct_static_obj_labels,
-  /// Stores the builtin static obj labels member of `CgState`.
+  /// Builtin static obj labels associated with `CgState`.
   builtin_static_obj_labels,
-  /// Stores the extern static obj labels member of `CgState`.
+  /// Extern static obj labels associated with `CgState`.
   extern_static_obj_labels,
-  /// Stores the diagnostics member of `CgState`.
+  /// Diagnostics associated with `CgState`.
   diagnostics,
-  /// Stores the call total count member of `CgState`.
+  /// Call total count associated with `CgState`.
   call_total_count,
-  /// Stores the call indirect count member of `CgState`.
+  /// Call indirect count associated with `CgState`.
   call_indirect_count,
-  /// Stores the callprof entries member of `CgState`.
+  /// Callprof entries associated with `CgState`.
   callprof_entries,
-  /// Stores the callprof index member of `CgState`.
+  /// Callprof index associated with `CgState`.
   callprof_index,
-  /// Stores the callprof name labels member of `CgState`.
+  /// Callprof name labels associated with `CgState`.
   callprof_name_labels,
-  /// Stores the callprof n member of `CgState`.
+  /// Callprof n associated with `CgState`.
   callprof_n,
-  /// Stores the is windows subsystem member of `CgState`.
+  /// Whether `CgState.is_windows_subsystem` indicates windows subsystem.
   is_windows_subsystem,
-  /// Stores the func ret label member of `CgState`.
+  /// Func ret label associated with `CgState`.
   func_ret_label,
-  /// Stores the func frame size member of `CgState`.
+  /// Func frame size associated with `CgState`.
   func_frame_size,
-  /// Stores the errprop suppression member of `CgState`.
+  /// Errprop suppression associated with `CgState`.
   errprop_suppression,
-  /// Stores the errprop sync depth member of `CgState`.
+  /// Errprop sync depth associated with `CgState`.
   errprop_sync_depth,
-  /// Stores the dbg line starts member of `CgState`.
+  /// Dbg line starts associated with `CgState`.
   dbg_line_starts,
-  /// Stores the expr temp base member of `CgState`.
+  /// Expr temp base associated with `CgState`.
   expr_temp_base,
-  /// Stores the expr temp top member of `CgState`.
+  /// Expr temp top associated with `CgState`.
   expr_temp_top,
-  /// Stores the current fn boxed names member of `CgState`.
+  /// Current fn boxed names associated with `CgState`.
   current_fn_boxed_names,
-  /// Stores the current fn env index member of `CgState`.
+  /// Current fn env index associated with `CgState`.
   current_fn_env_index,
-  /// Stores the current env root off member of `CgState`.
+  /// Current env root off associated with `CgState`.
   current_env_root_off,
-  /// Stores the scope index stack member of `CgState`.
+  /// Scope index stack associated with `CgState`.
   scope_index_stack,
-  /// Stores the scope declared index stack member of `CgState`.
+  /// Scope declared index stack associated with `CgState`.
   scope_declared_index_stack,
-  /// Stores the func global map index member of `CgState`.
+  /// Func global map index associated with `CgState`.
   func_global_map_index,
-  /// Stores the user function index member of `CgState`.
+  /// User function index associated with `CgState`.
   user_function_index,
-  /// Stores the function codegen name map member of `CgState`.
+  /// Function codegen name map associated with `CgState`.
   function_codegen_name_map,
-  /// Stores the analysis mode member of `CgState`.
+  /// Analysis mode associated with `CgState`.
   analysis_mode,
-  /// Stores the qualify cache member of `CgState`.
+  /// Qualify cache associated with `CgState`.
   qualify_cache,
-  /// Stores the struct fields index member of `CgState`.
+  /// Struct fields index associated with `CgState`.
   struct_fields_index,
-  /// Stores the struct ids index member of `CgState`.
+  /// Struct ids index associated with `CgState`.
   struct_ids_index,
-  /// Stores the enum variants index member of `CgState`.
+  /// Enum variants index associated with `CgState`.
   enum_variants_index,
-  /// Stores the enum ids index member of `CgState`.
+  /// Enum ids index associated with `CgState`.
   enum_ids_index,
-  /// Stores the struct methods index member of `CgState`.
+  /// Struct methods index associated with `CgState`.
   struct_methods_index,
-  /// Stores the struct static methods index member of `CgState`.
+  /// Struct static methods index associated with `CgState`.
   struct_static_methods_index,
-  /// Stores the extern sig index member of `CgState`.
+  /// Extern sig index associated with `CgState`.
   extern_sig_index,
-  /// Stores the import alias index member of `CgState`.
+  /// Import alias index associated with `CgState`.
   import_alias_index,
-  /// Stores the call temp base member of `CgState`.
+  /// Call temp base associated with `CgState`.
   call_temp_base,
-  /// Stores the expr temp max member of `CgState`.
+  /// Expr temp max associated with `CgState`.
   expr_temp_max,
-  /// Stores the current root rec off member of `CgState`.
+  /// Current root rec off associated with `CgState`.
   _current_root_rec_off,
-  /// Stores the current root static qwords member of `CgState`.
+  /// Current root static qwords associated with `CgState`.
   _current_root_static_qwords,
-  /// Stores the expr temp reg order member of `CgState`.
+  /// Expr temp reg order associated with `CgState`.
   _expr_temp_reg_order,
-  /// Stores the expr temp reg live member of `CgState`.
+  /// Expr temp reg live associated with `CgState`.
   _expr_temp_reg_live,
-  /// Stores the expr temp reg live by reg member of `CgState`.
+  /// Expr temp reg live by reg associated with `CgState`.
   _expr_temp_reg_live_by_reg,
-  /// Stores the expr temp reg reserved member of `CgState`.
+  /// Expr temp reg reserved associated with `CgState`.
   _expr_temp_reg_reserved,
-  /// Stores the cold block stack member of `CgState`.
+  /// Cold block stack associated with `CgState`.
   _cold_block_stack,
-  /// Stores the inline param stack member of `CgState`.
+  /// Inline param stack associated with `CgState`.
   _inline_param_stack,
-  /// Stores the inline call stack member of `CgState`.
+  /// Inline call stack associated with `CgState`.
   _inline_call_stack,
-  /// Stores the inline emitted bytes member of `CgState`.
+  /// Inline emitted bytes associated with `CgState`.
   _inline_emitted_bytes,
-  /// Stores the max inline call args global member of `CgState`.
+  /// Max inline call args global associated with `CgState`.
   max_inline_call_args_global,
-  /// Stores the known int names member of `CgState`.
+  /// Known int names associated with `CgState`.
   known_int_names,
-  /// Stores the known value types member of `CgState`.
+  /// Known value types associated with `CgState`.
   known_value_types,
-  /// Stores the loop index fast stack member of `CgState`.
+  /// Loop index fast stack associated with `CgState`.
   loop_index_fast_stack,
-  /// Stores the inline only functions member of `CgState`.
+  /// Inline only functions associated with `CgState`.
   inline_only_functions,
-  /// Stores the pruned inline functions member of `CgState`.
+  /// Pruned inline functions associated with `CgState`.
   pruned_inline_functions,
-  /// Stores the ext widebuf labels member of `CgState`.
+  /// Ext widebuf labels associated with `CgState`.
   ext_widebuf_labels,
-  /// Stores the decl site bindings member of `CgState`.
+  /// Decl site bindings associated with `CgState`.
   decl_site_bindings,
-  /// Stores the function local ids member of `CgState`.
+  /// Function local ids associated with `CgState`.
   function_local_ids,
-  /// Stores the module init active member of `CgState`.
+  /// Module init active associated with `CgState`.
   _module_init_active,
-  /// Stores the module init active file member of `CgState`.
+  /// Module init active file associated with `CgState`.
   _module_init_active_file,
-  /// Stores the global owner file member of `CgState`.
+  /// Global owner file associated with `CgState`.
   _global_owner_file,
-  /// Stores the module init status labels member of `CgState`.
+  /// Module init status labels associated with `CgState`.
   _module_init_status_labels,
-  /// Stores the native threads possible member of `CgState`.
+  /// Native threads possible associated with `CgState`.
   native_threads_possible,
-  /// Stores the synchronized globals member of `CgState`.
+  /// Synchronized globals associated with `CgState`.
   synchronized_globals,
-  /// Stores the target member of `CgState`.
+  /// Target associated with `CgState`.
   target,
-  /// Stores the is linux target member of `CgState`.
+  /// Whether `CgState.is_linux_target` indicates linux target.
   is_linux_target,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
 struct NamedArray
-  /// Stores the key member of `NamedArray`.
+  /// Key associated with `NamedArray`.
   key,
-  /// Stores the values member of `NamedArray`.
+  /// Values associated with `NamedArray`.
   values,
 end struct
 
 /// Represents named int.
 struct NamedInt
-  /// Stores the key member of `NamedInt`.
+  /// Key associated with `NamedInt`.
   key,
-  /// Stores the value member of `NamedInt`.
+  /// Value associated with `NamedInt`.
   value,
 end struct
 
 /// Represents named any.
 struct NamedAny
-  /// Stores the key member of `NamedAny`.
+  /// Key associated with `NamedAny`.
   key,
-  /// Stores the value member of `NamedAny`.
+  /// Value associated with `NamedAny`.
   value,
 end struct
 
 /// Spill slot/register pair that keeps a tagged expression value GC-visible.
 struct ExprValueTemp
-  /// Stores the off member of `ExprValueTemp`.
+  /// Off associated with `ExprValueTemp`.
   off,
-  /// Stores the reg member of `ExprValueTemp`.
+  /// Reg associated with `ExprValueTemp`.
   reg,
-  /// Stores the dirty member of `ExprValueTemp`.
+  /// Dirty associated with `ExprValueTemp`.
   dirty,
 end struct
 
@@ -317,7 +317,7 @@ function _append_unique(vals, v)
   return vals +[v]
 end function
 
-/// Implements expr temp named get.
+/// Emit expr temp named get as shared native-codegen support.
 /// @internal
 function _expr_temp_named_get(entries, key, defaultv)
   if typeof(entries) != "array" or len(entries) <= 0 then return defaultv end if
@@ -328,7 +328,7 @@ function _expr_temp_named_get(entries, key, defaultv)
   return defaultv
 end function
 
-/// Implements expr temp named set.
+/// Emit expr temp named set as shared native-codegen support.
 /// @internal
 function _expr_temp_named_set(entries, key, value)
   if typeof(entries) != "array" then entries = [] end if
@@ -344,7 +344,7 @@ function _expr_temp_named_set(entries, key, value)
   return entries +[NamedAny(key, value)]
 end function
 
-/// Implements expr temp named remove.
+/// Emit expr temp named remove as shared native-codegen support.
 /// @internal
 function _expr_temp_named_remove(entries, key)
   if typeof(entries) != "array" or len(entries) <= 0 then return [] end if
@@ -357,40 +357,40 @@ function _expr_temp_named_remove(entries, key)
   return outv
 end function
 
-/// Implements expr temp live by reg get.
+/// Emit expr temp live by reg get as shared native-codegen support.
 /// @internal
 function _expr_temp_live_by_reg_get(state, reg)
   return _expr_temp_named_get(state._expr_temp_reg_live_by_reg, reg, 0)
 end function
 
-/// Implements expr temp live by reg set.
+/// Emit expr temp live by reg set as shared native-codegen support.
 /// @internal
 function _expr_temp_live_by_reg_set(state, reg, tmp)
   state._expr_temp_reg_live_by_reg = _expr_temp_named_set(state._expr_temp_reg_live_by_reg, reg, tmp)
   return state
 end function
 
-/// Implements expr temp live by reg remove.
+/// Emit expr temp live by reg remove as shared native-codegen support.
 /// @internal
 function _expr_temp_live_by_reg_remove(state, reg)
   state._expr_temp_reg_live_by_reg = _expr_temp_named_remove(state._expr_temp_reg_live_by_reg, reg)
   return state
 end function
 
-/// Implements expr temp reserved get.
+/// Emit expr temp reserved get as shared native-codegen support.
 /// @internal
 function _expr_temp_reserved_get(state, reg)
   return _expr_temp_named_get(state._expr_temp_reg_reserved, reg, 0)
 end function
 
-/// Implements expr temp reserved set.
+/// Emit expr temp reserved set as shared native-codegen support.
 /// @internal
 function _expr_temp_reserved_set(state, reg, value)
   state._expr_temp_reg_reserved = _expr_temp_named_set(state._expr_temp_reg_reserved, reg, value)
   return state
 end function
 
-/// Implements expr temp reserved dec.
+/// Emit expr temp reserved dec as shared native-codegen support.
 /// @internal
 function _expr_temp_reserved_dec(state, reg)
   cnt = _expr_temp_reserved_get(state, reg)
@@ -403,7 +403,7 @@ function _expr_temp_reserved_dec(state, reg)
   return state
 end function
 
-/// Implements sync expr temp root count.
+/// Emit sync expr temp root count as shared native-codegen support.
 /// @internal
 function _sync_expr_temp_root_count(state)
   rec_off = state._current_root_rec_off
@@ -417,7 +417,7 @@ function _sync_expr_temp_root_count(state)
   return state
 end function
 
-/// Implements sync asm before call live.
+/// Emit sync asm before call live as shared native-codegen support.
 /// @internal
 function _sync_asm_before_call_live(state)
   if typeof(state.asm) == "struct" then
@@ -426,7 +426,7 @@ function _sync_asm_before_call_live(state)
   return state
 end function
 
-/// Implements imports get funcs.
+/// Emit imports get funcs as shared native-codegen support.
 /// @internal
 function _imports_get_funcs(imports, dll)
   if typeof(imports) != "array" or len(imports) <= 0 then return [] end if
@@ -440,7 +440,7 @@ function _imports_get_funcs(imports, dll)
   return []
 end function
 
-/// Implements imports set funcs.
+/// Emit imports set funcs as shared native-codegen support.
 /// @internal
 function _imports_set_funcs(imports, dll, funcs)
   if typeof(imports) != "array" then imports = [] end if
@@ -454,7 +454,7 @@ function _imports_set_funcs(imports, dll, funcs)
   return imports +[NamedArray(dll, funcs)]
 end function
 
-/// Implements seed rdata.
+/// Emit seed rdata as shared native-codegen support.
 /// @internal
 function _seed_rdata(cg)
   cg.rdata = d.rdata_add_bytes(cg.rdata, "nl", bytes("\n"))
@@ -514,7 +514,7 @@ function _seed_rdata(cg)
   return cg
 end function
 
-/// Implements seed data.
+/// Emit seed data as shared native-codegen support.
 /// @internal
 function _seed_data(cg)
   cg.data = d.data_add_u64(cg.data, "dbg_loc_script", t.enc_void())
@@ -563,7 +563,7 @@ function _seed_data(cg)
   return cg
 end function
 
-/// Implements cg core new.
+/// Emit cg core new as shared native-codegen support.
 /// @param source Source value to process.
 /// @param filename Value supplied for `filename`.
 /// @param import_aliases Value supplied for `import_aliases`.
@@ -704,7 +704,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   return cg
 end function
 
-/// Implements cg core init.
+/// Emit cg core init as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function cg_core_init(state)
   return state
@@ -716,7 +716,7 @@ function __init__(state)
   return cg_core_init(state)
 end function
 
-/// Implements pretty script.
+/// Emit pretty script as shared native-codegen support.
 /// @internal
 function _pretty_script(state, p)
   if typeof(p) != "string" or p == "" then return "<script>" end if
@@ -753,7 +753,7 @@ function _pretty_script(state, p)
   return rp
 end function
 
-/// Implements track call label.
+/// Emit track call label as shared native-codegen support.
 /// @internal
 function _track_call_label(state, lbl)
   if typeof(lbl) != "string" or lbl == "" then return state end if
@@ -762,7 +762,7 @@ function _track_call_label(state, lbl)
   return state
 end function
 
-/// Implements in function.
+/// Emit in function as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function in_function(state)
   return state.in_function
@@ -788,7 +788,7 @@ function add_import_symbol(state, dll, sym)
   return state
 end function
 
-/// Implements import string gt.
+/// Emit import string gt as shared native-codegen support.
 /// @internal
 function _import_string_gt(a, b)
   if typeof(a) != "string" or typeof(b) != "string" then return false end if
@@ -807,7 +807,7 @@ function _import_string_gt(a, b)
   return an > bn
 end function
 
-/// Implements import pair gt.
+/// Emit import pair gt as shared native-codegen support.
 /// @internal
 function _import_pair_gt(a, b)
   if typeof(a) != "array" or len(a) < 2 then return false end if
@@ -824,7 +824,7 @@ function _import_pair_gt(a, b)
   return _import_string_gt(ad, bd)
 end function
 
-/// Implements sort import pairs.
+/// Emit sort import pairs as shared native-codegen support.
 /// @internal
 function _sort_import_pairs(pairs)
   if typeof(pairs) != "array" or len(pairs) <= 1 then return pairs end if
@@ -882,13 +882,13 @@ function _add_extern_imports(state)
   return state
 end function
 
-/// Implements pos.
+/// Emit pos as shared native-codegen support.
 /// @internal
 function _pos(node)
   return t.ast_pos(node)
 end function
 
-/// Implements source for dbg filename.
+/// Emit source for dbg filename as shared native-codegen support.
 /// @internal
 function _source_for_dbg_filename(state, filename)
   if typeof(filename) == "string" and filename != "" then
@@ -907,7 +907,7 @@ function _source_for_dbg_filename(state, filename)
   return ""
 end function
 
-/// Implements line from pos.
+/// Emit line from pos as shared native-codegen support.
 /// @internal
 function _line_from_pos(state, pos, filename)
   source = _source_for_dbg_filename(state, filename)
@@ -945,7 +945,7 @@ function _line_from_pos(state, pos, filename)
   return line
 end function
 
-/// Implements flatten member chain as qualname.
+/// Emit flatten member chain as qualname as shared native-codegen support.
 /// @internal
 function _flatten_member_chain_as_qualname(expr)
   if t.ast_is_node(expr) == false then return 0 end if
@@ -960,7 +960,7 @@ function _flatten_member_chain_as_qualname(expr)
   return 0
 end function
 
-/// Implements apply import alias.
+/// Emit apply import alias as shared native-codegen support.
 /// @internal
 function _apply_import_alias(state, qname)
   if typeof(qname) != "string" then return qname end if
@@ -1001,14 +1001,14 @@ function _apply_import_alias(state, qname)
   return qname
 end function
 
-/// Implements current file package prefix.
+/// Emit current file package prefix as shared native-codegen support.
 /// @internal
 function _current_file_package_prefix(state)
   if typeof(state.current_file_prefix) == "string" then return state.current_file_prefix end if
   return ""
 end function
 
-/// Implements current function prefix.
+/// Emit current function prefix as shared native-codegen support.
 /// @internal
 function _current_function_prefix(state)
   if typeof(state.current_qname_prefix) == "string" and state.current_qname_prefix != "" then
@@ -1017,7 +1017,7 @@ function _current_function_prefix(state)
   return _current_file_package_prefix(state)
 end function
 
-/// Implements qualify identifier.
+/// Emit qualify identifier as shared native-codegen support.
 /// @internal
 function _qualify_identifier(state, name, node, kind)
   if typeof(name) != "string" then return name end if
@@ -1119,7 +1119,7 @@ function release_expr_temps(state, size)
   return state
 end function
 
-/// Implements spill live expr value temps.
+/// Emit spill live expr value temps as shared native-codegen support.
 /// @internal
 function _spill_live_expr_value_temps(state)
   if typeof(state._expr_temp_reg_live) != "array" or len(state._expr_temp_reg_live) <= 0 then return state end if
@@ -1134,7 +1134,7 @@ function _spill_live_expr_value_temps(state)
   return state
 end function
 
-/// Implements reserve expr temp regs.
+/// Emit reserve expr temp regs as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param regs Value supplied for `regs`.
 function reserve_expr_temp_regs(state, regs)
@@ -1210,7 +1210,7 @@ function alloc_expr_value_temp(state, prefer_reg)
   return tmp
 end function
 
-/// Implements expr value temp store rax.
+/// Emit expr value temp store rax as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param tmp Value supplied for `tmp`.
 function expr_value_temp_store_rax(state, tmp)
@@ -1224,7 +1224,7 @@ function expr_value_temp_store_rax(state, tmp)
   return state
 end function
 
-/// Implements expr value temp store reg.
+/// Emit expr value temp store reg as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param tmp Value supplied for `tmp`.
 /// @param reg Value supplied for `reg`.
@@ -1241,7 +1241,7 @@ function expr_value_temp_store_reg(state, tmp, reg)
   return state
 end function
 
-/// Implements expr value temp load.
+/// Emit expr value temp load as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param dst Value supplied for `dst`.
 /// @param tmp Value supplied for `tmp`.
@@ -1258,7 +1258,7 @@ function expr_value_temp_load(state, dst, tmp)
   return state
 end function
 
-/// Implements expr value temp offset.
+/// Emit expr value temp offset as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param tmp Value supplied for `tmp`.
 function expr_value_temp_offset(state, tmp)
@@ -1302,7 +1302,7 @@ function push_cold_block_scope(state)
   return state
 end function
 
-/// Implements cold block frame items.
+/// Emit cold block frame items as shared native-codegen support.
 /// @internal
 function _cold_block_frame_items(frame)
   if typeof(frame) == "struct" and typeof(frame.chunks) == "array" then
@@ -1312,7 +1312,7 @@ function _cold_block_frame_items(frame)
   return []
 end function
 
-/// Implements pop cold block scope.
+/// Emit pop cold block scope as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function pop_cold_block_scope(state)
   if typeof(state._cold_block_stack) != "array" or len(state._cold_block_stack) <= 0 then return [] end if
@@ -1329,7 +1329,7 @@ function pop_cold_block_scope(state)
   return outv
 end function
 
-/// Implements defer cold block.
+/// Emit defer cold block as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param label Value supplied for `label`.
 /// @param emitter Value supplied for `emitter`.
@@ -1352,7 +1352,7 @@ function defer_cold_block(state, label, emitter)
   return true
 end function
 
-/// Runs emit deferred cold blocks.
+/// Emit emit deferred cold blocks as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function emit_deferred_cold_blocks(state)
   if typeof(state._cold_block_stack) != "array" or len(state._cold_block_stack) <= 0 then return state end if
@@ -1372,7 +1372,7 @@ function emit_deferred_cold_blocks(state)
   return state
 end function
 
-/// Implements ensure var.
+/// Emit ensure var as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 function ensure_var(state, name)
@@ -1380,7 +1380,7 @@ function ensure_var(state, name)
   return name
 end function
 
-/// Implements core error.
+/// Emit core error as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param msg Value supplied for `msg`.
 /// @param node Value supplied for `node`.
@@ -1390,7 +1390,7 @@ function core_error(state, msg, node)
   return msg
 end function
 
-/// Runs emit dbg line.
+/// Emit emit dbg line as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param node Value supplied for `node`.
 function emit_dbg_line(state, node)
@@ -1429,7 +1429,7 @@ function emit_dbg_line(state, node)
   return state
 end function
 
-/// Runs emit load var.
+/// Emit emit load var as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param node Value supplied for `node`.
@@ -1437,7 +1437,7 @@ function emit_load_var(state, name, node)
   return scope.emit_load_var_scoped(state, name)
 end function
 
-/// Runs emit store var.
+/// Emit emit store var as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param name Name of the requested item.
 /// @param node Value supplied for `node`.
@@ -1445,7 +1445,7 @@ function emit_store_var(state, name, node)
   return scope.emit_store_var_scoped(state, name, node)
 end function
 
-/// Runs emit writefile.
+/// Emit emit writefile as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param buf_label Value supplied for `buf_label`.
 /// @param length Number of elements or bytes to process.
@@ -1455,7 +1455,7 @@ function emit_writefile(state, buf_label, length)
   return emit_writefile_ptr_len(state)
 end function
 
-/// Runs emit writefile ptr len.
+/// Emit emit writefile ptr len as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function emit_writefile_ptr_len(state)
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rbx")
@@ -1466,7 +1466,7 @@ function emit_writefile_ptr_len(state)
   return state
 end function
 
-/// Runs emit writefile ptr len stderr.
+/// Emit emit writefile ptr len stderr as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function emit_writefile_ptr_len_stderr(state)
   state.asm = a.mov_r64_r64(state.asm, "r10", "rdx")
@@ -1485,7 +1485,7 @@ function emit_writefile_ptr_len_stderr(state)
   return state
 end function
 
-/// Runs emit writefile stderr.
+/// Emit emit writefile stderr as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param buf_label Value supplied for `buf_label`.
 /// @param length Number of elements or bytes to process.
@@ -1495,7 +1495,7 @@ function emit_writefile_stderr(state, buf_label, length)
   return emit_writefile_ptr_len_stderr(state)
 end function
 
-/// Runs emit normalize xmm0 to value.
+/// Emit emit normalize xmm0 to value as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function emit_normalize_xmm0_to_value(state)
   lid = new_label_id(state)
@@ -1529,7 +1529,7 @@ function emit_normalize_xmm0_to_value(state)
   return state
 end function
 
-/// Runs emit force xmm0 to float value.
+/// Emit emit force xmm0 to float value as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function emit_force_xmm0_to_float_value(state)
   lid = new_label_id(state)
@@ -1550,7 +1550,7 @@ function emit_force_xmm0_to_float_value(state)
   return state
 end function
 
-/// Runs emit to double xmm.
+/// Emit emit to double xmm as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param xmm Value supplied for `xmm`.
 /// @param fail_label Value supplied for `fail_label`.
@@ -1606,7 +1606,7 @@ function emit_to_double_xmm(state, xmm, fail_label)
   return state
 end function
 
-/// Runs emit jmp if false rax.
+/// Emit emit jmp if false rax as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param false_label Value supplied for `false_label`.
 function emit_jmp_if_false_rax(state, false_label)
@@ -1680,14 +1680,14 @@ function emit_jmp_if_false_rax(state, false_label)
   return state
 end function
 
-/// Runs emit struct field index dispatch.
+/// Emit emit struct field index dispatch as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param field Value supplied for `field`.
 function emit_struct_field_index_dispatch(state, field)
   return 0
 end function
 
-/// Runs emit struct field dispatch.
+/// Emit emit struct field dispatch as shared native-codegen support.
 /// @param state Value supplied for `state`.
 /// @param field Value supplied for `field`.
 function emit_struct_field_dispatch(state, field)
@@ -1704,7 +1704,7 @@ function reset_helper_tracking(state)
   return state
 end function
 
-/// Implements starts with.
+/// Emit starts with as shared native-codegen support.
 /// @internal
 function _starts_with(text, prefix)
   if typeof(text) != "string" then return false end if
@@ -1717,7 +1717,7 @@ function _starts_with(text, prefix)
   return true
 end function
 
-/// Implements arr contains.
+/// Emit arr contains as shared native-codegen support.
 /// @internal
 function _arr_contains(arr, value)
   if typeof(arr) != "array" or len(arr) <= 0 then return false end if
@@ -1727,7 +1727,7 @@ function _arr_contains(arr, value)
   return false
 end function
 
-/// Implements str less ascii.
+/// Emit str less ascii as shared native-codegen support.
 /// @internal
 function _str_less_ascii(a, b)
   if typeof(a) != "string" then a = "" + a end if
@@ -1758,7 +1758,7 @@ function _is_internal_helper_label(lbl)
   return true
 end function
 
-/// Implements helper supported.
+/// Emit helper supported as shared native-codegen support.
 /// @internal
 function _helper_supported(lbl)
   if lbl == "fn_cpu_init" then return true end if
@@ -1876,7 +1876,7 @@ function _helper_supported(lbl)
   return false
 end function
 
-/// Runs emit helper by label group0.
+/// Emit emit helper by label group0 as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_group0(state, lbl)
   if lbl == "fn_cpu_init" then return rt.emit_cpu_init_function(state) end if
@@ -1929,7 +1929,7 @@ function _emit_helper_by_label_group0(state, lbl)
   return state
 end function
 
-/// Runs emit helper by label group1.
+/// Emit emit helper by label group1 as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_group1(state, lbl)
   if lbl == "fn_bytes_startswith" then return rt.emit_bytes_startswith_function(state) end if
@@ -1945,7 +1945,7 @@ function _emit_helper_by_label_group1(state, lbl)
   return state
 end function
 
-/// Runs emit helper by label group2.
+/// Emit emit helper by label group2 as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_group2(state, lbl)
   if lbl == "fn_string_endswith" then return bal.emit_string_endswith_function(state) end if
@@ -1961,7 +1961,7 @@ function _emit_helper_by_label_group2(state, lbl)
   return state
 end function
 
-/// Runs emit helper by label group3.
+/// Emit emit helper by label group3 as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_group3(state, lbl)
   if lbl == "fn_string_join" then return bal.emit_string_join_function(state) end if
@@ -1977,7 +1977,7 @@ function _emit_helper_by_label_group3(state, lbl)
   return state
 end function
 
-/// Runs emit helper by label group4.
+/// Emit emit helper by label group4 as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_group4(state, lbl)
   if lbl == "fn_typeName" then return rt.emit_typeName_function(state) end if
@@ -1993,7 +1993,7 @@ function _emit_helper_by_label_group4(state, lbl)
   return state
 end function
 
-/// Runs emit helper by label group5.
+/// Emit emit helper by label group5 as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_group5(state, lbl)
   if lbl == "fn_builtin_input" then return rt.emit_builtin_input_function(state) end if
@@ -2010,7 +2010,7 @@ function _emit_helper_by_label_group5(state, lbl)
   return state
 end function
 
-/// Runs emit helper by label group6.
+/// Emit emit helper by label group6 as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_group6(state, lbl)
   if lbl == "fn_callStats" then return rt.emit_callStats_function(state) end if
@@ -2024,7 +2024,7 @@ function _emit_helper_by_label_group6(state, lbl)
   return state
 end function
 
-/// Runs emit helper by label other.
+/// Emit emit helper by label other as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_other(state, lbl)
   if lbl == "fn_input" then return bal.emit_input_function(state) end if
@@ -2036,7 +2036,7 @@ function _emit_helper_by_label_other(state, lbl)
   return state
 end function
 
-/// Runs emit helper by label.
+/// Emit emit helper by label as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label(state, lbl)
   rank = _helper_rank(lbl)
@@ -2050,7 +2050,7 @@ function _emit_helper_by_label(state, lbl)
   return _emit_helper_by_label_other(state, lbl)
 end function
 
-/// Implements helper rank.
+/// Emit helper rank as shared native-codegen support.
 /// @internal
 function _helper_rank(lbl)
   ordered = [
@@ -2086,7 +2086,7 @@ function _helper_rank(lbl)
   return 1 << 20
 end function
 
-/// Implements collect pending helpers.
+/// Emit collect pending helpers as shared native-codegen support.
 /// @internal
 function _collect_pending_helpers(state, emitted_index)
   vals = []
@@ -2119,7 +2119,7 @@ function _collect_pending_helpers(state, emitted_index)
   return vals
 end function
 
-/// Runs emit used helpers.
+/// Emit emit used helpers as shared native-codegen support.
 /// @param state Value supplied for `state`.
 function emit_used_helpers(state)
   if typeof(state.emitted_helpers) != "array" then state.emitted_helpers = [] end if

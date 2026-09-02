@@ -23,7 +23,7 @@ Represents namespace decl.
 _filename
 ```
 
-Stores the filename member of `NamespaceDecl`.
+Filename associated with `NamespaceDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L381)
@@ -35,7 +35,7 @@ Stores the filename member of `NamespaceDecl`.
 _pos
 ```
 
-Stores the pos member of `NamespaceDecl`.
+Pos associated with `NamespaceDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L379)
@@ -47,7 +47,7 @@ Stores the pos member of `NamespaceDecl`.
 name
 ```
 
-Stores the name member of `NamespaceDecl`.
+Name associated with `NamespaceDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L377)
@@ -59,7 +59,7 @@ Stores the name member of `NamespaceDecl`.
 node_kind
 ```
 
-Stores the node kind member of `NamespaceDecl`.
+Node kind associated with `NamespaceDecl`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L375)

@@ -19,5 +19,5 @@ limitations under the License.
 
 package mlc.__init__
 
-/// Stores the version.
+/// Track version.
 const VERSION = "bootstrap"

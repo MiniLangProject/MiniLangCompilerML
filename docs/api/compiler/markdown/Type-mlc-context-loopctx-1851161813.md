@@ -23,7 +23,7 @@ Legacy loop-only context retained for compatible helper signatures.
 break_label
 ```
 
-Stores the break label member of `LoopCtx`.
+Break label associated with `LoopCtx`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L37)
@@ -35,7 +35,7 @@ Stores the break label member of `LoopCtx`.
 continue_label
 ```
 
-Stores the continue label member of `LoopCtx`.
+Continue label associated with `LoopCtx`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/context.ml#L39)

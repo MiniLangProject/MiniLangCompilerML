@@ -23,7 +23,7 @@ Normalized native ABI declarations used by validation and import planning.
 is_out
 ```
 
-Stores the is out member of `ExternSigParam`.
+Whether `ExternSigParam.is_out` indicates out.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L249)
@@ -35,7 +35,7 @@ Stores the is out member of `ExternSigParam`.
 name
 ```
 
-Stores the name member of `ExternSigParam`.
+Name associated with `ExternSigParam`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L245)
@@ -47,7 +47,7 @@ Stores the name member of `ExternSigParam`.
 ty
 ```
 
-Stores the ty member of `ExternSigParam`.
+Ty associated with `ExternSigParam`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L247)

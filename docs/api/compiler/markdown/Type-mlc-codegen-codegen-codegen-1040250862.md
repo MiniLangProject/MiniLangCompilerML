@@ -23,7 +23,7 @@ Facade module that mirrors the Python `Codegen` composition surface. The actual 
 state
 ```
 
-Stores the state member of `Codegen`.
+State associated with `Codegen`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L36)

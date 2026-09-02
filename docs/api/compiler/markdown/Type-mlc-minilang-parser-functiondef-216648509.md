@@ -23,7 +23,7 @@ Represents function def.
 _filename
 ```
 
-Stores the filename member of `FunctionDef`.
+Filename associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L573)
@@ -35,7 +35,7 @@ Stores the filename member of `FunctionDef`.
 _ml_boxed
 ```
 
-Stores the ml boxed member of `FunctionDef`.
+Ml boxed associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L561)
@@ -47,7 +47,7 @@ Stores the ml boxed member of `FunctionDef`.
 _ml_capture_depth
 ```
 
-Stores the ml capture depth member of `FunctionDef`.
+Ml capture depth associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L555)
@@ -59,7 +59,7 @@ Stores the ml capture depth member of `FunctionDef`.
 _ml_capture_index
 ```
 
-Stores the ml capture index member of `FunctionDef`.
+Ml capture index associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L567)
@@ -71,7 +71,7 @@ Stores the ml capture index member of `FunctionDef`.
 _ml_captures
 ```
 
-Stores the ml captures member of `FunctionDef`.
+Ml captures associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L553)
@@ -83,7 +83,7 @@ Stores the ml captures member of `FunctionDef`.
 _ml_env_hop
 ```
 
-Stores the ml env hop member of `FunctionDef`.
+Ml env hop associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L569)
@@ -95,7 +95,7 @@ Stores the ml env hop member of `FunctionDef`.
 _ml_env_index
 ```
 
-Stores the ml env index member of `FunctionDef`.
+Ml env index associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L565)
@@ -107,7 +107,7 @@ Stores the ml env index member of `FunctionDef`.
 _ml_env_slots
 ```
 
-Stores the ml env slots member of `FunctionDef`.
+Ml env slots associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L563)
@@ -119,7 +119,7 @@ Stores the ml env slots member of `FunctionDef`.
 _ml_globals_declared
 ```
 
-Stores the ml globals declared member of `FunctionDef`.
+Ml globals declared associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L551)
@@ -131,7 +131,7 @@ Stores the ml globals declared member of `FunctionDef`.
 _ml_locals
 ```
 
-Stores the ml locals member of `FunctionDef`.
+Ml locals associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L549)
@@ -143,7 +143,7 @@ Stores the ml locals member of `FunctionDef`.
 _ml_nested_functions
 ```
 
-Stores the ml nested functions member of `FunctionDef`.
+Ml nested functions associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L557)
@@ -155,7 +155,7 @@ Stores the ml nested functions member of `FunctionDef`.
 _ml_parent_fn
 ```
 
-Stores the ml parent fn member of `FunctionDef`.
+Ml parent fn associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L559)
@@ -167,7 +167,7 @@ Stores the ml parent fn member of `FunctionDef`.
 _pos
 ```
 
-Stores the pos member of `FunctionDef`.
+Pos associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L571)
@@ -179,7 +179,7 @@ Stores the pos member of `FunctionDef`.
 body
 ```
 
-Stores the body member of `FunctionDef`.
+Body associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L525)
@@ -191,7 +191,7 @@ Stores the body member of `FunctionDef`.
 is_async
 ```
 
-Stores the is async member of `FunctionDef`.
+Whether `FunctionDef.is_async` indicates async.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L545)
@@ -203,7 +203,7 @@ Stores the is async member of `FunctionDef`.
 is_inline
 ```
 
-Stores the is inline member of `FunctionDef`.
+Whether `FunctionDef.is_inline` indicates inline.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L529)
@@ -215,7 +215,7 @@ Stores the is inline member of `FunctionDef`.
 is_iterator
 ```
 
-Stores the is iterator member of `FunctionDef`.
+Whether `FunctionDef.is_iterator` indicates iterator.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L547)
@@ -227,7 +227,7 @@ Stores the is iterator member of `FunctionDef`.
 is_static
 ```
 
-Stores the is static member of `FunctionDef`.
+Whether `FunctionDef.is_static` indicates static.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L527)
@@ -239,7 +239,7 @@ Stores the is static member of `FunctionDef`.
 is_synchronized
 ```
 
-Stores the is synchronized member of `FunctionDef`.
+Whether `FunctionDef.is_synchronized` indicates synchronized.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L531)
@@ -251,7 +251,7 @@ Stores the is synchronized member of `FunctionDef`.
 name
 ```
 
-Stores the name member of `FunctionDef`.
+Name associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L521)
@@ -263,7 +263,7 @@ Stores the name member of `FunctionDef`.
 node_kind
 ```
 
-Stores the node kind member of `FunctionDef`.
+Node kind associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L519)
@@ -275,7 +275,7 @@ Stores the node kind member of `FunctionDef`.
 param_defaults
 ```
 
-Stores the param defaults member of `FunctionDef`.
+Param defaults associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L537)
@@ -287,7 +287,7 @@ Stores the param defaults member of `FunctionDef`.
 param_optional
 ```
 
-Stores the param optional member of `FunctionDef`.
+Param optional associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L535)
@@ -299,7 +299,7 @@ Stores the param optional member of `FunctionDef`.
 param_types
 ```
 
-Stores the param types member of `FunctionDef`.
+Param types associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L533)
@@ -311,7 +311,7 @@ Stores the param types member of `FunctionDef`.
 params
 ```
 
-Stores the params member of `FunctionDef`.
+Params associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L523)
@@ -323,7 +323,7 @@ Stores the params member of `FunctionDef`.
 return_optional
 ```
 
-Stores the return optional member of `FunctionDef`.
+Return optional associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L543)
@@ -335,7 +335,7 @@ Stores the return optional member of `FunctionDef`.
 return_type
 ```
 
-Stores the return type member of `FunctionDef`.
+Return type associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L541)
@@ -347,7 +347,7 @@ Stores the return type member of `FunctionDef`.
 variadic_index
 ```
 
-Stores the variadic index member of `FunctionDef`.
+Variadic index associated with `FunctionDef`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L539)

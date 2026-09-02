@@ -23,7 +23,7 @@ Success/error envelope for command-line manifest expansion.
 args
 ```
 
-Stores the args member of `ProjectExpansion`.
+Args associated with `ProjectExpansion`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L79)
@@ -35,7 +35,7 @@ Stores the args member of `ProjectExpansion`.
 message
 ```
 
-Stores the message member of `ProjectExpansion`.
+Diagnostic message carried by `ProjectExpansion`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L83)
@@ -47,7 +47,7 @@ Stores the message member of `ProjectExpansion`.
 ok
 ```
 
-Stores the ok member of `ProjectExpansion`.
+Whether `ProjectExpansion` represents a successful result.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L77)
@@ -59,7 +59,7 @@ Stores the ok member of `ProjectExpansion`.
 project
 ```
 
-Stores the project member of `ProjectExpansion`.
+Project associated with `ProjectExpansion`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L81)

@@ -23,7 +23,7 @@ Metadata-only first-pass record. Section payloads are copied into their final co
 bss_size
 ```
 
-Stores the bss size member of `MloLayoutScan`.
+Bss size associated with `MloLayoutScan`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L339)
@@ -35,7 +35,7 @@ Stores the bss size member of `MloLayoutScan`.
 data_size
 ```
 
-Stores the data size member of `MloLayoutScan`.
+Data size associated with `MloLayoutScan`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L337)
@@ -47,7 +47,7 @@ Stores the data size member of `MloLayoutScan`.
 entry_label
 ```
 
-Stores the entry label member of `MloLayoutScan`.
+Entry label associated with `MloLayoutScan`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L331)
@@ -59,7 +59,7 @@ Stores the entry label member of `MloLayoutScan`.
 imports
 ```
 
-Stores the imports member of `MloLayoutScan`.
+Imports associated with `MloLayoutScan`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L345)
@@ -71,7 +71,7 @@ Stores the imports member of `MloLayoutScan`.
 private_label_count
 ```
 
-Stores the private label count member of `MloLayoutScan`.
+Private label count associated with `MloLayoutScan`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L343)
@@ -83,7 +83,7 @@ Stores the private label count member of `MloLayoutScan`.
 public_label_count
 ```
 
-Stores the public label count member of `MloLayoutScan`.
+Public label count associated with `MloLayoutScan`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L341)
@@ -95,7 +95,7 @@ Stores the public label count member of `MloLayoutScan`.
 rdata_size
 ```
 
-Stores the rdata size member of `MloLayoutScan`.
+Rdata size associated with `MloLayoutScan`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L335)
@@ -107,7 +107,7 @@ Stores the rdata size member of `MloLayoutScan`.
 text_size
 ```
 
-Stores the text size member of `MloLayoutScan`.
+Text size associated with `MloLayoutScan`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L333)

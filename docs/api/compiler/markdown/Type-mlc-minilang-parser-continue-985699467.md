@@ -23,7 +23,7 @@ Represents continue.
 _filename
 ```
 
-Stores the filename member of `Continue`.
+Filename associated with `Continue`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L703)
@@ -35,7 +35,7 @@ Stores the filename member of `Continue`.
 _pos
 ```
 
-Stores the pos member of `Continue`.
+Pos associated with `Continue`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L701)
@@ -47,7 +47,7 @@ Stores the pos member of `Continue`.
 node_kind
 ```
 
-Stores the node kind member of `Continue`.
+Node kind associated with `Continue`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L699)

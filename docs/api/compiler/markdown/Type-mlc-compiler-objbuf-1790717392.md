@@ -23,7 +23,7 @@ Capacity-backed binary writer and reader for the .mlo file format.
 parts
 ```
 
-Stores the parts member of `ObjBuf`.
+Parts associated with `ObjBuf`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L371)
@@ -35,7 +35,7 @@ Stores the parts member of `ObjBuf`.
 total
 ```
 
-Stores the total member of `ObjBuf`.
+Total associated with `ObjBuf`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L373)

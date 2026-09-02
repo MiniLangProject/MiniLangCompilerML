@@ -23,7 +23,7 @@ Immutable section boundary used while one logical monolithic stream is spilled i
 bss_label_count
 ```
 
-Stores the bss label count member of `MloStateCheckpoint`.
+Bss label count associated with `MloStateCheckpoint`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L365)
@@ -35,7 +35,7 @@ Stores the bss label count member of `MloStateCheckpoint`.
 bss_size
 ```
 
-Stores the bss size member of `MloStateCheckpoint`.
+Bss size associated with `MloStateCheckpoint`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L355)
@@ -47,7 +47,7 @@ Stores the bss size member of `MloStateCheckpoint`.
 data_label_count
 ```
 
-Stores the data label count member of `MloStateCheckpoint`.
+Data label count associated with `MloStateCheckpoint`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L361)
@@ -59,7 +59,7 @@ Stores the data label count member of `MloStateCheckpoint`.
 data_patch_count
 ```
 
-Stores the data patch count member of `MloStateCheckpoint`.
+Data patch count associated with `MloStateCheckpoint`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L363)
@@ -71,7 +71,7 @@ Stores the data patch count member of `MloStateCheckpoint`.
 data_used
 ```
 
-Stores the data used member of `MloStateCheckpoint`.
+Data used associated with `MloStateCheckpoint`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L353)
@@ -83,7 +83,7 @@ Stores the data used member of `MloStateCheckpoint`.
 rdata_label_count
 ```
 
-Stores the rdata label count member of `MloStateCheckpoint`.
+Rdata label count associated with `MloStateCheckpoint`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L357)
@@ -95,7 +95,7 @@ Stores the rdata label count member of `MloStateCheckpoint`.
 rdata_patch_count
 ```
 
-Stores the rdata patch count member of `MloStateCheckpoint`.
+Rdata patch count associated with `MloStateCheckpoint`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L359)
@@ -107,7 +107,7 @@ Stores the rdata patch count member of `MloStateCheckpoint`.
 rdata_used
 ```
 
-Stores the rdata used member of `MloStateCheckpoint`.
+Rdata used associated with `MloStateCheckpoint`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L351)

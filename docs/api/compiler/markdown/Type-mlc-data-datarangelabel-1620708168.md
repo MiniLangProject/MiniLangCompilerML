@@ -23,7 +23,7 @@ Named offset and byte length into read-only data.
 length
 ```
 
-Stores the length member of `DataRangeLabel`.
+Length associated with `DataRangeLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L39)
@@ -35,7 +35,7 @@ Stores the length member of `DataRangeLabel`.
 name
 ```
 
-Stores the name member of `DataRangeLabel`.
+Name associated with `DataRangeLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L35)
@@ -47,7 +47,7 @@ Stores the name member of `DataRangeLabel`.
 offset
 ```
 
-Stores the offset member of `DataRangeLabel`.
+Offset associated with `DataRangeLabel`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L37)

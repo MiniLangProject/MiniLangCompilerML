@@ -23,7 +23,7 @@ Compiler-internal expression used while emitting deferred calls.
 _filename
 ```
 
-Stores the filename member of `DeferredCapture`.
+Filename associated with `DeferredCapture`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L353)
@@ -35,7 +35,7 @@ Stores the filename member of `DeferredCapture`.
 _pos
 ```
 
-Stores the pos member of `DeferredCapture`.
+Pos associated with `DeferredCapture`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L351)
@@ -47,7 +47,7 @@ Stores the pos member of `DeferredCapture`.
 node_kind
 ```
 
-Stores the node kind member of `DeferredCapture`.
+Node kind associated with `DeferredCapture`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L347)
@@ -59,7 +59,7 @@ Stores the node kind member of `DeferredCapture`.
 offset
 ```
 
-Stores the offset member of `DeferredCapture`.
+Offset associated with `DeferredCapture`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L349)

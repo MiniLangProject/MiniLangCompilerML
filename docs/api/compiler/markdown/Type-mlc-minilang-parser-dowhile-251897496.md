@@ -23,7 +23,7 @@ Represents do while.
 _filename
 ```
 
-Stores the filename member of `DoWhile`.
+Filename associated with `DoWhile`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L729)
@@ -35,7 +35,7 @@ Stores the filename member of `DoWhile`.
 _pos
 ```
 
-Stores the pos member of `DoWhile`.
+Pos associated with `DoWhile`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L727)
@@ -47,7 +47,7 @@ Stores the pos member of `DoWhile`.
 body
 ```
 
-Stores the body member of `DoWhile`.
+Body associated with `DoWhile`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L723)
@@ -59,7 +59,7 @@ Stores the body member of `DoWhile`.
 cond
 ```
 
-Stores the cond member of `DoWhile`.
+Cond associated with `DoWhile`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L725)
@@ -71,7 +71,7 @@ Stores the cond member of `DoWhile`.
 node_kind
 ```
 
-Stores the node kind member of `DoWhile`.
+Node kind associated with `DoWhile`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L721)

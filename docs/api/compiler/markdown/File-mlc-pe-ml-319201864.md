@@ -21,7 +21,7 @@ Reachable from entry: **yes**
 function _bytes_from_array(arr)
 ```
 
-Implements bytes from array.
+Emit bytes from array in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -37,7 +37,7 @@ Implements bytes from array.
 function _bytes_ljust(b, size)
 ```
 
-Implements bytes ljust.
+Emit bytes ljust in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -54,7 +54,7 @@ Implements bytes ljust.
 function _bytes_pad_to(b, size)
 ```
 
-Implements bytes pad to.
+Emit bytes pad to in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -71,7 +71,7 @@ Implements bytes pad to.
 function _bytes_write_at(dst, offset, src)
 ```
 
-Implements bytes write at.
+Emit bytes write at in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -106,7 +106,7 @@ Returns find section by name.
 function _imports_get_funcs(imports, dll)
 ```
 
-Implements imports get funcs.
+Emit imports get funcs in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -123,7 +123,7 @@ Implements imports get funcs.
 function _named_get(arr, name, default_value)
 ```
 
-Implements named get.
+Emit named get in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -141,7 +141,7 @@ Implements named get.
 function _named_set(arr, name, value)
 ```
 
-Implements named set.
+Emit named set in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -159,7 +159,7 @@ Implements named set.
 function _next_section_raw_addr(pe)
 ```
 
-Implements next section raw addr.
+Emit next section raw addr in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -175,7 +175,7 @@ Implements next section raw addr.
 function _section_name_bytes(name)
 ```
 
-Implements section name bytes.
+Emit section name bytes in the Windows PE image.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -245,7 +245,7 @@ Build a deterministic .idata section and resolved IAT symbol table.
 const IMAGE_SCN_CNT_CODE = 32
 ```
 
-Stores the image scn cnt code.
+Track image scn cnt code.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L29)
@@ -257,7 +257,7 @@ Stores the image scn cnt code.
 const IMAGE_SCN_CNT_INITIALIZED_DATA = 64
 ```
 
-Stores the image scn cnt initialized data.
+Track image scn cnt initialized data.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L31)
@@ -269,7 +269,7 @@ Stores the image scn cnt initialized data.
 const IMAGE_SCN_CNT_UNINITIALIZED_DATA = 128
 ```
 
-Stores the image scn cnt uninitialized data.
+Track image scn cnt uninitialized data.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L33)
@@ -282,7 +282,7 @@ Stores the image scn cnt uninitialized data.
 const KERNEL32 = "kernel32.dll"
 ```
 
-Stores the kernel32.
+Track kernel32.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L24)
@@ -310,7 +310,7 @@ Assign deterministic virtual and file offsets to every section.
 const MSVCRT = "msvcrt.dll"
 ```
 
-Stores the msvcrt.
+Track msvcrt.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pe.ml#L26)
