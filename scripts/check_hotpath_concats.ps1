@@ -206,7 +206,7 @@ if (-not $decodeString.Success) {
 $projectSource = Get-Content -LiteralPath (Join-Path $root "mlc\project.ml") -Raw
 $collectSources = [Regex]::Match(
   $projectSource,
-  "(?ms)^function\s+_collect_ml_files\s*\([^\r\n]*\).*?^end function\s*$"
+  "(?ms)^function\s+_collect_ml_files_inner\s*\([^\r\n]*\).*?^end function\s*$"
 )
 if (-not $collectSources.Success) {
   $failures += "mlc\project.ml: project source collector was not found"

@@ -301,6 +301,8 @@ function _test_project_manifest(compiler_path, repo_root)
   source_dir = _artifact_path("tmp")
   source_abs = _path_join(source_dir, "_rt_project_source.ml")
   shared_abs = _artifact_path("_rt_project_shared.ml")
+  linked_target_abs = _artifact_path("_rt_project_link_target")
+  linked_dir_abs = _path_join(source_dir, "linked-source")
   output_abs = _artifact_path("_rt_project_output.exe")
   cache_abs = _artifact_path("_rt_project_cache")
   if fs.exists(cache_abs) and _wsystem("rmdir /s /q " + _q(cache_abs)) != 0 then
@@ -309,6 +311,14 @@ function _test_project_manifest(compiler_path, repo_root)
   end if
   if fs.exists(source_dir) == false and _wsystem("mkdir " + _q(source_dir)) != 0 then
     print "[FAIL] " + name + " (could not create source fixture directory)"
+    return false
+  end if
+  if fs.exists(linked_dir_abs) and _wsystem("rmdir " + _q(linked_dir_abs)) != 0 then
+    print "[FAIL] " + name + " (could not reset source junction)"
+    return false
+  end if
+  if fs.exists(linked_target_abs) and _wsystem("rmdir /s /q " + _q(linked_target_abs)) != 0 then
+    print "[FAIL] " + name + " (could not reset junction target)"
     return false
   end if
   manifest_text = "[project]\nentry = \"tmp/_rt_project_source.ml\"\noutput = \"_rt_project_output.exe\"\nobject_pipeline = true\nincremental = true\ncache_dir = \"_rt_project_cache\"\ncompiler_args = [\"--asm-cols\", \"addr,code\"]\n\n[defines]\nRESULT = 0\n"
@@ -336,6 +346,38 @@ function _test_project_manifest(compiler_path, repo_root)
   if len(state_lines) > 0 then cache_artifact = _path_join(cache_abs, "build." + s.trim(state_lines[0]) + ".exe") end if
   if len(state_lines) < 2 or fs.exists(cache_artifact) == false then
     print "[FAIL] " + name + " (cache publication left incomplete files)"
+    return false
+  end if
+
+  // Broad fingerprint traversal must match Python Path.rglob(): a directory
+  // junction is not followed. Besides avoiding duplicate inputs, this bounds
+  // traversal when a linked tree contains a cycle.
+  initial_digest = s.trim(state_lines[0])
+  if _wsystem("mkdir " + _q(linked_target_abs)) != 0 then
+    print "[FAIL] " + name + " (could not create junction target)"
+    return false
+  end if
+  ignored_source = _path_join(linked_target_abs, "ignored.ml")
+  if typeof(fs.writeAllText(ignored_source, "function ignoredLinkedSource() return 1 end function\n")) == "error" then
+    print "[FAIL] " + name + " (could not write linked source)"
+    return false
+  end if
+  if _wsystem("mklink /J " + _q(linked_dir_abs) + " " + _q(linked_target_abs) + " >nul") != 0 then
+    print "[FAIL] " + name + " (could not create source junction)"
+    return false
+  end if
+  if _wsystem(cmd) != 0 then
+    print "[FAIL] " + name + " (junction-safe rebuild failed)"
+    return false
+  end if
+  linked_state = fs.readAllText(_path_join(cache_abs, "build.state"))
+  linked_lines = s.split(linked_state, "\n")
+  if len(linked_lines) < 1 or s.trim(linked_lines[0]) != initial_digest then
+    print "[FAIL] " + name + " (directory junction changed broad fingerprint)"
+    return false
+  end if
+  if _wsystem("rmdir " + _q(linked_dir_abs)) != 0 then
+    print "[FAIL] " + name + " (could not remove source junction)"
     return false
   end if
 

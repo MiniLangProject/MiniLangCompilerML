@@ -4337,6 +4337,7 @@ function _emit_expr_call(state, expr)
 
       fid_th = _next_lid(state)
       l_fail_th = "thread_method_fail_" + fid_th
+      l_bad_timeout_th = "thread_method_bad_timeout_" + fid_th
       l_done_th = "thread_method_done_" + fid_th
       state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base_th)
       state.asm = a.mov_r64_r64(state.asm, "r11", "rcx")
@@ -4365,13 +4366,20 @@ function _emit_expr_call(state, expr)
           state.asm = a.mov_r64_r64(state.asm, "r11", "rdx")
           state.asm = a.and_r64_imm(state.asm, "r11", 7)
           state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_INT)
-          state.asm = a.jcc(state.asm, "ne", l_fail_th)
+          state.asm = a.jcc(state.asm, "ne", l_bad_timeout_th)
           state.asm = a.sar_r64_imm8(state.asm, "rdx", 3)
+          state.asm = a.cmp_r64_imm(state.asm, "rdx", 0)
+          state.asm = a.jcc(state.asm, "l", l_bad_timeout_th)
+          state.asm = a.cmp_r64_imm(state.asm, "rdx", 0x7FFFFFFF)
+          state.asm = a.jcc(state.asm, "g", l_bad_timeout_th)
         else
           state.asm = a.mov_r32_imm32(state.asm, "edx", 0xFFFFFFFF)
         end if
       end if
       state.asm = a.call(state.asm, helper_th)
+      state.asm = a.jmp(state.asm, l_done_th)
+      state.asm = a.mark(state.asm, l_bad_timeout_th)
+      state = _emit_make_error_const(state, c.ERR_CALL_NOT_CALLABLE, "Thread.Join timeout must be an integer in range 0..2147483647")
       state.asm = a.jmp(state.asm, l_done_th)
       state.asm = a.mark(state.asm, l_fail_th)
       state = _emit_make_error_const(state, c.ERR_METHOD_NOT_FOUND, "No matching Thread method '" + mname_th + "' for receiver")
@@ -4744,15 +4752,22 @@ function _emit_expr_call(state, expr)
     end if
     state = cg_emit_expr(state, call_args[0])
     lid_sleep = _next_lid(state)
-    l_ok_sleep = "thsleep_ok_" + lid_sleep
+    l_type_ok_sleep = "thsleep_type_ok_" + lid_sleep
+    l_bad_range_sleep = "thsleep_bad_range_" + lid_sleep
+    l_done_sleep = "thsleep_done_" + lid_sleep
     state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
     state.asm = a.and_r64_imm(state.asm, "r11", 7)
     state.asm = a.cmp_r64_imm(state.asm, "r11", c.TAG_INT)
-    state.asm = a.jcc(state.asm, "e", l_ok_sleep)
+    state.asm = a.jcc(state.asm, "e", l_type_ok_sleep)
     state = _emit_make_error_const(state, c.ERR_CALL_NOT_CALLABLE, "threadSleep expects an integer millisecond value")
     state = _emit_auto_errprop(state)
-    state.asm = a.mark(state.asm, l_ok_sleep)
+    state.asm = a.jmp(state.asm, l_done_sleep)
+    state.asm = a.mark(state.asm, l_type_ok_sleep)
     state.asm = a.sar_rax_imm8(state.asm, 3)
+    state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+    state.asm = a.jcc(state.asm, "l", l_bad_range_sleep)
+    state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
+    state.asm = a.jcc(state.asm, "g", l_bad_range_sleep)
     state.asm = a.mov_r32_r32(state.asm, "r12d", "eax")
     threaded_native_sleep = state.native_threads_possible
     if threaded_native_sleep then state.asm = a.call(state.asm, "fn_gc_native_enter") end if
@@ -4761,6 +4776,11 @@ function _emit_expr_call(state, expr)
     state.asm = a.call_rax(state.asm)
     if threaded_native_sleep then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.jmp(state.asm, l_done_sleep)
+    state.asm = a.mark(state.asm, l_bad_range_sleep)
+    state = _emit_make_error_const(state, c.ERR_CALL_NOT_CALLABLE, "threadSleep milliseconds must be in range 0..2147483647")
+    state = _emit_auto_errprop(state)
+    state.asm = a.mark(state.asm, l_done_sleep)
     return state
   end if
 

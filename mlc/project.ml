@@ -12,11 +12,13 @@ import mlc.tools as t
 
 #if TARGET_OS == "windows"
 extern function GetFullPathNameW(path as wstr, bufferLen as u32, buffer as buffer, filePart as ptr) from "kernel32.dll" returns u32
+extern function GetFileAttributesW(path as wstr) from "kernel32.dll" returns u32
 extern function CreateDirectoryW(path as wstr, securityAttributes as ptr) from "kernel32.dll" returns bool
 extern function MoveFileExW(source as wstr, destination as wstr, flags as u32) from "kernel32.dll" returns bool
 #else
 extern function _project_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
 extern function _project_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
+extern function _project_lstat(path as cstr, info as bytes) from "libc.so.6" symbol "lstat" returns i32
 extern function _project_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
 extern function _project_rename(source as cstr, destination as cstr) from "libc.so.6" symbol "rename" returns i32
 #endif
@@ -368,14 +370,31 @@ function _path_key(path)
 #endif
 end function
 
+// Broad source-root discovery deliberately does not descend into directory
+// links. This matches Python Path.rglob(), bounds traversal, and prevents a
+// junction/symlink cycle from manufacturing endlessly different lexical paths.
+// Explicitly imported files still follow their exact path in the second pass.
+function _is_directory_link(path)
+#if TARGET_OS == "windows"
+  attributes = GetFileAttributesW(path)
+  if attributes == 0xFFFFFFFF then return false end if
+  return (attributes & 0x10) != 0 and (attributes & 0x400) != 0
+#else
+  info = bytes(144, 0)
+  if _project_lstat(path, info) != 0 then return false end if
+  mode = _project_u32le(info, 24)
+  return (mode & 61440) == 40960 and fs.isDir(path)
+#endif
+end function
+
 // Collect every MiniLang source below a root once. Indexed directory/file sets
 // make overlapping include roots linear instead of repeatedly deduplicating
 // immutable arrays.
-function _collect_ml_files(path, excluded, collector)
+function _collect_ml_files_inner(path, excluded, collector, follow_directory_link)
   if typeof(path) != "string" or path == "" then return collector end if
-  // fingerprint() canonicalizes every root before traversal. Children joined
-  // below therefore remain absolute; repeating GetFullPathNameW/realpath for
-  // every directory entry adds syscall overhead without changing the key.
+  // fingerprint() makes every root absolute before traversal. Children joined
+  // below therefore remain absolute; repeating lexical normalization for every
+  // directory entry adds syscall overhead without changing the key.
   absolute = path
   path_key = _path_key(absolute)
   if path_key == _path_key(excluded) then return collector end if
@@ -387,6 +406,7 @@ function _collect_ml_files(path, excluded, collector)
     return collector
   end if
   if fs.isDir(absolute) == false then return collector end if
+  if follow_directory_link == false and _is_directory_link(absolute) then return collector end if
   if t.fastmap_has(collector.seen_dirs, path_key) then return collector end if
   collector.seen_dirs = t.fastmap_set(collector.seen_dirs, path_key, 1)
   names = fs.listDir(absolute)
@@ -395,9 +415,15 @@ function _collect_ml_files(path, excluded, collector)
     name = names[i]
     low = s.toLowerAscii(name)
     if low == ".git" or low == "__pycache__" then continue end if
-    collector = _collect_ml_files(_join(absolute, name), excluded, collector)
+    collector = _collect_ml_files_inner(_join(absolute, name), excluded, collector, false)
   end for
   return collector
+end function
+
+function _collect_ml_files(path, excluded, collector)
+  // An explicitly configured root may itself be a link; only links discovered
+  // below that root are skipped, matching Path.rglob's root behavior.
+  return _collect_ml_files_inner(path, excluded, collector, true)
 end function
 
 function _append_unique_path(paths, path)
@@ -584,12 +610,12 @@ end function
 // Two native CRC polynomials plus the exact length provide a fast bounded-
 // memory content identity. Native checksum instructions avoid interpreting
 // every byte in MiniLang when hashing the 50+ MiB compiler executable.
-function _file_content_id(path)
+function _file_content_id_with_buffer(path, buffer)
+  if typeof(buffer) != "bytes" or len(buffer) <= 0 then return error(1, "invalid cache hash buffer") end if
   file = fileio.openRead(path)
   if typeof(file) == "error" then return file end if
   count = fileio.size(file)
   if typeof(count) == "error" then ignored = fileio.close(file); return count end if
-  buffer = bytes(1048576, 0)
   offset = 0
   ieee = 0
   castagnoli = 0
@@ -608,6 +634,12 @@ function _file_content_id(path)
   closed = fileio.close(file)
   if typeof(closed) == "error" then return closed end if
   return count + ":" + _hex32(ieee) + ":" + _hex32(castagnoli)
+end function
+
+// Single-artifact callers retain the simple API; object-set validation reuses
+// one scratch buffer across every file to avoid one 1-MiB allocation per MLO.
+function _file_content_id(path)
+  return _file_content_id_with_buffer(path, bytes(1048576, 0))
 end function
 
 function _valid_project_digest(value)
@@ -760,9 +792,10 @@ function restoreObjects(pb, digest)
   mlo_names = sort.sortBy(mlo_names, _string_less)
   if mlo_count <= 0 or support_count != 1 then return "" end if
   if len(expected_names) != len(mlo_names) then return "" end if
+  content_buffer = bytes(1048576, 0)
   for ni = 0 to len(mlo_names) - 1
     if expected_names[ni] != mlo_names[ni] then return "" end if
-    actual_id = _file_content_id(_join(obj_dir, mlo_names[ni]))
+    actual_id = _file_content_id_with_buffer(_join(obj_dir, mlo_names[ni]), content_buffer)
     if typeof(actual_id) != "string" or actual_id != expected_ids[ni] then return "" end if
   end for
   return obj_dir
@@ -844,6 +877,7 @@ function storeObjects(pb, digest, source_dir)
   support_count = 0
   cached_names = []
   cached_ids = []
+  content_buffer = bytes(1048576, 0)
   for i = 0 to len(names) - 1
     name = names[i]
     if typeof(name) != "string" or s.endsWith(s.toLowerAscii(name), ".mlo") == false then continue end if
@@ -852,7 +886,7 @@ function storeObjects(pb, digest, source_dir)
     destination_path = _join(obj_dir, name)
     copied = fs.copyFile(source_path, destination_path, true)
     if typeof(copied) == "error" then return copied end if
-    content_id = _file_content_id(destination_path)
+    content_id = _file_content_id_with_buffer(destination_path, content_buffer)
     if typeof(content_id) == "error" then return content_id end if
     cached_names = cached_names + [name]
     cached_ids = cached_ids + [content_id]

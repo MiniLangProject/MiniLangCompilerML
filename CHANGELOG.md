@@ -4,6 +4,16 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## Unreleased
 
+- Made native millisecond timeouts portable and explicit: `threadSleep` and
+  `Thread.Join(timeout)` now reject non-integers, negatives and values above
+  `2147483647`; synchronization, socket, time and thread-pool wrappers enforce
+  the same boundary without 32-bit truncation. Linux semaphore releases now
+  validate the native count atomically under a release guard, eliminating a
+  stale-bookkeeping handoff race.
+- Stopped broad project fingerprint traversal at directory symlinks and Windows
+  junctions while preserving explicitly imported linked files. MLO object-set
+  validation now reuses one 1-MiB checksum scratch buffer, removing one such
+  allocation per cached object without changing MLO v2 or target bytes.
 - Made lazy Linux extern resolution an atomic one-owner transition, cached
   failed lookups and closed handles after missing-symbol failures. Concurrent
   first calls no longer repeat `dlopen`/`dlsym` work or leak loader references.
