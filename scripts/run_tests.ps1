@@ -354,6 +354,24 @@ try {
   $results += Invoke-NativeStep "mlfmt modern syntax, idempotence and Windows/Linux parity" "powershell.exe" @(
     "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $formatterRegression,
     "-Compiler", $Compiler, "-ArtifactsDir", $formatterArtifacts)
+  $stdTestSource = Join-Path $Root "tests\std_test_framework.ml"
+  $stdTestExecutable = Join-Path $script:ResolvedArtifactsDir "std_test_framework.exe"
+  $results += Invoke-NativeStep "compile std.test framework" $Compiler (@($stdTestSource, $stdTestExecutable, "-I", $Root) + $effectiveCompilerArgs)
+  if ($results[-1].ExitCode -eq 0) {
+    $results += Invoke-NativeStep "run std.test framework" $stdTestExecutable @()
+  }
+  $mltestScript = Join-Path $ScriptDir "run_mltest.ps1"
+  $mltestArtifacts = Join-Path $script:ResolvedArtifactsDir "mltest"
+  $results += Invoke-NativeStep "mltest tagged discovery and generated runner" "powershell.exe" @(
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $mltestScript,
+    "-TestRoot", (Join-Path $Root "tests\mltest_fixture"), "-Compiler", $Compiler,
+    "-ArtifactsDir", $mltestArtifacts)
+  if ($results[-1].ExitCode -eq 0) {
+    $results += Invoke-ExpectedCompilerFailure "mltest rejects tagged callbacks with parameters" `
+      (Join-Path $mltestArtifacts "mltest.exe") `
+      @("list", (Join-Path $Root "tests\mltest_invalid_fixture")) `
+      "must have zero parameters"
+  }
   $invalidLinuxFfiOutput = Join-Path $script:ResolvedArtifactsDir "invalid-linux-ffi.elf"
   $invalidLinuxFfiArgs = @((Join-Path $Root "tests\linux_windows_ffi_error.ml"), $invalidLinuxFfiOutput,
                            "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
@@ -366,6 +384,18 @@ try {
   # Cross-compile representative static, dynamic-FFI and threaded Linux ELF
   # programs, then execute them through WSL on the Windows test host.
   if ($null -ne (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
+    $linuxMltestImage = Join-Path $script:ResolvedArtifactsDir "mltest.elf"
+    $linuxMltestArgs = @((Join-Path $Root "tools\mltest.ml"), $linuxMltestImage,
+                         "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
+    $results += Invoke-NativeStep "compile Linux mltest discovery" $Compiler $linuxMltestArgs
+    if ($results[-1].ExitCode -eq 0) {
+      $linuxMltestPath = @(& wsl.exe wslpath -a -u ($linuxMltestImage.Replace('\', '/')) 2>&1)[0]
+      $linuxFixturePath = @(& wsl.exe wslpath -a -u ((Join-Path $Root "tests\mltest_fixture").Replace('\', '/')) 2>&1)[0]
+      & wsl.exe chmod +x $linuxMltestPath
+      $results += Invoke-NativeStep "run Linux mltest discovery" "wsl.exe" @(
+        "timeout", "120s", $linuxMltestPath, "list", $linuxFixturePath)
+    }
+
     $linuxCases = @(
       [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
       [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
@@ -379,6 +409,7 @@ try {
       [pscustomobject]@{ Name = "Linux thread lifecycle races"; Source = "thread_lifecycle_races.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux managed thread pool"; Source = "thread_pool.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux standard library"; Source = "stdlib_unit_tests.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux std.test framework"; Source = "std_test_framework.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux threading standard library"; Source = "threading_stdlib.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux platform crypto"; Source = "crypto_cng.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared-value snapshots"; Source = "shared_value.ml"; RunArgs = @() },
