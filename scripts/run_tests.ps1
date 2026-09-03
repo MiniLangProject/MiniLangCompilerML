@@ -349,6 +349,11 @@ try {
 
   $results += Test-LinuxRuntimeBlobLayout "Linux pthread runtime blob layout"
   $results += Invoke-CompilerVersionCheck "compiler version CLI" $Compiler
+  $formatterRegression = Join-Path $ScriptDir "test_formatter.ps1"
+  $formatterArtifacts = Join-Path $script:ResolvedArtifactsDir "formatter"
+  $results += Invoke-NativeStep "mlfmt modern syntax, idempotence and Windows/Linux parity" "powershell.exe" @(
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $formatterRegression,
+    "-Compiler", $Compiler, "-ArtifactsDir", $formatterArtifacts)
   $invalidLinuxFfiOutput = Join-Path $script:ResolvedArtifactsDir "invalid-linux-ffi.elf"
   $invalidLinuxFfiArgs = @((Join-Path $Root "tests\linux_windows_ffi_error.ml"), $invalidLinuxFfiOutput,
                            "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
