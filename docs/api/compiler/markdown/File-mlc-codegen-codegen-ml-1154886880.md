@@ -284,7 +284,7 @@ Coordinate all function entries in the native-codegen pipeline.
 | `cg` | `dynamic` | — | Value supplied for `cg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L529)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L530)
 
 <a id="function-function-mlc-codegen-codegen-clear-program-function-state-function-clear-program-function-state-cg-mlc-codegen-codegen-ml-182666621"></a>
 ### clear_program_function_state
@@ -300,7 +300,7 @@ Drop program-analysis records once every user function has been emitted. Runtime
 | `cg` | `dynamic` | — | Value supplied for `cg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L605)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L606)
 
 <a id="function-function-mlc-codegen-codegen-clone-for-object-function-clone-for-object-cg-seed-runtime-mlc-codegen-codegen-ml-2129459047"></a>
 ### clone_for_object
@@ -317,7 +317,7 @@ Coordinate clone for object in the native-codegen pipeline.
 | `seed_runtime` | `dynamic` | — | Value supplied for `seed_runtime`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L447)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L448)
 
 - [mlc.codegen.codegen.Codegen](Type-mlc-codegen-codegen-codegen-1040250862.md) — struct
 <a id="function-function-mlc-codegen-codegen-emit-entry-object-function-emit-entry-object-cg-module-init-recs-max-call-args-main-main-name-mlc-codegen-codegen-ml-1084668338"></a>
@@ -337,7 +337,7 @@ Coordinate emit entry object in the native-codegen pipeline.
 | `main_name` | `dynamic` | — | Value supplied for `main_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L488)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L489)
 
 <a id="function-function-mlc-codegen-codegen-emit-extern-stubs-function-emit-extern-stubs-cg-mlc-codegen-codegen-ml-59230413"></a>
 ### emit_extern_stubs
@@ -353,7 +353,7 @@ Coordinate emit extern stubs in the native-codegen pipeline.
 | `cg` | `dynamic` | — | Value supplied for `cg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L587)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L588)
 
 <a id="function-function-mlc-codegen-codegen-emit-module-function-entries-function-emit-module-function-entries-cg-entries-start-index-count-analysis-scratch-mlc-codegen-codegen-ml-608867126"></a>
 ### emit_module_function_entries
@@ -373,7 +373,7 @@ Coordinate emit module function entries in the native-codegen pipeline.
 | `analysis_scratch` | `dynamic` | — | Value supplied for `analysis_scratch`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L565)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L566)
 
 <a id="function-function-mlc-codegen-codegen-emit-module-functions-function-emit-module-functions-cg-module-file-mlc-codegen-codegen-ml-1937406640"></a>
 ### emit_module_functions
@@ -390,7 +390,7 @@ Coordinate emit module functions in the native-codegen pipeline.
 | `module_file` | `dynamic` | — | Value supplied for `module_file`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L510)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L511)
 
 <a id="function-function-mlc-codegen-codegen-emit-module-init-object-function-emit-module-init-object-cg-module-rec-mlc-codegen-codegen-ml-168585754"></a>
 ### emit_module_init_object
@@ -407,7 +407,7 @@ Coordinate emit module init object in the native-codegen pipeline.
 | `module_rec` | `dynamic` | — | Value supplied for `module_rec`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L499)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L500)
 
 <a id="function-function-mlc-codegen-codegen-emit-program-function-emit-program-cg-program-mlc-codegen-codegen-ml-1765725431"></a>
 ### emit_program
@@ -440,7 +440,7 @@ Coordinate emit used helpers in the native-codegen pipeline.
 | `cg` | `dynamic` | — | Value supplied for `cg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L596)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L597)
 
 <a id="function-function-mlc-codegen-codegen-enable-call-profile-metadata-function-enable-call-profile-metadata-cg-mlc-codegen-codegen-ml-1239671869"></a>
 ### enable_call_profile_metadata
@@ -472,7 +472,7 @@ Coordinate function entry count in the native-codegen pipeline.
 | `entries` | `dynamic` | — | Value supplied for `entries`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L537)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L538)
 
 <a id="function-function-mlc-codegen-codegen-function-entry-name-function-function-entry-name-entries-node-id-mlc-codegen-codegen-ml-1465721125"></a>
 ### function_entry_name
@@ -489,7 +489,7 @@ Coordinate function entry name in the native-codegen pipeline.
 | `node_id` | `dynamic` | — | Value supplied for `node_id`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L544)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L545)
 
 <a id="function-function-mlc-codegen-codegen-module-function-entries-function-module-function-entries-cg-module-file-mlc-codegen-codegen-ml-22499336"></a>
 ### module_function_entries
@@ -506,7 +506,7 @@ Coordinate module function entries in the native-codegen pipeline.
 | `module_file` | `dynamic` | — | Value supplied for `module_file`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L521)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L522)
 
 <a id="function-function-mlc-codegen-codegen-new-function-analysis-scratch-function-new-function-analysis-scratch-mlc-codegen-codegen-ml-26912121"></a>
 ### new_function_analysis_scratch
@@ -518,7 +518,7 @@ function new_function_analysis_scratch()
 Allocate one reusable workspace for the serial per-function analyses. Object emitters keep it outside cloned codegen state and pass it across fragments.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L549)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L550)
 
 <a id="function-function-mlc-codegen-codegen-newcodegen-function-newcodegen-source-filename-import-aliases-extern-sigs-extern-structs-mlc-codegen-codegen-ml-882947353"></a>
 ### newCodegen
@@ -577,7 +577,7 @@ Coordinate prepare program for objects in the native-codegen pipeline.
 | `program` | `dynamic` | — | Value supplied for `program`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L466)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L467)
 
 <a id="function-function-mlc-codegen-codegen-release-emitted-function-entries-function-release-emitted-function-entries-cg-entries-start-index-count-mlc-codegen-codegen-ml-1994472837"></a>
 ### release_emitted_function_entries
@@ -596,7 +596,7 @@ Releases or resets release emitted function entries.
 | `count` | `dynamic` | — | Number of items to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L578)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L579)
 
 <a id="function-function-mlc-codegen-codegen-release-function-analysis-scratch-function-release-function-analysis-scratch-value-mlc-codegen-codegen-ml-2060943192"></a>
 ### release_function_analysis_scratch
@@ -612,7 +612,7 @@ Releases or resets release function analysis scratch.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L555)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L556)
 
 <a id="function-function-mlc-codegen-codegen-set-target-function-set-target-cg-target-mlc-codegen-codegen-ml-211183960"></a>
 ### set_target
@@ -645,7 +645,7 @@ Start a new serialized text fragment without resetting semantic codegen state. R
 | `cg` | `dynamic` | — | Value supplied for `cg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L455)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L456)
 
 <a id="function-function-mlc-codegen-codegen-track-helper-function-track-helper-cg-label-mlc-codegen-codegen-ml-1967167001"></a>
 ### track_helper
@@ -662,4 +662,4 @@ Coordinate track helper in the native-codegen pipeline.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L615)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen.ml#L616)

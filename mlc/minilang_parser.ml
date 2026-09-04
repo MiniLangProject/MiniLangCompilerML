@@ -918,7 +918,7 @@ _keywords =[
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
 "switch", "case", "default", "struct", "enum", "are", "namespace", "import", "as", "package",
 "extern", "from", "returns", "symbol", "out", "static", "inline", "synchronized", "void", "is", "defer",
-"interface", "implements", "iterator", "yield", "async", "await"
+"interface", "implements", "iterator", "yield", "async", "await", "operator"
 ]
 
 /// Creates new token.
@@ -1525,9 +1525,20 @@ function tokenize(code)
       continue
     end if
 
+    if i + 2 < n then
+      three = ch + code[i + 1] + code[i + 2]
+      if three == "<<=" or three == ">>=" then
+        app = _token_push(token_chunks, token_tail, TK_OP, three, i)
+        token_chunks = app[0]
+        token_tail = app[1]
+        i = i + 3
+        continue
+      end if
+    end if
+
     if i + 1 < n then
       two = ch + code[i + 1]
-      if two == "==" or two == "!=" or two == ">=" or two == "<=" or two == "<<" or two == ">>" or two == "=>" or two == "??" or two == "?." then
+      if two == "==" or two == "!=" or two == ">=" or two == "<=" or two == "<<" or two == ">>" or two == "=>" or two == "??" or two == "?." or two == "+=" or two == "-=" or two == "*=" or two == "/=" or two == "%=" or two == "&=" or two == "|=" or two == "^=" then
         app = _token_push(token_chunks, token_tail, TK_OP, two, i)
         token_chunks = app[0]
         token_tail = app[1]
@@ -2055,6 +2066,52 @@ function _precedence(op)
   return -1
 end function
 
+/// Maps one supported source operator and arity to its reserved static method.
+/// @internal
+function operator_method_name(op_symbol, arity)
+  if arity == 1 then
+    if op_symbol == "+" then return "__operator_pos" end if
+    if op_symbol == "-" then return "__operator_neg" end if
+    if op_symbol == "not" then return "__operator_not" end if
+    if op_symbol == "~" then return "__operator_bitnot" end if
+    return ""
+  end if
+  if arity != 2 then return "" end if
+  if op_symbol == "+" then return "__operator_add" end if
+  if op_symbol == "-" then return "__operator_sub" end if
+  if op_symbol == "*" then return "__operator_mul" end if
+  if op_symbol == "/" then return "__operator_div" end if
+  if op_symbol == "%" then return "__operator_mod" end if
+  if op_symbol == "==" then return "__operator_eq" end if
+  if op_symbol == "!=" then return "__operator_ne" end if
+  if op_symbol == "<" then return "__operator_lt" end if
+  if op_symbol == "<=" then return "__operator_le" end if
+  if op_symbol == ">" then return "__operator_gt" end if
+  if op_symbol == ">=" then return "__operator_ge" end if
+  if op_symbol == "&" then return "__operator_bitand" end if
+  if op_symbol == "|" then return "__operator_bitor" end if
+  if op_symbol == "^" then return "__operator_bitxor" end if
+  if op_symbol == "<<" then return "__operator_shl" end if
+  if op_symbol == ">>" then return "__operator_shr" end if
+  return ""
+end function
+
+/// Returns the binary operator represented by a compound assignment token.
+/// @internal
+function _compound_assignment_base(op_symbol)
+  if op_symbol == "+=" then return "+" end if
+  if op_symbol == "-=" then return "-" end if
+  if op_symbol == "*=" then return "*" end if
+  if op_symbol == "/=" then return "/" end if
+  if op_symbol == "%=" then return "%" end if
+  if op_symbol == "&=" then return "&" end if
+  if op_symbol == "|=" then return "|" end if
+  if op_symbol == "^=" then return "^" end if
+  if op_symbol == "<<=" then return "<<" end if
+  if op_symbol == ">>=" then return ">>" end if
+  return ""
+end function
+
 /// Returns parse expr list.
 /// @internal
 function _parse_expr_list(end_kind)
@@ -2417,6 +2474,14 @@ end function
 /// @internal
 function _parse_unary()
   t = _peek()
+  if _tok_kind_id(t) == TK_OP and _tok_value(t) == "+" then
+    sp = _tok_pos(t)
+    _advance()
+    _skip_newlines()
+    r = _parse_unary()
+    if _has_error() then return end if
+    return Unary("Unary", "+", r, sp, _filename)
+  end if
   if _tok_kind_id(t) == TK_OP and _tok_value(t) == "-" then
     sp = _tok_pos(t)
     _advance()
@@ -3495,6 +3560,106 @@ function _parse_stmt_struct(start_pos, t)
       return
     end if
 
+    if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "operator" then
+      operator_pos = _tok_pos(_advance())
+      operator_inline = false
+      if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "inline" then
+        _advance()
+        operator_inline = true
+      end if
+      operator_tok = _peek()
+      operator_symbol = ""
+      if _tok_kind_id(operator_tok) == TK_OP or (_tok_kind_id(operator_tok) == TK_KW and _tok_value(operator_tok) == "not") then
+        operator_symbol = _tok_value(_advance())
+      else
+        _set_error("Expected a supported operator after 'operator'", _tok_pos(operator_tok))
+        return
+      end if
+      _expect_kind(TK_LPAREN)
+      if _has_error() then return end if
+      operator_params = _parse_parameter_list()
+      if _has_error() then return end if
+      operator_name_base = operator_method_name(operator_symbol, len(operator_params.names))
+      if operator_name_base == "" then
+        _set_error("Operator '" + operator_symbol + "' does not support " + len(operator_params.names) + " operand(s)", operator_pos)
+        return
+      end if
+      if operator_params.variadic_index >= 0 then
+        _set_error("Operator parameters cannot be variadic or have default values", operator_pos)
+        return
+      end if
+      for operator_i = 0 to len(operator_params.names) - 1
+        if typeof(operator_params.types[operator_i]) != "string" or operator_params.optionals[operator_i] then
+          _set_error("Every operator operand requires a non-optional type", operator_pos)
+          return
+        end if
+        if typeof(operator_params.defaults[operator_i]) != "void" then
+          _set_error("Operator parameters cannot be variadic or have default values", operator_pos)
+          return
+        end if
+      end for
+      first_operator_type = operator_params.types[0]
+      first_operator_dot = s.lastIndexOf(first_operator_type, ".")
+      if first_operator_dot >= 0 then first_operator_type = s.substr(first_operator_type, first_operator_dot + 1, len(first_operator_type) - first_operator_dot - 1) end if
+      if first_operator_type != _tok_value(nm) then
+        _set_error("The first operator operand must have the owning struct type '" + _tok_value(nm) + "'", operator_pos)
+        return
+      end if
+      if _tok_kind_id(_peek()) != TK_KW or _tok_value(_peek()) != "returns" then
+        _set_error("Operator declarations require an explicit return type", _tok_pos(_peek()))
+        return
+      end if
+      _advance()
+      operator_return = _parse_type_ref()
+      if _has_error() then return end if
+      if operator_return[1] then
+        _set_error("Operator return types cannot be optional", operator_pos)
+        return
+      end if
+      operator_return_name = s.toLowerAscii(operator_return[0])
+      if operator_return_name == "void" then
+        _set_error("Operator return types cannot be void", operator_pos)
+        return
+      end if
+      if (operator_symbol == "==" or operator_symbol == "!=" or operator_symbol == "<" or operator_symbol == "<=" or operator_symbol == ">" or operator_symbol == ">=" or operator_symbol == "not") and operator_return_name != "bool" and operator_return_name != "boolean" then
+        _set_error("Operator '" + operator_symbol + "' must return bool", operator_pos)
+        return
+      end if
+      same_operator_count = 0
+      existing_methods = _chunked_finish(methods_chunks, methods_tail)
+      if len(existing_methods) > 0 then
+        for existing_i = 0 to len(existing_methods) - 1
+          existing_method = existing_methods[existing_i]
+          if s.startsWith(existing_method.name, operator_name_base + "__overload_") then
+            same_operator_count = same_operator_count + 1
+            same_signature = len(existing_method.param_types) == len(operator_params.types)
+            if same_signature and len(operator_params.types) > 0 then
+              for signature_i = 0 to len(operator_params.types) - 1
+                if existing_method.param_types[signature_i] != operator_params.types[signature_i] then same_signature = false break end if
+              end for
+            end if
+            if same_signature then
+              _set_error("Duplicate operator '" + operator_symbol + "' signature", operator_pos)
+              return
+            end if
+          end if
+        end for
+      end if
+      operator_name = operator_name_base + "__overload_" + same_operator_count
+      _expect_block_nl()
+      _func_depth = _func_depth + 1
+      operator_body = _parse_block_until_end("operator", operator_pos)
+      _func_depth = _func_depth - 1
+      if _has_error() then return end if
+      _expect_end_of("operator")
+      if _has_error() then return end if
+      operator_node = _new_function_node(operator_name, operator_params.names, operator_body, true, operator_inline, false, operator_params.types, operator_params.optionals, operator_params.defaults, -1, operator_return[0], false, false, false, operator_pos, _filename)
+      app_operator = _chunked_push(methods_chunks, methods_tail, operator_node, 16)
+      methods_chunks = app_operator[0]
+      methods_tail = app_operator[1]
+      continue
+    end if
+
     if _tok_kind_id(_peek()) == TK_KW and(_tok_value(_peek()) == "function" or _tok_value(_peek()) == "static") then
       mpos = _tok_pos(_peek())
       is_static = false
@@ -3523,6 +3688,10 @@ function _parse_stmt_struct(start_pos, t)
 
       mn = _expect_kind(TK_IDENT)
       if _has_error() then return end if
+      if s.startsWith(_tok_value(mn), "__operator_") then
+        _set_error("Method names beginning with '__operator_' are reserved", _tok_pos(mn))
+        return
+      end if
       _expect_kind(TK_LPAREN)
       if _has_error() then return end if
       parsed = _parse_parameter_list()
@@ -4013,9 +4182,27 @@ function _parse_stmt_ident(start_pos, first_tok)
     declared_type = tref[0]
     declared_optional = tref[1]
   end if
-  if _match_value(TK_OP, "=") then
+  assignment_symbol = ""
+  compound_base = ""
+  if _tok_kind_id(_peek()) == TK_OP then
+    assignment_symbol = _tok_value(_peek())
+    compound_base = _compound_assignment_base(assignment_symbol)
+    if assignment_symbol == "=" or compound_base != "" then _advance() else assignment_symbol = "" end if
+  end if
+  if assignment_symbol != "" then
     rhs = _parse_expr(0)
     if _has_error() then return end if
+    if assignment_symbol != "=" then
+      if typeof(declared_type) == "string" then
+        _set_error("A compound assignment cannot redeclare a variable type", start_pos)
+        return
+      end if
+      if t.ast_kind(expr) != "Var" then
+        _set_error("Compound assignment currently requires a variable target", start_pos)
+        return
+      end if
+      rhs = Bin("Bin", expr, compound_base, rhs, start_pos, _filename)
+    end if
     if t.ast_kind(expr) == "Var" then
       if typeof(declared_type) == "string" then
         rhs = TypeGuard("TypeGuard", rhs, declared_type, declared_optional, start_pos, _filename)
@@ -4177,7 +4364,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.2.3")
+    CompileValue("MINILANG_VERSION", "1.2.4")
   ]
 end function
 

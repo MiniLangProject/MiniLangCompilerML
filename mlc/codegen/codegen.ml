@@ -426,6 +426,7 @@ function _clone_state_for_object(base, seed_runtime)
   // unlocked reads/writes in --object-pipeline builds while monolithic builds
   // correctly used the per-binding monitor.
   st.synchronized_globals = _copy_array(base.synchronized_globals)
+  st.operator_overloads_present = base.operator_overloads_present
 
   st.asm = a.newCodegenAsmBuilder()
   if seed_runtime then

@@ -3562,7 +3562,10 @@ function _typeflow_expr_type(state, ex, known)
   if k == "IsType" then return "bool" end if
   if k == "Unary" then
     op_u = _coerce_name(t.ast_op(ex))
-    rb = _typeflow_base(_typeflow_expr_type(state, t.ast_right(ex), known))
+    operand_fact = _typeflow_expr_type(state, t.ast_right(ex), known)
+    overload_u = exprmod._resolve_operator_overload_facts(state, op_u, [operand_fact], ex, false)
+    if overload_u[0] and overload_u[1] != "" then return overload_u[2] end if
+    rb = _typeflow_base(operand_fact)
     if op_u == "not" and rb != "" then return "bool" end if
     if op_u == "~" and rb == "int" then return "int" end if
     if op_u == "-" and rb == "int" then return "int" end if
@@ -3571,8 +3574,12 @@ function _typeflow_expr_type(state, ex, known)
   end if
   if k == "Bin" then
     op_b = _coerce_name(t.ast_op(ex))
-    lb = _typeflow_base(_typeflow_expr_type(state, t.ast_left(ex), known))
-    rb2 = _typeflow_base(_typeflow_expr_type(state, t.ast_right(ex), known))
+    left_fact = _typeflow_expr_type(state, t.ast_left(ex), known)
+    right_fact = _typeflow_expr_type(state, t.ast_right(ex), known)
+    overload_b = exprmod._resolve_operator_overload_facts(state, op_b, [left_fact, right_fact], ex, false)
+    if overload_b[0] and overload_b[1] != "" then return overload_b[2] end if
+    lb = _typeflow_base(left_fact)
+    rb2 = _typeflow_base(right_fact)
     if op_b == "==" or op_b == "!=" then return "bool" end if
     numeric_l_cmp = lb == "int" or lb == "float" or lb == "number"
     numeric_r_cmp = rb2 == "int" or rb2 == "float" or rb2 == "number"
@@ -3810,6 +3817,23 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   loop_names = inputs[4]
   normal_names = inputs[6]
   excluded = inputs[8]
+  typed_param_facts = []
+  params = try(fn_node.params)
+  param_types = try(fn_node.param_types)
+  param_optional = try(fn_node.param_optional)
+  if state.operator_overloads_present and typeof(params) == "array" and typeof(param_types) == "array" and len(params) > 0 then
+    for param_i = 0 to len(params) - 1
+      param_name = _coerce_name(params[param_i])
+      param_type = void
+      if param_i < len(param_types) then param_type = param_types[param_i] end if
+      optional = false
+      if typeof(param_optional) == "array" and param_i < len(param_optional) and typeof(param_optional[param_i]) == "bool" then optional = param_optional[param_i] end if
+      if typeof(param_type) == "string" and optional == false and _arr_has(excluded, param_name) == false then
+        param_fact = exprmod._operator_declared_type_fact(state, param_type, "", fn_node)
+        if param_fact != "" then typed_param_facts = typed_param_facts + [[param_name, param_fact]] end if
+      end if
+    end for
+  end if
 
   body = try(fn_node.body)
   if typeof(body) != "array" then body = [] end if
@@ -3822,15 +3846,19 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
 
   tracked_names = loop_names + []
   if len(assignments) > 0 then for i = 0 to len(assignments) - 1 tracked_names = _arr_add_unique(tracked_names, assignments[i][0]) end for end if
-  read_order = _typeflow_scan_read_order(body, tracked_names, [], [], true)
+  typed_param_names = []
+  if len(typed_param_facts) > 0 then for each param_rec in typed_param_facts tracked_names = _arr_add_unique(tracked_names, param_rec[0]); typed_param_names = _arr_add_unique(typed_param_names, param_rec[0]) end for end if
+  read_order = _typeflow_scan_read_order(body, tracked_names, typed_param_names, [], true)
   read_before_init = read_order[1]
   if len(read_before_init) > 0 then for i = 0 to len(read_before_init) - 1 excluded = _arr_add_unique(excluded, read_before_init[i]) end for end if
 
   initialized = loop_names + []
+  if len(typed_param_names) > 0 then for each typed_name in typed_param_names initialized = _arr_add_unique(initialized, typed_name) end for end if
   if len(direct_initializers) > 0 then for i = 0 to len(direct_initializers) - 1 initialized = _arr_add_unique(initialized, direct_initializers[i][0]) end for end if
   candidates = []
   if len(assignments) > 0 then for i = 0 to len(assignments) - 1 if _arr_has(initialized, assignments[i][0]) and _arr_has(excluded, assignments[i][0]) == false then candidates = _arr_add_unique(candidates, assignments[i][0]) end if end for end if
   if len(loop_names) > 0 then for i = 0 to len(loop_names) - 1 if _arr_has(excluded, loop_names[i]) == false then candidates = _arr_add_unique(candidates, loop_names[i]) end if end for end if
+  if len(typed_param_names) > 0 then for each typed_name in typed_param_names if _arr_has(excluded, typed_name) == false then candidates = _arr_add_unique(candidates, typed_name) end if end for end if
 
   // Compiler-sized functions can contain hundreds of candidates and deeply
   // chained aliases. Keep the fixed-point facts in an indexed table so each
@@ -3838,6 +3866,12 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   // after convergence for the rest of code generation.
   facts_index = _reset_analysis_map(scratch[4], (len(candidates) * 2) + 64)
   fact_names = []
+  if len(typed_param_facts) > 0 then
+    for each param_rec in typed_param_facts
+      facts_index = t.fastmap_set(facts_index, param_rec[0], param_rec[1])
+      fact_names = _arr_add_unique(fact_names, param_rec[0])
+    end for
+  end if
   if len(loop_names) > 0 then
     for i = 0 to len(loop_names) - 1
       if _arr_has(candidates, loop_names[i]) then
@@ -3911,6 +3945,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
     validate_pos = validate_pos + 1
     validate_queued = t.fastmap_set(validate_queued, nm_v, 0)
     if _typeflow_get(facts_index, nm_v) == "" then continue end if
+    if _arr_has(typed_param_names, nm_v) and len(_intflow_map_get(assignments, nm_v)) <= 0 then continue end if
     if _arr_has(loop_names, nm_v) and len(_intflow_map_get(assignments, nm_v)) <= 0 then continue end if
     vals_v = _intflow_map_get(assignments, nm_v)
     inferred_v = []
@@ -7676,6 +7711,7 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
           if is_static then
             qfn = sqn + ".__static__." + mname
             sdict = _strpair_set(sdict, mname, qfn)
+            if s.startsWith(mname, "__operator_") then state.operator_overloads_present = true end if
           else
             qfn = sqn + "." + mname
             params_new = ["this"] + params_new

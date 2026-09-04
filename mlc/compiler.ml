@@ -35,9 +35,9 @@ import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.2.3"
+const COMPILER_VERSION = "1.2.4"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.3"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.4"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.

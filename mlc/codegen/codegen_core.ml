@@ -269,6 +269,8 @@ struct CgState
   target,
   /// Whether `CgState.is_linux_target` indicates linux target.
   is_linux_target,
+  /// Whether the program declares any user-defined operators.
+  operator_overloads_present,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
@@ -696,7 +698,8 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   true,
   [],
   target,
-  target == "linux-x64"
+  target == "linux-x64",
+  false
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)

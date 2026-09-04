@@ -1060,6 +1060,18 @@ Nested user functions associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L123)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-operator-overloads-present-operator-overloads-present-mlc-codegen-codegen-core-ml-1063939867"></a>
+### operator_overloads_present
+
+```ml
+operator_overloads_present
+```
+
+Whether the program declares any user-defined operators.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L273)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-pruned-inline-functions-pruned-inline-functions-mlc-codegen-codegen-core-ml-1773356663"></a>
 ### pruned_inline_functions
 

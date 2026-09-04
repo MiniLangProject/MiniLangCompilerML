@@ -2364,7 +2364,33 @@ end function
 /// Lower emit expr unary expression behavior to native x64.
 /// @internal
 function _emit_expr_unary(state, expr)
+  overloaded_u = _emit_operator_overload(state, _coerce_name(t.ast_op(expr)), [t.ast_right(expr)], expr)
+  state = overloaded_u[0]
+  if overloaded_u[1] then return state end if
   state = cg_emit_expr(state, t.ast_right(expr))
+  if t.ast_op(expr) == "+" then
+    lid_p = _next_lid(state)
+    l_ok_p = "uplus_ok_" + lid_p
+    l_fail_p = "uplus_fail_" + lid_p
+    l_end_p = "uplus_end_" + lid_p
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "e", l_ok_p)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_FLOAT)
+    state.asm = a.jcc(state.asm, "e", l_ok_p)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_fail_p)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
+    state.asm = a.jcc(state.asm, "e", l_ok_p)
+    state.asm = a.mark(state.asm, l_fail_p)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.jmp(state.asm, l_end_p)
+    state.asm = a.mark(state.asm, l_ok_p)
+    state.asm = a.mark(state.asm, l_end_p)
+    return state
+  end if
   if t.ast_op(expr) == "-" then
     lid_u = _next_lid(state)
     lid_uv = _next_lid(state)
@@ -2566,6 +2592,112 @@ function _opt_type_fact_get(items, name)
   return ""
 end function
 
+/// Convert a declared operator type into the optimizer's canonical type fact.
+/// @internal
+function _operator_declared_type_fact(state, raw_type, owner_qname, node)
+  if typeof(raw_type) != "string" or raw_type == "" then return "" end if
+  lowered = s.toLowerAscii(s.trim(raw_type))
+  if lowered == "integer" then lowered = "int" end if
+  if lowered == "boolean" then lowered = "bool" end if
+  if lowered == "str" then lowered = "string" end if
+  if lowered == "int" or lowered == "float" or lowered == "bool" or lowered == "string" or lowered == "array" or lowered == "bytes" or lowered == "function" or lowered == "thread" or lowered == "error" or lowered == "void" then
+    return lowered
+  end if
+  raw_leaf = raw_type
+  raw_dot = s.lastIndexOf(raw_leaf, ".")
+  if raw_dot >= 0 then raw_leaf = s.substr(raw_leaf, raw_dot + 1, len(raw_leaf) - raw_dot - 1) end if
+  owner_leaf = owner_qname
+  owner_dot = s.lastIndexOf(owner_leaf, ".")
+  if owner_dot >= 0 then owner_leaf = s.substr(owner_leaf, owner_dot + 1, len(owner_leaf) - owner_dot - 1) end if
+  if owner_qname != "" and raw_leaf == owner_leaf then return "struct:" + owner_qname end if
+  aliased = _apply_import_alias(state, raw_type)
+  qualified = _qualify_identifier(state, aliased)
+  if _state_struct_id_get(state, qualified, 0) != 0 then return "struct:" + qualified end if
+  if _state_struct_id_get(state, aliased, 0) != 0 then return "struct:" + aliased end if
+  return ""
+end function
+
+/// Resolve a statically typed struct operator from precomputed flow facts.
+/// @internal
+function _resolve_operator_overload_facts(state, op_symbol, facts, node, strict)
+  if state.operator_overloads_present == false then return [false, "", ""] end if
+  method_base = ml.operator_method_name(op_symbol, len(facts))
+  if method_base == "" or len(facts) <= 0 then return [false, "", ""] end if
+  left_fact = facts[0]
+  if s.startsWith(left_fact, "struct:") == false then return [false, "", ""] end if
+  owner_qname = s.substr(left_fact, 7, len(left_fact) - 7)
+  method_map = _state_struct_static_methods_get(state, owner_qname)
+  candidate_names = []
+  direct_qfn = _method_map_get(method_map, method_base)
+  if direct_qfn != "" then candidate_names = candidate_names + [direct_qfn] end if
+  overload_index = 0
+  while true
+    candidate_qfn = _method_map_get(method_map, method_base + "__overload_" + overload_index)
+    if candidate_qfn == "" then break end if
+    candidate_names = candidate_names + [candidate_qfn]
+    overload_index = overload_index + 1
+  end while
+  if len(candidate_names) <= 0 then return [false, "", ""] end if
+
+  selected_qfn = ""
+  selected_result = ""
+  match_count = 0
+  for candidate_i = 0 to len(candidate_names) - 1
+    candidate_qfn2 = candidate_names[candidate_i]
+    candidate_fn = _user_function_get(state, candidate_qfn2)
+    if typeof(candidate_fn) != "struct" or typeof(candidate_fn.param_types) != "array" or len(candidate_fn.param_types) != len(facts) then continue end if
+    compatible = true
+    for operand_i = 0 to len(facts) - 1
+      expected_fact = _operator_declared_type_fact(state, candidate_fn.param_types[operand_i], owner_qname, candidate_fn)
+      actual_fact = facts[operand_i]
+      if actual_fact == "" or expected_fact == "" or _opt_type_base(actual_fact) != _opt_type_base(expected_fact) or (s.startsWith(expected_fact, "struct:") and actual_fact != expected_fact) then
+        compatible = false
+        break
+      end if
+    end for
+    if compatible then
+      match_count = match_count + 1
+      selected_qfn = candidate_qfn2
+      selected_result = _operator_declared_type_fact(state, candidate_fn.return_type, owner_qname, candidate_fn)
+    end if
+  end for
+  if match_count == 1 then return [true, selected_qfn, selected_result] end if
+  if strict then
+    fact_text = s.join(facts, ", ")
+    if match_count > 1 then
+      state.diagnostics = state.diagnostics + ["Operator '" + op_symbol + "' is ambiguous for operand types (" + fact_text + ")"]
+    else
+      state.diagnostics = state.diagnostics + ["No operator '" + op_symbol + "' overload matches operand types (" + fact_text + ")"]
+    end if
+  end if
+  return [true, "", ""]
+end function
+
+/// Resolve an operator using the emission-time facts for its operand ASTs.
+/// @internal
+function _resolve_operator_overload(state, op_symbol, operands, node, strict)
+  if state.operator_overloads_present == false then return [false, "", ""] end if
+  facts = array(len(operands), "")
+  if len(operands) > 0 then
+    for fact_i = 0 to len(operands) - 1 facts[fact_i] = _opt_expr_known_type(state, operands[fact_i]) end for
+  end if
+  return _resolve_operator_overload_facts(state, op_symbol, facts, node, strict)
+end function
+
+/// Emit a resolved operator through the ordinary direct-call/inlining path.
+/// @internal
+function _emit_operator_overload(state, op_symbol, operands, node)
+  resolution = _resolve_operator_overload(state, op_symbol, operands, node, true)
+  if resolution[0] == false then return [state, false] end if
+  if resolution[1] == "" then
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return [state, true]
+  end if
+  operator_call = ml.Call("Call", ml.Var("Var", resolution[1], t.ast_pos(node), t.ast_filename(node)), operands, [], t.ast_pos(node), t.ast_filename(node))
+  state = cg_emit_expr(state, operator_call)
+  return [state, true]
+end function
+
 /// Lower opt expr known type expression behavior to native x64.
 /// @internal
 function _opt_expr_known_type(state, ex)
@@ -2596,6 +2728,8 @@ function _opt_expr_known_type(state, ex)
   if k == "IsType" then return "bool" end if
   if k == "Unary" then
     op_u = _coerce_name(t.ast_op(ex))
+    overload_u = _resolve_operator_overload(state, op_u, [t.ast_right(ex)], ex, false)
+    if overload_u[0] and overload_u[1] != "" then return overload_u[2] end if
     rb = _opt_type_base(_opt_expr_known_type(state, t.ast_right(ex)))
     if op_u == "not" and rb != "" then return "bool" end if
     if op_u == "~" and rb == "int" then return "int" end if
@@ -2605,6 +2739,8 @@ function _opt_expr_known_type(state, ex)
   end if
   if k == "Bin" then
     op_b = _coerce_name(t.ast_op(ex))
+    overload_b = _resolve_operator_overload(state, op_b, [t.ast_left(ex), t.ast_right(ex)], ex, false)
+    if overload_b[0] and overload_b[1] != "" then return overload_b[2] end if
     lb = _opt_type_base(_opt_expr_known_type(state, t.ast_left(ex)))
     rb2 = _opt_type_base(_opt_expr_known_type(state, t.ast_right(ex)))
     if op_b == "==" or op_b == "!=" then return "bool" end if
@@ -2635,6 +2771,19 @@ function _opt_expr_known_type(state, ex)
     // a runtime target guard.
     if (tb == "bytes" or tb == "bytes?") and index_base == "int" then return "int" end if
     if tb == "string" and index_base == "int" then return "string" end if
+  end if
+  if state.operator_overloads_present and k == "Call" then
+    callee = try(ex.callee)
+    fn_qname = _native_callback_resolve_user_fn(state, callee)
+    if fn_qname != "" then
+      declared_fn = _user_function_get(state, fn_qname)
+      if typeof(declared_fn) == "struct" and (typeof(try(declared_fn.return_optional)) != "bool" or declared_fn.return_optional == false) then
+        declared_result = _operator_declared_type_fact(state, try(declared_fn.return_type), "", declared_fn)
+        if declared_result != "" then return declared_result end if
+      end if
+    end if
+    constructor_qname = _expr_to_qualname(state, callee)
+    if _state_struct_id_get(state, constructor_qname, 0) != 0 then return "struct:" + constructor_qname end if
   end if
   return ""
 end function
@@ -3102,6 +3251,9 @@ end function
 /// Emit binary operators, preserving left-to-right effects and routing dynamic type/error cases through the same helpers used by the reference compiler.
 /// @internal
 function _emit_expr_bin(state, expr)
+  overloaded_b = _emit_operator_overload(state, _coerce_name(t.ast_op(expr)), [t.ast_left(expr), t.ast_right(expr)], expr)
+  state = overloaded_b[0]
+  if overloaded_b[1] then return state end if
   if t.ast_op(expr) == "and" then
     lid_and = _next_lid(state)
     lid_and_v = _next_lid(state)

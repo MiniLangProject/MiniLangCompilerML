@@ -892,6 +892,7 @@ function main(args)
   if _test(compiler_path, repo_root, "language_suite", "tests\\language_suite.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "declaration_comments", "tests\\declaration_comments.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_extensions", "tests\\language_extensions.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "operator_overloading", "tests\\operator_overloading.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_performance_features", "tests\\language_performance_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_async_variadic", "tests\\language_async_variadic.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_default_lambda", "tests\\language_default_lambda.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
@@ -903,6 +904,13 @@ function main(args)
   if _test(compiler_path, repo_root, "language_lazy_iterator_invalid", "tests\\language_lazy_iterator_invalid.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_named_argument_error", "tests\\language_named_argument_error.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_lambda_parameter_error", "tests\\language_lambda_parameter_error.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "operator_invalid_and", "tests\\operator_invalid_and.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "operator_invalid_owner", "tests\\operator_invalid_owner.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "operator_invalid_comparison_return", "tests\\operator_invalid_comparison_return.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "operator_invalid_void_return", "tests\\operator_invalid_void_return.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "operator_duplicate_signature", "tests\\operator_duplicate_signature.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "operator_no_matching_overload", "tests\\operator_no_matching_overload.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "operator_ambiguous_alias", "tests\\operator_ambiguous_alias.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "stdlib_unit_tests", "tests\\stdlib_unit_tests.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_periodic_test", "tests\\gc_periodic_test.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "gc_heap_stress", "tests\\gc_heap_stress.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

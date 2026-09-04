@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.2.3"
+  $expected = "MiniLang Compiler 1.2.4"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -417,6 +417,7 @@ try {
       [pscustomobject]@{ Name = "Linux extern/user basename collision"; Source = "extern_user_name_collision\main.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux GC safepoint publication"; Source = "gc_back_to_back_safepoint.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux language extensions"; Source = "language_extensions.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux operator overloading"; Source = "operator_overloading.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux async variadics"; Source = "language_async_variadic.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux default lambda lowering"; Source = "language_default_lambda.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux imported interfaces"; Source = "language_imported_interface.ml"; RunArgs = @() }
@@ -566,6 +567,12 @@ try {
     [pscustomobject]@{
       Name = "language extensions"
       Source = Join-Path $Root "tests\language_extensions.ml"
+      Includes = @($Root)
+      Args = @()
+    },
+    [pscustomobject]@{
+      Name = "operator overloading"
+      Source = Join-Path $Root "tests\operator_overloading.ml"
       Includes = @($Root)
       Args = @()
     },
