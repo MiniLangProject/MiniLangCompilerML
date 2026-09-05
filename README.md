@@ -3,8 +3,8 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Language: MiniLang](https://img.shields.io/badge/written%20in-MiniLang-5b5bd6.svg)](.)
 
-Current stable release: **1.2.5**. See the [changelog](CHANGELOG.md) and
-[release notes](RELEASE_NOTES_1.2.5.md).
+Current stable release: **1.2.6**. See the [changelog](CHANGELOG.md) and
+[release notes](RELEASE_NOTES_1.2.6.md).
 
 Supported native targets: **Windows x64 (PE32+)** and **Linux x64 (ELF64)**.
 
@@ -204,7 +204,7 @@ Common options:
   `--profile-compiler` and does not alter generated target bytes
 
 `.\build\mlc_win64.exe -version` and `--version` both print
-`MiniLang Compiler 1.2.5`. `.\build\mlc_win64.exe --help` prints a short usage
+`MiniLang Compiler 1.2.6`. `.\build\mlc_win64.exe --help` prints a short usage
 summary.
 
 Notes (current implementation):
@@ -348,8 +348,8 @@ not processed. Directives may be nested.
 
 The immutable target values are `TARGET_OS`, `TARGET_ARCH`, `TARGET_ABI`,
 `TARGET_FORMAT`, `POINTER_SIZE` and `MINILANG_VERSION`. Windows selects
-`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.5"`; Linux selects
-`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.5"`. No
+`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.6"`; Linux selects
+`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.6"`. No
 compiler-implementation value is exposed: the Python and self-hosted compilers
 must select the same source for identical inputs.
 

@@ -4366,7 +4366,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.2.5")
+    CompileValue("MINILANG_VERSION", "1.2.6")
   ]
 end function
 
