@@ -256,6 +256,18 @@ Peephole last push associated with `AsmBuilder`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L82)
 
+<a id="field-field-mlc-asm-asmbuilder-peephole-prev-jump-patch-peephole-prev-jump-patch-mlc-asm-ml-574724637"></a>
+### peephole_prev_jump_patch
+
+```ml
+peephole_prev_jump_patch
+```
+
+Conditional relocation immediately before an unlabelled near JMP.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L92)
+
 <a id="field-field-mlc-asm-asmbuilder-record-calls-record-calls-mlc-asm-ml-1704893651"></a>
 ### record_calls
 

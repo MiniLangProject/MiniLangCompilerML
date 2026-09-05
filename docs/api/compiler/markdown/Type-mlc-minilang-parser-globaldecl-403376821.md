@@ -12,7 +12,7 @@ struct GlobalDecl
 Represents global decl.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L707)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L709)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `GlobalDecl`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L715)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L717)
 
 <a id="field-field-mlc-minilang-parser-globaldecl-pos-pos-mlc-minilang-parser-ml-826821928"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `GlobalDecl`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L713)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L715)
 
 <a id="field-field-mlc-minilang-parser-globaldecl-names-names-mlc-minilang-parser-ml-662499774"></a>
 ### names
@@ -50,7 +50,7 @@ names
 Names associated with `GlobalDecl`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L711)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L713)
 
 <a id="field-field-mlc-minilang-parser-globaldecl-node-kind-node-kind-mlc-minilang-parser-ml-1458211470"></a>
 ### node_kind
@@ -62,4 +62,4 @@ node_kind
 Node kind associated with `GlobalDecl`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L709)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L711)

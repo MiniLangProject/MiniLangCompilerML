@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.2.4"
+  $expected = "MiniLang Compiler 1.2.5"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -245,8 +245,8 @@ function Test-LinuxRuntimeBlobLayout {
     $start = $constant["RUNTIME_LEGACY_THREAD_START"]
     $end = $constant["RUNTIME_LEGACY_THREAD_END"]
     $finalBytes = $start + $pthreadBytes + ($rawBytes - $end)
-    $passed = ($rawBytes -eq 1785 -and $pthreadBytes -eq 1077 -and
-               $start -eq 497 -and $end -eq 1361 -and $finalBytes -eq 1998)
+    $passed = ($rawBytes -eq 1777 -and $pthreadBytes -eq 1076 -and
+               $start -eq 494 -and $end -eq 1358 -and $finalBytes -eq 1989)
 
     foreach ($patchName in @(
         "RUNTIME_PTHREAD_CREATE_PATCH", "RUNTIME_PTHREAD_WAIT_PATCH",
@@ -419,6 +419,7 @@ try {
       [pscustomobject]@{ Name = "Linux language extensions"; Source = "language_extensions.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux operator overloading"; Source = "operator_overloading.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux async variadics"; Source = "language_async_variadic.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux escaping variadics"; Source = "variadic_escape_lifetime.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux default lambda lowering"; Source = "language_default_lambda.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux imported interfaces"; Source = "language_imported_interface.ml"; RunArgs = @() }
     )
@@ -535,6 +536,18 @@ try {
   $parityCompilerArgs = @($effectiveCompilerArgs | Where-Object { $_ -ne "--object-pipeline" })
   $objectParityCases = @(
     [pscustomobject]@{
+      Name = "variadic escape lifetime"
+      Source = Join-Path $Root "tests\variadic_escape_lifetime.ml"
+      Includes = @($Root)
+      Args = @()
+    },
+    [pscustomobject]@{
+      Name = "Linux variadic escape lifetime"
+      Source = Join-Path $Root "tests\variadic_escape_lifetime.ml"
+      Includes = @($Root)
+      Args = @("--target", "linux-x64")
+    },
+    [pscustomobject]@{
       Name = "entry initializer inline"
       Source = Join-Path $Root "tests\object_entry_inline.ml"
       Includes = @($Root)
@@ -598,6 +611,9 @@ try {
     $results += Invoke-NativeStep ("compile parity object: " + $parityCase.Name) $Compiler $objectArgs
     if ($results[-1].ExitCode -ne 0) { continue }
     $results += Compare-BinaryArtifacts ("object byte identity: " + $parityCase.Name) $monoExe $objectExe
+    if ($parityCase.Name -eq "variadic escape lifetime") {
+      $results += Invoke-NativeStep "run object variadic escape lifetime" $objectExe @()
+    }
 
     # Exercise the standalone streaming linker against retained canonical
     # objects, independently of the coordinator that emitted them.

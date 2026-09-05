@@ -160,6 +160,18 @@ Ml parent fn associated with `FunctionDef`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L559)
 
+<a id="field-field-mlc-minilang-parser-functiondef-ml-stack-variadic-safe-ml-stack-variadic-safe-mlc-minilang-parser-ml-1922599862"></a>
+### _ml_stack_variadic_safe
+
+```ml
+_ml_stack_variadic_safe
+```
+
+Cached variadic escape proof; void until analyzed, retained after body release.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L575)
+
 <a id="field-field-mlc-minilang-parser-functiondef-pos-pos-mlc-minilang-parser-ml-625457100"></a>
 ### _pos
 

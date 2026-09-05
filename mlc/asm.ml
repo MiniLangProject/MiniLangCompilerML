@@ -88,6 +88,8 @@ struct AsmBuilder
   active_chunk,
   /// Active chunk index associated with `AsmBuilder`.
   active_chunk_index,
+  /// Conditional relocation immediately before an unlabelled near JMP.
+  peephole_prev_jump_patch,
 end struct
 
 /// Encoded general-purpose-register number, width and REX requirement.
@@ -152,7 +154,7 @@ end function
 function newAsmBuilder()
   cs = 65536
   first_chunk = bytes(cs, 0)
-  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [first_chunk], cs, false, [], [], t.fastmap_new(256), [], [], true, t.fastmap_new(256), first_chunk, 0)
+  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [first_chunk], cs, false, [], [], t.fastmap_new(256), [], [], true, t.fastmap_new(256), first_chunk, 0, 0)
   return asm
 end function
 
@@ -1156,6 +1158,20 @@ function mark(asm, name)
     jend = last_jump[1]
     target = last_jump[2]
     disp_pos = last_jump[3]
+    prev = asm.peephole_prev_jump_patch
+    // Jcc yes; JMP no; yes: -> J!cc no; yes:. The removed tail has no
+    // labels, so earlier offsets and every RIP-relative relocation stay valid.
+    if typeof(prev) == "struct" and jend == here and jend - start == 5 then
+      if prev.pos + 4 == start and prev.target == name and target != name and _byte_at(asm, start) == 0xE9 then
+        last_patch = _last_patch(asm)
+        if typeof(last_patch) == "struct" and last_patch.pos == disp_pos and last_patch.target == target then
+          asm = _set_chunk_byte(asm, prev.pos - 1, _byte_at(asm, prev.pos - 1) ^ 1)
+          prev.target = target
+          asm = _drop_last_patch(asm)
+          asm = _peephole_trim_tail(asm, 5)
+        end if
+      end if
+    end if
     if target == name and jend == here then
       p = _last_patch(asm)
       if typeof(p) == "struct" and p.pos == disp_pos and p.target == name then
@@ -1165,6 +1181,7 @@ function mark(asm, name)
     end if
   end if
   asm.peephole_last_jump = []
+  asm.peephole_prev_jump_patch = 0
   asm.labels = []
   asm = _label_push(asm, AsmLabel(name, pos(asm)))
   if typeof(asm.label_pos_map) != "struct" then asm.label_pos_map = t.fastmap_new(256) end if
@@ -1237,6 +1254,19 @@ function jmp(asm, label)
   end if
 
   start = pos(asm)
+  asm.peephole_prev_jump_patch = 0
+  prev = asm.peephole_last_jump
+  if typeof(prev) == "array" and len(prev) == 4 then
+    if prev[1] == start and prev[1] - prev[0] == 6 then
+      op = _byte_at(asm, prev[0] + 1)
+      if _byte_at(asm, prev[0]) == 0x0F and op >= 0x80 and op <= 0x8F then
+        prev_patch = _last_patch(asm)
+        if typeof(prev_patch) == "struct" and prev_patch.pos == prev[3] and prev_patch.target == prev[2] then
+          asm.peephole_prev_jump_patch = prev_patch
+        end if
+      end if
+    end if
+  end if
   asm = _emit8(asm, 0xE9)
   p = pos(asm)
   asm = _emit32(asm, 0)
@@ -1722,6 +1752,10 @@ end function
 /// @internal
 function _grp1_imm(asm, size, subop, rm, imm)
   if size != 8 and size != 32 and size != 64 then return error(1, "Unsupported operand size for grp1") end if
+  // AND with a nonnegative signed-32 mask already clears the upper half.
+  // The 32-bit form zero-extends the same result and keeps SF/ZF/PF/CF/OF:
+  // bit 31 cannot be set. Negative sign-extended masks must stay 64-bit.
+  if size == 64 and subop == 4 and imm >= 0 and imm <= 0x7FFFFFFF then size = 32 end if
   rd = -1
   opcode = 0
   imm_bytes = bytes(0)
@@ -1745,6 +1779,15 @@ function _grp1_imm(asm, size, subop, rm, imm)
       imm_bytes = t.u32(imm)
     end if
     if size == 64 then w = 1 else w = 0 end if
+  end if
+  // Accumulator immediates omit ModRM; retain the shorter sign-extended
+  // imm8 form for 32/64-bit operations whenever that encoding fits.
+  if rd == 0 and (size == 8 or _fits_i8(imm) == false) then
+    accumulator_opcode = (subop << 3) | 5
+    if size == 8 then accumulator_opcode = (subop << 3) | 4 end if
+    asm = _emit_rex(asm, w, 0, 0, 0, false)
+    asm = _emit8(asm, accumulator_opcode)
+    return _emit(asm, imm_bytes)
   end if
   asm = _emit_rex(asm, w, 0, 0, (rd >> 3) & 1, false)
   asm = _emit8(asm, opcode)
@@ -2108,6 +2151,12 @@ function _emit_shift_imm8(asm, subop, reg_name, imm, w)
   rd = _rid_any(reg_name)
   if rd < 0 then return asm end if
   asm = _emit_rex(asm, w, 0, 0, (rd >> 3) & 1, false)
+  // Only the encoded imm8 value one uses D1. Keep zero/other counts intact,
+  // including their defined or undefined status-flag behavior.
+  if (imm & 0xFF) == 1 then
+    asm = _emit8(asm, 0xD1)
+    return _emit_modrm(asm, 3, subop, rd & 7)
+  end if
   asm = _emit8(asm, 0xC1)
   asm = _emit_modrm(asm, 3, subop, rd & 7)
   asm = _emit8(asm, imm)
@@ -2197,12 +2246,8 @@ end function
 /// @param asm Value supplied for `asm`.
 /// @param imm Value supplied for `imm`.
 function test_rax_imm32(asm, imm)
-  rd = _rid_any("rax")
-  asm = _emit_rex(asm, 1, 0, 0, (rd >> 3) & 1, false)
-  asm = _emit8(asm, 0xF7)
-  asm = _emit_modrm(asm, 3, 0, rd & 7)
-  asm = _emit32(asm, imm)
-  return asm
+  // Keep the compatibility alias on the same canonical encoding path.
+  return test_r64_imm32(asm, "rax", imm)
 end function
 
 /// Encode or manage xor ecx ecx in the native x64 assembler.
@@ -2503,6 +2548,11 @@ end function
 function _grp1_r8_imm8(asm, subop, reg8, imm)
   r = _rid_any(reg8)
   if r < 0 then return asm end if
+  // AL's accumulator opcode is one byte shorter than group-1 plus ModRM.
+  if r == 0 then
+    asm = _emit8(asm, (subop << 3) | 4)
+    return _emit8(asm, imm)
+  end if
   force = _is_force_rex_8(reg8)
   asm = _emit_rex(asm, 0, 0, 0, (r >> 3) & 1, force)
   asm = _emit8(asm, 0x80)
@@ -2556,6 +2606,11 @@ function test_r64_imm32(asm, reg_name, imm)
   r = _rid_any(reg_name)
   if r < 0 then return asm end if
   asm = _emit_rex(asm, 1, 0, 0, (r >> 3) & 1, false)
+  // The RAX-specific opcode omits ModRM without changing TEST semantics.
+  if r == 0 then
+    asm = _emit8(asm, 0xA9)
+    return _emit32(asm, imm)
+  end if
   asm = _emit8(asm, 0xF7)
   asm = _emit_modrm(asm, 3, 0, r & 7)
   asm = _emit32(asm, imm)

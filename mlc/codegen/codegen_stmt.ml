@@ -453,10 +453,15 @@ function _release_emitted_fn_body(fn_node)
     end if
     fn_node._ml_uses_this = uses_this
   end if
-  // Inline bodies remain codegen inputs for later callers. Non-inline bodies,
-  // however, are never inspected again once their native object is serialized;
-  // keep the signature shell for arity/callback checks and release the body and
-  // analysis-only closure sets promptly.
+  // Preserve escape-analysis results before discarding their input. Otherwise
+  // later variadic calls would inspect an empty body and incorrectly conclude
+  // that an escaping argument array can live on their stack.
+  variadic_index = try(fn_node.variadic_index)
+  if typeof(variadic_index) == "int" and variadic_index >= 0 then
+    fn_node._ml_stack_variadic_safe = exprmod._variadic_param_stack_safe(fn_node)
+  end if
+  // Inline bodies remain inputs for later callers. Non-inline bodies can now
+  // be released while their signature and body-dependent facts remain valid.
   if exprmod._function_wants_inline(fn_node) then return fn_node end if
   fn_node.body = []
   fn_node._ml_locals = []
@@ -558,7 +563,8 @@ function _clone_function_node_for_emit(fn_node)
     _copy_fn_map_or_array_field(try(fn_node._ml_capture_index)),
     try(fn_node._ml_env_hop),
     try(fn_node._pos),
-    _coerce_name(try(fn_node._filename))
+    _coerce_name(try(fn_node._filename)),
+    try(fn_node._ml_stack_variadic_safe)
   )
 end function
 

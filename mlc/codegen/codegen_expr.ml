@@ -173,10 +173,16 @@ end function
 /// @internal
 function _variadic_param_stack_safe(fn)
   if typeof(fn) != "struct" then return false end if
+  // Object emission releases non-inline bodies before later callers are
+  // lowered. A cached escape proof must outlive that body, just as in Python.
+  cached = try(fn._ml_stack_variadic_safe)
+  if typeof(cached) == "bool" then return cached end if
   index = try(fn.variadic_index)
   params = try(fn.params)
   if typeof(index) != "int" or index < 0 or typeof(params) != "array" or index >= len(params) then return false end if
-  return _variadic_stmts_safe(try(fn.body), _coerce_name(params[index]))
+  safe = _variadic_stmts_safe(try(fn.body), _coerce_name(params[index]))
+  fn._ml_stack_variadic_safe = safe
+  return safe
 end function
 
 /// Lower normalize declared call args expression behavior to native x64.

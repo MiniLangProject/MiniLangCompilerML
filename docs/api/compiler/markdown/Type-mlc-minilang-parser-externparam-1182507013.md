@@ -12,7 +12,7 @@ struct ExternParam
 Represents extern param.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L845)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L847)
 
 ## Members
 
@@ -26,7 +26,7 @@ is_out
 Whether `ExternParam.is_out` indicates out.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L853)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L855)
 
 <a id="field-field-mlc-minilang-parser-externparam-name-name-mlc-minilang-parser-ml-1715241480"></a>
 ### name
@@ -38,7 +38,7 @@ name
 Name associated with `ExternParam`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L849)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L851)
 
 <a id="field-field-mlc-minilang-parser-externparam-node-kind-node-kind-mlc-minilang-parser-ml-7151430"></a>
 ### node_kind
@@ -50,7 +50,7 @@ node_kind
 Node kind associated with `ExternParam`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L847)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L849)
 
 <a id="field-field-mlc-minilang-parser-externparam-ty-ty-mlc-minilang-parser-ml-1001431580"></a>
 ### ty
@@ -62,4 +62,4 @@ ty
 Ty associated with `ExternParam`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L851)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L853)

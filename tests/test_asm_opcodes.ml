@@ -231,6 +231,109 @@ function checkCallAndHelperTracking()
   return failures
 end function
 
+/// Verify shorter encodings against independent architectural opcode vectors.
+function checkCompactEncodings()
+  failures = 0
+  failures = failures + checkOpcode("AND positive mask", a.and_r64_imm(a.newAsmBuilder(), "rax", 7), "83e007")
+  failures = failures + checkOpcode("AND extended reg", a.and_r64_imm(a.newAsmBuilder(), "r8", 7), "4183e007")
+  failures = failures + checkOpcode("AND mask boundary", a.and_r64_imm(a.newAsmBuilder(), "rax", 0x7FFFFFFF), "25ffffff7f")
+  failures = failures + checkOpcode("AND negative mask", a.and_r64_imm(a.newAsmBuilder(), "rax", -1), "4883e0ff")
+  failures = failures + checkOpcode("AND sign-extended mask", a.and_r64_imm(a.newAsmBuilder(), "rax", 0x80000000), "482500000080")
+  failures = failures + checkOpcode("AND negative extended reg", a.and_r64_imm(a.newAsmBuilder(), "r8", -2147483648), "4981e000000080")
+  failures = failures + checkOpcode("ADD imm8", a.add_r64_imm(a.newAsmBuilder(), "rax", 127), "4883c07f")
+  failures = failures + checkOpcode("ADD accumulator", a.add_r64_imm(a.newAsmBuilder(), "rax", 128), "480580000000")
+  failures = failures + checkOpcode("SUB accumulator", a.sub_r32_imm(a.newAsmBuilder(), "eax", 128), "2d80000000")
+  failures = failures + checkOpcode("CMP accumulator", a.cmp_r64_imm(a.newAsmBuilder(), "rax", -129), "483d7fffffff")
+  failures = failures + checkOpcode("XOR AL", a.xor_r8_imm8(a.newAsmBuilder(), "al", 255), "34ff")
+  failures = failures + checkOpcode("OR R8B", a.or_r8_imm8(a.newAsmBuilder(), "r8b", 7), "4180c807")
+  failures = failures + checkOpcode("TEST accumulator", a.test_r64_imm32(a.newAsmBuilder(), "rax", -1), "48a9ffffffff")
+  failures = failures + checkOpcode("TEST accumulator alias", a.test_rax_imm32(a.newAsmBuilder(), 8), "48a908000000")
+  failures = failures + checkOpcode("AND accumulator alias", a.and_rax_imm8(a.newAsmBuilder(), 7), "83e007")
+  failures = failures + checkOpcode("CMP accumulator alias", a.cmp_rax_imm32(a.newAsmBuilder(), 128), "483d80000000")
+  failures = failures + checkOpcode("TEST extended reg", a.test_r64_imm32(a.newAsmBuilder(), "r8", 7), "49f7c007000000")
+  for each count in [0, 1, 2, 31, 32, 33, 63, 64, 65, 255, 257]
+    suffix = "c1"
+    tail = hex(bytes(1, count & 255))
+    if (count & 255) == 1 then suffix = "d1"; tail = "" end if
+    failures = failures + checkOpcode("SHL64 count=" + count, a.shl_r64_imm8(a.newAsmBuilder(), "rax", count), "48" + suffix + "e0" + tail)
+    failures = failures + checkOpcode("SHR64 count=" + count, a.shr_r64_imm8(a.newAsmBuilder(), "r9", count), "49" + suffix + "e9" + tail)
+    failures = failures + checkOpcode("SAR64 count=" + count, a.sar_r64_imm8(a.newAsmBuilder(), "rax", count), "48" + suffix + "f8" + tail)
+    failures = failures + checkOpcode("SHL32 count=" + count, a.shl_r32_imm8(a.newAsmBuilder(), "r9d", count), "41" + suffix + "e1" + tail)
+    failures = failures + checkOpcode("SHR32 count=" + count, a.shr_r32_imm8(a.newAsmBuilder(), "eax", count), suffix + "e8" + tail)
+    failures = failures + checkOpcode("SAR32 count=" + count, a.sar_r32_imm8(a.newAsmBuilder(), "r9d", count), "41" + suffix + "f9" + tail)
+  end for
+  return failures
+end function
+
+/// Exercise branch inversion at code-page and relocation-chunk boundaries.
+function checkCompactBranches()
+  failures = 0
+  conditions = ["o", "no", "b", "ae", "e", "ne", "be", "a", "s", "ns", "p", "np", "l", "ge", "le", "g"]
+  for i = 0 to 15
+    b = a.newAsmBuilder()
+    b = a.jcc(b, conditions[i], "yes")
+    b = a.jmp(b, "no")
+    b = a.mark(b, "yes")
+    b = a.nop(b)
+    b = a.mark(b, "no")
+    expected = "0f" + hex(bytes(1, 0x80 + (i ^ 1))) + "0100000090"
+    failures = failures + checkOpcode("inverted " + conditions[i], b, expected)
+  end for
+  for each prefix in [0, 254, 255, 256]
+    for each padding in [0, 4090, 4091, 4095]
+      b = a.newAsmBuilder()
+      i = 0
+      while i < prefix
+        b = a.call(b, "no")
+        i = i + 1
+      end while
+      i = 0
+      while i < padding
+        b = a.nop(b)
+        i = i + 1
+      end while
+      branch_start = a.pos(b)
+      b = a.jcc(b, "e", "yes")
+      b = a.jmp(b, "no")
+      b = a.mark(b, "yes")
+      b = a.resolve_defined_patches(b)
+      b = a.nop(b)
+      b = a.mark(b, "no")
+      b = a.resolve_all_defined_patches(b)
+      code = a.finalize(b)
+      if len(code) != branch_start + 7 or code[branch_start + 1] != 0x85 or code[branch_start + 2] != 1 then
+        print "FAIL: compact branch boundary prefix=" + prefix + " padding=" + padding
+        failures = failures + 1
+      end if
+      i = 0
+      while i < prefix
+        offset = i * 5 + 1
+        displacement = code[offset] | (code[offset + 1] << 8) | (code[offset + 2] << 16) | (code[offset + 3] << 24)
+        if offset + 4 + displacement != branch_start + 7 then
+          print "FAIL: compact branch earlier relocation"
+          failures = failures + 1
+        end if
+        i = i + 1
+      end while
+    end for
+  end for
+  for each barrier in ["label", "nop"]
+    b = a.newAsmBuilder()
+    b = a.jcc(b, "e", "yes")
+    if barrier == "label" then b = a.mark(b, "other_entry") else b = a.nop(b) end if
+    b = a.jmp(b, "no")
+    b = a.mark(b, "yes")
+    b = a.nop(b)
+    b = a.mark(b, "no")
+    code = a.finalize(b)
+    if code[1] != 0x84 or len(a.get_patches(b)) != 2 then
+      print "FAIL: compact branch crossed " + barrier
+      failures = failures + 1
+    end if
+  end for
+  return failures
+end function
+
 function main(args)
   p = "tests\\asm_opcodes_golden.json"
   if fs.exists(p) == false then
@@ -384,6 +487,8 @@ function main(args)
   end if
 
   failures = failures + checkLinuxThunkLocalBranches()
+  failures = failures + checkCompactEncodings()
+  failures = failures + checkCompactBranches()
   failures = failures + checkRDataLabelScale()
   failures = failures + checkDataLabelScale()
   failures = failures + checkChunkedIndexedRead()

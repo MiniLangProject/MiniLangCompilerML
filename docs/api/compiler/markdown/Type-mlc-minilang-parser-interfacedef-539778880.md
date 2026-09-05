@@ -12,7 +12,7 @@ struct InterfaceDef
 Compile-time structural contract with no runtime representation.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L793)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L795)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `InterfaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L803)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L805)
 
 <a id="field-field-mlc-minilang-parser-interfacedef-pos-pos-mlc-minilang-parser-ml-526272043"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `InterfaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L801)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L803)
 
 <a id="field-field-mlc-minilang-parser-interfacedef-methods-methods-mlc-minilang-parser-ml-1848589541"></a>
 ### methods
@@ -50,7 +50,7 @@ methods
 Methods associated with `InterfaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L799)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L801)
 
 <a id="field-field-mlc-minilang-parser-interfacedef-name-name-mlc-minilang-parser-ml-664495019"></a>
 ### name
@@ -62,7 +62,7 @@ name
 Name associated with `InterfaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L797)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L799)
 
 <a id="field-field-mlc-minilang-parser-interfacedef-node-kind-node-kind-mlc-minilang-parser-ml-649296181"></a>
 ### node_kind
@@ -74,4 +74,4 @@ node_kind
 Node kind associated with `InterfaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L795)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L797)

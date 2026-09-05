@@ -12,7 +12,7 @@ struct LazyIteratorState
 Mutable construction state for a lazy iterator's pull-closure state machine. Integer state IDs keep suspension/resumption explicit and avoid materializing yielded elements in an intermediate array.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5222)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5224)
 
 ## Members
 
@@ -26,7 +26,7 @@ blocks
 Blocks associated with `LazyIteratorState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5228)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5230)
 
 <a id="field-field-mlc-minilang-parser-lazyiteratorstate-fn-fn-mlc-minilang-parser-ml-215731472"></a>
 ### fn
@@ -38,7 +38,7 @@ fn
 Fn associated with `LazyIteratorState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5224)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5226)
 
 <a id="field-field-mlc-minilang-parser-lazyiteratorstate-globals-declared-globals-declared-mlc-minilang-parser-ml-1795633630"></a>
 ### globals_declared
@@ -50,7 +50,7 @@ globals_declared
 Globals declared associated with `LazyIteratorState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5232)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5234)
 
 <a id="field-field-mlc-minilang-parser-lazyiteratorstate-persistent-persistent-mlc-minilang-parser-ml-821199862"></a>
 ### persistent
@@ -62,7 +62,7 @@ persistent
 Persistent associated with `LazyIteratorState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5230)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5232)
 
 <a id="field-field-mlc-minilang-parser-lazyiteratorstate-state-name-state-name-mlc-minilang-parser-ml-2092761194"></a>
 ### state_name
@@ -74,4 +74,4 @@ state_name
 State name associated with `LazyIteratorState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5226)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5228)

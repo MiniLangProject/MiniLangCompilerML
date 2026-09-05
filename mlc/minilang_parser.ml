@@ -571,6 +571,8 @@ struct FunctionDef
   _pos,
   /// Filename associated with `FunctionDef`.
   _filename,
+  /// Cached variadic escape proof; void until analyzed, retained after body release.
+  _ml_stack_variadic_safe,
 end struct
 
 /// Represents return.
@@ -940,7 +942,7 @@ end function
 /// Keep compiler-internal closure fields centralized when surface syntax creates ordinary, lambda, iterator or async functions.
 /// @internal
 function _new_function_node(name, params, body, is_static, is_inline, is_synchronized, param_types, param_optional, param_defaults, variadic_index, return_type, return_optional, is_async, is_iterator, pos, filename)
-  return FunctionDef("FunctionDef", name, params, body, is_static, is_inline, is_synchronized, param_types, param_optional, param_defaults, variadic_index, return_type, return_optional, is_async, is_iterator, [], [], [], [], [], 0, [], [], [], [], false, pos, filename)
+  return FunctionDef("FunctionDef", name, params, body, is_static, is_inline, is_synchronized, param_types, param_optional, param_defaults, variadic_index, return_type, return_optional, is_async, is_iterator, [], [], [], [], [], 0, [], [], [], [], false, pos, filename, void)
 end function
 
 /// Parse or represent substr in the MiniLang front end.
@@ -4364,7 +4366,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.2.4")
+    CompileValue("MINILANG_VERSION", "1.2.5")
   ]
 end function
 

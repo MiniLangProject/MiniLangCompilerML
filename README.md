@@ -3,8 +3,8 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Language: MiniLang](https://img.shields.io/badge/written%20in-MiniLang-5b5bd6.svg)](.)
 
-Current stable release: **1.2.4**. See the [changelog](CHANGELOG.md) and
-[release notes](RELEASE_NOTES_1.2.4.md).
+Current stable release: **1.2.5**. See the [changelog](CHANGELOG.md) and
+[release notes](RELEASE_NOTES_1.2.5.md).
 
 Supported native targets: **Windows x64 (PE32+)** and **Linux x64 (ELF64)**.
 
@@ -18,7 +18,9 @@ itself with `build.ps1`. Release 1.0.0 and later are source-only: generated
 `.exe` files are deliberately not tracked. On a clean sibling checkout,
 `build.ps1` uses `MiniLangCompilerPy/mlc_win64.py` for the first bootstrap and
 uses the resulting native compiler on subsequent self-host runs. This
-repository intentionally contains no Python source files. See
+compiler implementation and native self-host builds do not depend on Python.
+Optional development-only Python scripts compare benchmark samples and verify
+the embedded Linux runtime against the sibling reference compiler. See
 [Compiler parity and self-hosting](COMPILER_PARITY.md) for the exact bootstrap,
 self-build and target-output guarantees.
 
@@ -202,7 +204,7 @@ Common options:
   `--profile-compiler` and does not alter generated target bytes
 
 `.\build\mlc_win64.exe -version` and `--version` both print
-`MiniLang Compiler 1.2.4`. `.\build\mlc_win64.exe --help` prints a short usage
+`MiniLang Compiler 1.2.5`. `.\build\mlc_win64.exe --help` prints a short usage
 summary.
 
 Notes (current implementation):
@@ -346,8 +348,8 @@ not processed. Directives may be nested.
 
 The immutable target values are `TARGET_OS`, `TARGET_ARCH`, `TARGET_ABI`,
 `TARGET_FORMAT`, `POINTER_SIZE` and `MINILANG_VERSION`. Windows selects
-`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.4"`; Linux selects
-`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.4"`. No
+`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.5"`; Linux selects
+`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.5"`. No
 compiler-implementation value is exposed: the Python and self-hosted compilers
 must select the same source for identical inputs.
 
@@ -3446,7 +3448,14 @@ Optimizations (always-on, conservative):
   identity space.
 - **Branch/peephole optimization**: resolved backward edges use x64 short
   branches when in range, jumps to the immediately following label disappear,
-  and local redundant instruction patterns are folded.
+  and adjacent conditional/unconditional branch pairs become one inverted
+  conditional branch when the first target is the fallthrough. Labels and
+  intervening instructions prevent unsafe folding.
+- **Compact x64 encodings**: accumulator-immediate opcodes, implicit-one
+  shifts and safe 32-bit AND masks reduce actual machine-code size without
+  packing the executable or removing runtime checks. Both native targets use
+  the same encoding rules; defined arithmetic flags and full register results
+  are preserved. See the [size experiment](docs/reports/CODE_SIZE_2026-09-05.md).
 - **Helper pruning**: only referenced `fn_*` runtime helpers are emitted.
 
 GC flags:
