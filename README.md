@@ -14,8 +14,9 @@ Linux x64 (ELF64) images. Windows is the default target;
 `--subsystem windows` emits a Windows GUI image.
 
 The compiler implementation is written entirely in MiniLang and rebuilds
-itself with `build.ps1`. Release 1.0.0 and later are source-only: generated
-`.exe` files are deliberately not tracked. On a clean sibling checkout,
+itself with `build.ps1`. Release 1.2.6 includes ready-to-run **Windows and
+Linux binary packages**; see [binary installation](README-BINARY.md). Generated
+binaries remain outside Git. On a clean sibling checkout,
 `build.ps1` uses `MiniLangCompilerPy/mlc_win64.py` for the first bootstrap and
 uses the resulting native compiler on subsequent self-host runs. This
 compiler implementation and native self-host builds do not depend on Python.
