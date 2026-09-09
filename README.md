@@ -3,8 +3,8 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Language: MiniLang](https://img.shields.io/badge/written%20in-MiniLang-5b5bd6.svg)](.)
 
-Current stable release: **1.2.6**. See the [changelog](CHANGELOG.md) and
-[release notes](RELEASE_NOTES_1.2.6.md).
+Current stable release: **1.2.7**. See the [changelog](CHANGELOG.md) and
+[release notes](RELEASE_NOTES_1.2.7.md).
 
 Supported native targets: **Windows x64 (PE32+)** and **Linux x64 (ELF64)**.
 
@@ -14,7 +14,7 @@ Linux x64 (ELF64) images. Windows is the default target;
 `--subsystem windows` emits a Windows GUI image.
 
 The compiler implementation is written entirely in MiniLang and rebuilds
-itself with `build.ps1`. Release 1.2.6 includes ready-to-run **Windows and
+itself with `build.ps1`. Release 1.2.7 includes ready-to-run **Windows and
 Linux binary packages**; see [binary installation](README-BINARY.md). Generated
 binaries remain outside Git. On a clean sibling checkout,
 `build.ps1` uses `MiniLangCompilerPy/mlc_win64.py` for the first bootstrap and
@@ -205,7 +205,7 @@ Common options:
   `--profile-compiler` and does not alter generated target bytes
 
 `.\build\mlc_win64.exe -version` and `--version` both print
-`MiniLang Compiler 1.2.6`. `.\build\mlc_win64.exe --help` prints a short usage
+`MiniLang Compiler 1.2.7`. `.\build\mlc_win64.exe --help` prints a short usage
 summary.
 
 Notes (current implementation):
@@ -349,8 +349,8 @@ not processed. Directives may be nested.
 
 The immutable target values are `TARGET_OS`, `TARGET_ARCH`, `TARGET_ABI`,
 `TARGET_FORMAT`, `POINTER_SIZE` and `MINILANG_VERSION`. Windows selects
-`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.6"`; Linux selects
-`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.6"`. No
+`"windows"`, `"x64"`, `"win64"`, `"pe"`, `8` and `"1.2.7"`; Linux selects
+`"linux"`, `"x64"`, `"sysv"`, `"elf"`, `8` and `"1.2.7"`. No
 compiler-implementation value is exposed: the Python and self-hosted compilers
 must select the same source for identical inputs.
 
@@ -3467,17 +3467,18 @@ GC flags:
 
 The standard library includes reusable CRC-32C/CRC-32, platform-native
 cryptography, and CPU-dispatched byte/string search. Public wrappers live in
-`std.checksum.*`, `std.crypto`, `std.crypto.aes_gcm`, and `std.cpu`;
+`std.checksum.*`, `std.crypto`, `std.crypto.aes_gcm`,
+`std.crypto.ecdsa_p256`, and `std.cpu`;
 checksum helpers and their lookup tables are emitted only when referenced,
 while search accelerates the existing first-class string/bytes builtins.
 
 CRC-32C uses SSE4.2 when available and a bit-identical software fallback.
 Search uses AVX2, SSE2, or scalar candidate scans while preserving byte-indexed
 string semantics. Cryptography is backed by Windows CNG or Linux OpenSSL 3 and includes
-AES-256-GCM, SHA-256/384, HMAC, HKDF, X25519, system CSPRNG,
+AES-256-GCM, ECDSA P-256/SHA-256 verification, SHA-256/384, HMAC, HKDF, X25519, system CSPRNG,
 constant-time byte comparison, and best-effort secure erasure.
 
 See [the native primitives guide](docs/NATIVE_PRIMITIVES.md) for API details,
 polynomials, dispatch controls, and security assumptions. Focused tests live in
-`tests/checksum_runtime.ml`, `tests/crypto_cng.ml`, and
+`tests/checksum_runtime.ml`, `tests/crypto_cng.ml`, `tests/ecdsa_p256.ml`, and
 `tests/simd_search.ml`; reproducible measurements live in `benchmarks/`.

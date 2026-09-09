@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.2.6"
+  $expected = "MiniLang Compiler 1.2.7"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -412,6 +412,7 @@ try {
       [pscustomobject]@{ Name = "Linux std.test framework"; Source = "std_test_framework.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux threading standard library"; Source = "threading_stdlib.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux platform crypto"; Source = "crypto_cng.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux ECDSA-P256"; Source = "ecdsa_p256.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared-value snapshots"; Source = "shared_value.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux platform services"; Source = "platform_services.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux extern/user basename collision"; Source = "extern_user_name_collision\main.ml"; RunArgs = @() },
@@ -472,6 +473,7 @@ try {
     [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },
     [pscustomobject]@{ Name = "SIMD search differential"; Source = "simd_search.ml" },
     [pscustomobject]@{ Name = "platform crypto vectors"; Source = "crypto_cng.ml" },
+    [pscustomobject]@{ Name = "ECDSA-P256 signature verification"; Source = "ecdsa_p256.ml" },
     [pscustomobject]@{ Name = "portable shared-value snapshots"; Source = "shared_value.ml" },
     [pscustomobject]@{ Name = "portable platform services"; Source = "platform_services.ml" },
     [pscustomobject]@{ Name = "extern/user basename collision"; Source = "extern_user_name_collision\main.ml" }
