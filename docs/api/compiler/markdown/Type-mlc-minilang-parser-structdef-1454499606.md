@@ -26,7 +26,7 @@ _extern_field_types
 Extern field types associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L787)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L789)
 
 <a id="field-field-mlc-minilang-parser-structdef-filename-filename-mlc-minilang-parser-ml-665802743"></a>
 ### _filename
@@ -38,7 +38,7 @@ _filename
 Filename associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L791)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L793)
 
 <a id="field-field-mlc-minilang-parser-structdef-pos-pos-mlc-minilang-parser-ml-1103713793"></a>
 ### _pos
@@ -50,7 +50,19 @@ _pos
 Pos associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L789)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L791)
+
+<a id="field-field-mlc-minilang-parser-structdef-field-defaults-field-defaults-mlc-minilang-parser-ml-1790405473"></a>
+### field_defaults
+
+```ml
+field_defaults
+```
+
+Default initializer expressions parallel to fields.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L785)
 
 <a id="field-field-mlc-minilang-parser-structdef-field-optional-field-optional-mlc-minilang-parser-ml-1491382565"></a>
 ### field_optional
@@ -98,7 +110,7 @@ interfaces
 Interfaces associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L785)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L787)
 
 <a id="field-field-mlc-minilang-parser-structdef-methods-methods-mlc-minilang-parser-ml-1134397163"></a>
 ### methods

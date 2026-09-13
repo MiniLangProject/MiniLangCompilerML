@@ -1213,6 +1213,14 @@ function _try_const_bin(op, lv, rv)
     return ConstEvalResult(false, 0)
   end if
 
+  if op == "div" then
+    if _is_int_no_bool(lv) and _is_int_no_bool(rv) then
+      if rv == 0 then return ConstEvalResult(false, 0) end if
+      return ConstEvalResult(true, (lv - (lv % rv)) / rv)
+    end if
+    return ConstEvalResult(false, 0)
+  end if
+
   if op == "%" then
     if _is_int_no_bool(lv) and _is_int_no_bool(rv) then
       if rv == 0 then return ConstEvalResult(false, 0) end if
@@ -2122,7 +2130,12 @@ function _emit_expr_member(state, expr)
         end if
       end for
     end if
+    known_method_fast = _method_map_get(_state_struct_methods_get(state, struct_qname), mname)
+    if typeof(fields_fast) == "array" and known_method_fast == "" then
+      state.diagnostics = state.diagnostics + ["Struct '" + struct_qname + "' has no member '" + mname + "'"]
+    end if
   end if
+
   state = cg_emit_expr(state, tgt)
 
   fid_m = _next_lid(state)
@@ -2197,6 +2210,7 @@ end function
 /// Lower emit expr index expression behavior to native x64.
 /// @internal
 function _emit_expr_index(state, expr)
+  state = _validate_statically_known_index(state, expr)
   fast_plan = _opt_known_index_plan(state, expr)
   if typeof(fast_plan) == "array" and len(fast_plan) >= 3 then
     return _opt_emit_known_index(state, expr, fast_plan)
@@ -2759,6 +2773,7 @@ function _opt_expr_known_type(state, ex)
     if (op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" and _opt_const_nonnegative_int(state, right_b) then return "int" end if
     if (op_b == "+" or op_b == "-" or op_b == "*") and lb == "int" and rb2 == "int" then return "int" end if
     if op_b == "%" and lb == "int" and rb2 == "int" and _opt_const_nonzero_number(state, right_b) then return "int" end if
+    if op_b == "div" and lb == "int" and rb2 == "int" and _opt_const_nonzero_number(state, right_b) then return "int" end if
     numeric_l = lb == "int" or lb == "float" or lb == "number"
     numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "+" or op_b == "-" or op_b == "*") and numeric_l and numeric_r then return "number" end if
@@ -2778,7 +2793,7 @@ function _opt_expr_known_type(state, ex)
     if (tb == "bytes" or tb == "bytes?") and index_base == "int" then return "int" end if
     if tb == "string" and index_base == "int" then return "string" end if
   end if
-  if state.operator_overloads_present and k == "Call" then
+  if k == "Call" then
     callee = try(ex.callee)
     fn_qname = _native_callback_resolve_user_fn(state, callee)
     if fn_qname != "" then
@@ -2848,6 +2863,32 @@ function _opt_known_index_plan(state, ex)
     if cv.value >= 0 and cv.value < exact_len then bounds_proven = true end if
   end if
   return [kind, base_slot, bounds_proven]
+end function
+
+/// Diagnose index failures that local type and length facts prove in advance.
+/// Unknown values retain the normal catchable runtime checks.
+/// @internal
+function _validate_statically_known_index(state, ex)
+  if typeof(ex) != "struct" then return state end if
+  target = try(ex.target)
+  index = try(ex.index)
+  target_fact = _opt_expr_known_type(state, target)
+  target_kind = _opt_type_base(target_fact)
+  indexable = target_kind == "array" or target_kind == "bytes" or target_kind == "bytes?" or target_kind == "string"
+  if not indexable then return state end if
+  index_kind = _opt_type_base(_opt_expr_known_type(state, index))
+  if index_kind != "" and index_kind != "int" then
+    state.diagnostics = state.diagnostics + ["Index must be an int; statically known type is '" + index_kind + "'"]
+    return state
+  end if
+  exact_len = _opt_type_exact_length(target_fact)
+  cv = cg_expr_try_const_value(state, index)
+  if exact_len >= 0 and typeof(cv) == "struct" and cv.ok and typeof(cv.value) == "int" then
+    if cv.value < 0 - exact_len or cv.value >= exact_len then
+      state.diagnostics = state.diagnostics + ["Index " + cv.value + " is out of bounds for statically known length " + exact_len]
+    end if
+  end if
+  return state
 end function
 
 /// Lower opt emit known index expression behavior to native x64.
@@ -3254,12 +3295,54 @@ function _emit_known_float_binop(state, expr)
   return [state, true]
 end function
 
+/// Lower a statically string-starting left `+` spine iteratively.
+/// This preserves left-to-right semantics while avoiding deep compiler
+/// recursion and repeated dynamic add dispatch for serializer-style chains.
+/// @internal
+function _try_emit_left_string_concat_chain(state, expr)
+  if t.ast_kind(expr) != "Bin" or t.ast_op(expr) != "+" then return [state, false] end if
+  count = 0
+  current = expr
+  while t.ast_kind(current) == "Bin" and t.ast_op(current) == "+"
+    count = count + 1
+    current = t.ast_left(current)
+  end while
+  if count < 2 or _opt_type_base(_opt_expr_known_type(state, current)) != "string" then return [state, false] end if
+
+  rights = array(count)
+  current2 = expr
+  ri = count - 1
+  while t.ast_kind(current2) == "Bin" and t.ast_op(current2) == "+"
+    rights[ri] = t.ast_right(current2)
+    ri = ri - 1
+    current2 = t.ast_left(current2)
+  end while
+
+  accumulator = core.alloc_expr_temps(state, 8)
+  state = cg_emit_expr(state, current2)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, accumulator)
+  for i = 0 to count - 1
+    state = cg_emit_expr(state, rights[i])
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", accumulator)
+    state.asm = a.call(state.asm, "fn_add_string")
+    state = _emit_auto_errprop(state)
+    state.asm = a.mov_rsp_disp32_rax(state.asm, accumulator)
+  end for
+  state.asm = a.mov_rax_rsp_disp32(state.asm, accumulator)
+  state = core.free_expr_temps(state, 8)
+  return [state, true]
+end function
+
 /// Emit binary operators, preserving left-to-right effects and routing dynamic type/error cases through the same helpers used by the reference compiler.
 /// @internal
 function _emit_expr_bin(state, expr)
   overloaded_b = _emit_operator_overload(state, _coerce_name(t.ast_op(expr)), [t.ast_left(expr), t.ast_right(expr)], expr)
   state = overloaded_b[0]
   if overloaded_b[1] then return state end if
+  concat_chain = _try_emit_left_string_concat_chain(state, expr)
+  state = concat_chain[0]
+  if concat_chain[1] then return state end if
   if t.ast_op(expr) == "and" then
     lid_and = _next_lid(state)
     lid_and_v = _next_lid(state)
@@ -3625,6 +3708,48 @@ function _emit_expr_bin(state, expr)
     state.asm = a.mark(state.asm, l_div_fail)
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
     state.asm = a.mark(state.asm, l_div_done)
+    if tmp_bin_ok then state = core.free_expr_temps(state, 16) end if
+    return state
+  end if
+
+  // Explicit floor division accepts only integers and therefore remains safe
+  // for array indices without an implicit float conversion.
+  if op == "div" then
+    lid_idiv = _next_lid(state)
+    l_idiv_fail = "intdiv_fail_" + lid_idiv
+    l_idiv_retag = "intdiv_retag_" + lid_idiv
+    l_idiv_done = "intdiv_done_" + lid_idiv
+
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.and_rax_imm8(state.asm, 7)
+    state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.jcc(state.asm, "ne", l_idiv_fail)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+    state.asm = a.and_rax_imm8(state.asm, 7)
+    state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.jcc(state.asm, "ne", l_idiv_fail)
+
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.sar_rax_imm8(state.asm, 3)
+    state.asm = a.sar_r64_imm8(state.asm, "r11", 3)
+    state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+    state.asm = a.jcc(state.asm, "e", l_idiv_fail)
+    state.asm = a.cqo(state.asm)
+    state.asm = a.idiv_r64(state.asm, "r11")
+    state.asm = a.test_r64_r64(state.asm, "rdx", "rdx")
+    state.asm = a.jcc(state.asm, "e", l_idiv_retag)
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rdx")
+    state.asm = a.xor_r64_r64(state.asm, "rcx", "r11")
+    state.asm = a.test_r64_r64(state.asm, "rcx", "rcx")
+    state.asm = a.jcc(state.asm, "ge", l_idiv_retag)
+    state.asm = a.dec_r64(state.asm, "rax")
+    state.asm = a.mark(state.asm, l_idiv_retag)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.jmp(state.asm, l_idiv_done)
+    state.asm = a.mark(state.asm, l_idiv_fail)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.mark(state.asm, l_idiv_done)
     if tmp_bin_ok then state = core.free_expr_temps(state, 16) end if
     return state
   end if
@@ -4633,6 +4758,15 @@ function _emit_expr_call(state, expr)
           values[field_index] = call_args[ni]
         end if
       end for
+      ctor_contracts = _state_struct_field_types_get(state, callee)
+      for fi = 0 to len(values) - 1
+        if typeof(values[fi]) == "void" and typeof(ctor_contracts) == "array" and fi < len(ctor_contracts) then
+          contract = ctor_contracts[fi]
+          if typeof(contract) == "array" and len(contract) >= 3 and typeof(contract[2]) != "void" then
+            values[fi] = contract[2]
+          end if
+        end if
+      end for
       for fi = 0 to len(values) - 1
         if typeof(values[fi]) == "void" then
           state.diagnostics = state.diagnostics + ["Missing field argument '" + ctor_fields[fi] + "' for struct " + callee]
@@ -4645,6 +4779,30 @@ function _emit_expr_call(state, expr)
       expr.arg_names = array(len(values), void)
       nargs = len(values)
     end if
+  end if
+
+  // Positional struct calls may omit a trailing field only when that field
+  // declares a default initializer.
+  ctor_fields_defaults = _state_struct_fields_get(state, callee)
+  if callee != "error" and not has_named and typeof(ctor_fields_defaults) == "array" and nargs < len(ctor_fields_defaults) then
+    ctor_contracts_defaults = _state_struct_field_types_get(state, callee)
+    while len(call_args) < len(ctor_fields_defaults)
+      default_index = len(call_args)
+      default_expr = void
+      if typeof(ctor_contracts_defaults) == "array" and default_index < len(ctor_contracts_defaults) then
+        default_contract = ctor_contracts_defaults[default_index]
+        if typeof(default_contract) == "array" and len(default_contract) >= 3 then default_expr = default_contract[2] end if
+      end if
+      if typeof(default_expr) == "void" then
+        state.diagnostics = state.diagnostics + ["Missing field argument '" + ctor_fields_defaults[default_index] + "' for struct " + callee]
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        return state
+      end if
+      call_args = call_args + [default_expr]
+    end while
+    expr.args = call_args
+    expr.arg_names = array(len(call_args), void)
+    nargs = len(call_args)
   end if
 
   math_callee = callee

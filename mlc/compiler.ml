@@ -35,9 +35,9 @@ import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.2.7"
+const COMPILER_VERSION = "1.2.8"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.7"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.8"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
@@ -1537,7 +1537,7 @@ end function
 /// Reports whether is constexpr binary.
 /// @internal
 function _is_constexpr_binary(op)
-  return op == "or" or op == "and" or op == "|" or op == "^" or op == "&" or op == "==" or op == "!=" or op == ">" or op == "<" or op == ">=" or op == "<=" or op == "<<" or op == ">>" or op == "+" or op == "-" or op == "*" or op == "/" or op == "%"
+  return op == "or" or op == "and" or op == "|" or op == "^" or op == "&" or op == "==" or op == "!=" or op == ">" or op == "<" or op == ">=" or op == "<=" or op == "<<" or op == ">>" or op == "+" or op == "-" or op == "*" or op == "/" or op == "%" or op == "div"
 end function
 
 /// Perform the expr to qualname compiler phase.

@@ -1921,6 +1921,7 @@ function _emit_storage_stmt(state, stmt, k)
   end if
 
   if k == "SetIndex" then
+    state = exprmod._validate_statically_known_index(state, stmt)
     fast_store = exprmod._opt_known_index_plan(state, stmt)
     if typeof(fast_store) == "array" and len(fast_store) >= 3 and (fast_store[0] == "array" or fast_store[0] == "bytes" or fast_store[0] == "bytes_checked") then
       return _opt_emit_known_setindex(state, stmt, fast_store)
@@ -1928,7 +1929,6 @@ function _emit_storage_stmt(state, stmt, k)
 
     lid_si = state.label_id
     state.label_id = state.label_id + 1
-    l_rhs_void = "seti_rhs_void_" + lid_si
     l_bad_target = "seti_bad_target_" + lid_si
     l_bad_index = "seti_bad_index_" + lid_si
     l_oob = "seti_oob_" + lid_si
@@ -1950,9 +1950,6 @@ function _emit_storage_stmt(state, stmt, k)
     state.asm = a.mov_rax_rsp_disp32(state.asm, idx_off)
 
     state = core.free_expr_temps(state, 16)
-
-    state.asm = a.cmp_r64_imm(state.asm, "r10", t.enc_void())
-    state.asm = a.jcc(state.asm, "e", l_rhs_void)
 
     state.asm = a.mov_r64_r64(state.asm, "r8", "r11")
     state.asm = a.and_r64_imm(state.asm, "r8", 7)
@@ -2025,12 +2022,6 @@ function _emit_storage_stmt(state, stmt, k)
     state.asm = a.add_r64_r64(state.asm, "r8", "rcx")
     state.asm = a.add_r64_imm(state.asm, "r8", 8)
     state.asm = a.mov_membase_disp_r8(state.asm, "r8", 0, "al")
-    state.asm = a.jmp(state.asm, l_done_si)
-
-    state.asm = a.mark(state.asm, l_rhs_void)
-    state = core.emit_dbg_line(state, stmt)
-    state = exprmod._emit_make_error_const(state, c.ERR_VOID_OP, "Cannot assign void via index")
-    state = exprmod._emit_auto_errprop(state)
     state.asm = a.jmp(state.asm, l_done_si)
 
     state.asm = a.mark(state.asm, l_bad_target)
@@ -2935,7 +2926,7 @@ end function
 /// Reports whether is constexpr binary.
 /// @internal
 function _is_constexpr_binary(op)
-  return op == "or" or op == "and" or op == "|" or op == "^" or op == "&" or op == "==" or op == "!=" or op == ">" or op == "<" or op == ">=" or op == "<=" or op == "<<" or op == ">>" or op == "+" or op == "-" or op == "*" or op == "/" or op == "%"
+  return op == "or" or op == "and" or op == "|" or op == "^" or op == "&" or op == "==" or op == "!=" or op == ">" or op == "<" or op == ">=" or op == "<=" or op == "<<" or op == ">>" or op == "+" or op == "-" or op == "*" or op == "/" or op == "%" or op == "div"
 end function
 
 /// Reports whether is constexpr expr.
@@ -4200,7 +4191,6 @@ function _opt_emit_known_setindex(state, stmt, plan)
   bounds_proven = plan[2]
   lid = state.label_id
   state.label_id = state.label_id + 1
-  l_rhs_void = "seti_fast_rhs_void_" + lid
   l_oob = "seti_fast_oob_" + lid
   l_bad_target = "seti_fast_bad_target_" + lid
   l_bad_byte = "seti_fast_bad_byte_" + lid
@@ -4227,8 +4217,6 @@ function _opt_emit_known_setindex(state, stmt, plan)
   release_bytes = 8
   if own_base >= 0 then release_bytes = 16 end if
   state = core.free_expr_temps(state, release_bytes)
-  state.asm = a.cmp_r64_imm(state.asm, "r10", t.enc_void())
-  state.asm = a.jcc(state.asm, "e", l_rhs_void)
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
   state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
   if kind == "bytes_checked" then
@@ -4282,11 +4270,6 @@ function _opt_emit_known_setindex(state, stmt, plan)
     state.asm = a.mov_membase_disp_r8(state.asm, "r8", 0, "al")
     state.asm = a.jmp(state.asm, l_done)
   end if
-  state.asm = a.mark(state.asm, l_rhs_void)
-  state = core.emit_dbg_line(state, stmt)
-  state = exprmod._emit_make_error_const(state, c.ERR_VOID_OP, "Cannot assign void via index")
-  state = exprmod._emit_auto_errprop(state)
-  state.asm = a.jmp(state.asm, l_done)
   if bounds_proven == false then
     state.asm = a.mark(state.asm, l_oob)
     state = core.emit_dbg_line(state, stmt)
@@ -7676,7 +7659,9 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
               field_optional = false
               if typeof(try(st.field_types)) == "array" and fi < len(st.field_types) then field_ty = st.field_types[fi] end if
               if typeof(try(st.field_optional)) == "array" and fi < len(st.field_optional) then field_optional = st.field_optional[fi] end if
-              contracts = contracts + [[field_ty, field_optional]]
+              field_default = void
+              if typeof(try(st.field_defaults)) == "array" and fi < len(st.field_defaults) then field_default = st.field_defaults[fi] end if
+              contracts = contracts + [[field_ty, field_optional, field_default]]
             end for
           end if
           state.struct_field_types = _named_array_set(state.struct_field_types, sqn, contracts)

@@ -781,6 +781,8 @@ struct StructDef
   field_types,
   /// Field optional associated with `StructDef`.
   field_optional,
+  /// Default initializer expressions parallel to fields.
+  field_defaults,
   /// Interfaces associated with `StructDef`.
   interfaces,
   /// Extern field types associated with `StructDef`.
@@ -920,7 +922,7 @@ _keywords =[
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
 "switch", "case", "default", "struct", "enum", "are", "namespace", "import", "as", "package",
 "extern", "from", "returns", "symbol", "out", "static", "inline", "synchronized", "void", "is", "defer",
-"interface", "implements", "iterator", "yield", "async", "await", "operator"
+"interface", "implements", "iterator", "yield", "async", "await", "operator", "div"
 ]
 
 /// Creates new token.
@@ -2064,7 +2066,7 @@ function _precedence(op)
   if op == ">" or op == "<" or op == ">=" or op == "<=" then return 7 end if
   if op == "<<" or op == ">>" then return 8 end if
   if op == "+" or op == "-" then return 9 end if
-  if op == "*" or op == "/" or op == "%" then return 10 end if
+  if op == "*" or op == "/" or op == "%" or op == "div" then return 10 end if
   return -1
 end function
 
@@ -2544,7 +2546,7 @@ function _parse_expr(min_prec)
     tok = _peek()
     op = ""
     if _tok_kind_id(tok) == TK_OP then op = _tok_value(tok) end if
-    if _tok_kind_id(tok) == TK_KW and(_tok_value(tok) == "and" or _tok_value(tok) == "or" or _tok_value(tok) == "is") then op = _tok_value(tok) end if
+    if _tok_kind_id(tok) == TK_KW and(_tok_value(tok) == "and" or _tok_value(tok) == "or" or _tok_value(tok) == "is" or _tok_value(tok) == "div") then op = _tok_value(tok) end if
     if op == "" then break end if
     prec = _precedence(op)
     if prec < min_prec or prec < 0 then break end if
@@ -3425,7 +3427,7 @@ function _parse_stmt_extern(start_pos, t)
     end while
     _expect_end_of("struct")
     if _has_error() then return end if
-    return StructDef("StructDef", _tok_value(nm), _chunked_finish(fields_chunks, fields_tail), [], [], [], [], _chunked_finish(field_tys_chunks, field_tys_tail), start_pos, _filename)
+    return StructDef("StructDef", _tok_value(nm), _chunked_finish(fields_chunks, fields_tail), [], [], [], [], [], _chunked_finish(field_tys_chunks, field_tys_tail), start_pos, _filename)
   end if
 
   _expect_value(TK_KW, "function")
@@ -3552,6 +3554,8 @@ function _parse_stmt_struct(start_pos, t)
   field_types_tail = []
   field_optional_chunks = []
   field_optional_tail = []
+  field_defaults_chunks = []
+  field_defaults_tail = []
   methods_chunks = []
   methods_tail = []
   while not _is_end_of("struct")
@@ -3734,12 +3738,21 @@ function _parse_stmt_struct(start_pos, t)
       fty = ftref[0]
       foptional = ftref[1]
     end if
+    fdefault = void
+    if _tok_kind_id(_peek()) == TK_OP and _tok_value(_peek()) == "=" then
+      _advance()
+      fdefault = _parse_expr(0)
+      if _has_error() then return end if
+    end if
     appft0 = _chunked_push(field_types_chunks, field_types_tail, fty, 16)
     field_types_chunks = appft0[0]
     field_types_tail = appft0[1]
     appfo0 = _chunked_push(field_optional_chunks, field_optional_tail, foptional, 16)
     field_optional_chunks = appfo0[0]
     field_optional_tail = appfo0[1]
+    appfd0 = _chunked_push(field_defaults_chunks, field_defaults_tail, fdefault, 16)
+    field_defaults_chunks = appfd0[0]
+    field_defaults_tail = appfd0[1]
     while _match_kind(TK_COMMA)
       if _tok_kind_id(_peek()) == TK_NL then
         nxt = _peek_non_nl()
@@ -3761,12 +3774,21 @@ function _parse_stmt_struct(start_pos, t)
         fty = ftref[0]
         foptional = ftref[1]
       end if
+      fdefault = void
+      if _tok_kind_id(_peek()) == TK_OP and _tok_value(_peek()) == "=" then
+        _advance()
+        fdefault = _parse_expr(0)
+        if _has_error() then return end if
+      end if
       appft = _chunked_push(field_types_chunks, field_types_tail, fty, 16)
       field_types_chunks = appft[0]
       field_types_tail = appft[1]
       appfo = _chunked_push(field_optional_chunks, field_optional_tail, foptional, 16)
       field_optional_chunks = appfo[0]
       field_optional_tail = appfo[1]
+      appfd = _chunked_push(field_defaults_chunks, field_defaults_tail, fdefault, 16)
+      field_defaults_chunks = appfd[0]
+      field_defaults_tail = appfd[1]
     end while
     _expect_block_nl()
   end while
@@ -3780,6 +3802,7 @@ function _parse_stmt_struct(start_pos, t)
     _chunked_finish(methods_chunks, methods_tail),
     _chunked_finish(field_types_chunks, field_types_tail),
     _chunked_finish(field_optional_chunks, field_optional_tail),
+    _chunked_finish(field_defaults_chunks, field_defaults_tail),
     interfaces,
     [],
     start_pos,
@@ -4366,7 +4389,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.2.7")
+    CompileValue("MINILANG_VERSION", "1.2.8")
   ]
 end function
 

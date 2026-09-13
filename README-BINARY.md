@@ -1,6 +1,6 @@
 # Binary compiler packages
 
-Release 1.2.7 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.2.8 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
@@ -30,7 +30,7 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.2.7 compiler-source revision and executable hash.
+The manifest identifies the 1.2.8 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 

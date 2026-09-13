@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.2.7"
+  $expected = "MiniLang Compiler 1.2.8"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -380,6 +380,15 @@ try {
   $conflictingAbiArgs = @((Join-Path $Root "tests\extern_abi_conflict.ml"), $conflictingAbiOutput,
                           "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
   $results += Invoke-ExpectedCompilerFailure "extern aliases reject incompatible native ABI signatures" $Compiler $conflictingAbiArgs "incompatible ABI signature"
+  foreach ($invalidCase in @(
+    [pscustomobject]@{ Name = "static index type diagnostics"; Source = "static_index_type_invalid.ml"; Text = "Index must be an int; statically known type is 'float'" },
+    [pscustomobject]@{ Name = "static index bounds diagnostics"; Source = "static_index_bounds_invalid.ml"; Text = "Index 3 is out of bounds for statically known length 3" },
+    [pscustomobject]@{ Name = "static struct member diagnostics"; Source = "static_struct_member_invalid.ml"; Text = "Struct 'Player' has no member 'missing'" }
+  )) {
+    $invalidOutput = Join-Path $script:ResolvedArtifactsDir ($invalidCase.Source + ".exe")
+    $invalidArgs = @((Join-Path $Root ("tests\" + $invalidCase.Source)), $invalidOutput, "-I", $Root) + $effectiveCompilerArgs
+    $results += Invoke-ExpectedCompilerFailure $invalidCase.Name $Compiler $invalidArgs $invalidCase.Text
+  }
 
   # Cross-compile representative static, dynamic-FFI and threaded Linux ELF
   # programs, then execute them through WSL on the Windows test host.
@@ -468,6 +477,8 @@ try {
   $results += Invoke-NativeStep "run ML test harness" $runnerExe $runnerArgs
 
   $nativePrimitiveCases = @(
+    [pscustomobject]@{ Name = "safe indexing, integer conversion, div and struct defaults"; Source = "safe_indexing_and_integer_conversions.ml" },
+    [pscustomobject]@{ Name = "long string concat chains compile iteratively"; Source = "long_string_concat.ml" },
     [pscustomobject]@{ Name = "compiler scope indexes"; Source = "compiler_scope_index.ml" },
     [pscustomobject]@{ Name = "compiler qualification cache"; Source = "compiler_qualification_cache.ml" },
     [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },
