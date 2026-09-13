@@ -34,6 +34,13 @@ Both CLI version switches and `MINILANG_VERSION` report 1.2.8.
 - [Windows x64 ZIP](https://github.com/MiniLangProject/MiniLangCompilerML/releases/download/v1.2.8/MiniLangCompilerML-1.2.8-windows-x64.zip)
 - [Linux x64 tar.gz](https://github.com/MiniLangProject/MiniLangCompilerML/releases/download/v1.2.8/MiniLangCompilerML-1.2.8-linux-x64.tar.gz)
 
+| Artifact | SHA-256 |
+| --- | --- |
+| Windows compiler | `60DB15723F1D33AFCCBAF81657E91569811C38CF54A320117857C29027700E0B` |
+| Linux compiler | `8BF4FDDDB7D68F2B5B3613D0FA715AA69A1B7FC68E7EC392F67B319141893DB8` |
+| Windows x64 ZIP | `0CA1D2C37AB0D35FE123666C9A226DB3F43B4772FA913E9BDD01B84F08046E09` |
+| Linux x64 tar.gz | `A30F590339D977A3B1ECDDCD1BFAA17DDF326F707689541AC268ED4CAF077B66` |
+
 Extract the complete package, including `std/`. Run `mlc.exe` on Windows or
 `./mlc` on Linux. Compile with `-I .` from the package directory and select the
 desired target explicitly when cross-compiling. Each archive has a SHA-256
