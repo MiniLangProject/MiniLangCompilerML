@@ -1,23 +1,23 @@
 # Binary compiler packages
 
-Release 1.2.10 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.2.11 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
 either compiler distribution.
 
-## Release 1.2.10 checksums
+## Release 1.2.11 checksums
 
-The download archives are `MiniLangCompilerML-1.2.10-windows-x64.zip` and
-`MiniLangCompilerML-1.2.10-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.10).
+The download archives are `MiniLangCompilerML-1.2.11-windows-x64.zip` and
+`MiniLangCompilerML-1.2.11-linux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.11).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 65,331,200 | `D1E4312E9ADEA6EB190B68F0210999B06A22D744C43070874CF9BBA018FA05D8` |
-| Linux `mlc` | 65,335,104 | `83640A9437C16785647E21EEE254DD5AA4896B54126F28B426FD35FA5930AF28` |
+| Windows `mlc.exe` | 65,331,200 | `493965554B865B9666927551165D321D9338359CD4BFCF03AF01A344CA6B3F20` |
+| Linux `mlc` | 65,335,104 | `3986392C43989A67C30DC70E2A3A8502E49F2BA66DB5C284C39372D24397F300` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -43,17 +43,17 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.2.10 compiler-source revision and executable hash.
+The manifest identifies the 1.2.11 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
-## Native video runtime
+## Native media runtime
 
-Release 1.2.10 packages include native-video
+Release 1.2.11 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 
-Applications importing `std.video` must deploy the matching file from
+Applications importing `std.video` or `std.audio` must deploy the matching file from
 `runtimes/<target>/` beside the generated executable. Windows supplies Media
 Foundation. Linux additionally needs the GStreamer 1.x runtime and plugins for
 the formats the application accepts. The portable bridge source and build
