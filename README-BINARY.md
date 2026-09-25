@@ -47,16 +47,35 @@ The manifest identifies the 1.2.9 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
+## Development packages after 1.2.9
+
+Packages built from the current unreleased sources also include native-video
+bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
+bridge's ABI, relative path and SHA-256.
+
+Applications importing `std.video` must deploy the matching file from
+`runtimes/<target>/` beside the generated executable. Windows supplies Media
+Foundation. Linux additionally needs the GStreamer 1.x runtime and plugins for
+the formats the application accepts. The portable bridge source and build
+instructions are included under `native/video/`; cross-target builds can
+build the other target's bridge from that source.
+
 This package contains the native, self-hosted MiniLang compiler. Its
 executable has no Python runtime dependency.
 
 ## Building binary releases
 
 Build `build/mlc_win64.exe` with `build.ps1` on Windows and `build/mlc_linux_x64`
-with `build.sh` on Linux. Then run the development packaging helper:
+with `build.sh` on Linux. Build the target's native-video bridge before
+running the development packaging helper:
+
+```powershell
+.\native\video\windows\build.ps1
+python scripts/package_binary.py --binary build/mlc_win64.exe --platform windows-x64
+```
 
 ```sh
-python scripts/package_binary.py --binary build/mlc_win64.exe --platform windows-x64
+sh native/video/linux/build.sh
 python scripts/package_binary.py --binary build/mlc_linux_x64 --platform linux-x64
 ```
 

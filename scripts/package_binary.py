@@ -40,6 +40,19 @@ def main() -> int:
         shutil.copy2(binary, executable)
         executable.chmod(0o755)
         shutil.copytree(root / 'std', package / 'std', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+        shutil.copytree(root / 'native' / 'video', package / 'native' / 'video',
+                        ignore=shutil.ignore_patterns('__pycache__', '*.pyc', 'test.ps1'))
+        bridge_name = 'minilang_video.dll' if args.platform == 'windows-x64' else 'libminilang_video.so'
+        bridge_source = root / 'build' / 'native' / 'video' / args.platform / bridge_name
+        if not bridge_source.is_file():
+            build_script = ('native/video/windows/build.ps1' if args.platform == 'windows-x64'
+                            else 'native/video/linux/build.sh')
+            raise FileNotFoundError(
+                f'native video bridge is missing: run {build_script} before packaging')
+        runtime_directory = package / 'runtimes' / args.platform
+        runtime_directory.mkdir(parents=True)
+        bridge = runtime_directory / bridge_name
+        shutil.copy2(bridge_source, bridge)
         for filename in ['LICENSE', 'README-BINARY.md', 'CHANGELOG.md', f'RELEASE_NOTES_{args.version}.md']:
             shutil.copy2(root / filename, package / filename)
         example = package / 'examples' / 'hello.ml'
@@ -50,7 +63,12 @@ def main() -> int:
         manifest = {'compiler': compiler_name, 'version': args.version, 'platform': args.platform,
                     'compilerSourceRevision': revision,
                     'executable': executable.name,
-                    'executableSha256': hashlib.sha256(binary.read_bytes()).hexdigest()}
+                    'executableSha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+                    'nativeVideoBridge': {
+                        'abiVersion': 1,
+                        'path': str(bridge.relative_to(package)).replace('\\', '/'),
+                        'sha256': hashlib.sha256(bridge.read_bytes()).hexdigest(),
+                    }}
         (package / 'BUILD_INFO.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
         if args.third_party:
             licenses = package / 'third-party'
