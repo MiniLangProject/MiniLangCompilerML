@@ -18,7 +18,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', required=True, type=Path)
     parser.add_argument('--platform', required=True, choices=['windows-x64', 'linux-x64'])
-    parser.add_argument('--version', default='1.2.9')
+    parser.add_argument('--version', default='1.2.10')
     parser.add_argument('--third-party', action='append', default=[], type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]

@@ -1,23 +1,23 @@
 # Binary compiler packages
 
-Release 1.2.9 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.2.10 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
 either compiler distribution.
 
-## Release 1.2.9 checksums
+## Release 1.2.10 checksums
 
-The download archives are `MiniLangCompilerML-1.2.9-windows-x64.zip` and
-`MiniLangCompilerML-1.2.9-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.9).
+The download archives are `MiniLangCompilerML-1.2.10-windows-x64.zip` and
+`MiniLangCompilerML-1.2.10-linux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.10).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 65,331,200 | `C1D0FD2895B5C853BA461C6BE3A67C6C2A21647D22C23DBBB22897B80A6D685E` |
-| Linux `mlc` | 65,335,104 | `84B474193973EC0FED41CB5711F1BDA05FEFA5C8849E3B5DC599F54E81C9C75B` |
+| Windows `mlc.exe` | 65,331,200 | `D1E4312E9ADEA6EB190B68F0210999B06A22D744C43070874CF9BBA018FA05D8` |
+| Linux `mlc` | 65,335,104 | `83640A9437C16785647E21EEE254DD5AA4896B54126F28B426FD35FA5930AF28` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -43,13 +43,13 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.2.9 compiler-source revision and executable hash.
+The manifest identifies the 1.2.10 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
-## Development packages after 1.2.9
+## Native video runtime
 
-Packages built from the current unreleased sources also include native-video
+Release 1.2.10 packages include native-video
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 
