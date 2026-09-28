@@ -85,9 +85,17 @@ def main() -> int:
                     if path.is_file():
                         target.write(path, path.relative_to(package.parent))
         else:
+            def linux_archive_mode(info: tarfile.TarInfo) -> tarfile.TarInfo:
+                """Set portable Linux modes even when packaging on Windows."""
+                # Windows chmod only controls the read-only attribute; it
+                # cannot supply the executable bits tarfile reads from stat.
+                executable_member = info.name == f'{name}/mlc' or info.name.endswith('.sh')
+                info.mode = 0o755 if info.isdir() or executable_member else 0o644
+                return info
+
             archive = output / (name + '.tar.gz')
             with tarfile.open(archive, 'w:gz', compresslevel=9) as target:
-                target.add(package, arcname=name)
+                target.add(package, arcname=name, filter=linux_archive_mode)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     Path(str(archive) + '.sha256').write_text(f'{digest}  {archive.name}\n', encoding='ascii')
     print(f'Built {archive}\nSHA256 {digest}')

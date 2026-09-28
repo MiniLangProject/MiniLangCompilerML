@@ -6,6 +6,9 @@ HollowKeep mixed-string-concatenation fix in both compiler implementations.
 
 ## Fixes and regression coverage
 
+- Linux packages now set POSIX archive modes explicitly when assembled on
+  Windows, preserving executable permissions after extraction on Linux.
+
 - Unary and binary type inference now reuses operand facts instead of
   recursively computing them twice. Qualified struct types remain intact for
   overload selection; evaluation order and emitted program semantics are
