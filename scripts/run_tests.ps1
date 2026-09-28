@@ -429,6 +429,7 @@ try {
       [pscustomobject]@{ Name = "Linux GC safepoint publication"; Source = "gc_back_to_back_safepoint.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux language extensions"; Source = "language_extensions.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux operator overloading"; Source = "operator_overloading.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux mixed concat with operator overloads"; Source = "mixed_concat_overloads.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux async variadics"; Source = "language_async_variadic.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux escaping variadics"; Source = "variadic_escape_lifetime.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux default lambda lowering"; Source = "language_default_lambda.ml"; RunArgs = @() },
@@ -480,6 +481,7 @@ try {
   $nativePrimitiveCases = @(
     [pscustomobject]@{ Name = "safe indexing, integer conversion, div and struct defaults"; Source = "safe_indexing_and_integer_conversions.ml" },
     [pscustomobject]@{ Name = "long string concat chains compile iteratively"; Source = "long_string_concat.ml" },
+    [pscustomobject]@{ Name = "mixed concat with operator overloads"; Source = "mixed_concat_overloads.ml" },
     [pscustomobject]@{ Name = "compiler scope indexes"; Source = "compiler_scope_index.ml" },
     [pscustomobject]@{ Name = "compiler qualification cache"; Source = "compiler_qualification_cache.ml" },
     [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },
@@ -610,6 +612,12 @@ try {
       Includes = @($Root)
       Args = @()
     }
+    [pscustomobject]@{
+      Name = "mixed concat with operator overloads"
+      Source = Join-Path $Root "tests\mixed_concat_overloads.ml"
+      Includes = @($Root)
+      Args = @()
+    }
   )
   foreach ($parityCase in $objectParityCases) {
     $stem = ($parityCase.Name -replace '[^A-Za-z0-9]+', '_').Trim('_').ToLowerInvariant()
@@ -626,8 +634,8 @@ try {
     $results += Invoke-NativeStep ("compile parity object: " + $parityCase.Name) $Compiler $objectArgs
     if ($results[-1].ExitCode -ne 0) { continue }
     $results += Compare-BinaryArtifacts ("object byte identity: " + $parityCase.Name) $monoExe $objectExe
-    if ($parityCase.Name -eq "variadic escape lifetime") {
-      $results += Invoke-NativeStep "run object variadic escape lifetime" $objectExe @()
+    if ($parityCase.Name -eq "variadic escape lifetime" -or $parityCase.Name -eq "mixed concat with operator overloads") {
+      $results += Invoke-NativeStep ("run object " + $parityCase.Name) $objectExe @()
     }
 
     # Exercise the standalone streaming linker against retained canonical

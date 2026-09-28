@@ -2748,9 +2748,13 @@ function _opt_expr_known_type(state, ex)
   if k == "IsType" then return "bool" end if
   if k == "Unary" then
     op_u = _coerce_name(t.ast_op(ex))
-    overload_u = _resolve_operator_overload(state, op_u, [t.ast_right(ex)], ex, false)
+    // Reuse full operand facts for overload resolution and builtin inference.
+    // Walking both paths recursively doubles work at every nesting level
+    // whenever any imported module declares an operator.
+    right_fact_u = _opt_expr_known_type(state, t.ast_right(ex))
+    overload_u = _resolve_operator_overload_facts(state, op_u, [right_fact_u], ex, false)
     if overload_u[0] and overload_u[1] != "" then return overload_u[2] end if
-    rb = _opt_type_base(_opt_expr_known_type(state, t.ast_right(ex)))
+    rb = _opt_type_base(right_fact_u)
     if op_u == "not" and rb != "" then return "bool" end if
     if op_u == "~" and rb == "int" then return "int" end if
     if op_u == "-" and rb == "int" then return "int" end if
@@ -2759,10 +2763,14 @@ function _opt_expr_known_type(state, ex)
   end if
   if k == "Bin" then
     op_b = _coerce_name(t.ast_op(ex))
-    overload_b = _resolve_operator_overload(state, op_b, [t.ast_left(ex), t.ast_right(ex)], ex, false)
+    // Preserve qualified struct facts for exact overload selection; reduce
+    // them to representation base types only for builtin inference below.
+    left_fact_b = _opt_expr_known_type(state, t.ast_left(ex))
+    right_fact_b = _opt_expr_known_type(state, t.ast_right(ex))
+    overload_b = _resolve_operator_overload_facts(state, op_b, [left_fact_b, right_fact_b], ex, false)
     if overload_b[0] and overload_b[1] != "" then return overload_b[2] end if
-    lb = _opt_type_base(_opt_expr_known_type(state, t.ast_left(ex)))
-    rb2 = _opt_type_base(_opt_expr_known_type(state, t.ast_right(ex)))
+    lb = _opt_type_base(left_fact_b)
+    rb2 = _opt_type_base(right_fact_b)
     if op_b == "==" or op_b == "!=" then return "bool" end if
     numeric_l_cmp = lb == "int" or lb == "float" or lb == "number"
     numeric_r_cmp = rb2 == "int" or rb2 == "float" or rb2 == "number"
