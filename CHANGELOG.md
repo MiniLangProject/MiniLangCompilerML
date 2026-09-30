@@ -2,7 +2,7 @@
 
 All notable changes to the MiniLang compiler are documented here.
 
-## Unreleased
+## 1.2.14 - 2026-09-30
 
 - Make Windows bootstrap memory diagnostics opt-in with `-BootstrapProbe`.
   Preserve `-NoBootstrapProbe` compatibility and Python-bootstrap protection;
