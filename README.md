@@ -8,6 +8,10 @@ Current stable release: **1.2.12**. See the [changelog](CHANGELOG.md) and
 
 Supported native targets: **Windows x64 (PE32+)** and **Linux x64 (ELF64)**.
 
+Development changes since 1.2.12 improve integer floor division and avoid
+unnecessary string copies. See the [runtime/heap evaluation](docs/reports/RUNTIME_CODEGEN_REVIEW_2026-09-30.md)
+for measurements, correctness checks and the scope of binary-parity validation.
+
 MiniLang (`.ml`) is a small, dynamically typed language that compiles with the
 self-hosted compiler produced by `build.ps1` to native Windows x64 (PE32+) or
 Linux x64 (ELF64) images. Windows is the default target;

@@ -3077,6 +3077,17 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
     state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
     return state
   end if
+  if op == "div" then
+    // The caller only selects this path for a positive power-of-two divisor.
+    // Arithmetic shift rounds negative dividends down, matching floor div.
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+    if rhs_const != 1 then
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3 + _positive_power_of_two_shift(rhs_const))
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    end if
+    return state
+  end if
   if op == "%" then
     if rhs_ok then
       divisor = rhs_const
@@ -3460,6 +3471,7 @@ function _emit_expr_bin(state, expr)
 
   op = t.ast_op(expr)
   known_int_op = op == "+" or op == "-" or op == "*" or op == "%" or op == "&" or op == "|" or op == "^" or op == "<<" or op == ">>" or op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
+  if op == "div" and rhs_const_int_ok and rhs_const_int <= 576460752303423488 and _positive_power_of_two_shift(rhs_const_int) >= 0 then known_int_op = true end if
   if known_int_op and _opt_expr_known_int(state, t.ast_left(expr)) and _opt_expr_known_int(state, t.ast_right(expr)) then
     state = _emit_known_int_binop(state, op, lhs_const_int_ok, lhs_const_int, rhs_const_int_ok, rhs_const_int)
     return state
@@ -8408,14 +8420,24 @@ function _emit_expr_array_lit(state, expr)
 
   imm_items = []
   all_imm = true
+  all_scalar = true
   if n > 0 then
     for i = 0 to n - 1
       enc = _opt_try_const_immediate_encoded(state, items_lit[i])
       if enc == 0 then
         all_imm = false
-        break
+        // A tagged 61-bit integer may need all 64 bits when encoded. The
+        // compiler cannot store that encoding in its own int, but the array
+        // still contains no managed pointers. Emit its elements normally and
+        // retain the scalar-array header, matching the Python backend.
+        scalar = cg_expr_try_const_value(state, items_lit[i])
+        if scalar.ok == false or typeof(scalar.value) != "int" then
+          all_scalar = false
+          break
+        end if
+      else
+        imm_items = imm_items + [enc]
       end if
-      imm_items = imm_items + [enc]
     end for
   end if
 
@@ -8429,7 +8451,7 @@ function _emit_expr_array_lit(state, expr)
   state = core.expr_value_temp_store_rax(state, base_tmp)
   state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
 
-  if all_imm then
+  if all_scalar then
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY_IMM, false)
   else
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
