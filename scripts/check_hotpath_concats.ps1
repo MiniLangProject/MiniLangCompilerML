@@ -161,8 +161,8 @@ if (-not [Regex]::IsMatch($buildPsSource, '"--heap-commit"\s*,\s*"512m"')) {
 }
 if (-not [Regex]::IsMatch(
     $buildPsSource,
-    '\$enableBootstrapProbe\s*=\s*-not\s+\$NoBootstrapProbe\s+-and\s+-not\s+\$script:CompilerIsPython')) {
-  $failures += "build.ps1: Python bootstrap is no longer protected from the self-host-only --mem-probe flag"
+    '\$enableBootstrapProbe\s*=\s*\$BootstrapProbe\s+-and\s+-not\s+\$NoBootstrapProbe\s+-and\s+-not\s+\$script:CompilerIsPython')) {
+  $failures += "build.ps1: memory probing must be opt-in, honor the disable switch, and exclude Python bootstraps"
 }
 if (-not [Regex]::IsMatch($buildShSource, "--heap-commit\s+512m")) {
   $failures += "build.sh: self-host compiler initial heap commit is not 512 MiB"

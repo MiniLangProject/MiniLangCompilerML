@@ -3228,6 +3228,18 @@ function div_r64(asm, reg_name)
   return asm
 end function
 
+/// Multiply unsigned RAX by reg_name, returning the full product in RDX:RAX.
+/// @param asm Native assembler state.
+/// @param reg_name Source register; RAX and RDX are overwritten.
+function mul_r64(asm, reg_name)
+  r = _rid_any(reg_name)
+  if r < 0 then return asm end if
+  asm = _emit_rex(asm, 1, 0, 0, (r >> 3) & 1, false)
+  asm = _emit8(asm, 0xF7)
+  asm = _emit_modrm(asm, 3, 4, r & 7)
+  return asm
+end function
+
 /// Encode or manage rep movsb in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function rep_movsb(asm)

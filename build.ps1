@@ -14,6 +14,7 @@ param(
   [switch]$NoReplace,
   [switch]$SkipSmoke,
   [switch]$KeepObjects,
+  [switch]$BootstrapProbe,
   [switch]$NoBootstrapProbe
 )
 
@@ -228,7 +229,9 @@ $buildArgs = @(
   "--gc-limit", "1536m",
   "--object-pipeline"
 )
-$enableBootstrapProbe = -not $NoBootstrapProbe -and -not $script:CompilerIsPython
+# Diagnostics must be opt-in: heap/label probing materially perturbs timings.
+# Preserve the old negative switch; it wins if both switches are supplied.
+$enableBootstrapProbe = $BootstrapProbe -and -not $NoBootstrapProbe -and -not $script:CompilerIsPython
 if ($enableBootstrapProbe) {
   $buildArgs += "--mem-probe"
 }
@@ -243,7 +246,7 @@ if ($replaceFinal) {
 }
 if ($enableBootstrapProbe) {
   Write-Host "Bootstrap: mem-probe enabled"
-} elseif (-not $NoBootstrapProbe -and $script:CompilerIsPython) {
+} elseif ($BootstrapProbe -and $script:CompilerIsPython) {
   Write-Host "Bootstrap: mem-probe omitted for Python compiler"
 }
 

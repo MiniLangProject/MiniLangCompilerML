@@ -2612,6 +2612,27 @@ function _opt_type_fact_get(items, name)
   return ""
 end function
 
+/// Compare bounded, pure local integer trees without allocating analysis maps.
+/// Calls, heap reads, captures and potentially failing operations are excluded.
+/// @internal
+function _opt_same_local_int_expr(state, left, right, depth)
+  if depth > 3 then return false end if
+  kind = t.ast_kind(left)
+  if kind != t.ast_kind(right) then return false end if
+  if kind == "Var" then return t.ast_name(left) == t.ast_name(right) and _opt_expr_known_int(state, left) end if
+  if kind == "Num" then
+    left_value = t.ast_value(left)
+    right_value = t.ast_value(right)
+    return typeof(left_value) == "int" and typeof(right_value) == "int" and left_value == right_value
+  end if
+  if kind == "Bin" then
+    op = t.ast_op(left)
+    if op != "+" and op != "-" and op != "*" and op != "&" and op != "|" and op != "^" then return false end if
+    return op == t.ast_op(right) and _opt_same_local_int_expr(state, t.ast_left(left), t.ast_left(right), depth + 1) and _opt_same_local_int_expr(state, t.ast_right(left), t.ast_right(right), depth + 1)
+  end if
+  return false
+end function
+
 /// Convert a declared operator type into the optimizer's canonical type fact.
 /// @internal
 function _operator_declared_type_fact(state, raw_type, owner_qname, node)
@@ -3078,7 +3099,34 @@ function _emit_known_int_binop(state, op, lhs_ok, lhs_const, rhs_ok, rhs_const)
     return state
   end if
   if op == "div" then
-    // The caller only selects this path for a positive power-of-two divisor.
+    // The caller proves a positive signed-61-bit constant divisor.
+    if _positive_power_of_two_shift(rhs_const) < 0 then
+      // Complement negative dividends before unsigned reciprocal division.
+      // ceil(2^60/d) needs at most one quotient correction for n < 2^60.
+      done_div = "known_div_recip_" + _next_lid(state)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.sar_r64_imm8(state.asm, "rcx", 63)
+      state.asm = a.xor_r64_r64(state.asm, "rax", "rcx")
+      state.asm = a.mov_r64_r64(state.asm, "r8", "rax")
+      state.asm = a.mov_r64_imm64(state.asm, "r11", (1152921504606846975 div rhs_const) + 1)
+      state.asm = a.mul_r64(state.asm, "r11")
+      state.asm = a.shr_r64_imm8(state.asm, "rax", 60)
+      state.asm = a.shl_r64_imm8(state.asm, "rdx", 4)
+      state.asm = a.or_r64_r64(state.asm, "rax", "rdx")
+      state.asm = a.mov_r64_imm64(state.asm, "r11", rhs_const)
+      state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+      state.asm = a.imul_r64_r64(state.asm, "rdx", "r11")
+      state.asm = a.cmp_r64_r64(state.asm, "rdx", "r8")
+      state.asm = a.jcc(state.asm, "be", done_div)
+      state.asm = a.dec_r64(state.asm, "rax")
+      state.asm = a.mark(state.asm, done_div)
+      state.asm = a.xor_r64_r64(state.asm, "rax", "rcx")
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+      return state
+    end if
     // Arithmetic shift rounds negative dividends down, matching floor div.
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
     if rhs_const != 1 then
@@ -3446,16 +3494,33 @@ function _emit_expr_bin(state, expr)
     return state
   end if
 
-  left_tmp = core.alloc_expr_temps(state, 8)
-  right_tmp = core.alloc_expr_temps(state, 8)
-  state = cg_emit_expr(state, t.ast_left(expr))
-  state.asm = a.mov_rsp_disp32_rax(state.asm, left_tmp)
-  state = cg_emit_expr(state, t.ast_right(expr))
-  state.asm = a.mov_rsp_disp32_rax(state.asm, right_tmp)
-
-  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", left_tmp)
-  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", right_tmp)
-  state = core.free_expr_temps(state, 16)
+  left_expr = t.ast_left(expr)
+  right_expr = t.ast_right(expr)
+  // Most trees cannot match: bypass recursive analysis for literal/heap RHSs.
+  right_kind = t.ast_kind(right_expr)
+  if right_kind == "Num" and typeof(t.ast_value(right_expr)) == "int" then
+    // An immediate cannot call, collect or clobber R10.
+    state = cg_emit_expr(state, left_expr)
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state.asm = a.mov_r64_tagged_int(state.asm, "r11", t.ast_value(right_expr))
+  else
+    // A lone repeated variable saves just one load, not enough to justify
+    // probing every variable/variable operator in large compiler functions.
+    if right_kind == "Bin" and t.ast_kind(left_expr) == "Bin" and _opt_same_local_int_expr(state, left_expr, right_expr, 0) then
+      state = cg_emit_expr(state, left_expr)
+      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    else
+      left_tmp = core.alloc_expr_temps(state, 8)
+      state = cg_emit_expr(state, left_expr)
+      state.asm = a.mov_rsp_disp32_rax(state.asm, left_tmp)
+      state = cg_emit_expr(state, right_expr)
+      // No call or safepoint intervenes: the right stack store/load is dead.
+      state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", left_tmp)
+      state = core.free_expr_temps(state, 8)
+    end if
+  end if
   tmp_bin_ok = false
 
   lhs_const = _opt_try_const_value(state, t.ast_left(expr))
@@ -3471,7 +3536,7 @@ function _emit_expr_bin(state, expr)
 
   op = t.ast_op(expr)
   known_int_op = op == "+" or op == "-" or op == "*" or op == "%" or op == "&" or op == "|" or op == "^" or op == "<<" or op == ">>" or op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
-  if op == "div" and rhs_const_int_ok and rhs_const_int <= 576460752303423488 and _positive_power_of_two_shift(rhs_const_int) >= 0 then known_int_op = true end if
+  if op == "div" and rhs_const_int_ok and rhs_const_int > 0 and rhs_const_int <= 1152921504606846975 then known_int_op = true end if
   if known_int_op and _opt_expr_known_int(state, t.ast_left(expr)) and _opt_expr_known_int(state, t.ast_right(expr)) then
     state = _emit_known_int_binop(state, op, lhs_const_int_ok, lhs_const_int, rhs_const_int_ok, rhs_const_int)
     return state

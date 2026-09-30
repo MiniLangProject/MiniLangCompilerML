@@ -6,6 +6,11 @@
 Current stable release: **1.2.13**. See the [changelog](CHANGELOG.md) and
 [release notes](RELEASE_NOTES_1.2.13.md).
 
+The development tree additionally improves constant integer division, decimal
+formatting and local expression code generation. See the
+[unreleased optimization evaluation](docs/reports/LOCAL_CODEGEN_OPTIMIZATIONS_2026-09-30.md)
+for correctness, parity, performance and scope; these changes are not in 1.2.13.
+
 Supported native targets: **Windows x64 (PE32+)** and **Linux x64 (ELF64)**.
 
 Release 1.2.13 improves integer floor division and avoids
@@ -480,8 +485,8 @@ Useful variants:
 # Retain the generated .mlo object directory for linker investigation.
 .\build.ps1 -KeepObjects
 
-# Disable bootstrap memory-probe output at its source.
-.\build.ps1 -NoBootstrapProbe
+# Enable optional bootstrap memory diagnostics (not for timing comparisons).
+.\build.ps1 -BootstrapProbe
 ```
 
 Notes:
@@ -666,9 +671,10 @@ Notes:
   peak working set fell from 875.5 to 481.4 MiB (45.01%). Both sets emitted the
   same 60,443,136-byte executable with SHA-256
   `101C11E9E17D19A58A01C8EABF5E6B4CB7971DC28FB3A66472C12BF8642D6A25`.
-- Native bootstrap builds enable the compiler's `--mem-probe` mode by default
-  and filter its noisy `[mem]` lines from the console. A clean Python bootstrap
-  omits this self-host-only diagnostic flag automatically.
+- Bootstrap memory diagnostics are opt-in through `-BootstrapProbe`; they can
+  materially increase build time. Python bootstraps always omit `--mem-probe`.
+  The existing `-NoBootstrapProbe` switch remains accepted and takes precedence
+  over `-BootstrapProbe`. Linux builds already omit these diagnostics by default.
 - If the first compile produced object files but failed during the final link, the script retries the link from the existing `.mlo` object directory.
 
 ### Run compiled programs

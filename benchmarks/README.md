@@ -187,7 +187,8 @@ normal fixed-point compiler.
 
 ## Runtime code generation and allocation identities
 
-`runtime_codegen.ml` measures floor division, repeated strings, allocation-free
+`runtime_codegen.ml` measures floor division (powers of two and general positive
+constants), repeated pure integer expressions, decimal formatting, repeated strings, allocation-free
 string identities, and ordinary concatenation/repeat/join controls. It uses
 QueryPerformanceCounter on Windows and CLOCK_MONOTONIC on Linux, with reused
 timer buffers to avoid contaminating heap-allocation measurements.
@@ -204,4 +205,21 @@ comparison script **inside Linux**, not through a separate WSL launch per sample
 The script alternates A/B order, checks matching checksums and retains raw samples,
 medians, image sizes and SHA-256 hashes. Keep unrelated builds idle during timing.
 Heap bytes are allocations during the workload, not RSS or total process memory.
+Use the documented heap/GC options: if collection occurs during a workload,
+the reported heap-used delta is not its cumulative allocation count.
 See [the evaluation report](../docs/reports/RUNTIME_CODEGEN_REVIEW_2026-09-30.md).
+The extended arithmetic cases are evaluated in the
+[local codegen report](../docs/reports/LOCAL_CODEGEN_OPTIMIZATIONS_2026-09-30.md).
+
+On Windows, compare the compiler processes themselves with:
+
+```powershell
+python benchmarks/compare_compiler_codegen.py build/before.exe build/after.exe tests/runtests.ml --include . --runs 3 --output build/compiler-comparison.json
+```
+
+This forces monolithic compilation so the OS peak working set belongs to the
+complete compiler process, not only an object-pipeline coordinator. It warms
+both compilers, alternates measured runs and records image sizes/hashes.
+For full self-build timings, keep diagnostic probing disabled. The Windows
+build script now requires `-BootstrapProbe` to opt into that instrumentation;
+Linux builds already omit it by default.

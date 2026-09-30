@@ -100,7 +100,7 @@ Lower cg emit builtins alloc allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L3013)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L3056)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-array-add-function-function-emit-array-add-function-state-mlc-codegen-codegen-builtins-alloc-ml-404836874"></a>
 ### emit_array_add_function
@@ -116,7 +116,7 @@ Lower emit array add function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1297)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1311)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-box-float-function-function-emit-box-float-function-state-mlc-codegen-codegen-builtins-alloc-ml-1552409924"></a>
 ### emit_box_float_function
@@ -148,7 +148,7 @@ Lower emit bytes add function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1414)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1428)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-bytes-alloc-function-function-emit-bytes-alloc-function-state-mlc-codegen-codegen-builtins-alloc-ml-1267821362"></a>
 ### emit_bytes_alloc_function
@@ -164,7 +164,7 @@ Lower emit bytes alloc function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1371)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1385)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-bytes-eq-function-function-emit-bytes-eq-function-state-mlc-codegen-codegen-builtins-alloc-ml-1120651394"></a>
 ### emit_bytes_eq_function
@@ -180,7 +180,7 @@ Lower emit bytes eq function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1484)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1498)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-decode16z-function-function-emit-decode16z-function-state-mlc-codegen-codegen-builtins-alloc-ml-788400018"></a>
 ### emit_decode16Z_function
@@ -292,7 +292,7 @@ Lower emit slice function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1552)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1566)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-add-function-function-emit-string-add-function-state-mlc-codegen-codegen-builtins-alloc-ml-732887898"></a>
 ### emit_string_add_function
@@ -308,7 +308,7 @@ Lower emit string add function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1102)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1107)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-endswith-function-function-emit-string-endswith-function-state-mlc-codegen-codegen-builtins-alloc-ml-655638304"></a>
 ### emit_string_endswith_function
@@ -324,7 +324,7 @@ Lower emit string endswith function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2007)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2021)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-eq-ignore-case-ascii-function-function-emit-string-eq-ignore-case-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-2092485688"></a>
 ### emit_string_eq_ignore_case_ascii_function
@@ -340,7 +340,7 @@ Lower emit string eq ignore case ascii function allocation behavior to native x6
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2783)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2818)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-indexof-function-function-emit-string-indexof-function-state-mlc-codegen-codegen-builtins-alloc-ml-418389098"></a>
 ### emit_string_indexof_function
@@ -356,7 +356,7 @@ Lower emit string indexof function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1787)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1801)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-is-blank-ascii-function-function-emit-string-is-blank-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-576081770"></a>
 ### emit_string_is_blank_ascii_function
@@ -372,7 +372,7 @@ Lower emit string is blank ascii function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2434)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2469)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-join-function-function-emit-string-join-function-state-mlc-codegen-codegen-builtins-alloc-ml-295930736"></a>
 ### emit_string_join_function
@@ -388,7 +388,7 @@ Lower emit string join function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2857)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2892)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-lastindexof-function-function-emit-string-lastindexof-function-state-mlc-codegen-codegen-builtins-alloc-ml-1650872574"></a>
 ### emit_string_lastindexof_function
@@ -404,7 +404,7 @@ Lower emit string lastindexof function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1880)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1894)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-ltrim-ascii-function-function-emit-string-ltrim-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-1420755194"></a>
 ### emit_string_ltrim_ascii_function
@@ -420,7 +420,7 @@ Lower emit string ltrim ascii function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2178)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2213)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-repeat-function-function-emit-string-repeat-function-state-mlc-codegen-codegen-builtins-alloc-ml-445144794"></a>
 ### emit_string_repeat_function
@@ -436,7 +436,7 @@ Lower emit string repeat function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2066)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2080)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-reverse-function-function-emit-string-reverse-function-state-mlc-codegen-codegen-builtins-alloc-ml-1806498462"></a>
 ### emit_string_reverse_function
@@ -452,7 +452,7 @@ Lower emit string reverse function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2482)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2517)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-rtrim-ascii-function-function-emit-string-rtrim-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-386542674"></a>
 ### emit_string_rtrim_ascii_function
@@ -468,7 +468,7 @@ Lower emit string rtrim ascii function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2255)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2290)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-slice-function-function-emit-string-slice-function-state-mlc-codegen-codegen-builtins-alloc-ml-670650374"></a>
 ### emit_string_slice_function
@@ -484,7 +484,7 @@ Lower emit string slice function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1658)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1672)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-startswith-function-function-emit-string-startswith-function-state-mlc-codegen-codegen-builtins-alloc-ml-1295344506"></a>
 ### emit_string_startswith_function
@@ -500,7 +500,7 @@ Lower emit string startswith function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1950)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L1964)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-to-lower-ascii-function-function-emit-string-to-lower-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-1846023914"></a>
 ### emit_string_to_lower_ascii_function
@@ -516,7 +516,7 @@ Lower emit string to lower ascii function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2569)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2604)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-to-upper-ascii-function-function-emit-string-to-upper-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-367254172"></a>
 ### emit_string_to_upper_ascii_function
@@ -532,7 +532,7 @@ Lower emit string to upper ascii function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2676)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2711)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-string-trim-ascii-function-function-emit-string-trim-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-1979931772"></a>
 ### emit_string_trim_ascii_function
@@ -548,7 +548,7 @@ Lower emit string trim ascii function allocation behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2330)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_builtins_alloc.ml#L2365)
 
 <a id="function-function-mlc-codegen-codegen-builtins-alloc-emit-value-to-string-function-function-emit-value-to-string-function-state-mlc-codegen-codegen-builtins-alloc-ml-586077162"></a>
 ### emit_value_to_string_function
