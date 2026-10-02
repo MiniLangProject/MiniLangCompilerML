@@ -3818,13 +3818,16 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   params = try(fn_node.params)
   param_types = try(fn_node.param_types)
   param_optional = try(fn_node.param_optional)
-  if state.operator_overloads_present and typeof(params) == "array" and typeof(param_types) == "array" and len(params) > 0 then
+  if typeof(params) == "array" and typeof(param_types) == "array" and len(params) > 0 then
     for param_i = 0 to len(params) - 1
       param_name = _coerce_name(params[param_i])
       param_type = void
       if param_i < len(param_types) then param_type = param_types[param_i] end if
       optional = false
       if typeof(param_optional) == "array" and param_i < len(param_optional) and typeof(param_optional[param_i]) == "bool" then optional = param_optional[param_i] end if
+      // Seed container contracts even without operators; later writes are
+      // still validated by the whole-function representation analysis.
+      if state.operator_overloads_present == false and param_type != "array" and param_type != "bytes" then continue end if
       if typeof(param_type) == "string" and optional == false and _arr_has(excluded, param_name) == false then
         param_fact = exprmod._operator_declared_type_fact(state, param_type, "", fn_node)
         if param_fact != "" then typed_param_facts = typed_param_facts + [[param_name, param_fact]] end if
@@ -4138,7 +4141,7 @@ function _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, 
   if end_cv[0] then return start_value <= end_cv[1] and end_cv[1] < exact_len end if
   if t.ast_kind(end_ex) != "Bin" or _coerce_name(t.ast_op(end_ex)) != "-" then return false end if
   right_cv = _intflow_const_int(state, t.ast_right(end_ex))
-  if right_cv[0] == false or right_cv[1] != 1 or start_value != 0 or exact_len <= 0 then return false end if
+  if right_cv[0] == false or right_cv[1] != 1 or start_value != 0 then return false end if
   left = t.ast_left(end_ex)
   if typeof(left) != "struct" or _coerce_name(try(left.node_kind)) != "Call" then return false end if
   if _member_qname(try(left.callee)) != "len" then return false end if
@@ -4148,7 +4151,8 @@ function _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, 
   return t.ast_kind(arg) == "Var" and _coerce_name(t.ast_name(arg)) == target_name
 end function
 
-/// Lower for index hoist plans statement behavior to native x64.
+/// Hoist stable container roots; dynamic lengths retain all bounds checks.
+/// In particular, an inclusive 0 to -1 loop still executes descending.
 /// @internal
 function _for_index_hoist_plans(state, loop_node, index_binding)
   if state.in_function == false or typeof(index_binding) != "struct" then return [] end if
@@ -4174,11 +4178,12 @@ function _for_index_hoist_plans(state, loop_node, index_binding)
     fact = _typeflow_get(state.known_value_types, target_name)
     kind = _typeflow_base(fact)
     exact_len = _typeflow_exact_length(fact)
-    if (kind != "array" and kind != "bytes") or exact_len < 0 then continue end if
+    if kind != "array" and kind != "bytes" then continue end if
     if _for_end_proves_index_bounds(state, loop_node, target_name, exact_len, start_cv[1]) == false then continue end if
     binding = scope.cg_resolve_binding(state, target_name)
     if typeof(binding) != "struct" or (binding.kind != "local" and binding.kind != "param") then continue end if
-    plans = plans + [[binding.id, rec[1], kind, true]]
+    if typeof(binding.boxed) == "bool" and binding.boxed then continue end if
+    plans = plans + [[binding.id, rec[1], kind, exact_len > 0]]
   end for
   return plans
 end function

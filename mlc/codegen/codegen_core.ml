@@ -1769,6 +1769,7 @@ function _helper_supported(lbl)
   if lbl == "fn_runtime_cpu_active_features" then return true end if
   if lbl == "fn_runtime_cpu_set_mask" then return true end if
   if lbl == "fn_int_to_dec" then return true end if
+  if lbl == "fn_make_error_const" then return true end if
   if lbl == "fn_strlen" then return true end if
   if lbl == "fn_alloc" then return true end if
   if lbl == "fn_init_argvw" then return true end if
@@ -2016,6 +2017,7 @@ end function
 /// Emit emit helper by label group6 as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_group6(state, lbl)
+  if lbl == "fn_make_error_const" then return rt.emit_make_error_const_function(state) end if
   if lbl == "fn_callStats" then return rt.emit_callStats_function(state) end if
   if lbl == "fn_heap_count" then return mem.emit_heap_count_function(state) end if
   if lbl == "fn_heap_bytes_used" then return mem.emit_heap_bytes_used_function(state) end if
@@ -2081,7 +2083,7 @@ function _helper_rank(lbl)
     "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_copyArray", "fn_builtin_copyStringBytes", "fn_builtin_fillBytes",
     "fn_builtin_gc_collect", "fn_builtin_gc_set_limit", "fn_build_args", "fn_init_argvw", "fn_incref",
     "fn_decref", "fn_callStats", "fn_heap_count", "fn_heap_bytes_used", "fn_heap_bytes_committed",
-    "fn_heap_bytes_reserved", "fn_heap_free_bytes", "fn_heap_free_blocks", "fn_unhandled_error_exit"
+    "fn_heap_bytes_reserved", "fn_heap_free_bytes", "fn_heap_free_blocks", "fn_unhandled_error_exit", "fn_make_error_const"
   ]
   for i = 0 to len(ordered) - 1
     if ordered[i] == lbl then return i end if

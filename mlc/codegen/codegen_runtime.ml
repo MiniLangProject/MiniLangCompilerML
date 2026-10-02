@@ -23,8 +23,35 @@ import mlc.constants as c
 import mlc.data as d
 import mlc.tools as t
 
-/// Emit cg runtime init in the native runtime.
-/// @param state Value supplied for `state`.
+/// Construct a cold runtime error from a tagged code and immortal rdata text. Saves arguments outside call shadow space; no managed argument is hidden from the GC. Captures the caller's current debug location after allocation.
+/// @internal
+function emit_make_error_const_function(state)
+  state.asm = a.mark(state.asm, "fn_make_error_const")
+  state.asm = a.sub_rsp_imm32(state.asm, 56)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 32, "rcx")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 40, "rdx")
+  state.asm = a.mov_rcx_imm32(state.asm, 48)
+  state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 32)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 40)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
+  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
+  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
+  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+  state.asm = a.add_rsp_imm32(state.asm, 56)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+/// Initialize runtime code generation without retaining additional state.
+/// @param state Active code-generation state, returned unchanged.
 function cg_runtime_init(state)
   return state
 end function

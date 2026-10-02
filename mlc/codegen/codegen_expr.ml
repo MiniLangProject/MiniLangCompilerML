@@ -2027,6 +2027,8 @@ end function
 /// Lower emit expr member expression behavior to native x64.
 /// @internal
 function _emit_expr_member(state, expr)
+  projected = _opt_project_temporary_struct(state, expr)
+  if typeof(projected) != "void" then return cg_emit_expr(state, projected) end if
   mname = _coerce_name(try(expr.name))
   if mname == "" then mname = _coerce_name(try(expr.field)) end if
   tgt_m = try(expr.target)
@@ -2610,6 +2612,46 @@ function _opt_type_fact_get(items, name)
     if typeof(rec) == "array" and len(rec) >= 2 and rec[0] == name and typeof(rec[1]) == "string" then return rec[1] end if
   end for
   return ""
+end function
+
+/// Elide an immediately projected temporary struct with only total integer arguments. Full positional arity and absent/int contracts preserve observable evaluations and guard failures; all other constructors retain allocation.
+/// @internal
+function _opt_project_temporary_struct(state, member)
+  call = try(member.target)
+  if t.ast_kind(call) != "Call" then return void end if
+  callee = try(call.callee)
+  if t.ast_kind(callee) != "Var" then return void end if
+  raw = _coerce_name(t.ast_name(callee))
+  name = _qualify_identifier(state, raw)
+  binding = scope.cg_resolve_binding(state, raw)
+  if typeof(binding) == "struct" and binding.kind != "global" then return void end if
+  fields = _state_struct_fields_get(state, name)
+  args = call.args
+  if name == "error" or typeof(fields) != "array" then return void end if
+  if len(fields) < 1 or len(fields) > 8 or len(args) != len(fields) then return void end if
+  arg_names = try(call.arg_names)
+  if typeof(arg_names) == "array" and len(arg_names) > 0 then
+    for i = 0 to len(arg_names) - 1
+      if typeof(arg_names[i]) == "string" and arg_names[i] != "" then return void end if
+    end for
+  end if
+  index = -1
+  for i = 0 to len(fields) - 1
+    if fields[i] == member.name then index = i end if
+  end for
+  if index < 0 then return void end if
+  contracts = _state_struct_field_types_get(state, name)
+  for i = 0 to len(args) - 1
+    if _opt_same_local_int_expr(state, args[i], args[i], 0) == false then return void end if
+    if typeof(contracts) == "array" and i < len(contracts) then
+      contract = contracts[i]
+      if typeof(contract) == "array" and len(contract) >= 1 then
+        ty = contract[0]
+        if typeof(ty) == "string" and ty != "" and ty != "int" then return void end if
+      end if
+    end if
+  end for
+  return args[index]
 end function
 
 /// Compare bounded, pure local integer trees without allocating analysis maps.
@@ -3503,6 +3545,13 @@ function _emit_expr_bin(state, expr)
     state = cg_emit_expr(state, left_expr)
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
     state.asm = a.mov_r64_tagged_int(state.asm, "r11", t.ast_value(right_expr))
+  else if right_kind == "Var" and _opt_expr_known_int(state, right_expr) and _opt_expr_known_int(state, left_expr) then
+    // Unboxed integer local/parameter or constexpr: the load uses RAX only,
+    // cannot collect and preserves the completed left value in R10.
+    state = cg_emit_expr(state, left_expr)
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state = cg_emit_expr(state, right_expr)
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
   else
     // A lone repeated variable saves just one load, not enough to justify
     // probing every variable/variable operator in large compiler functions.
@@ -9124,35 +9173,10 @@ function _emit_make_error_const(state, code, message)
   lbl = "objstr_" + _next_lid(state)
   state.rdata = d.rdata_add_obj_string(state.rdata, lbl, msg)
 
-  state.asm = a.mov_rcx_imm32(state.asm, 48)
-  state.asm = a.call(state.asm, "fn_alloc")
-  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-
-  // header: type / struct_id
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
-
-  // field0 = code
-  state.asm = a.mov_rax_imm64(state.asm, t.enc_int(err_code))
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
-
-  // field1 = message
-  state.asm = a.lea_rax_rip(state.asm, lbl)
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
-
-  // field2 = script
-  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
-
-  // field3 = func
-  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
-
-  // field4 = line
-  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
-
-  state.asm = a.mov_rax_r11(state.asm)
+  // The message is an immortal rdata string; only immediates cross allocation.
+  state.asm = a.mov_r64_tagged_int(state.asm, "rcx", err_code)
+  state.asm = a.lea_rdx_rip(state.asm, lbl)
+  state.asm = a.call(state.asm, "fn_make_error_const")
   return state
 end function
 
@@ -10270,12 +10294,25 @@ function _emit_inline_call(state, callee, args)
   state.known_int_names = t.fastmap_new(64)
   param_types = try(fn.param_types)
   param_optional = try(fn.param_optional)
+  literal_body = try(fn.body)
+  literal_leaf = false
+  if typeof(literal_body) == "array" and len(literal_body) == 1 then literal_leaf = t.ast_kind(literal_body[0]) == "Return" end if
   if typeof(param_types) != "array" then param_types = [] end if
   if typeof(param_optional) != "array" then param_optional = [] end if
   if len(params) > 0 then
     for pti = 0 to len(params) - 1
       optional = false
       if pti < len(param_optional) and typeof(param_optional[pti]) == "bool" then optional = param_optional[pti] end if
+      // Specialize only existing inline expansions, within their byte budget.
+      // Literal ints need no caller flow assumptions; guards remain unchanged.
+      raw_type = void
+      if pti < len(param_types) then raw_type = param_types[pti] end if
+      if literal_leaf and (typeof(raw_type) != "string" or raw_type == "") and t.ast_kind(args[pti]) == "Num" and typeof(t.ast_value(args[pti])) == "int" then
+        literal_name = _coerce_name(params[pti])
+        state.known_value_types = t.fastmap_set(state.known_value_types, literal_name, "int")
+        state.known_int_names = t.fastmap_set(state.known_int_names, literal_name, 1)
+        continue
+      end if
       if optional or pti >= len(param_types) then continue end if
       fact = _inline_declared_type_fact(state, param_types[pti])
       if fact == "" then continue end if

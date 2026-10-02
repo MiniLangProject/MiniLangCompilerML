@@ -404,29 +404,10 @@ function _emit_make_error_const(state, code, message)
   lbl = "objstr_" + lid
   state.rdata = d.rdata_add_obj_string(state.rdata, lbl, msg)
 
-  state.asm = a.mov_rcx_imm32(state.asm, 48)
-  state.asm = a.call(state.asm, "fn_alloc")
-  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
-  state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, c.ERROR_STRUCT_ID, false)
-
-  state.asm = a.mov_rax_imm64(state.asm, t.enc_int(err_code))
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
-
-  state.asm = a.lea_rax_rip(state.asm, lbl)
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 16, "rax")
-
-  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_script")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 24, "rax")
-
-  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_func")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 32, "rax")
-
-  state.asm = a.mov_rax_rip_qword(state.asm, "dbg_loc_line")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r11", 40, "rax")
-
-  state.asm = a.mov_rax_r11(state.asm)
+  // The message is an immortal rdata string; only immediates cross allocation.
+  state.asm = a.mov_r64_tagged_int(state.asm, "rcx", err_code)
+  state.asm = a.lea_rdx_rip(state.asm, lbl)
+  state.asm = a.call(state.asm, "fn_make_error_const")
   return state
 end function
 
