@@ -32,7 +32,7 @@ Emit array has for the Linux x64 runtime.
 | `wanted` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L242)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L244)
 
 <a id="function-function-mlc-linux-runtime-emit-extern-thunks-function-emit-extern-thunks-state-mlc-linux-runtime-ml-220175397"></a>
 ### _emit_extern_thunks
@@ -48,7 +48,7 @@ Translate MiniLang's stable Win64-like native ABI to Linux SysV.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L252)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L254)
 
 <a id="function-function-mlc-linux-runtime-extern-dll-base-function-extern-dll-base-dll-mlc-linux-runtime-ml-1882968546"></a>
 ### _extern_dll_base
@@ -80,7 +80,7 @@ Emit extern param type for the Linux x64 runtime.
 | `param` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L229)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L231)
 
 <a id="function-function-mlc-linux-runtime-pthread-runtime-blob-function-pthread-runtime-blob-mlc-linux-runtime-ml-494942306"></a>
 ### _pthread_runtime_blob
@@ -92,7 +92,7 @@ function _pthread_runtime_blob()
 Generated pthread-backed replacement for the legacy CreateThread through CloseHandle portion of _runtime_blob. Internal branches are pre-resolved; the three dynamic pthread calls are registered as RIP patches by emit_runtime.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L222)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L224)
 
 <a id="function-function-mlc-linux-runtime-runtime-blob-raw-function-runtime-blob-raw-mlc-linux-runtime-ml-1501145666"></a>
 ### _runtime_blob_raw
@@ -104,7 +104,7 @@ function _runtime_blob_raw()
 Emit runtime blob raw for the Linux x64 runtime.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L202)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L204)
 
 <a id="function-function-mlc-linux-runtime-runtime-labels-function-runtime-labels-mlc-linux-runtime-ml-971158720"></a>
 ### _runtime_labels
@@ -128,7 +128,7 @@ function _runtime_non_thread_parts()
 Split the stable non-thread helpers around the complete superseded native thread range. emit_runtime inserts the canonical pthread block between them.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L213)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L215)
 
 - [mlc.linux_runtime.DynamicImport](Type-mlc-linux-runtime-dynamicimport-249578260.md) — struct
 - [mlc.linux_runtime.DynamicImportsResult](Type-mlc-linux-runtime-dynamicimportsresult-1949239652.md) — struct
@@ -146,7 +146,7 @@ Emit emit runtime for the Linux x64 runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L469)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L471)
 
 <a id="function-function-mlc-linux-runtime-emit-startup-function-emit-startup-state-mlc-linux-runtime-ml-1287943791"></a>
 ### emit_startup
@@ -192,11 +192,11 @@ Stable boundaries inside the checked-in syscall blob. The legacy thread implemen
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L61)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-legacy-thread-end-const-runtime-legacy-thread-end-1358-mlc-linux-runtime-ml-29138692"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-legacy-thread-end-const-runtime-legacy-thread-end-1427-mlc-linux-runtime-ml-1817463909"></a>
 ### RUNTIME_LEGACY_THREAD_END
 
 ```ml
-const RUNTIME_LEGACY_THREAD_END = 1358
+const RUNTIME_LEGACY_THREAD_END = 1427
 ```
 
 Track runtime legacy thread end.
@@ -204,11 +204,11 @@ Track runtime legacy thread end.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L65)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-legacy-thread-start-const-runtime-legacy-thread-start-494-mlc-linux-runtime-ml-1011161508"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-legacy-thread-start-const-runtime-legacy-thread-start-563-mlc-linux-runtime-ml-1171015099"></a>
 ### RUNTIME_LEGACY_THREAD_START
 
 ```ml
-const RUNTIME_LEGACY_THREAD_START = 494
+const RUNTIME_LEGACY_THREAD_START = 563
 ```
 
 Track runtime legacy thread start.
@@ -216,11 +216,11 @@ Track runtime legacy thread start.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L63)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-pthread-close-patch-const-runtime-pthread-close-patch-1437-mlc-linux-runtime-ml-682825950"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-pthread-close-patch-const-runtime-pthread-close-patch-1506-mlc-linux-runtime-ml-549567687"></a>
 ### RUNTIME_PTHREAD_CLOSE_PATCH
 
 ```ml
-const RUNTIME_PTHREAD_CLOSE_PATCH = 1437
+const RUNTIME_PTHREAD_CLOSE_PATCH = 1506
 ```
 
 Track runtime pthread close patch.
@@ -228,11 +228,11 @@ Track runtime pthread close patch.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L71)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-pthread-create-patch-const-runtime-pthread-create-patch-688-mlc-linux-runtime-ml-1193610273"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-pthread-create-patch-const-runtime-pthread-create-patch-757-mlc-linux-runtime-ml-868743932"></a>
 ### RUNTIME_PTHREAD_CREATE_PATCH
 
 ```ml
-const RUNTIME_PTHREAD_CREATE_PATCH = 688
+const RUNTIME_PTHREAD_CREATE_PATCH = 757
 ```
 
 Track runtime pthread create patch.
@@ -240,11 +240,11 @@ Track runtime pthread create patch.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L67)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-pthread-wait-patch-const-runtime-pthread-wait-patch-1155-mlc-linux-runtime-ml-1960795753"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-pthread-wait-patch-const-runtime-pthread-wait-patch-1224-mlc-linux-runtime-ml-230722498"></a>
 ### RUNTIME_PTHREAD_WAIT_PATCH
 
 ```ml
-const RUNTIME_PTHREAD_WAIT_PATCH = 1155
+const RUNTIME_PTHREAD_WAIT_PATCH = 1224
 ```
 
 Track runtime pthread wait patch.

@@ -469,7 +469,7 @@ Emit emit call stats function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3936)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3938)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-copy-bytes-function-function-emit-copy-bytes-function-state-mlc-codegen-codegen-runtime-ml-710271692"></a>
 ### emit_copy_bytes_function

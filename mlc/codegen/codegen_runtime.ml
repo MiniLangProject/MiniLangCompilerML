@@ -3919,6 +3919,8 @@ function emit_builtin_gc_set_limit_function(state)
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_young_bytes_since")
 
   state.asm = a.mark(state.asm, l_done)
+  state.asm = a.mov_rax_imm64(state.asm, 0)
+  state.asm = a.mov_rip_qword_rax(state.asm, "gc_adaptive")
   state.asm = a.sub_rsp_imm8(state.asm, 0x28)
   state.asm = a.call(state.asm, "tlab_retire_internal")
   state.asm = a.add_rsp_imm8(state.asm, 0x28)

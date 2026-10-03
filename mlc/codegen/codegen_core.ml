@@ -1784,6 +1784,7 @@ function _helper_supported(lbl)
   if lbl == "fn_unhandled_error_exit" then return true end if
   if lbl == "fn_heap_count" then return true end if
   if lbl == "fn_heap_bytes_used" then return true end if
+  if lbl == "fn_gc_stat" then return true end if
   if lbl == "fn_heap_bytes_committed" then return true end if
   if lbl == "fn_heap_bytes_reserved" then return true end if
   if lbl == "fn_heap_free_bytes" then return true end if
@@ -2021,6 +2022,7 @@ function _emit_helper_by_label_group6(state, lbl)
   if lbl == "fn_callStats" then return rt.emit_callStats_function(state) end if
   if lbl == "fn_heap_count" then return mem.emit_heap_count_function(state) end if
   if lbl == "fn_heap_bytes_used" then return mem.emit_heap_bytes_used_function(state) end if
+  if lbl == "fn_gc_stat" then return mem.emit_gc_stat_function(state) end if
   if lbl == "fn_heap_bytes_committed" then return mem.emit_heap_bytes_committed_function(state) end if
   if lbl == "fn_heap_bytes_reserved" then return mem.emit_heap_bytes_reserved_function(state) end if
   if lbl == "fn_heap_free_bytes" then return mem.emit_heap_free_bytes_function(state) end if
@@ -2083,7 +2085,7 @@ function _helper_rank(lbl)
     "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_copyArray", "fn_builtin_copyStringBytes", "fn_builtin_fillBytes",
     "fn_builtin_gc_collect", "fn_builtin_gc_set_limit", "fn_build_args", "fn_init_argvw", "fn_incref",
     "fn_decref", "fn_callStats", "fn_heap_count", "fn_heap_bytes_used", "fn_heap_bytes_committed",
-    "fn_heap_bytes_reserved", "fn_heap_free_bytes", "fn_heap_free_blocks", "fn_unhandled_error_exit", "fn_make_error_const"
+    "fn_heap_bytes_reserved", "fn_heap_free_bytes", "fn_heap_free_blocks", "fn_unhandled_error_exit", "fn_make_error_const", "fn_gc_stat"
   ]
   for i = 0 to len(ordered) - 1
     if ordered[i] == lbl then return i end if

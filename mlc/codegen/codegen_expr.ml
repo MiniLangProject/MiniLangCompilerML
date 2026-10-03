@@ -592,6 +592,7 @@ function inline _builtin_label(name)
   if nm == "input" then return "fn_builtin_input" end if
   if nm == "gc_collect" then return "fn_builtin_gc_collect" end if
   if nm == "gc_set_limit" then return "fn_builtin_gc_set_limit" end if
+  if nm == "gc_stat" then return "fn_gc_stat" end if
   if nm == "decode" then return "fn_decode" end if
   if nm == "decodeZ" then return "fn_decodeZ" end if
   if nm == "decode16Z" then return "fn_decode16Z" end if
@@ -6465,6 +6466,18 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
     return [state, true]
   end if
 
+  if (callee == "gc_stat" or raw_name == "gc_stat") then
+    if nargs != 1 then
+      state.diagnostics = state.diagnostics + ["gc_stat() expects exactly 1 argument"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    state = cg_emit_expr(state, call_args[0])
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.call(state.asm, "fn_gc_stat")
+    return [state, true]
+  end if
+
   if (callee == "gc_set_limit" or raw_name == "gc_set_limit") then
     if nargs != 1 then
       state.diagnostics = state.diagnostics +["gc_set_limit() expects exactly 1 argument"]
@@ -7713,7 +7726,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
         if special_qn == "nativeRawValue" then is_special = true end if
         if special_qn == "nativeValueFromRaw" then is_special = true end if
         if special_qn == "nativeCallback" then is_special = true end if
-        if special_qn == "gc_collect" or special_qn == "gc_set_limit" or special_qn == "callStats" then is_special = true end if
+        if special_qn == "gc_collect" or special_qn == "gc_set_limit" or special_qn == "gc_stat" or special_qn == "callStats" then is_special = true end if
         if special_qn == "heap_count" or special_qn == "heap_bytes_used" or special_qn == "heap_free_bytes" or special_qn == "heap_free_blocks" then is_special = true end if
         if special_qn == "heap_bytes_committed" or special_qn == "heap_bytes_reserved" then is_special = true end if
         if is_special == false and _state_struct_id_get(state, special_qn, 0) == 0 then

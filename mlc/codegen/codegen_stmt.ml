@@ -8417,6 +8417,7 @@ function _builtin_specs()
     ["fillBytes", 4, 4, "fn_builtin_fillBytes"],
     ["gc_collect", 0, 0, "fn_builtin_gc_collect"],
     ["gc_set_limit", 1, 1, "fn_builtin_gc_set_limit"],
+    ["gc_stat", 1, 1, "fn_gc_stat"],
     ["heap_count", 0, 0, "fn_heap_count"],
     ["heap_bytes_used", 0, 0, "fn_heap_bytes_used"],
     ["heap_bytes_committed", 0, 0, "fn_heap_bytes_committed"],

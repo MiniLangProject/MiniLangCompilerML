@@ -245,8 +245,16 @@ function Test-LinuxRuntimeBlobLayout {
     $start = $constant["RUNTIME_LEGACY_THREAD_START"]
     $end = $constant["RUNTIME_LEGACY_THREAD_END"]
     $finalBytes = $start + $pthreadBytes + ($rawBytes - $end)
-    $passed = ($rawBytes -eq 1777 -and $pthreadBytes -eq 1076 -and
-               $start -eq 494 -and $end -eq 1358 -and $finalBytes -eq 1989)
+    $passed = ($rawBytes -eq 1846 -and $pthreadBytes -eq 1076 -and
+               $start -eq 563 -and $end -eq 1427 -and $finalBytes -eq 2058)
+    # The blob emitter consumes labels in source order; a correct inventory
+    # with unsorted offsets would duplicate slices and silently change code.
+    $previousOffset = -1
+    foreach ($label in [regex]::Matches($source, 'RuntimeLabel\("([^"]+)", ([0-9]+)\)')) {
+      $offset = [int]$label.Groups[2].Value
+      if ($offset -lt $previousOffset -or $offset -ge $finalBytes) { $passed = $false }
+      $previousOffset = $offset
+    }
 
     foreach ($patchName in @(
         "RUNTIME_PTHREAD_CREATE_PATCH", "RUNTIME_PTHREAD_WAIT_PATCH",
@@ -431,6 +439,8 @@ try {
       [pscustomobject]@{ Name = "Linux operator overloading"; Source = "operator_overloading.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux mixed concat with operator overloads"; Source = "mixed_concat_overloads.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux runtime codegen"; Source = "runtime_codegen.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux memory management"; Source = "memory_management.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux memory purge"; Source = "memory_purge.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux async variadics"; Source = "language_async_variadic.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux escaping variadics"; Source = "variadic_escape_lifetime.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux default lambda lowering"; Source = "language_default_lambda.ml"; RunArgs = @() },
@@ -441,6 +451,9 @@ try {
       $linuxStem = [System.IO.Path]::GetFileNameWithoutExtension($linuxCase.Source)
       $linuxImage = Join-Path $script:ResolvedArtifactsDir ($linuxStem + ".elf")
       $linuxArgs = @($linuxSource, $linuxImage, "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
+      # This fixture specifically validates the unconfigured adaptive policy.
+      if ($linuxCase.Source -eq "memory_management.ml") { $linuxArgs = @($linuxSource, $linuxImage, "-I", $Root, "--target", "linux-x64") }
+      if ($linuxCase.Source -eq "memory_purge.ml") { $linuxArgs += @("--heap-shrink", "--heap-shrink-min", "1m") }
       $results += Invoke-NativeStep ("compile " + $linuxCase.Name) $Compiler $linuxArgs
       if ($results[-1].ExitCode -ne 0) { continue }
       $magic = [System.IO.File]::ReadAllBytes($linuxImage)
@@ -484,6 +497,8 @@ try {
     [pscustomobject]@{ Name = "long string concat chains compile iteratively"; Source = "long_string_concat.ml" },
     [pscustomobject]@{ Name = "mixed concat with operator overloads"; Source = "mixed_concat_overloads.ml" },
     [pscustomobject]@{ Name = "runtime codegen"; Source = "runtime_codegen.ml" },
+    [pscustomobject]@{ Name = "memory management"; Source = "memory_management.ml" },
+    [pscustomobject]@{ Name = "memory purge"; Source = "memory_purge.ml" },
     [pscustomobject]@{ Name = "compiler scope indexes"; Source = "compiler_scope_index.ml" },
     [pscustomobject]@{ Name = "compiler qualification cache"; Source = "compiler_qualification_cache.ml" },
     [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },
@@ -500,6 +515,8 @@ try {
     $nativeStem = [System.IO.Path]::GetFileNameWithoutExtension($nativeCase.Source)
     $nativeExe = Join-Path $script:ResolvedArtifactsDir ($nativeStem + ".exe")
     $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root) + $effectiveCompilerArgs
+    if ($nativeCase.Source -eq "memory_management.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root) }
+    if ($nativeCase.Source -eq "memory_purge.ml") { $nativeArgs += @("--heap-shrink", "--heap-shrink-min", "1m") }
     $results += Invoke-NativeStep ("compile " + $nativeCase.Name) $Compiler $nativeArgs
     if ($results[-1].ExitCode -eq 0) {
       $results += Invoke-NativeStep ("run " + $nativeCase.Name) $nativeExe @()
