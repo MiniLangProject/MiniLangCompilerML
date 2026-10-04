@@ -1,23 +1,23 @@
 # Binary compiler packages
 
-Release 1.2.16 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.2.17 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
 either compiler distribution.
 
-## Release 1.2.16 checksums
+## Release 1.2.17 checksums
 
-The download archives are `MiniLangCompilerML-1.2.16-windows-x64.zip` and
-`MiniLangCompilerML-1.2.16-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.16).
+The download archives are `MiniLangCompilerML-1.2.17-windows-x64.zip` and
+`MiniLangCompilerML-1.2.17-linux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.17).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 55,015,936 | `0BB6AF2112F74DFF0E4EEC0584434B2174F5ACA45C852018875F711A891C959A` |
-| Linux `mlc` | 55,017,456 | `986044376AD1BC6E625E5424607C876C5471991045A3E616D27672EED4BFE1C5` |
+| Windows `mlc.exe` | 55,015,936 | `0895874C84BBFFFDB060B784B99030903C663281D81F06D69EA5059941C78EAB` |
+| Linux `mlc` | 55,017,456 | `69131667618014713A6D7107A92298F8196FE72169FAD2BB17BD600817CA84C8` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -43,13 +43,13 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.2.16 compiler-source revision and executable hash.
+The manifest identifies the 1.2.17 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
 ## Native media runtime
 
-Release 1.2.16 packages include the native-media
+Release 1.2.17 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 
