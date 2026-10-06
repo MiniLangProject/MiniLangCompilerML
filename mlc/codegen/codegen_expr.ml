@@ -5445,6 +5445,7 @@ function _emit_expr_call(state, expr)
     state.asm = a.cmp_r64_imm(state.asm, "rax", 0x7FFFFFFF)
     state.asm = a.jcc(state.asm, "g", l_bad_range_sleep)
     state.asm = a.mov_r32_r32(state.asm, "r12d", "eax")
+    state = mem.emit_gc_release_handoffs(state)
     threaded_native_sleep = state.native_threads_possible
     if threaded_native_sleep then state.asm = a.call(state.asm, "fn_gc_native_enter") end if
     state.asm = a.mov_r32_r32(state.asm, "ecx", "r12d")
@@ -7101,6 +7102,7 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       return [state, true]
     end if
+    state = mem.emit_gc_release_handoffs(state)
     state.asm = a.call(state.asm, "fn_gc_collect")
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
     return [state, true]
@@ -9449,8 +9451,6 @@ function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
     state = mem.ensure_gc_data(state)
     lid = _next_lid(state)
     l_null = "extret_cstr_null_" + lid
-    l_scan = "extret_cstr_scan_" + lid
-    l_done = "extret_cstr_done_" + lid
     l_after = "extret_cstr_after_" + lid
 
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
@@ -9465,17 +9465,11 @@ function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
     state.asm = a.mov_rax_rip_qword(state.asm, "gc_tmp0")
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
     state.asm = a.sar_r64_imm8(state.asm, "r10", 3)
-    state.asm = a.xor_r32_r32(state.asm, "r9d", "r9d")
-    state.asm = a.mark(state.asm, l_scan)
-    state.asm = a.mov_r64_r64(state.asm, "r11", "r10")
-    state.asm = a.add_r64_r64(state.asm, "r11", "r9")
-    state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "r11", 0)
-    state.asm = a.cmp_r8_imm8(state.asm, "al", 0)
-    state.asm = a.jcc(state.asm, "e", l_done)
-    state.asm = a.inc_r32(state.asm, "r9d")
-    state.asm = a.jmp(state.asm, l_scan)
-
-    state.asm = a.mark(state.asm, l_done)
+    // Keep the conversion identical to the Python emitter and share the
+    // native string/copy helpers instead of a separate inline implementation.
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
+    state.asm = a.call(state.asm, "fn_strlen")
+    state.asm = a.mov_r32_r32(state.asm, "r9d", "edx")
     state.asm = a.mov_r64_r64(state.asm, "r11", "r9")
     state.asm = a.shl_r64_imm8(state.asm, "r11", 3)
     state.asm = a.or_r64_imm8(state.asm, "r11", c.TAG_INT)
@@ -9497,14 +9491,15 @@ function _emit_extern_ret_from_native(state, abi_ty, fail_label, pos)
     state.asm = a.mov_rax_rip_qword(state.asm, "gc_tmp0")
     state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
     state.asm = a.sar_r64_imm8(state.asm, "r10", 3)
-    state.asm = a.push_reg(state.asm, "rsi")
-    state.asm = a.push_reg(state.asm, "rdi")
-    state.asm = a.mov_r64_r64(state.asm, "rsi", "r10")
-    state.asm = a.lea_r64_membase_disp(state.asm, "rdi", "r11", 8)
-    state.asm = a.mov_r32_r32(state.asm, "ecx", "r9d")
-    state.asm = a.rep_movsb(state.asm)
-    state.asm = a.pop_reg(state.asm, "rdi")
-    state.asm = a.pop_reg(state.asm, "rsi")
+    state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "r10")
+    state.asm = a.mov_r32_r32(state.asm, "r8d", "r9d")
+    state.asm = a.call(state.asm, "fn_copy_bytes")
+    state.asm = a.mov_rax_rip_qword(state.asm, "gc_tmp2")
+    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+    // Volatile R9 is not preserved by the ELF copy helper. Reload the
+    // authoritative header length before writing the terminating NUL.
+    state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "r11", 4)
     state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
     state.asm = a.add_r64_r64(state.asm, "rax", "r9")
     state.asm = a.add_rax_imm8(state.asm, 8)
@@ -9833,7 +9828,10 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
 
   // Native code may block indefinitely. Publish a stable stack-root chain
   // before entering it so stop-the-world GC need not wait for the OS call.
-  if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_enter") end if
+  if threaded_native then
+    state = mem.emit_gc_release_handoffs(state)
+    state.asm = a.call(state.asm, "fn_gc_native_enter")
+  end if
 
   if native_nargs >= 1 then
     aty0 = _coerce_name(ps[0])
@@ -10546,6 +10544,7 @@ function emit_extern_stubs(state)
     if required < min_req then required = min_req end if
     frame = t.align_to_mod(required, 16, 8)
 
+    state = mem.emit_runtime_alignment(state)
     state.asm = a.mark(state.asm, stub_lbl)
     if frame <= 0x7F then
       state.asm = a.sub_rsp_imm8(state.asm, frame)
@@ -10596,7 +10595,10 @@ function emit_extern_stubs(state)
       end for
     end if
 
-    if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_enter") end if
+    if threaded_native then
+      state = mem.emit_gc_release_handoffs(state)
+      state.asm = a.call(state.asm, "fn_gc_native_enter")
+    end if
 
     regs = ["rcx", "rdx", "r8", "r9"]
     xregs = ["xmm0", "xmm1", "xmm2", "xmm3"]

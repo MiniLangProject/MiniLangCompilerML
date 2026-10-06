@@ -3228,6 +3228,34 @@ function div_r64(asm, reg_name)
   return asm
 end function
 
+/// Set a register bit (index modulo 64); CF receives the previous bit value.
+/// @param asm Native assembler state.
+/// @param dst Destination qword register.
+/// @param index Register containing the bit index, reduced modulo 64.
+function bts_r64_r64(asm, dst, index)
+  d = _rid_any(dst)
+  i = _rid_any(index)
+  if d < 0 or i < 0 then return asm end if
+  asm = _emit_rex(asm, 1, (i >> 3) & 1, 0, (d >> 3) & 1, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xAB)
+  return _emit_modrm(asm, 3, i & 7, d & 7)
+end function
+
+/// Read a register bit (index modulo 64) into CF without modifying it.
+/// @param asm Native assembler state.
+/// @param value Register containing the qword to inspect.
+/// @param index Register containing the bit index, reduced modulo 64.
+function bt_r64_r64(asm, value, index)
+  v = _rid_any(value)
+  i = _rid_any(index)
+  if v < 0 or i < 0 then return asm end if
+  asm = _emit_rex(asm, 1, (i >> 3) & 1, 0, (v >> 3) & 1, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xA3)
+  return _emit_modrm(asm, 3, i & 7, v & 7)
+end function
+
 /// Multiply unsigned RAX by reg_name, returning the full product in RDX:RAX.
 /// @param asm Native assembler state.
 /// @param reg_name Source register; RAX and RDX are overwritten.

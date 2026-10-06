@@ -35,9 +35,9 @@ import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.2.17"
+const COMPILER_VERSION = "1.2.18"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.17"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.18"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
@@ -2352,9 +2352,11 @@ end function
 /// Perform the size suffix mul compiler phase.
 /// @internal
 function _size_suffix_mul(ch)
-  if ch == "k" then return 1024 end if
-  if ch == "m" then return 1024 * 1024 end if
-  if ch == "g" then return 1024 * 1024 * 1024 end if
+  if ch == "" or ch == "b" then return 1 end if
+  if ch == "k" or ch == "kb" or ch == "kib" then return 1024 end if
+  if ch == "m" or ch == "mb" or ch == "mib" then return 1024 * 1024 end if
+  if ch == "g" or ch == "gb" or ch == "gib" then return 1024 * 1024 * 1024 end if
+  if ch == "t" or ch == "tb" or ch == "tib" then return 1024 * 1024 * 1024 * 1024 end if
   return -1
 end function
 
@@ -2362,35 +2364,39 @@ end function
 /// @internal
 function _parse_size_text(txt)
   if typeof(txt) != "string" or txt == "" then
-    return ["", -1]
+    return ["invalid size", -1]
   end if
-  x = s.toLowerAscii(txt)
+  // Match the Python CLI's ASCII decimal/binary-unit contract. Check each
+  // decimal step and multiplication before it can overflow a tagged int.
+  // std.string.trim intentionally recognizes only space/tab/CR/LF; the CLI
+  // also accepts the ASCII vertical-tab/form-feed edges accepted by Python.
+  raw = bytes(txt)
+  first = 0
+  last = len(raw)
+  while first < last and (raw[first] == 32 or (raw[first] >= 9 and raw[first] <= 13))
+    first += 1
+  end while
+  while last > first and (raw[last - 1] == 32 or (raw[last - 1] >= 9 and raw[last - 1] <= 13))
+    last -= 1
+  end while
+  x = s.toLowerAscii(s.replaceAll(s.substr(txt, first, last - first), "_", ""))
   n = len(x)
-  if n <= 0 then return ["", -1] end if
-
-  last = x[n - 1]
-  mul = _size_suffix_mul(last)
-  numtxt = x
-  if mul > 0 then
-    if n <= 1 then return ["invalid size", -1] end if
-    numtxt = s.substr(x, 0, n - 1)
-  else
-    b = bytes(last)
-    c = 0
-    if len(b) > 0 then c = b[0] end if
-    if c < 48 or c > 57 then
-      return ["invalid size suffix", -1]
-    end if
-    mul = 1
-  end if
-
-  base = toNumber(numtxt)
-  if typeof(base) != "int" then
-    return ["invalid size", -1]
-  end if
-  if base <= 0 then
-    return ["invalid size", -1]
-  end if
+  if n <= 0 then return ["invalid size", -1] end if
+  // Keep 64-KiB alignment inside the positive signed-61-bit range.
+  maximum = 1152921504606781440
+  data = bytes(x)
+  base = 0
+  i = 0
+  while i < n and data[i] >= 48 and data[i] <= 57
+    digit = data[i] - 48
+    if base > (maximum - digit) div 10 then return ["size exceeds maximum", -1] end if
+    base = base * 10 + digit
+    i += 1
+  end while
+  if i == 0 or base <= 0 then return ["invalid size", -1] end if
+  mul = _size_suffix_mul(s.substr(x, i, n - i))
+  if mul <= 0 then return ["invalid size suffix", -1] end if
+  if base > maximum div mul then return ["size exceeds maximum", -1] end if
   return ["", base * mul]
 end function
 
@@ -6244,6 +6250,11 @@ function _link_mlo_linux_sections(obj_paths, output_exe, text_buf, rdata_buf, da
     print "CompileError: " + executable_result.message
     return 2
   end if
+  listing_result = try(_write_elf_asm_listing_if_enabled(output_exe, layout, text_buf, rdata_buf, data_buf))
+  if typeof(listing_result) == "error" then
+    print "CompileError: failed to write assembly listing"
+    return 2
+  end if
   print "OK: wrote " + output_exe + " (native x64 ELF, MiniLang self-hosted compiler " + COMPILER_VERSION + ", MLO pipeline)"
   return 0
 end function
@@ -6508,7 +6519,7 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
 
   exe = pe.build(p)
   _heap_probe("link:pe_built")
-  listing_result = _write_asm_listing_if_enabled(output_exe, p, buf, rdata_buf, data_buf, idsec.data)
+  listing_result = try(_write_asm_listing_if_enabled(output_exe, p, buf, rdata_buf, data_buf, idsec.data))
   if typeof(listing_result) == "error" then
     print "CompileError: failed to write assembly listing"
     return 2
@@ -6766,6 +6777,11 @@ function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_b
   executable_result = _make_linux_output_executable(output_exe)
   if typeof(executable_result) == "error" then
     print "CompileError: " + executable_result.message
+    return 2
+  end if
+  listing_result = try(_write_elf_asm_listing_if_enabled(output_exe, layout, text_buf, rdata_buf, data_buf))
+  if typeof(listing_result) == "error" then
+    print "CompileError: failed to write assembly listing"
     return 2
   end if
   print "OK: wrote " + output_exe + " (native x64 ELF, MiniLang self-hosted compiler " + COMPILER_VERSION + ")"
@@ -7355,7 +7371,7 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   _compiler_profile_phase("building and writing executable")
   exe = pe.build(p)
   _heap_probe("compile:pe_built")
-  listing_result = _write_asm_listing_if_enabled(output_exe, p, st.asm.buf, st.rdata.data, st.data.data, idsec.data)
+  listing_result = try(_write_asm_listing_if_enabled(output_exe, p, st.asm.buf, st.rdata.data, st.data.data, idsec.data))
   if typeof(listing_result) == "error" then
     print "CompileError: failed to write assembly listing"
     return 2
@@ -7392,9 +7408,24 @@ end function
 /// Perform the asm default path compiler phase.
 /// @internal
 function _asm_default_path(output_exe)
-  if _endsWith(output_exe, ".exe") then
-    return s.substr(output_exe, 0, len(output_exe) - 4) + ".asm"
-  end if
+  // Match splitext: replace only the final filename's extension, not a dot
+  // in its parent directory or a leading dot in an extensionless filename.
+  dot = -1
+  seen_name = false
+  for i = 0 to len(output_exe) - 1
+    ch = output_exe[i]
+    if ch == "/" or ch == "\\" then
+      seen_name = false
+      dot = -1
+    else
+      if ch == "." then
+        if seen_name then dot = i end if
+      else
+        seen_name = true
+      end if
+    end if
+  end for
+  if dot >= 0 then return s.substr(output_exe, 0, dot) + ".asm" end if
   return output_exe + ".asm"
 end function
 
@@ -7416,7 +7447,9 @@ end function
 /// Perform the asm append section compiler phase.
 /// @internal
 function _asm_append_section(bld, name, buf, rva)
-  bld.appendLine("; section " + name + " RVA=0x" + _hex_u32_fixed(rva) + " size=" + len(buf))
+  address_kind = "RVA"
+  if _compile_target == "linux-x64" then address_kind = "VA" end if
+  bld.appendLine("; section " + name + " " + address_kind + "=0x" + _hex_u32_fixed(rva) + " size=" + len(buf))
   off = 0
   while off < len(buf)
     take = 16
@@ -7457,6 +7490,25 @@ function _write_asm_listing_if_enabled(output_exe, peb, text_buf, rdata_buf, dat
     _asm_append_section(bld, ".rdata", rdata_buf, peb.sections[1].virt_addr)
     _asm_append_section(bld, ".data", data_buf, peb.sections[2].virt_addr)
     _asm_append_section(bld, ".idata", idata_buf, peb.sections[4].virt_addr)
+  end if
+  wr = fs.writeAllText(out_path, bld.toString())
+  if typeof(wr) == "error" then return wr end if
+  print "OK: wrote " + out_path
+  return true
+end function
+
+/// Write the final relocated ELF bytes using the same column/data controls as PE.
+/// @internal
+function _write_elf_asm_listing_if_enabled(output_exe, layout, text_buf, rdata_buf, data_buf)
+  if _asm_listing_enabled == false then return true end if
+  out_path = _asm_listing_path
+  if out_path == "" then out_path = _asm_default_path(output_exe) end if
+  bld = sb.StringBuilder.withCapacity(len(text_buf) * 4 + 4096)
+  bld.appendLine("; MiniLang native x64 ELF listing")
+  _asm_append_section(bld, ".text", text_buf, layout.base + layout.text_off)
+  if _asm_dump_data then
+    _asm_append_section(bld, ".rdata", rdata_buf, layout.base + layout.rdata_off)
+    _asm_append_section(bld, ".data", data_buf, layout.base + layout.data_off)
   end if
   wr = fs.writeAllText(out_path, bld.toString())
   if typeof(wr) == "error" then return wr end if
@@ -7840,6 +7892,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   tail_cg.state.data = cg.state.data
   tail_cg.state.bss = cg.state.bss
   tail_cg.state.used_helpers = helper_union
+  tail_cg.state.heap_config = _cfg_set(tail_cg.state.heap_config, "cg_object_text_base", text_stream_offset)
   _progress_phase("emitting canonical extern stubs")
   tail_cg = codegen.emit_extern_stubs(tail_cg)
   _progress_phase("emitting canonical runtime helpers")
@@ -8024,6 +8077,10 @@ function run_cli(args)
   _dump_labels_path = _get_flag_value(args, "--dump-labels")
   _object_pipeline_enabled = false
   _object_emit_only = _has_flag(args, "--object-emit-only")
+  if _has_flag(args, "--asm") and _has_flag(args, "--no-asm") then
+    print "CompileError: --asm and --no-asm are mutually exclusive"
+    return 2
+  end if
   _asm_listing_enabled = _has_flag(args, "--asm") and _has_flag(args, "--no-asm") == false
   _asm_listing_path = _get_flag_value(args, "--asm-out")
   _asm_show_addr = true

@@ -66,9 +66,9 @@ const RUNTIME_LEGACY_THREAD_END = 1427
 /// Track runtime pthread create patch.
 const RUNTIME_PTHREAD_CREATE_PATCH = 757
 /// Track runtime pthread wait patch.
-const RUNTIME_PTHREAD_WAIT_PATCH = 1224
+const RUNTIME_PTHREAD_WAIT_PATCH = 1226
 /// Track runtime pthread close patch.
-const RUNTIME_PTHREAD_CLOSE_PATCH = 1506
+const RUNTIME_PTHREAD_CLOSE_PATCH = 1510
 
 /// Emit extern dll base for the Linux x64 runtime.
 /// @internal
@@ -184,18 +184,18 @@ function _runtime_labels()
     RuntimeLabel("linux_cs_lock_loop", 455), RuntimeLabel("linux_cs_lock_done", 484), RuntimeLabel("linux_LeaveCriticalSection", 497),
     RuntimeLabel("linux_cs_leave_release", 539), RuntimeLabel("linux_cs_leave_done", 562), RuntimeLabel("linux_CreateThread", 563),
     RuntimeLabel("linux_pthread_start", 874), RuntimeLabel("linux_thread_create_cleanup", 934), RuntimeLabel("linux_thread_create_fail", 949),
-    RuntimeLabel("linux_WaitForSingleObject", 1043), RuntimeLabel("linux_thread_wait_loop", 1135), RuntimeLabel("linux_thread_wait_join", 1178),
-    RuntimeLabel("linux_thread_wait_join_claim", 1178), RuntimeLabel("linux_thread_wait_join_owned", 1250), RuntimeLabel("linux_thread_wait_join_release", 1262),
-    RuntimeLabel("linux_thread_wait_ok", 1276), RuntimeLabel("linux_thread_wait_failed", 1283), RuntimeLabel("linux_thread_wait_timeout", 1293),
-    RuntimeLabel("linux_thread_wait_done", 1298), RuntimeLabel("linux_CloseHandle", 1385), RuntimeLabel("linux_thread_close_unmap", 1518),
-    RuntimeLabel("linux_thread_close_fail", 1552), RuntimeLabel("linux_thread_close_done", 1554), RuntimeLabel("linux_fmod", 1639),
-    RuntimeLabel("linux__gcvt", 1662), RuntimeLabel("linux_gcvt_abs", 1719), RuntimeLabel("linux_gcvt_int_loop", 1749),
-    RuntimeLabel("linux_gcvt_reverse_loop", 1789), RuntimeLabel("linux_gcvt_int_done", 1818), RuntimeLabel("linux_gcvt_carry_loop", 1873),
-    RuntimeLabel("linux_gcvt_carry_increment", 1913), RuntimeLabel("linux_gcvt_fraction_ready", 1923), RuntimeLabel("linux_gcvt_frac_loop", 1946),
-    RuntimeLabel("linux_gcvt_trim", 1988), RuntimeLabel("linux_gcvt_terminate", 2005), RuntimeLabel("linux_SetConsoleOutputCP", 2025),
-    RuntimeLabel("linux_FreeConsole", 2031), RuntimeLabel("linux_LocalFree", 2037), RuntimeLabel("linux_GetCommandLineW", 2043),
-    RuntimeLabel("linux_CommandLineToArgvW", 2046), RuntimeLabel("linux_WriteConsoleW", 2049), RuntimeLabel("linux_MultiByteToWideChar", 2052),
-    RuntimeLabel("linux_WideCharToMultiByte", 2055)
+    RuntimeLabel("linux_WaitForSingleObject", 1043), RuntimeLabel("linux_thread_wait_loop", 1137), RuntimeLabel("linux_thread_wait_join", 1180),
+    RuntimeLabel("linux_thread_wait_join_claim", 1180), RuntimeLabel("linux_thread_wait_join_owned", 1252), RuntimeLabel("linux_thread_wait_join_release", 1264),
+    RuntimeLabel("linux_thread_wait_ok", 1278), RuntimeLabel("linux_thread_wait_failed", 1285), RuntimeLabel("linux_thread_wait_timeout", 1295),
+    RuntimeLabel("linux_thread_wait_done", 1300), RuntimeLabel("linux_CloseHandle", 1389), RuntimeLabel("linux_thread_close_unmap", 1522),
+    RuntimeLabel("linux_thread_close_fail", 1556), RuntimeLabel("linux_thread_close_done", 1558), RuntimeLabel("linux_fmod", 1643),
+    RuntimeLabel("linux__gcvt", 1666), RuntimeLabel("linux_gcvt_abs", 1723), RuntimeLabel("linux_gcvt_int_loop", 1753),
+    RuntimeLabel("linux_gcvt_reverse_loop", 1793), RuntimeLabel("linux_gcvt_int_done", 1822), RuntimeLabel("linux_gcvt_carry_loop", 1877),
+    RuntimeLabel("linux_gcvt_carry_increment", 1917), RuntimeLabel("linux_gcvt_fraction_ready", 1927), RuntimeLabel("linux_gcvt_frac_loop", 1950),
+    RuntimeLabel("linux_gcvt_trim", 1992), RuntimeLabel("linux_gcvt_terminate", 2009), RuntimeLabel("linux_SetConsoleOutputCP", 2029),
+    RuntimeLabel("linux_FreeConsole", 2035), RuntimeLabel("linux_LocalFree", 2041), RuntimeLabel("linux_GetCommandLineW", 2047),
+    RuntimeLabel("linux_CommandLineToArgvW", 2050), RuntimeLabel("linux_WriteConsoleW", 2053), RuntimeLabel("linux_MultiByteToWideChar", 2056),
+    RuntimeLabel("linux_WideCharToMultiByte", 2059)
   ]
 end function
 
@@ -222,7 +222,7 @@ end function
 /// Generated pthread-backed replacement for the legacy CreateThread through CloseHandle portion of _runtime_blob. Internal branches are pre-resolved; the three dynamic pthread calls are registered as RIP patches by emit_runtime.
 /// @internal
 function _pthread_runtime_blob()
-  return fromHex("53415441554156415757564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004d8be84d8bf14c8bbc240801000033ffbe00100000ba0300000041ba2200000049c7c0ffffffff4533c9b8090000000f05483d01f0ffff0f83ea0000004c8be041c7442408010000004d896c24104d89742418498bfc33f6488d057d000000488bd0498bccff150000000085c00f85a5000000498b04244189074d8bdcf30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a00000005e5f415f415e415d415c5b498bc3c341544883ec204c8be7498d442440488bf0bf01100000b89e0000000f05498b4c2418498b442410ffd041c7442408000000004833c04883c420415cc3498bfcbe00100000b80b0000000f05f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a00000005e5f415f415e415d415c5b33c0c34154415541564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004c8be1448bea418b44240885c00f841e0000004585ed0f8488000000b901000000e8e6fcffff4183fdff74da41ffcdebd5418b44242083f8020f845400000085c00f853200000033c0ba01000000f0410fb154242075da498b3c2433f6ff150000000085c00f851a00000041c744242002000000e91a000000b901000000e889fcffffebac41c744242000000000e90700000033c0e90f000000b8ffffffffe905000000b802010000f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a0000000415e415d415cc3415457564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004c8be1418b44240885c00f8543000000418b44242085c00f8514000000498b3c2433f6ff150000000085c00f8522000000498bfcbe00100000b80b0000000f054885c00f850a000000b801000000e90200000033c0f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a00000005e5f415cc3")
+  return fromHex("53415441554156415757564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004d8be84d8bf14c8bbc240801000033ffbe00100000ba0300000041ba2200000049c7c0ffffffff4533c9b8090000000f05483d01f0ffff0f83ea0000004c8be041c7442408010000004d896c24104d89742418498bfc33f6488d057d000000488bd0498bccff150000000085c00f85a5000000498b04244189074d8bdcf30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a00000005e5f415f415e415d415c5b498bc3c341544883ec204c8be7498d442440488bf0bf01100000b89e0000000f05498b4c2418498b442410ffd041c7442408000000004833c04883c420415cc3498bfcbe00100000b80b0000000f05f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a00000005e5f415f415e415d415c5b33c0c357564154415541564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004c8be1448bea418b44240885c00f841e0000004585ed0f8488000000b901000000e8e4fcffff4183fdff74da41ffcdebd5418b44242083f8020f845400000085c00f853200000033c0ba01000000f0410fb154242075da498b3c2433f6ff150000000085c00f851a00000041c744242002000000e91a000000b901000000e887fcffffebac41c744242000000000e90700000033c0e90f000000b8ffffffffe905000000b802010000f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a0000000415e415d415c5e5fc3415457564881eca0000000f30f7f3424f30f7f7c2410f3440f7f442420f3440f7f4c2430f3440f7f542440f3440f7f5c2450f3440f7f642460f3440f7f6c2470f3440f7fb42480000000f3440f7fbc24900000004c8be1418b44240885c00f8543000000418b44242085c00f8514000000498b3c2433f6ff150000000085c00f8522000000498bfcbe00100000b80b0000000f054885c00f850a000000b801000000e90200000033c0f30f6f3424f30f6f7c2410f3440f6f442420f3440f6f4c2430f3440f6f542440f3440f6f5c2450f3440f6f642460f3440f6f6c2470f3440f6fb42480000000f3440f6fbc24900000004881c4a00000005e5f415cc3")
 end function
 
 

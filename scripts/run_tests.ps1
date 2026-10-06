@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.2.17"
+  $expected = "MiniLang Compiler 1.2.18"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -245,8 +245,9 @@ function Test-LinuxRuntimeBlobLayout {
     $start = $constant["RUNTIME_LEGACY_THREAD_START"]
     $end = $constant["RUNTIME_LEGACY_THREAD_END"]
     $finalBytes = $start + $pthreadBytes + ($rawBytes - $end)
-    $passed = ($rawBytes -eq 1846 -and $pthreadBytes -eq 1076 -and
-               $start -eq 563 -and $end -eq 1427 -and $finalBytes -eq 2058)
+    # WaitForSingleObject now saves/restores RDI and RSI across pthread_join.
+    $passed = ($rawBytes -eq 1846 -and $pthreadBytes -eq 1080 -and
+               $start -eq 563 -and $end -eq 1427 -and $finalBytes -eq 2062)
     # The blob emitter consumes labels in source order; a correct inventory
     # with unsorted offsets would duplicate slices and silently change code.
     $previousOffset = -1
@@ -441,6 +442,13 @@ try {
       [pscustomobject]@{ Name = "Linux mixed concat with operator overloads"; Source = "mixed_concat_overloads.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux runtime codegen"; Source = "runtime_codegen.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux memory management"; Source = "memory_management.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux heap ceiling"; Source = "memory_heap_ceiling.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux GC thread lifetime"; Source = "gc_thread_lifetime.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux GC handoff lifetime"; Source = "gc_handoff_lifetime.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux GC bitmap words"; Source = "gc_bitmap_words.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux FFI cstr returns"; Source = "ffi_cstr_return.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux allocation cursor"; Source = "memory_fragmentation_cursor.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux GC metadata"; Source = "memory_gc_metadata.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux memory purge"; Source = "memory_purge.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux async variadics"; Source = "language_async_variadic.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux escaping variadics"; Source = "variadic_escape_lifetime.ml"; RunArgs = @() },
@@ -454,6 +462,8 @@ try {
       $linuxArgs = @($linuxSource, $linuxImage, "-I", $Root, "--target", "linux-x64") + $effectiveCompilerArgs
       # This fixture specifically validates the unconfigured adaptive policy.
       if ($linuxCase.Source -eq "memory_management.ml") { $linuxArgs = @($linuxSource, $linuxImage, "-I", $Root, "--target", "linux-x64") }
+      if ($linuxCase.Source -eq "memory_heap_ceiling.ml") { $linuxArgs = @($linuxSource, $linuxImage, "-I", $Root, "--target", "linux-x64", "--heap-reserve", "40m", "--heap-commit", "32m") }
+      if ($linuxCase.Source -eq "memory_gc_metadata.ml") { $linuxArgs += @("--heap-shrink", "--heap-shrink-min", "1m") }
       if ($linuxCase.Source -eq "memory_purge.ml") { $linuxArgs += @("--heap-shrink", "--heap-shrink-min", "1m") }
       $results += Invoke-NativeStep ("compile " + $linuxCase.Name) $Compiler $linuxArgs
       if ($results[-1].ExitCode -ne 0) { continue }
@@ -499,6 +509,13 @@ try {
     [pscustomobject]@{ Name = "mixed concat with operator overloads"; Source = "mixed_concat_overloads.ml" },
     [pscustomobject]@{ Name = "runtime codegen"; Source = "runtime_codegen.ml" },
     [pscustomobject]@{ Name = "memory management"; Source = "memory_management.ml" },
+    [pscustomobject]@{ Name = "heap ceiling"; Source = "memory_heap_ceiling.ml" },
+    [pscustomobject]@{ Name = "GC thread lifetime"; Source = "gc_thread_lifetime.ml" },
+    [pscustomobject]@{ Name = "GC handoff lifetime"; Source = "gc_handoff_lifetime.ml" },
+    [pscustomobject]@{ Name = "GC bitmap words"; Source = "gc_bitmap_words.ml" },
+    [pscustomobject]@{ Name = "FFI cstr returns"; Source = "ffi_cstr_return.ml" },
+    [pscustomobject]@{ Name = "allocation cursor"; Source = "memory_fragmentation_cursor.ml" },
+    [pscustomobject]@{ Name = "GC metadata"; Source = "memory_gc_metadata.ml" },
     [pscustomobject]@{ Name = "memory purge"; Source = "memory_purge.ml" },
     [pscustomobject]@{ Name = "compiler scope indexes"; Source = "compiler_scope_index.ml" },
     [pscustomobject]@{ Name = "compiler qualification cache"; Source = "compiler_qualification_cache.ml" },
@@ -518,6 +535,8 @@ try {
     $nativeExe = Join-Path $script:ResolvedArtifactsDir ($nativeStem + ".exe")
     $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root) + $effectiveCompilerArgs
     if ($nativeCase.Source -eq "memory_management.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root) }
+    if ($nativeCase.Source -eq "memory_heap_ceiling.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root, "--heap-reserve", "40m", "--heap-commit", "32m") }
+    if ($nativeCase.Source -eq "memory_gc_metadata.ml") { $nativeArgs += @("--heap-shrink", "--heap-shrink-min", "1m") }
     if ($nativeCase.Source -eq "memory_purge.ml") { $nativeArgs += @("--heap-shrink", "--heap-shrink-min", "1m") }
     $results += Invoke-NativeStep ("compile " + $nativeCase.Name) $Compiler $nativeArgs
     if ($results[-1].ExitCode -eq 0) {

@@ -216,11 +216,11 @@ Track runtime legacy thread start.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L63)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-pthread-close-patch-const-runtime-pthread-close-patch-1506-mlc-linux-runtime-ml-549567687"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-pthread-close-patch-const-runtime-pthread-close-patch-1510-mlc-linux-runtime-ml-1842656442"></a>
 ### RUNTIME_PTHREAD_CLOSE_PATCH
 
 ```ml
-const RUNTIME_PTHREAD_CLOSE_PATCH = 1506
+const RUNTIME_PTHREAD_CLOSE_PATCH = 1510
 ```
 
 Track runtime pthread close patch.
@@ -240,11 +240,11 @@ Track runtime pthread create patch.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L67)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-pthread-wait-patch-const-runtime-pthread-wait-patch-1224-mlc-linux-runtime-ml-230722498"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-pthread-wait-patch-const-runtime-pthread-wait-patch-1226-mlc-linux-runtime-ml-390973824"></a>
 ### RUNTIME_PTHREAD_WAIT_PATCH
 
 ```ml
-const RUNTIME_PTHREAD_WAIT_PATCH = 1224
+const RUNTIME_PTHREAD_WAIT_PATCH = 1226
 ```
 
 Track runtime pthread wait patch.

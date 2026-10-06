@@ -2188,6 +2188,7 @@ function emit_used_helpers(state)
       state.diagnostics = state.diagnostics + ["Unknown internal helper referenced: " + best]
       continue
     end if
+    state = mem.emit_runtime_alignment(state)
     state = _emit_helper_by_label(state, best)
   end while
 

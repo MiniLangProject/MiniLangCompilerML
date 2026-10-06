@@ -31,7 +31,7 @@ Emit init in the managed-memory runtime.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L203)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L204)
 
 <a id="function-function-mlc-codegen-codegen-memory-append-unique-function-append-unique-values-value-mlc-codegen-codegen-memory-ml-484259326"></a>
 ### _append_unique
@@ -265,7 +265,7 @@ Reports whether application code references diagnostic counters.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2214)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2412)
 
 <a id="constant-constant-mlc-codegen-codegen-memory-alloc-min-split-const-alloc-min-split-32-mlc-codegen-codegen-memory-ml-1661056987"></a>
 ### ALLOC_MIN_SPLIT
@@ -293,7 +293,7 @@ Emit cg memory init in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2576)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2786)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-alloc-function-function-emit-alloc-function-state-mlc-codegen-codegen-memory-ml-1374636448"></a>
 ### emit_alloc_function
@@ -309,7 +309,7 @@ Emit the shared-heap allocator, including the TLAB fast path and synchronized re
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L585)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L616)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-decref-function-function-emit-decref-function-state-mlc-codegen-codegen-memory-ml-848943548"></a>
 ### emit_decref_function
@@ -325,7 +325,7 @@ Emit emit decref function in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2115)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2313)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-gc-clear-root-slots-function-emit-gc-clear-root-slots-state-root-base-root-top-mlc-codegen-codegen-memory-ml-1049458376"></a>
 ### emit_gc_clear_root_slots
@@ -343,7 +343,7 @@ Emit emit gc clear root slots in the managed-memory runtime.
 | `root_top` | `dynamic` | — | Value supplied for `root_top`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L498)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L503)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-gc-collect-function-function-emit-gc-collect-function-state-mlc-codegen-codegen-memory-ml-2043781588"></a>
 ### emit_gc_collect_function
@@ -359,7 +359,7 @@ Emit stop-the-world mark/sweep collection. Thread roots are published before sus
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L1312)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L1367)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-gc-init-globals-function-emit-gc-init-globals-state-disable-periodic-mlc-codegen-codegen-memory-ml-1041162440"></a>
 ### emit_gc_init_globals
@@ -376,7 +376,7 @@ Emit emit gc init globals in the managed-memory runtime.
 | `disable_periodic` | `dynamic` | — | Value supplied for `disable_periodic`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L467)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L472)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-gc-pop-root-frame-function-emit-gc-pop-root-frame-state-root-rec-off-mlc-codegen-codegen-memory-ml-206505697"></a>
 ### emit_gc_pop_root_frame
@@ -393,7 +393,7 @@ Emit emit gc pop root frame in the managed-memory runtime.
 | `root_rec_off` | `dynamic` | — | Value supplied for `root_rec_off`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L571)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L602)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-gc-push-root-frame-function-emit-gc-push-root-frame-state-root-rec-off-root-base-root-top-mlc-codegen-codegen-memory-ml-545736239"></a>
 ### emit_gc_push_root_frame
@@ -412,7 +412,23 @@ Emit emit gc push root frame in the managed-memory runtime.
 | `root_top` | `dynamic` | — | Value supplied for `root_top`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L540)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L571)
+
+<a id="function-function-mlc-codegen-codegen-memory-emit-gc-release-handoffs-function-emit-gc-release-handoffs-state-mlc-codegen-codegen-memory-ml-202866004"></a>
+### emit_gc_release_handoffs
+
+```ml
+function emit_gc_release_handoffs(state)
+```
+
+Retire handoff roots only after live values have precise published roots.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `state` | `dynamic` | — | Code-generation state. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L542)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-gc-stat-function-function-emit-gc-stat-function-state-mlc-codegen-codegen-memory-ml-878060792"></a>
 ### emit_gc_stat_function
@@ -428,7 +444,7 @@ Read one diagnostic counter without allocation; invalid indices return void.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2182)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2380)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-heap-bytes-committed-function-function-emit-heap-bytes-committed-function-state-mlc-codegen-codegen-memory-ml-597269876"></a>
 ### emit_heap_bytes_committed_function
@@ -444,7 +460,7 @@ Emit emit heap bytes committed function in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2256)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2454)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-heap-bytes-reserved-function-function-emit-heap-bytes-reserved-function-state-mlc-codegen-codegen-memory-ml-1925633220"></a>
 ### emit_heap_bytes_reserved_function
@@ -460,7 +476,7 @@ Emit emit heap bytes reserved function in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2285)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2483)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-heap-bytes-used-function-function-emit-heap-bytes-used-function-state-mlc-codegen-codegen-memory-ml-216011958"></a>
 ### emit_heap_bytes_used_function
@@ -476,7 +492,7 @@ Return the heap frontier offset, not reachable/live object bytes.
 | `state` | `dynamic` | — | Native runtime emitter state. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2227)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2425)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-heap-count-function-function-emit-heap-count-function-state-mlc-codegen-codegen-memory-ml-2002706044"></a>
 ### emit_heap_count_function
@@ -492,7 +508,7 @@ Emit emit heap count function in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2123)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2321)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-heap-free-blocks-function-function-emit-heap-free-blocks-function-state-mlc-codegen-codegen-memory-ml-439642176"></a>
 ### emit_heap_free_blocks_function
@@ -508,7 +524,7 @@ Emit emit heap free blocks function in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2314)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2512)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-heap-free-bytes-function-function-emit-heap-free-bytes-function-state-mlc-codegen-codegen-memory-ml-1853574576"></a>
 ### emit_heap_free_bytes_function
@@ -524,7 +540,7 @@ Emit emit heap free bytes function in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2384)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2582)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-heap-grow-function-function-emit-heap-grow-function-state-mlc-codegen-codegen-memory-ml-759712978"></a>
 ### emit_heap_grow_function
@@ -540,7 +556,7 @@ Emit emit heap grow function in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2456)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2654)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-heap-init-function-emit-heap-init-state-heap-size-mlc-codegen-codegen-memory-ml-438456146"></a>
 ### emit_heap_init
@@ -557,7 +573,7 @@ Emit emit heap init in the managed-memory runtime.
 | `heap_size` | `dynamic` | — | Value supplied for `heap_size`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L277)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L282)
 
 <a id="function-function-mlc-codegen-codegen-memory-emit-incref-function-function-emit-incref-function-state-mlc-codegen-codegen-memory-ml-2119130748"></a>
 ### emit_incref_function
@@ -573,7 +589,23 @@ Emit emit incref function in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2107)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L2305)
+
+<a id="function-function-mlc-codegen-codegen-memory-emit-runtime-alignment-function-emit-runtime-alignment-state-mlc-codegen-codegen-memory-ml-540777084"></a>
+### emit_runtime_alignment
+
+```ml
+function emit_runtime_alignment(state)
+```
+
+Isolate hot runtime entries/loops on a 32-byte instruction-fetch boundary. The object-tail base makes padding identical to monolithic codegen.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `state` | `dynamic` | — | Code-generation state including the canonical text offset. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L557)
 
 <a id="function-function-mlc-codegen-codegen-memory-ensure-gc-data-function-ensure-gc-data-state-mlc-codegen-codegen-memory-ml-2102654204"></a>
 ### ensure_gc_data
@@ -589,7 +621,7 @@ Emit ensure gc data in the managed-memory runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L209)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_memory.ml#L210)
 
 <a id="constant-constant-mlc-codegen-codegen-memory-gc-default-bytes-limit-const-gc-default-bytes-limit-64-20-mlc-codegen-codegen-memory-ml-1557332908"></a>
 ### GC_DEFAULT_BYTES_LIMIT

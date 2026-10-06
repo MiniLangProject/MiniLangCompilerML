@@ -354,12 +354,33 @@ function main(args)
     print "FAIL: asm_opcodes_golden.json has no vectors field"
     return 4
   end if
-  if s.contains(txt, "\"count\": 229") == false then
-    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 229-vector set"
+  if s.contains(txt, "\"count\": 232") == false then
+    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 232-vector set"
     return 5
   end if
 
   failures = 0
+
+  // Independently pin register-bit-test encodings, including both REX fields.
+  b = a.newAsmBuilder()
+  b = a.bt_r64_r64(b, "rax", "rcx")
+  failures = failures + checkOpcode("bt_r64_r64 low registers", b, "480fa3c8")
+
+  b = a.newAsmBuilder()
+  b = a.bts_r64_r64(b, "rax", "rcx")
+  failures = failures + checkOpcode("bts_r64_r64 low registers", b, "480fabc8")
+
+  b = a.newAsmBuilder()
+  b = a.bt_r64_r64(b, "r10", "r8")
+  failures = failures + checkOpcode("bt_r64_r64 high registers", b, "4d0fa3c2")
+
+  b = a.newAsmBuilder()
+  b = a.bts_r64_r64(b, "r10", "r8")
+  failures = failures + checkOpcode("bts_r64_r64 high registers", b, "4d0fabc2")
+
+  b = a.newAsmBuilder()
+  b = a.mul_r64(b, "r11")
+  failures = failures + checkOpcode("mul_r64", b, "49f7e3")
 
   b = a.newAsmBuilder()
   b = a.movq_r64_xmm(b, "r10", "xmm9")

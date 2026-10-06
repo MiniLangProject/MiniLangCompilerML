@@ -22,6 +22,7 @@ import mlc.asm as a
 import mlc.constants as c
 import mlc.data as d
 import mlc.tools as t
+import mlc.codegen.codegen_memory as mem
 
 /// Construct a cold runtime error from a tagged code and immortal rdata text. Saves arguments outside call shadow space; no managed argument is hidden from the GC. Captures the caller's current debug location after allocation.
 /// @internal
@@ -3861,8 +3862,13 @@ end function
 /// @param state Value supplied for `state`.
 function emit_builtin_gc_collect_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_gc_collect")
+  // A first-class builtin is a real callee: reserve Win64 shadow space
+  // and align RSP before entering the collector and its OS callbacks.
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+  state = mem.emit_gc_release_handoffs(state)
   state.asm = a.call(state.asm, "fn_gc_collect")
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
   state.asm = a.ret(state.asm)
   return state
 end function

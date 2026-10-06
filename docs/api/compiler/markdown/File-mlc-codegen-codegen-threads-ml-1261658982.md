@@ -11,6 +11,7 @@ Reachable from entry: **yes**
 ## Imports
 
 - `mlc/asm.ml` as `a` → [mlc/asm.ml](File-mlc-asm-ml-1368648960.md)
+- `mlc/codegen/codegen_memory.ml` as `mem` → [mlc/codegen/codegen_memory.ml](File-mlc-codegen-codegen-memory-ml-2136639668.md)
 - `mlc/constants.ml` as `c` → [mlc/constants.ml](File-mlc-constants-ml-1024884042.md)
 - `mlc/data.ml` as `d` → [mlc/data.ml](File-mlc-data-ml-557434521.md)
 - `mlc/tools.ml` as `t` → [mlc/tools.ml](File-mlc-tools-ml-988451276.md)
@@ -32,7 +33,7 @@ Updates append unique.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L115)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L112)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-managed-thread-count-delta-function-emit-managed-thread-count-delta-state-delta-mlc-codegen-codegen-threads-ml-956712758"></a>
 ### _emit_managed_thread_count_delta
@@ -49,7 +50,7 @@ Emit emit managed thread count delta in the native threading runtime.
 | `delta` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L245)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L237)
 
 <a id="function-function-mlc-codegen-codegen-threads-has-label-function-has-label-labels-name-mlc-codegen-codegen-threads-ml-923041515"></a>
 ### _has_label
@@ -66,7 +67,7 @@ Reports whether has label.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L105)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L102)
 
 <a id="function-function-mlc-codegen-codegen-threads-new-label-id-function-new-label-id-state-mlc-codegen-codegen-threads-ml-1951519124"></a>
 ### _new_label_id
@@ -82,7 +83,7 @@ Creates new label id.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L126)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L123)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-gc-managed-exit-function-function-emit-gc-managed-exit-function-state-mlc-codegen-codegen-threads-ml-363662000"></a>
 ### emit_gc_managed_exit_function
@@ -98,7 +99,7 @@ Remove a terminating managed worker from collector participation.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L412)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L404)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-gc-native-enter-function-function-emit-gc-native-enter-function-state-mlc-codegen-codegen-threads-ml-1448965312"></a>
 ### emit_gc_native_enter_function
@@ -114,7 +115,7 @@ Mark the current thread native so the collector does not wait for a poll.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L328)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L320)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-gc-native-leave-function-function-emit-gc-native-leave-function-state-mlc-codegen-codegen-threads-ml-2055070818"></a>
 ### emit_gc_native_leave_function
@@ -130,7 +131,7 @@ Rejoin managed execution, parking first when a collection is active.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L364)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L356)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-gc-safepoint-function-function-emit-gc-safepoint-function-state-mlc-codegen-codegen-threads-ml-380093628"></a>
 ### emit_gc_safepoint_function
@@ -146,7 +147,7 @@ Emit the slow path that publishes a parked state until GC resumes the world.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L264)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L256)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-gc-safepoint-poll-function-emit-gc-safepoint-poll-state-mlc-codegen-codegen-threads-ml-330151080"></a>
 ### emit_gc_safepoint_poll
@@ -162,7 +163,7 @@ Emit a cheap conditional call that parks when collection was requested.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L208)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L199)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-gc-world-resume-function-function-emit-gc-world-resume-function-state-mlc-codegen-codegen-threads-ml-1826587852"></a>
 ### emit_gc_world_resume_function
@@ -178,7 +179,7 @@ Clear the collection request and make parked threads runnable again.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L584)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L586)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-gc-world-stop-function-function-emit-gc-world-stop-function-state-mlc-codegen-codegen-threads-ml-1429773454"></a>
 ### emit_gc_world_stop_function
@@ -194,7 +195,7 @@ Request collection and wait until every other managed thread is safe.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L520)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L522)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-heap-enter-function-function-emit-heap-enter-function-state-mlc-codegen-codegen-threads-ml-1367045632"></a>
 ### emit_heap_enter_function
@@ -210,7 +211,7 @@ Serialize heap mutation while preserving re-entrant allocation depth.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L433)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L435)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-heap-leave-function-function-emit-heap-leave-function-state-mlc-codegen-codegen-threads-ml-1998760952"></a>
 ### emit_heap_leave_function
@@ -226,7 +227,7 @@ Release the heap monitor at the outermost allocation depth.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L491)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L493)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-sync-enter-function-function-emit-sync-enter-function-state-mlc-codegen-codegen-threads-ml-1105104072"></a>
 ### emit_sync_enter_function
@@ -242,7 +243,7 @@ Enter the process-wide monitor used by synchronized language constructs.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L607)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L609)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-sync-init-function-emit-sync-init-state-mlc-codegen-codegen-threads-ml-304841148"></a>
 ### emit_sync_init
@@ -258,7 +259,7 @@ Initialize the main thread context and all process-wide critical sections.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L170)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L161)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-sync-leave-function-function-emit-sync-leave-function-state-mlc-codegen-codegen-threads-ml-88544024"></a>
 ### emit_sync_leave_function
@@ -274,7 +275,7 @@ Leave the process-wide synchronized monitor.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L626)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L628)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-alive-function-function-emit-thread-alive-function-state-mlc-codegen-codegen-threads-ml-2003955440"></a>
 ### emit_thread_alive_function
@@ -290,7 +291,7 @@ Emit emit thread alive function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L940)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L916)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-alloc-function-function-emit-thread-alloc-function-state-mlc-codegen-codegen-threads-ml-1525487468"></a>
 ### emit_thread_alloc_function
@@ -306,7 +307,7 @@ Emit emit thread alloc function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1170)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1158)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-cancellation-poll-function-emit-thread-cancellation-poll-state-mlc-codegen-codegen-threads-ml-1629970156"></a>
 ### emit_thread_cancellation_poll
@@ -322,7 +323,7 @@ Cooperatively turn a stop request into an early function return.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L222)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L214)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-close-function-function-emit-thread-close-function-state-mlc-codegen-codegen-threads-ml-1564354248"></a>
 ### emit_thread_close_function
@@ -338,7 +339,7 @@ Emit emit thread close function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1059)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1035)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-current-logical-id-function-function-emit-thread-current-logical-id-function-state-mlc-codegen-codegen-threads-ml-710568386"></a>
 ### emit_thread_current_logical_id_function
@@ -354,7 +355,7 @@ Emit emit thread current logical id function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1015)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L991)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-entry-function-function-emit-thread-entry-function-state-mlc-codegen-codegen-threads-ml-411978532"></a>
 ### emit_thread_entry_function
@@ -370,7 +371,7 @@ Bridge the target's native worker entrypoint to managed code and publish its res
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1179)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1167)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-id-function-function-emit-thread-id-function-state-mlc-codegen-codegen-threads-ml-460353190"></a>
 ### emit_thread_id_function
@@ -386,7 +387,7 @@ Emit emit thread id function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L963)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L939)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-join-function-function-emit-thread-join-function-state-mlc-codegen-codegen-threads-ml-168611108"></a>
 ### emit_thread_join_function
@@ -402,7 +403,7 @@ Emit emit thread join function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L844)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L820)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-logical-id-function-function-emit-thread-logical-id-function-state-mlc-codegen-codegen-threads-ml-2085745974"></a>
 ### emit_thread_logical_id_function
@@ -418,7 +419,7 @@ Emit emit thread logical id function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L974)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L950)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-new-function-function-emit-thread-new-function-state-mlc-codegen-codegen-threads-ml-855205780"></a>
 ### emit_thread_new_function
@@ -427,14 +428,14 @@ Emit emit thread logical id function in the native threading runtime.
 function emit_thread_new_function(state)
 ```
 
-Allocate and initialize a managed Thread object without starting it.
+Allocate a GC-owned Thread and register a weak lifecycle link.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `state` | `dynamic` | — | Value supplied for `state`. |
+| `state` | `dynamic` | — | Code-generation state. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L643)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L645)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-result-function-function-emit-thread-result-function-state-mlc-codegen-codegen-threads-ml-991759054"></a>
 ### emit_thread_result_function
@@ -450,7 +451,7 @@ Emit emit thread result function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1006)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L982)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-set-logical-id-function-function-emit-thread-set-logical-id-function-state-mlc-codegen-codegen-threads-ml-149940160"></a>
 ### emit_thread_set_logical_id_function
@@ -466,7 +467,7 @@ Emit emit thread set logical id function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L983)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L959)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-start-function-function-emit-thread-start-function-state-mlc-codegen-codegen-threads-ml-1457904124"></a>
 ### emit_thread_start_function
@@ -482,7 +483,7 @@ Publish the argument and create the native worker exactly once.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L738)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L714)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-status-function-function-emit-thread-status-function-state-mlc-codegen-codegen-threads-ml-1292778052"></a>
 ### emit_thread_status_function
@@ -498,7 +499,7 @@ Emit emit thread status function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1025)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1001)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-stop-function-function-emit-thread-stop-function-state-mlc-codegen-codegen-threads-ml-1794962392"></a>
 ### emit_thread_stop_function
@@ -514,7 +515,7 @@ Emit emit thread stop function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L806)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L782)
 
 <a id="function-function-mlc-codegen-codegen-threads-emit-thread-stop-requested-function-function-emit-thread-stop-requested-function-state-mlc-codegen-codegen-threads-ml-1119595898"></a>
 ### emit_thread_stop_requested_function
@@ -530,7 +531,7 @@ Emit emit thread stop requested function in the native threading runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1147)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L1135)
 
 <a id="function-function-mlc-codegen-codegen-threads-ensure-thread-data-function-ensure-thread-data-state-mlc-codegen-codegen-threads-ml-14057176"></a>
 ### ensure_thread_data
@@ -546,7 +547,7 @@ Materialize global monitors, the main context and coordination counters once.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L133)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L130)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-gc-thread-collector-const-gc-thread-collector-4-mlc-codegen-codegen-threads-ml-1010319348"></a>
 ### GC_THREAD_COLLECTOR
@@ -558,7 +559,7 @@ const GC_THREAD_COLLECTOR = 4
 Track gc thread collector.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L101)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L98)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-gc-thread-inactive-const-gc-thread-inactive-3-mlc-codegen-codegen-threads-ml-272758931"></a>
 ### GC_THREAD_INACTIVE
@@ -570,7 +571,7 @@ const GC_THREAD_INACTIVE = 3
 Track gc thread inactive.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L99)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L96)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-gc-thread-native-const-gc-thread-native-2-mlc-codegen-codegen-threads-ml-788931986"></a>
 ### GC_THREAD_NATIVE
@@ -582,7 +583,7 @@ const GC_THREAD_NATIVE = 2
 Track gc thread native.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L97)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L94)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-gc-thread-parked-const-gc-thread-parked-1-mlc-codegen-codegen-threads-ml-367300213"></a>
 ### GC_THREAD_PARKED
@@ -594,7 +595,7 @@ const GC_THREAD_PARKED = 1
 Track gc thread parked.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L95)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L92)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-gc-thread-running-const-gc-thread-running-0-mlc-codegen-codegen-threads-ml-898647272"></a>
 ### GC_THREAD_RUNNING
@@ -606,7 +607,7 @@ const GC_THREAD_RUNNING = 0
 Collector-facing states used by cooperative stop-the-world coordination.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L93)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L90)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-alloc-cursor-const-thread-alloc-cursor-thread-handoff-cursor-mlc-codegen-codegen-threads-ml-6837516"></a>
 ### THREAD_ALLOC_CURSOR
@@ -618,7 +619,7 @@ const THREAD_ALLOC_CURSOR = THREAD_HANDOFF_CURSOR
 Track thread alloc cursor.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L51)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L52)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-arg-const-thread-arg-144-mlc-codegen-codegen-threads-ml-1838539437"></a>
 ### THREAD_ARG
@@ -630,7 +631,7 @@ const THREAD_ARG = 144
 Track thread arg.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L53)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L54)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-arity-const-thread-arity-160-mlc-codegen-codegen-threads-ml-2025374685"></a>
 ### THREAD_ARITY
@@ -642,7 +643,7 @@ const THREAD_ARITY = 160
 Track thread arity.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L57)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L58)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-code-const-thread-code-24-mlc-codegen-codegen-threads-ml-1735192876"></a>
 ### THREAD_CODE
@@ -654,7 +655,7 @@ const THREAD_CODE = 24
 Track thread code.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L35)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L36)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-completed-const-thread-completed-3-mlc-codegen-codegen-threads-ml-1426983449"></a>
 ### THREAD_COMPLETED
@@ -666,7 +667,7 @@ const THREAD_COMPLETED = 3
 Track thread completed.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L82)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L79)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-configuring-const-thread-configuring-7-mlc-codegen-codegen-threads-ml-45006421"></a>
 ### THREAD_CONFIGURING
@@ -678,19 +679,7 @@ const THREAD_CONFIGURING = 7
 Track thread configuring.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L90)
-
-<a id="constant-constant-mlc-codegen-codegen-threads-thread-context-pool-size-const-thread-context-pool-size-65536-mlc-codegen-codegen-threads-ml-1114858823"></a>
-### THREAD_CONTEXT_POOL_SIZE
-
-```ml
-const THREAD_CONTEXT_POOL_SIZE = 65536
-```
-
-Track thread context pool size.
-
-
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L73)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L87)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-context-size-const-thread-context-size-208-mlc-codegen-codegen-threads-ml-599108086"></a>
 ### THREAD_CONTEXT_SIZE
@@ -702,19 +691,7 @@ const THREAD_CONTEXT_SIZE = 208
 Track thread context size.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L69)
-
-<a id="constant-constant-mlc-codegen-codegen-threads-thread-context-stride-const-thread-context-stride-208-mlc-codegen-codegen-threads-ml-2013311814"></a>
-### THREAD_CONTEXT_STRIDE
-
-```ml
-const THREAD_CONTEXT_STRIDE = 208
-```
-
-Track thread context stride.
-
-
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L71)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L70)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-created-const-thread-created-0-mlc-codegen-codegen-threads-ml-1374504008"></a>
 ### THREAD_CREATED
@@ -726,7 +703,7 @@ const THREAD_CREATED = 0
 Public lifecycle states stored in THREAD_STATUS.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L76)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L73)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-failed-const-thread-failed-5-mlc-codegen-codegen-threads-ml-78784233"></a>
 ### THREAD_FAILED
@@ -738,7 +715,7 @@ const THREAD_FAILED = 5
 Track thread failed.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L86)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L83)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-gc-state-const-thread-gc-state-128-mlc-codegen-codegen-threads-ml-1088683627"></a>
 ### THREAD_GC_STATE
@@ -750,7 +727,7 @@ const THREAD_GC_STATE = 128
 Track thread gc state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L47)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L48)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-handle-const-thread-handle-8-mlc-codegen-codegen-threads-ml-566563596"></a>
 ### THREAD_HANDLE
@@ -762,7 +739,7 @@ const THREAD_HANDLE = 8
 Track thread handle.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L31)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L32)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-handle-users-const-thread-handle-users-200-mlc-codegen-codegen-threads-ml-1900942902"></a>
 ### THREAD_HANDLE_USERS
@@ -774,7 +751,7 @@ const THREAD_HANDLE_USERS = 200
 Active Join() operations retain THREAD_HANDLE until their native wait ends.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L67)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L68)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-handoff-cursor-const-thread-handoff-cursor-136-mlc-codegen-codegen-threads-ml-1497024434"></a>
 ### THREAD_HANDOFF_CURSOR
@@ -786,7 +763,7 @@ const THREAD_HANDOFF_CURSOR = 136
 Cursor for the four allocation-handoff roots at THREAD_TMP0+32.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L49)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L50)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-heap-bypass-depth-const-thread-heap-bypass-depth-168-mlc-codegen-codegen-threads-ml-2065440141"></a>
 ### THREAD_HEAP_BYPASS_DEPTH
@@ -798,7 +775,7 @@ const THREAD_HEAP_BYPASS_DEPTH = 168
 Track thread heap bypass depth.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L59)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L60)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-id-const-thread-id-16-mlc-codegen-codegen-threads-ml-1008940095"></a>
 ### THREAD_ID
@@ -810,7 +787,7 @@ const THREAD_ID = 16
 Track thread id.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L33)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L34)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-logical-id-const-thread-logical-id-152-mlc-codegen-codegen-threads-ml-213743944"></a>
 ### THREAD_LOGICAL_ID
@@ -822,7 +799,7 @@ const THREAD_LOGICAL_ID = 152
 Track thread logical id.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L55)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L56)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-next-const-thread-next-120-mlc-codegen-codegen-threads-ml-1436166595"></a>
 ### THREAD_NEXT
@@ -834,7 +811,7 @@ const THREAD_NEXT = 120
 Track thread next.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L45)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L46)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-result-const-thread-result-40-mlc-codegen-codegen-threads-ml-1609688882"></a>
 ### THREAD_RESULT
@@ -846,7 +823,7 @@ const THREAD_RESULT = 40
 Track thread result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L39)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L40)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-roots-const-thread-roots-48-mlc-codegen-codegen-threads-ml-2086099880"></a>
 ### THREAD_ROOTS
@@ -858,7 +835,7 @@ const THREAD_ROOTS = 48
 Track thread roots.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L41)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L42)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-running-const-thread-running-1-mlc-codegen-codegen-threads-ml-850239583"></a>
 ### THREAD_RUNNING
@@ -870,7 +847,7 @@ const THREAD_RUNNING = 1
 Track thread running.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L78)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L75)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-starting-const-thread-starting-6-mlc-codegen-codegen-threads-ml-1357765630"></a>
 ### THREAD_STARTING
@@ -882,7 +859,7 @@ const THREAD_STARTING = 6
 Private states used while publishing a native worker/configuration update. Status() maps them to stable public strings rather than exposing new states.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L88)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L85)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-status-const-thread-status-4-mlc-codegen-codegen-threads-ml-1311542868"></a>
 ### THREAD_STATUS
@@ -894,7 +871,7 @@ const THREAD_STATUS = 4
 Track thread status.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L29)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L30)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-stop-const-thread-stop-32-mlc-codegen-codegen-threads-ml-811565457"></a>
 ### THREAD_STOP
@@ -906,7 +883,7 @@ const THREAD_STOP = 32
 Track thread stop.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L37)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L38)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-stop-requested-const-thread-stop-requested-2-mlc-codegen-codegen-threads-ml-981688830"></a>
 ### THREAD_STOP_REQUESTED
@@ -918,7 +895,7 @@ const THREAD_STOP_REQUESTED = 2
 Track thread stop requested.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L80)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L77)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-stopped-const-thread-stopped-4-mlc-codegen-codegen-threads-ml-1019797446"></a>
 ### THREAD_STOPPED
@@ -930,7 +907,7 @@ const THREAD_STOPPED = 4
 Track thread stopped.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L84)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L81)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-tlab-cursor-const-thread-tlab-cursor-184-mlc-codegen-codegen-threads-ml-1074270817"></a>
 ### THREAD_TLAB_CURSOR
@@ -942,7 +919,7 @@ const THREAD_TLAB_CURSOR = 184
 Track thread tlab cursor.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L63)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L64)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-tlab-end-const-thread-tlab-end-192-mlc-codegen-codegen-threads-ml-351329260"></a>
 ### THREAD_TLAB_END
@@ -954,7 +931,7 @@ const THREAD_TLAB_END = 192
 Track thread tlab end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L65)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L66)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-tlab-start-const-thread-tlab-start-176-mlc-codegen-codegen-threads-ml-626405522"></a>
 ### THREAD_TLAB_START
@@ -966,7 +943,7 @@ const THREAD_TLAB_START = 176
 Per-thread allocation ranges carved from the shared process heap.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L61)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L62)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-tmp0-const-thread-tmp0-56-mlc-codegen-codegen-threads-ml-379722647"></a>
 ### THREAD_TMP0
@@ -978,7 +955,7 @@ const THREAD_TMP0 = 56
 Track thread tmp0.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L43)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L44)
 
 <a id="constant-constant-mlc-codegen-codegen-threads-thread-type-const-thread-type-0-mlc-codegen-codegen-threads-ml-102616968"></a>
 ### THREAD_TYPE
@@ -990,4 +967,4 @@ const THREAD_TYPE = 0
 Native thread-context layout. Tagged managed values occupy qword fields and are scanned as GC roots; status and counters use native integer fields.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L27)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_threads.ml#L28)

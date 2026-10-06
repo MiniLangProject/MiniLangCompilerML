@@ -1,4 +1,6 @@
 build/
+__pycache__/
+*.py[cod]
 *.exe
 tests/_rt_*.exe
 tests/_rt_*.labels
