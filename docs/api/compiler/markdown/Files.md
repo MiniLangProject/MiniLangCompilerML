@@ -9,13 +9,14 @@
 | [mlc/codegen/__init__.ml](File-mlc-codegen-init-ml-1019260381.md) | `mlc.codegen.__init__` | no | 1 |
 | [mlc/codegen/codegen.ml](File-mlc-codegen-codegen-ml-1154886880.md) | `mlc.codegen.codegen` | yes | 40 |
 | [mlc/codegen/codegen_builtins_alloc.ml](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md) | `mlc.codegen.codegen_builtins_alloc` | yes | 35 |
+| [mlc/codegen/codegen_concurrent_gc.ml](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md) | `mlc.codegen.codegen_concurrent_gc` | yes | 10 |
 | [mlc/codegen/codegen_core.ml](File-mlc-codegen-codegen-core-ml-528695596.md) | `mlc.codegen.codegen_core` | yes | 220 |
 | [mlc/codegen/codegen_expr.ml](File-mlc-codegen-codegen-expr-ml-59843844.md) | `mlc.codegen.codegen_expr` | yes | 156 |
-| [mlc/codegen/codegen_memory.ml](File-mlc-codegen-codegen-memory-ml-2136639668.md) | `mlc.codegen.codegen_memory` | yes | 57 |
-| [mlc/codegen/codegen_runtime.ml](File-mlc-codegen-codegen-runtime-ml-1845689217.md) | `mlc.codegen.codegen_runtime` | yes | 61 |
+| [mlc/codegen/codegen_memory.ml](File-mlc-codegen-codegen-memory-ml-2136639668.md) | `mlc.codegen.codegen_memory` | yes | 62 |
+| [mlc/codegen/codegen_runtime.ml](File-mlc-codegen-codegen-runtime-ml-1845689217.md) | `mlc.codegen.codegen_runtime` | yes | 62 |
 | [mlc/codegen/codegen_scope.ml](File-mlc-codegen-codegen-scope-ml-1124416197.md) | `mlc.codegen.codegen_scope` | yes | 100 |
 | [mlc/codegen/codegen_stmt.ml](File-mlc-codegen-codegen-stmt-ml-1158291323.md) | `mlc.codegen.codegen_stmt` | yes | 271 |
-| [mlc/codegen/codegen_threads.ml](File-mlc-codegen-codegen-threads-ml-1261658982.md) | `mlc.codegen.codegen_threads` | yes | 68 |
+| [mlc/codegen/codegen_threads.ml](File-mlc-codegen-codegen-threads-ml-1261658982.md) | `mlc.codegen.codegen_threads` | yes | 70 |
 | [mlc/compiler.ml](File-mlc-compiler-ml-344018962.md) | `mlc.compiler` | yes | 417 |
 | [mlc/constants.ml](File-mlc-constants-ml-1024884042.md) | `mlc.constants` | yes | 49 |
 | [mlc/context.ml](File-mlc-context-ml-1162383972.md) | `mlc.context` | no | 17 |

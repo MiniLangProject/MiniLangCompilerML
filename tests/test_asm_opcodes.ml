@@ -354,12 +354,22 @@ function main(args)
     print "FAIL: asm_opcodes_golden.json has no vectors field"
     return 4
   end if
-  if s.contains(txt, "\"count\": 232") == false then
-    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 232-vector set"
+  if s.contains(txt, "\"count\": 233") == false then
+    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 233-vector set"
     return 5
   end if
 
   failures = 0
+
+  // Check RIP-relative addressing independently of generated golden vectors.
+  b = a.newAsmBuilder()
+  b = a.lea_r64_rip(b, "rcx", "target")
+  b = a.mark(b, "target")
+  failures = failures + checkOpcode("lea_r64_rip low register", b, "488d0d00000000")
+  b = a.newAsmBuilder()
+  b = a.mark(b, "target")
+  b = a.lea_r64_rip(b, "r11", "target")
+  failures = failures + checkOpcode("lea_r64_rip high register backward", b, "4c8d1df9ffffff")
 
   // Independently pin register-bit-test encodings, including both REX fields.
   b = a.newAsmBuilder()

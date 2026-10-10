@@ -1874,6 +1874,7 @@ function _emit_storage_stmt(state, stmt, k)
             state.asm = a.mov_r64_r64(state.asm, "r13", "rax")
             state.asm = a.mov_r64_membase_disp(state.asm, "r12", "rsp", target_fast_off)
             state = core.free_expr_temps(state, 8)
+            state = mem.emit_gc_write_barrier(state, "r12", 8 + fi_sm * 8)
             state.asm = a.mov_membase_disp_r64(state.asm, "r12", 8 + fi_sm * 8, "r13")
             return state
           end if
@@ -1912,6 +1913,7 @@ function _emit_storage_stmt(state, stmt, k)
     state = _emit_struct_field_index_dispatch_local(state, field, "edx", "ecx", l_ok_sm, l_fail_sm, "setm_" + lid_sm)
 
     state.asm = a.mark(state.asm, l_ok_sm)
+    state = mem.emit_gc_write_barrier_index(state, "r12", "rcx", 8)
     state.asm = a.mov_mem_bis_r64(state.asm, "r12", "rcx", 8, 8, "r13")
     state.asm = a.jmp(state.asm, l_done_sm)
 
@@ -2002,6 +2004,7 @@ function _emit_storage_stmt(state, stmt, k)
     state.asm = a.jcc(state.asm, "ne", l_store_array)
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
     state.asm = a.mark(state.asm, l_store_array)
+    state = mem.emit_gc_write_barrier_index(state, "r11", "rcx", 8)
     state.asm = a.mov_mem_bis_r64(state.asm, "r11", "rcx", 8, 8, "r10")
     state.asm = a.jmp(state.asm, l_done_si)
 
@@ -4258,6 +4261,7 @@ function _opt_emit_known_setindex(state, stmt, plan)
     state.asm = a.jcc(state.asm, "ne", l_store)
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
     state.asm = a.mark(state.asm, l_store)
+    state = mem.emit_gc_write_barrier_index(state, "r11", "rcx", 8)
     state.asm = a.mov_mem_bis_r64(state.asm, "r11", "rcx", 8, 8, "r10")
     state.asm = a.jmp(state.asm, l_done)
   else
@@ -8416,6 +8420,7 @@ function _builtin_specs()
     ["copyStringBytes", 5, 5, "fn_builtin_copyStringBytes"],
     ["fillBytes", 4, 4, "fn_builtin_fillBytes"],
     ["gc_collect", 0, 0, "fn_builtin_gc_collect"],
+    ["gc_collect_async", 0, 0, "fn_builtin_gc_collect_async"],
     ["gc_set_limit", 1, 1, "fn_builtin_gc_set_limit"],
     ["gc_stat", 1, 1, "fn_gc_stat"],
     ["heap_count", 0, 0, "fn_heap_count"],
@@ -9137,7 +9142,7 @@ end function
 function prepare_program_for_objects(state, program)
   // Imported modules are part of program, so this closed-program scan safely
   // removes TLS/GC polling and heap synchronization when Thread is unreachable.
-  state.native_threads_possible = _stmts_use_native_threads(program)
+  state.native_threads_possible = _stmts_use_native_threads(program) or mem._heap_cfg_get_bool(state, "gc_concurrent", false)
   state.extern_structs = []
   state.value_enum_values = []
   state.user_functions = t.arr_vec_new(512)

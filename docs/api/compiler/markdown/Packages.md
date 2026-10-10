@@ -8,6 +8,7 @@
 - [mlc.codegen.__init__](Package-mlc-codegen-init-266138350.md)
 - [mlc.codegen.codegen](Package-mlc-codegen-codegen-123168249.md)
 - [mlc.codegen.codegen_builtins_alloc](Package-mlc-codegen-codegen-builtins-alloc-457082396.md)
+- [mlc.codegen.codegen_concurrent_gc](Package-mlc-codegen-codegen-concurrent-gc-197838730.md)
 - [mlc.codegen.codegen_core](Package-mlc-codegen-codegen-core-1455908485.md)
 - [mlc.codegen.codegen_expr](Package-mlc-codegen-codegen-expr-1165427189.md)
 - [mlc.codegen.codegen_memory](Package-mlc-codegen-codegen-memory-379518877.md)

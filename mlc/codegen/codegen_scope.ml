@@ -22,6 +22,7 @@ import mlc.asm as a
 import mlc.constants as c
 import mlc.data as d
 import mlc.tools as t
+import mlc.codegen.codegen_memory as mem
 
 /// One resolved variable binding, including storage, capture and const metadata. promoted_xmm is an optional nonvolatile register mirror; the stack slot stays authoritative so GC metadata, diagnostics and native interop remain stable.
 struct VarBinding
@@ -1746,6 +1747,7 @@ function emit_store_var_scoped(state, name, node)
     state.asm = a.mark(state.asm, l_cap_full_store)
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r11", 16 + idx * 8)
     state.asm = a.mark(state.asm, l_cap_done_store)
+    state = mem.emit_gc_write_barrier(state, "r11", 8)
     state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
     return state
   end if
@@ -1755,6 +1757,7 @@ function emit_store_var_scoped(state, name, node)
     if typeof(b.offset) == "int" then off = b.offset end if
     if b.boxed then
       state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", off)
+      state = mem.emit_gc_write_barrier(state, "r11", 8)
       state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8, "rax")
       return state
     end if

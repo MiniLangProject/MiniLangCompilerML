@@ -474,6 +474,7 @@ function _usage()
   print "  --object-pipeline    force the memory-bounded .mlo pipeline"
   print "  --no-object-pipeline force the monolithic pipeline"
   print "  --target TARGET      windows-x64 (default) or linux-x64"
+  print "  --gc-concurrent     Windows background SATB collection (no heap shrink)"
   print "Conditional compilation:"
   print "  -DNAME[=VALUE] | --define NAME[=VALUE]"
 end function
@@ -2406,7 +2407,7 @@ function _validate_size_flags(args)
   i = 0
   while i < len(args)
     a = args[i]
-    if a == "--heap-reserve" or a == "--heap-commit" or a == "--heap-grow" or a == "--heap-shrink-min" or a == "--gc-limit" then
+    if a == "--heap-reserve" or a == "--heap-commit" or a == "--heap-grow" or a == "--heap-shrink-min" or a == "--gc-limit" or a == "--gc-satb-limit" then
       if i + 1 >= len(args) then
         return "invalid size"
       end if
@@ -2473,6 +2474,11 @@ function _collect_runtime_config(args)
       i = i + 1
       continue
     end if
+    if a == "--gc-concurrent" then
+      cfg = _cfg_set(cfg, "gc_concurrent", true)
+      i += 1
+      continue
+    end if
     if a == "--no-gc-periodic" then
       cfg = _cfg_set(cfg, "gc_disable_periodic", true)
       i = i + 1
@@ -2485,6 +2491,7 @@ function _collect_runtime_config(args)
     if a == "--heap-grow" then key = "grow_min_bytes" end if
     if a == "--heap-shrink-min" then key = "shrink_min_bytes" end if
     if a == "--gc-limit" then key = "gc_bytes_limit" end if
+    if a == "--gc-satb-limit" then key = "gc_satb_limit_bytes" end if
     if key != "" then
       if i + 1 < len(args) then
         pv = _parse_size_text(args[i + 1])
@@ -3651,6 +3658,7 @@ function _mlo_is_shared_runtime_data_label(name)
   if name == "gc_bytes_since" or name == "gc_bytes_limit" then return true end if
   if name == "gc_young_bytes_since" or name == "gc_young_bytes_limit" then return true end if
   if name == "gc_mark_top" then return true end if
+  if _startsWith(name, "gc_concurrent_") or _startsWith(name, "gc_satb_") then return true end if
   if _startsWith(name, "gc_tmp") then return true end if
   if _startsWith(name, "gc_mark_bits_") then return true end if
   if _startsWith(name, "heap_") then return true end if
@@ -8125,6 +8133,16 @@ function run_cli(args)
     return 2
   end if
   _compile_target = target_result[1]
+  if _has_flag(args, "--gc-concurrent") then
+    if _compile_target != "windows-x64" then
+      print "CompileOptionError: --gc-concurrent currently requires windows-x64"
+      return 2
+    end if
+    if _has_flag(args, "--heap-shrink") then
+      print "CompileOptionError: --gc-concurrent cannot be combined with --heap-shrink"
+      return 2
+    end if
+  end if
   configured_target = parser.set_compile_target(_compile_target)
   if typeof(configured_target) == "struct" and typeof(try(configured_target.message)) == "string" then
     print "CompileOptionError: " + configured_target.message

@@ -12,7 +12,7 @@ struct CgState
 Complete mutable state threaded through every backend emission function. Collection fields use indexed/capacity-backed representations on hot paths.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L33)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L34)
 
 ## Members
 
@@ -26,7 +26,7 @@ _cold_block_stack
 Cold block stack associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L231)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L232)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-current-root-rec-off-current-root-rec-off-mlc-codegen-codegen-core-ml-1076754375"></a>
 ### _current_root_rec_off
@@ -38,7 +38,7 @@ _current_root_rec_off
 Current root rec off associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L219)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L220)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-current-root-static-qwords-current-root-static-qwords-mlc-codegen-codegen-core-ml-526326183"></a>
 ### _current_root_static_qwords
@@ -50,7 +50,7 @@ _current_root_static_qwords
 Current root static qwords associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L221)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L222)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-expr-temp-reg-live-expr-temp-reg-live-mlc-codegen-codegen-core-ml-1092112787"></a>
 ### _expr_temp_reg_live
@@ -62,7 +62,7 @@ _expr_temp_reg_live
 Expr temp reg live associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L225)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L226)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-expr-temp-reg-live-by-reg-expr-temp-reg-live-by-reg-mlc-codegen-codegen-core-ml-221282943"></a>
 ### _expr_temp_reg_live_by_reg
@@ -74,7 +74,7 @@ _expr_temp_reg_live_by_reg
 Expr temp reg live by reg associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L227)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L228)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-expr-temp-reg-order-expr-temp-reg-order-mlc-codegen-codegen-core-ml-604185373"></a>
 ### _expr_temp_reg_order
@@ -86,7 +86,7 @@ _expr_temp_reg_order
 Expr temp reg order associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L223)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L224)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-expr-temp-reg-reserved-expr-temp-reg-reserved-mlc-codegen-codegen-core-ml-1161986019"></a>
 ### _expr_temp_reg_reserved
@@ -98,7 +98,7 @@ _expr_temp_reg_reserved
 Expr temp reg reserved associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L229)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L230)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-global-owner-file-global-owner-file-mlc-codegen-codegen-core-ml-1537112657"></a>
 ### _global_owner_file
@@ -110,7 +110,7 @@ _global_owner_file
 Global owner file associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L261)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L262)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-inline-call-stack-inline-call-stack-mlc-codegen-codegen-core-ml-1778522559"></a>
 ### _inline_call_stack
@@ -122,7 +122,7 @@ _inline_call_stack
 Inline call stack associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L235)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L236)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-inline-emitted-bytes-inline-emitted-bytes-mlc-codegen-codegen-core-ml-29198759"></a>
 ### _inline_emitted_bytes
@@ -134,7 +134,7 @@ _inline_emitted_bytes
 Inline emitted bytes associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L237)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L238)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-inline-param-stack-inline-param-stack-mlc-codegen-codegen-core-ml-48385819"></a>
 ### _inline_param_stack
@@ -146,7 +146,7 @@ _inline_param_stack
 Inline param stack associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L233)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L234)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-module-init-active-module-init-active-mlc-codegen-codegen-core-ml-1828102383"></a>
 ### _module_init_active
@@ -158,7 +158,7 @@ _module_init_active
 Module init active associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L257)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L258)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-module-init-active-file-module-init-active-file-mlc-codegen-codegen-core-ml-995593119"></a>
 ### _module_init_active_file
@@ -170,7 +170,7 @@ _module_init_active_file
 Module init active file associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L259)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L260)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-module-init-status-labels-module-init-status-labels-mlc-codegen-codegen-core-ml-254256469"></a>
 ### _module_init_status_labels
@@ -182,7 +182,7 @@ _module_init_status_labels
 Module init status labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L263)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L264)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-analysis-mode-analysis-mode-mlc-codegen-codegen-core-ml-1892412971"></a>
 ### analysis_mode
@@ -194,7 +194,7 @@ analysis_mode
 Analysis mode associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L195)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L196)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-asm-asm-mlc-codegen-codegen-core-ml-1491427983"></a>
 ### asm
@@ -206,7 +206,7 @@ asm
 Asm associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L57)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L58)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-binding-id-binding-id-mlc-codegen-codegen-core-ml-1867614257"></a>
 ### binding_id
@@ -218,7 +218,7 @@ binding_id
 Binding id associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L93)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L94)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-break-stack-break-stack-mlc-codegen-codegen-core-ml-1394174107"></a>
 ### break_stack
@@ -230,7 +230,7 @@ break_stack
 Break stack associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L67)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L68)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-bss-bss-mlc-codegen-codegen-core-ml-976545931"></a>
 ### bss
@@ -242,7 +242,7 @@ bss
 Bss associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L61)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L62)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-builtin-global-labels-builtin-global-labels-mlc-codegen-codegen-core-ml-248736255"></a>
 ### builtin_global_labels
@@ -254,7 +254,7 @@ builtin_global_labels
 Builtin global labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L135)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L136)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-builtin-specs-builtin-specs-mlc-codegen-codegen-core-ml-329746143"></a>
 ### builtin_specs
@@ -266,7 +266,7 @@ builtin_specs
 Builtin specs associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L133)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L134)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-builtin-static-obj-labels-builtin-static-obj-labels-mlc-codegen-codegen-core-ml-790278303"></a>
 ### builtin_static_obj_labels
@@ -278,7 +278,7 @@ builtin_static_obj_labels
 Builtin static obj labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L145)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L146)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-call-indirect-count-call-indirect-count-mlc-codegen-codegen-core-ml-2119111663"></a>
 ### call_indirect_count
@@ -290,7 +290,7 @@ call_indirect_count
 Call indirect count associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L153)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L154)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-call-profile-call-profile-mlc-codegen-codegen-core-ml-1519264663"></a>
 ### call_profile
@@ -302,7 +302,7 @@ call_profile
 Call profile associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L49)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L50)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-call-temp-base-call-temp-base-mlc-codegen-codegen-core-ml-1215044337"></a>
 ### call_temp_base
@@ -314,7 +314,7 @@ call_temp_base
 Call temp base associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L215)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L216)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-call-total-count-call-total-count-mlc-codegen-codegen-core-ml-715405665"></a>
 ### call_total_count
@@ -326,7 +326,7 @@ call_total_count
 Call total count associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L151)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L152)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-callprof-entries-callprof-entries-mlc-codegen-codegen-core-ml-408289363"></a>
 ### callprof_entries
@@ -338,7 +338,7 @@ callprof_entries
 Callprof entries associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L155)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L156)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-callprof-index-callprof-index-mlc-codegen-codegen-core-ml-1607163355"></a>
 ### callprof_index
@@ -350,7 +350,7 @@ callprof_index
 Callprof index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L157)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L158)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-callprof-n-callprof-n-mlc-codegen-codegen-core-ml-1668446111"></a>
 ### callprof_n
@@ -362,7 +362,7 @@ callprof_n
 Callprof n associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L161)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L162)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-callprof-name-labels-callprof-name-labels-mlc-codegen-codegen-core-ml-1580467261"></a>
 ### callprof_name_labels
@@ -374,7 +374,7 @@ callprof_name_labels
 Callprof name labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L159)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L160)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-current-env-root-off-current-env-root-off-mlc-codegen-codegen-core-ml-848647703"></a>
 ### current_env_root_off
@@ -386,7 +386,7 @@ current_env_root_off
 Current env root off associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L183)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L184)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-current-file-prefix-current-file-prefix-mlc-codegen-codegen-core-ml-1750218151"></a>
 ### current_file_prefix
@@ -398,7 +398,7 @@ current_file_prefix
 Current file prefix associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L109)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L110)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-current-fn-boxed-names-current-fn-boxed-names-mlc-codegen-codegen-core-ml-829703319"></a>
 ### current_fn_boxed_names
@@ -410,7 +410,7 @@ current_fn_boxed_names
 Current fn boxed names associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L179)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L180)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-current-fn-env-index-current-fn-env-index-mlc-codegen-codegen-core-ml-1832794165"></a>
 ### current_fn_env_index
@@ -422,7 +422,7 @@ current_fn_env_index
 Current fn env index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L181)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L182)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-current-qname-prefix-current-qname-prefix-mlc-codegen-codegen-core-ml-1962095445"></a>
 ### current_qname_prefix
@@ -434,7 +434,7 @@ current_qname_prefix
 Current qname prefix associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L107)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L108)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-data-data-mlc-codegen-codegen-core-ml-1572418539"></a>
 ### data
@@ -446,7 +446,7 @@ data
 Backing data owned by `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L59)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L60)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-dbg-line-starts-dbg-line-starts-mlc-codegen-codegen-core-ml-1365178319"></a>
 ### dbg_line_starts
@@ -458,7 +458,7 @@ dbg_line_starts
 Dbg line starts associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L173)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L174)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-decl-site-bindings-decl-site-bindings-mlc-codegen-codegen-core-ml-483045621"></a>
 ### decl_site_bindings
@@ -470,7 +470,7 @@ decl_site_bindings
 Decl site bindings associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L253)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L254)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-diagnostics-diagnostics-mlc-codegen-codegen-core-ml-1739972551"></a>
 ### diagnostics
@@ -482,7 +482,7 @@ diagnostics
 Diagnostics associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L149)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L150)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-emitted-helpers-emitted-helpers-mlc-codegen-codegen-core-ml-583503047"></a>
 ### emitted_helpers
@@ -494,7 +494,7 @@ emitted_helpers
 Emitted helpers associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L87)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L88)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-enum-ids-enum-ids-mlc-codegen-codegen-core-ml-2013339927"></a>
 ### enum_ids
@@ -506,7 +506,7 @@ enum_ids
 Enum ids associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L77)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L78)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-enum-ids-index-enum-ids-index-mlc-codegen-codegen-core-ml-395559953"></a>
 ### enum_ids_index
@@ -518,7 +518,7 @@ enum_ids_index
 Enum ids index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L205)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L206)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-enum-variants-enum-variants-mlc-codegen-codegen-core-ml-1894729303"></a>
 ### enum_variants
@@ -530,7 +530,7 @@ enum_variants
 Enum variants associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L75)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L76)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-enum-variants-index-enum-variants-index-mlc-codegen-codegen-core-ml-1463747807"></a>
 ### enum_variants_index
@@ -542,7 +542,7 @@ enum_variants_index
 Enum variants index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L203)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L204)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-errprop-suppression-errprop-suppression-mlc-codegen-codegen-core-ml-45486431"></a>
 ### errprop_suppression
@@ -554,7 +554,7 @@ errprop_suppression
 Errprop suppression associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L169)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L170)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-errprop-sync-depth-errprop-sync-depth-mlc-codegen-codegen-core-ml-2013591327"></a>
 ### errprop_sync_depth
@@ -566,7 +566,7 @@ errprop_sync_depth
 Errprop sync depth associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L171)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L172)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-expr-temp-base-expr-temp-base-mlc-codegen-codegen-core-ml-722322695"></a>
 ### expr_temp_base
@@ -578,7 +578,7 @@ expr_temp_base
 Expr temp base associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L175)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L176)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-expr-temp-max-expr-temp-max-mlc-codegen-codegen-core-ml-35834363"></a>
 ### expr_temp_max
@@ -590,7 +590,7 @@ expr_temp_max
 Expr temp max associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L217)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L218)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-expr-temp-top-expr-temp-top-mlc-codegen-codegen-core-ml-278652735"></a>
 ### expr_temp_top
@@ -602,7 +602,7 @@ expr_temp_top
 Expr temp top associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L177)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L178)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-ext-widebuf-labels-ext-widebuf-labels-mlc-codegen-codegen-core-ml-1345219663"></a>
 ### ext_widebuf_labels
@@ -614,7 +614,7 @@ ext_widebuf_labels
 Ext widebuf labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L251)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L252)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-extern-abi-structs-extern-abi-structs-mlc-codegen-codegen-core-ml-2012425343"></a>
 ### extern_abi_structs
@@ -626,7 +626,7 @@ extern_abi_structs
 Extern abi structs associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L43)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L44)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-extern-global-labels-extern-global-labels-mlc-codegen-codegen-core-ml-824226583"></a>
 ### extern_global_labels
@@ -638,7 +638,7 @@ extern_global_labels
 Extern global labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L137)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L138)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-extern-sig-index-extern-sig-index-mlc-codegen-codegen-core-ml-1164465629"></a>
 ### extern_sig_index
@@ -650,7 +650,7 @@ extern_sig_index
 Extern sig index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L211)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L212)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-extern-sigs-extern-sigs-mlc-codegen-codegen-core-ml-1205527963"></a>
 ### extern_sigs
@@ -662,7 +662,7 @@ extern_sigs
 Extern sigs associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L41)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L42)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-extern-static-obj-labels-extern-static-obj-labels-mlc-codegen-codegen-core-ml-1438939129"></a>
 ### extern_static_obj_labels
@@ -674,7 +674,7 @@ extern_static_obj_labels
 Extern static obj labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L147)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L148)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-extern-structs-extern-structs-mlc-codegen-codegen-core-ml-1793615933"></a>
 ### extern_structs
@@ -686,7 +686,7 @@ extern_structs
 Extern structs associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L45)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L46)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-extern-stub-labels-extern-stub-labels-mlc-codegen-codegen-core-ml-1030537913"></a>
 ### extern_stub_labels
@@ -698,7 +698,7 @@ extern_stub_labels
 Extern stub labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L139)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L140)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-file-prefix-map-file-prefix-map-mlc-codegen-codegen-core-ml-1325618887"></a>
 ### file_prefix_map
@@ -710,7 +710,7 @@ file_prefix_map
 File prefix map associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L111)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L112)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-filename-filename-mlc-codegen-codegen-core-ml-617792241"></a>
 ### filename
@@ -722,7 +722,7 @@ filename
 Filename associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L37)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L38)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-func-frame-size-func-frame-size-mlc-codegen-codegen-core-ml-870841691"></a>
 ### func_frame_size
@@ -734,7 +734,7 @@ func_frame_size
 Func frame size associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L167)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L168)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-func-global-map-func-global-map-mlc-codegen-codegen-core-ml-142341191"></a>
 ### func_global_map
@@ -746,7 +746,7 @@ func_global_map
 Func global map associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L103)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L104)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-func-global-map-index-func-global-map-index-mlc-codegen-codegen-core-ml-433919895"></a>
 ### func_global_map_index
@@ -758,7 +758,7 @@ func_global_map_index
 Func global map index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L189)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L190)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-func-globals-func-globals-mlc-codegen-codegen-core-ml-1995370697"></a>
 ### func_globals
@@ -770,7 +770,7 @@ func_globals
 Func globals associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L101)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L102)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-func-ret-label-func-ret-label-mlc-codegen-codegen-core-ml-1949570421"></a>
 ### func_ret_label
@@ -782,7 +782,7 @@ func_ret_label
 Func ret label associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L165)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L166)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-function-codegen-name-map-function-codegen-name-map-mlc-codegen-codegen-core-ml-652813071"></a>
 ### function_codegen_name_map
@@ -794,7 +794,7 @@ function_codegen_name_map
 Function codegen name map associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L193)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L194)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-function-global-labels-function-global-labels-mlc-codegen-codegen-core-ml-991344963"></a>
 ### function_global_labels
@@ -806,7 +806,7 @@ function_global_labels
 Function global labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L129)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L130)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-function-local-ids-function-local-ids-mlc-codegen-codegen-core-ml-1896792313"></a>
 ### function_local_ids
@@ -818,7 +818,7 @@ function_local_ids
 Function local ids associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L255)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L256)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-function-locals-function-locals-mlc-codegen-codegen-core-ml-1481375079"></a>
 ### function_locals
@@ -830,7 +830,7 @@ function_locals
 Function locals associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L105)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L106)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-function-static-obj-labels-function-static-obj-labels-mlc-codegen-codegen-core-ml-382208033"></a>
 ### function_static_obj_labels
@@ -842,7 +842,7 @@ function_static_obj_labels
 Function static obj labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L141)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L142)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-global-slots-global-slots-mlc-codegen-codegen-core-ml-978148893"></a>
 ### global_slots
@@ -854,7 +854,7 @@ global_slots
 Global slots associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L95)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L96)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-globals-globals-mlc-codegen-codegen-core-ml-177096271"></a>
 ### globals
@@ -866,7 +866,7 @@ globals
 Globals associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L97)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L98)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-heap-config-heap-config-mlc-codegen-codegen-core-ml-644603631"></a>
 ### heap_config
@@ -878,7 +878,7 @@ heap_config
 Heap config associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L47)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L48)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-import-alias-index-import-alias-index-mlc-codegen-codegen-core-ml-631561985"></a>
 ### import_alias_index
@@ -890,7 +890,7 @@ import_alias_index
 Import alias index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L213)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L214)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-import-aliases-import-aliases-mlc-codegen-codegen-core-ml-188295167"></a>
 ### import_aliases
@@ -902,7 +902,7 @@ import_aliases
 Import aliases associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L39)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L40)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-imports-imports-mlc-codegen-codegen-core-ml-853271119"></a>
 ### imports
@@ -914,7 +914,7 @@ imports
 Imports associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L55)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L56)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-in-function-in-function-mlc-codegen-codegen-core-ml-2100415467"></a>
 ### in_function
@@ -926,7 +926,7 @@ in_function
 In function associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L99)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L100)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-inline-only-functions-inline-only-functions-mlc-codegen-codegen-core-ml-860078815"></a>
 ### inline_only_functions
@@ -938,7 +938,7 @@ inline_only_functions
 Inline only functions associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L247)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L248)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-is-linux-target-is-linux-target-mlc-codegen-codegen-core-ml-966497423"></a>
 ### is_linux_target
@@ -950,7 +950,7 @@ is_linux_target
 Whether `CgState.is_linux_target` indicates linux target.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L271)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L272)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-is-windows-subsystem-is-windows-subsystem-mlc-codegen-codegen-core-ml-772601695"></a>
 ### is_windows_subsystem
@@ -962,7 +962,7 @@ is_windows_subsystem
 Whether `CgState.is_windows_subsystem` indicates windows subsystem.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L163)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L164)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-known-int-names-known-int-names-mlc-codegen-codegen-core-ml-2091869711"></a>
 ### known_int_names
@@ -974,7 +974,7 @@ known_int_names
 Known int names associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L241)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L242)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-known-value-types-known-value-types-mlc-codegen-codegen-core-ml-1246710971"></a>
 ### known_value_types
@@ -986,7 +986,7 @@ known_value_types
 Known value types associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L243)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L244)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-label-id-label-id-mlc-codegen-codegen-core-ml-895800375"></a>
 ### label_id
@@ -998,7 +998,7 @@ label_id
 Label id associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L83)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L84)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-loop-index-fast-stack-loop-index-fast-stack-mlc-codegen-codegen-core-ml-1315654287"></a>
 ### loop_index_fast_stack
@@ -1010,7 +1010,7 @@ loop_index_fast_stack
 Loop index fast stack associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L245)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L246)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-max-inline-call-args-global-max-inline-call-args-global-mlc-codegen-codegen-core-ml-2023219859"></a>
 ### max_inline_call_args_global
@@ -1022,7 +1022,7 @@ max_inline_call_args_global
 Max inline call args global associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L239)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L240)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-mem-probe-mem-probe-mlc-codegen-codegen-core-ml-270436295"></a>
 ### mem_probe
@@ -1034,7 +1034,7 @@ mem_probe
 Mem probe associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L53)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L54)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-native-threads-possible-native-threads-possible-mlc-codegen-codegen-core-ml-878101539"></a>
 ### native_threads_possible
@@ -1046,7 +1046,7 @@ native_threads_possible
 Native threads possible associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L265)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L266)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-nested-user-functions-nested-user-functions-mlc-codegen-codegen-core-ml-238506555"></a>
 ### nested_user_functions
@@ -1058,7 +1058,7 @@ nested_user_functions
 Nested user functions associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L123)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L124)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-operator-overloads-present-operator-overloads-present-mlc-codegen-codegen-core-ml-1063939867"></a>
 ### operator_overloads_present
@@ -1070,7 +1070,7 @@ operator_overloads_present
 Whether the program declares any user-defined operators.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L273)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L274)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-pruned-inline-functions-pruned-inline-functions-mlc-codegen-codegen-core-ml-1773356663"></a>
 ### pruned_inline_functions
@@ -1082,7 +1082,7 @@ pruned_inline_functions
 Pruned inline functions associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L249)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L250)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-qualify-cache-qualify-cache-mlc-codegen-codegen-core-ml-475979343"></a>
 ### qualify_cache
@@ -1094,7 +1094,7 @@ qualify_cache
 Qualify cache associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L197)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L198)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-rdata-rdata-mlc-codegen-codegen-core-ml-1750247495"></a>
 ### rdata
@@ -1106,7 +1106,7 @@ rdata
 Rdata associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L63)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L64)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-reserved-identifiers-reserved-identifiers-mlc-codegen-codegen-core-ml-922563053"></a>
 ### reserved_identifiers
@@ -1118,7 +1118,7 @@ reserved_identifiers
 Reserved identifiers associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L81)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L82)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-scope-declared-scope-declared-mlc-codegen-codegen-core-ml-1007634773"></a>
 ### scope_declared
@@ -1130,7 +1130,7 @@ scope_declared
 Scope declared associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L91)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L92)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-scope-declared-index-stack-scope-declared-index-stack-mlc-codegen-codegen-core-ml-1221869181"></a>
 ### scope_declared_index_stack
@@ -1142,7 +1142,7 @@ scope_declared_index_stack
 Scope declared index stack associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L187)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L188)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-scope-index-stack-scope-index-stack-mlc-codegen-codegen-core-ml-1962602531"></a>
 ### scope_index_stack
@@ -1154,7 +1154,7 @@ scope_index_stack
 Scope index stack associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L185)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L186)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-scope-stack-scope-stack-mlc-codegen-codegen-core-ml-1039237223"></a>
 ### scope_stack
@@ -1166,7 +1166,7 @@ scope_stack
 Scope stack associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L89)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L90)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-source-source-mlc-codegen-codegen-core-ml-872290225"></a>
 ### source
@@ -1178,7 +1178,7 @@ source
 Source associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L35)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L36)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-field-types-struct-field-types-mlc-codegen-codegen-core-ml-984046423"></a>
 ### struct_field_types
@@ -1190,7 +1190,7 @@ struct_field_types
 Struct field types associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L71)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L72)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-fields-struct-fields-mlc-codegen-codegen-core-ml-769295967"></a>
 ### struct_fields
@@ -1202,7 +1202,7 @@ struct_fields
 Struct fields associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L69)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L70)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-fields-index-struct-fields-index-mlc-codegen-codegen-core-ml-964953815"></a>
 ### struct_fields_index
@@ -1214,7 +1214,7 @@ struct_fields_index
 Struct fields index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L199)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L200)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-global-labels-struct-global-labels-mlc-codegen-codegen-core-ml-566087665"></a>
 ### struct_global_labels
@@ -1226,7 +1226,7 @@ struct_global_labels
 Struct global labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L131)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L132)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-ids-struct-ids-mlc-codegen-codegen-core-ml-1178253487"></a>
 ### struct_ids
@@ -1238,7 +1238,7 @@ struct_ids
 Struct ids associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L73)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L74)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-ids-index-struct-ids-index-mlc-codegen-codegen-core-ml-650404925"></a>
 ### struct_ids_index
@@ -1250,7 +1250,7 @@ struct_ids_index
 Struct ids index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L201)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L202)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-methods-struct-methods-mlc-codegen-codegen-core-ml-1433170811"></a>
 ### struct_methods
@@ -1262,7 +1262,7 @@ struct_methods
 Struct methods associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L125)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L126)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-methods-index-struct-methods-index-mlc-codegen-codegen-core-ml-1418923049"></a>
 ### struct_methods_index
@@ -1274,7 +1274,7 @@ struct_methods_index
 Struct methods index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L207)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L208)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-static-methods-struct-static-methods-mlc-codegen-codegen-core-ml-1756916723"></a>
 ### struct_static_methods
@@ -1286,7 +1286,7 @@ struct_static_methods
 Struct static methods associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L127)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L128)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-static-methods-index-struct-static-methods-index-mlc-codegen-codegen-core-ml-113557655"></a>
 ### struct_static_methods_index
@@ -1298,7 +1298,7 @@ struct_static_methods_index
 Struct static methods index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L209)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L210)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-struct-static-obj-labels-struct-static-obj-labels-mlc-codegen-codegen-core-ml-724662519"></a>
 ### struct_static_obj_labels
@@ -1310,7 +1310,7 @@ struct_static_obj_labels
 Struct static obj labels associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L143)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L144)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-synchronized-globals-synchronized-globals-mlc-codegen-codegen-core-ml-408175677"></a>
 ### synchronized_globals
@@ -1322,7 +1322,7 @@ synchronized_globals
 Synchronized globals associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L267)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L268)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-target-target-mlc-codegen-codegen-core-ml-69228077"></a>
 ### target
@@ -1334,7 +1334,7 @@ target
 Target associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L269)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L270)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-trace-calls-trace-calls-mlc-codegen-codegen-core-ml-507625855"></a>
 ### trace_calls
@@ -1346,7 +1346,7 @@ trace_calls
 Trace calls associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L51)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L52)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-typename-enum-by-id-typename-enum-by-id-mlc-codegen-codegen-core-ml-442694963"></a>
 ### typename_enum_by_id
@@ -1358,7 +1358,7 @@ typename_enum_by_id
 Typename enum by id associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L117)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L118)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-typename-enum-by-qname-typename-enum-by-qname-mlc-codegen-codegen-core-ml-378078007"></a>
 ### typename_enum_by_qname
@@ -1370,7 +1370,7 @@ typename_enum_by_qname
 Typename enum by qname associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L119)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L120)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-typename-struct-by-id-typename-struct-by-id-mlc-codegen-codegen-core-ml-364376455"></a>
 ### typename_struct_by_id
@@ -1382,7 +1382,7 @@ typename_struct_by_id
 Typename struct by id associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L113)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L114)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-typename-struct-by-qname-typename-struct-by-qname-mlc-codegen-codegen-core-ml-1749066743"></a>
 ### typename_struct_by_qname
@@ -1394,7 +1394,7 @@ typename_struct_by_qname
 Typename struct by qname associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L115)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L116)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-used-helpers-used-helpers-mlc-codegen-codegen-core-ml-331095105"></a>
 ### used_helpers
@@ -1406,7 +1406,7 @@ used_helpers
 Used helpers associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L85)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L86)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-user-function-index-user-function-index-mlc-codegen-codegen-core-ml-1128188351"></a>
 ### user_function_index
@@ -1418,7 +1418,7 @@ user_function_index
 User function index associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L191)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L192)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-user-functions-user-functions-mlc-codegen-codegen-core-ml-603078413"></a>
 ### user_functions
@@ -1430,7 +1430,7 @@ user_functions
 User functions associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L121)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L122)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-value-enum-values-value-enum-values-mlc-codegen-codegen-core-ml-1996817439"></a>
 ### value_enum_values
@@ -1442,7 +1442,7 @@ value_enum_values
 Value enum values associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L79)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L80)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-var-slots-var-slots-mlc-codegen-codegen-core-ml-851708719"></a>
 ### var_slots
@@ -1454,4 +1454,4 @@ var_slots
 Var slots associated with `CgState`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L65)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L66)

@@ -12,7 +12,7 @@ struct VarBinding
 One resolved variable binding, including storage, capture and const metadata. promoted_xmm is an optional nonvolatile register mirror; the stack slot stays authoritative so GC metadata, diagnostics and native interop remain stable.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L27)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L28)
 
 ## Members
 
@@ -26,7 +26,7 @@ boxed
 Boxed associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L41)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L42)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-capture-depth-capture-depth-mlc-codegen-codegen-scope-ml-785376450"></a>
 ### capture_depth
@@ -38,7 +38,7 @@ capture_depth
 Capture depth associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L43)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L44)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-capture-index-capture-index-mlc-codegen-codegen-scope-ml-2055509194"></a>
 ### capture_index
@@ -50,7 +50,7 @@ capture_index
 Capture index associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L45)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L46)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-const-expr-const-expr-mlc-codegen-codegen-scope-ml-97666140"></a>
 ### const_expr
@@ -62,7 +62,7 @@ const_expr
 Const expr associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L51)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L52)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-const-initialized-const-initialized-mlc-codegen-codegen-scope-ml-600623374"></a>
 ### const_initialized
@@ -74,7 +74,7 @@ const_initialized
 Const initialized associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L53)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L54)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-const-value-encoded-const-value-encoded-mlc-codegen-codegen-scope-ml-460275758"></a>
 ### const_value_encoded
@@ -86,7 +86,7 @@ const_value_encoded
 Const value encoded associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L57)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L58)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-const-value-label-const-value-label-mlc-codegen-codegen-scope-ml-344663934"></a>
 ### const_value_label
@@ -98,7 +98,7 @@ const_value_label
 Const value label associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L59)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L60)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-const-value-py-const-value-py-mlc-codegen-codegen-scope-ml-125023200"></a>
 ### const_value_py
@@ -110,7 +110,7 @@ const_value_py
 Const value py associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L55)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L56)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-decl-node-decl-node-mlc-codegen-codegen-scope-ml-1486028474"></a>
 ### decl_node
@@ -122,7 +122,7 @@ decl_node
 Decl node associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L47)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L48)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-depth-depth-mlc-codegen-codegen-scope-ml-200427166"></a>
 ### depth
@@ -134,7 +134,7 @@ depth
 Depth associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L39)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L40)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-id-id-mlc-codegen-codegen-scope-ml-1891362068"></a>
 ### id
@@ -146,7 +146,7 @@ id
 Id associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L29)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L30)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-is-const-is-const-mlc-codegen-codegen-scope-ml-542711602"></a>
 ### is_const
@@ -158,7 +158,7 @@ is_const
 Whether `VarBinding.is_const` indicates const.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L49)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L50)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-kind-kind-mlc-codegen-codegen-scope-ml-1576309774"></a>
 ### kind
@@ -170,7 +170,7 @@ kind
 Kind associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L33)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L34)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-label-label-mlc-codegen-codegen-scope-ml-274096078"></a>
 ### label
@@ -182,7 +182,7 @@ label
 Label associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L35)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L36)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-name-name-mlc-codegen-codegen-scope-ml-1570852852"></a>
 ### name
@@ -194,7 +194,7 @@ name
 Name associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L31)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L32)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-offset-offset-mlc-codegen-codegen-scope-ml-1379472116"></a>
 ### offset
@@ -206,7 +206,7 @@ offset
 Offset associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L37)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L38)
 
 <a id="field-field-mlc-codegen-codegen-scope-varbinding-promoted-xmm-promoted-xmm-mlc-codegen-codegen-scope-ml-365647944"></a>
 ### promoted_xmm
@@ -218,4 +218,4 @@ promoted_xmm
 Promoted xmm associated with `VarBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L61)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L62)

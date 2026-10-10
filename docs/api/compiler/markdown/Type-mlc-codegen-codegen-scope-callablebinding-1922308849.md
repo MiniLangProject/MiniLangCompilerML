@@ -12,7 +12,7 @@ struct CallableBinding
 Compact immutable-signature binding for function/struct/builtin/extern objects. These globals can be rebound at runtime but never participate in constexpr initialization, so retaining five const-evaluation fields per callable only inflates the compiler's permanent root scope.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L65)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L66)
 
 ## Members
 
@@ -26,7 +26,7 @@ boxed
 Boxed associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L79)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L80)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-capture-depth-capture-depth-mlc-codegen-codegen-scope-ml-1570044095"></a>
 ### capture_depth
@@ -38,7 +38,7 @@ capture_depth
 Capture depth associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L81)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L82)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-capture-index-capture-index-mlc-codegen-codegen-scope-ml-885718087"></a>
 ### capture_index
@@ -50,7 +50,7 @@ capture_index
 Capture index associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L83)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L84)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-decl-node-decl-node-mlc-codegen-codegen-scope-ml-444473599"></a>
 ### decl_node
@@ -62,7 +62,7 @@ decl_node
 Decl node associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L85)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L86)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-depth-depth-mlc-codegen-codegen-scope-ml-262426003"></a>
 ### depth
@@ -74,7 +74,7 @@ depth
 Depth associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L77)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L78)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-id-id-mlc-codegen-codegen-scope-ml-920435481"></a>
 ### id
@@ -86,7 +86,7 @@ id
 Id associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L67)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L68)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-is-const-is-const-mlc-codegen-codegen-scope-ml-1723750147"></a>
 ### is_const
@@ -98,7 +98,7 @@ is_const
 Whether `CallableBinding.is_const` indicates const.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L87)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L88)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-kind-kind-mlc-codegen-codegen-scope-ml-1450759655"></a>
 ### kind
@@ -110,7 +110,7 @@ kind
 Kind associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L71)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L72)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-label-label-mlc-codegen-codegen-scope-ml-1887916387"></a>
 ### label
@@ -122,7 +122,7 @@ label
 Label associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L73)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L74)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-name-name-mlc-codegen-codegen-scope-ml-648500421"></a>
 ### name
@@ -134,7 +134,7 @@ name
 Name associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L69)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L70)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-offset-offset-mlc-codegen-codegen-scope-ml-1624834369"></a>
 ### offset
@@ -146,7 +146,7 @@ offset
 Offset associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L75)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L76)
 
 <a id="field-field-mlc-codegen-codegen-scope-callablebinding-promoted-xmm-promoted-xmm-mlc-codegen-codegen-scope-ml-312877277"></a>
 ### promoted_xmm
@@ -158,4 +158,4 @@ promoted_xmm
 Promoted xmm associated with `CallableBinding`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L89)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L90)

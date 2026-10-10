@@ -513,6 +513,7 @@ try {
     [pscustomobject]@{ Name = "GC thread lifetime"; Source = "gc_thread_lifetime.ml" },
     [pscustomobject]@{ Name = "GC handoff lifetime"; Source = "gc_handoff_lifetime.ml" },
     [pscustomobject]@{ Name = "GC bitmap words"; Source = "gc_bitmap_words.ml" },
+    [pscustomobject]@{ Name = "GC asynchronous fallback"; Source = "gc_async_fallback.ml" },
     [pscustomobject]@{ Name = "FFI cstr returns"; Source = "ffi_cstr_return.ml" },
     [pscustomobject]@{ Name = "allocation cursor"; Source = "memory_fragmentation_cursor.ml" },
     [pscustomobject]@{ Name = "GC metadata"; Source = "memory_gc_metadata.ml" },

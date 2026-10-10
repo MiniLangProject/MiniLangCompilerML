@@ -3702,6 +3702,7 @@ function emit_builtin_copyArray_function(state)
   state.asm = a.add_r64_r64(state.asm, "rdx", "r8")
   state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rsp", 0x20)
   state.asm = a.shl_r64_imm8(state.asm, "r8", 3)
+  state = mem.emit_gc_write_barrier_range(state)
   state.asm = a.call(state.asm, "fn_copy_bytes")
 
   state.asm = a.mark(state.asm, l_ret_void)
@@ -3858,8 +3859,23 @@ function emit_builtin_input_function(state)
   return state
 end function
 
-/// Emit emit builtin gc collect function in the native runtime.
+/// Emit first-class gc_collect_async, falling back to synchronous collection by default.
 /// @param state Value supplied for `state`.
+function emit_builtin_gc_collect_async_function(state)
+  state.asm = a.mark(state.asm, "fn_builtin_gc_collect_async")
+  state.asm = a.sub_rsp_imm8(state.asm, 0x28)
+  collector = "fn_gc_collect"
+  if mem._heap_cfg_get_bool(state, "gc_concurrent", false) then collector = "fn_gc_concurrent_request" end if
+  state = mem.emit_gc_release_handoffs(state)
+  state.asm = a.call(state.asm, collector)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.add_rsp_imm8(state.asm, 0x28)
+  state.asm = a.ret(state.asm)
+  return state
+end function
+
+/// Emit first-class gc_collect with aligned shadow space for native callbacks.
+/// @param state Backend state receiving the synchronous builtin wrapper.
 function emit_builtin_gc_collect_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_gc_collect")
   // A first-class builtin is a real callee: reserve Win64 shadow space
@@ -4009,4 +4025,3 @@ function emit_callStats_function(state)
   state.asm = a.ret(state.asm)
   return state
 end function
-

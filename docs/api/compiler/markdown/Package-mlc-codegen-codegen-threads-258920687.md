@@ -9,6 +9,7 @@
 ## Symbols
 
 - [`mlc.codegen.codegen_threads._append_unique`](File-mlc-codegen-codegen-threads-ml-1261658982.md#function-function-mlc-codegen-codegen-threads-append-unique-function-append-unique-values-value-mlc-codegen-codegen-threads-ml-1480911850) — function
+- [`mlc.codegen.codegen_threads._concurrent_context_extra`](File-mlc-codegen-codegen-threads-ml-1261658982.md#function-function-mlc-codegen-codegen-threads-concurrent-context-extra-function-concurrent-context-extra-state-mlc-codegen-codegen-threads-ml-539628742) — function
 - [`mlc.codegen.codegen_threads._emit_managed_thread_count_delta`](File-mlc-codegen-codegen-threads-ml-1261658982.md#function-function-mlc-codegen-codegen-threads-emit-managed-thread-count-delta-function-emit-managed-thread-count-delta-state-delta-mlc-codegen-codegen-threads-ml-956712758) — function
 - [`mlc.codegen.codegen_threads._has_label`](File-mlc-codegen-codegen-threads-ml-1261658982.md#function-function-mlc-codegen-codegen-threads-has-label-function-has-label-labels-name-mlc-codegen-codegen-threads-ml-923041515) — function
 - [`mlc.codegen.codegen_threads._new_label_id`](File-mlc-codegen-codegen-threads-ml-1261658982.md#function-function-mlc-codegen-codegen-threads-new-label-id-function-new-label-id-state-mlc-codegen-codegen-threads-ml-1951519124) — function
@@ -60,6 +61,7 @@
 - [`mlc.codegen.codegen_threads.THREAD_HANDLE_USERS`](File-mlc-codegen-codegen-threads-ml-1261658982.md#constant-constant-mlc-codegen-codegen-threads-thread-handle-users-const-thread-handle-users-200-mlc-codegen-codegen-threads-ml-1900942902) — constant
 - [`mlc.codegen.codegen_threads.THREAD_HANDOFF_CURSOR`](File-mlc-codegen-codegen-threads-ml-1261658982.md#constant-constant-mlc-codegen-codegen-threads-thread-handoff-cursor-const-thread-handoff-cursor-136-mlc-codegen-codegen-threads-ml-1497024434) — constant
 - [`mlc.codegen.codegen_threads.THREAD_HEAP_BYPASS_DEPTH`](File-mlc-codegen-codegen-threads-ml-1261658982.md#constant-constant-mlc-codegen-codegen-threads-thread-heap-bypass-depth-const-thread-heap-bypass-depth-168-mlc-codegen-codegen-threads-ml-2065440141) — constant
+- [`mlc.codegen.codegen_threads.THREAD_HEAP_LOCK_DEPTH`](File-mlc-codegen-codegen-threads-ml-1261658982.md#constant-constant-mlc-codegen-codegen-threads-thread-heap-lock-depth-const-thread-heap-lock-depth-208-mlc-codegen-codegen-threads-ml-1491840370) — constant
 - [`mlc.codegen.codegen_threads.THREAD_ID`](File-mlc-codegen-codegen-threads-ml-1261658982.md#constant-constant-mlc-codegen-codegen-threads-thread-id-const-thread-id-16-mlc-codegen-codegen-threads-ml-1008940095) — constant
 - [`mlc.codegen.codegen_threads.THREAD_LOGICAL_ID`](File-mlc-codegen-codegen-threads-ml-1261658982.md#constant-constant-mlc-codegen-codegen-threads-thread-logical-id-const-thread-logical-id-152-mlc-codegen-codegen-threads-ml-213743944) — constant
 - [`mlc.codegen.codegen_threads.THREAD_NEXT`](File-mlc-codegen-codegen-threads-ml-1261658982.md#constant-constant-mlc-codegen-codegen-threads-thread-next-const-thread-next-120-mlc-codegen-codegen-threads-ml-1436166595) — constant

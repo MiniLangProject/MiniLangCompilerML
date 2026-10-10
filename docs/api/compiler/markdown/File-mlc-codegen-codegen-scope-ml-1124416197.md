@@ -11,6 +11,7 @@ Reachable from entry: **yes**
 ## Imports
 
 - `mlc/asm.ml` as `a` → [mlc/asm.ml](File-mlc-asm-ml-1368648960.md)
+- `mlc/codegen/codegen_memory.ml` as `mem` → [mlc/codegen/codegen_memory.ml](File-mlc-codegen-codegen-memory-ml-2136639668.md)
 - `mlc/constants.ml` as `c` → [mlc/constants.ml](File-mlc-constants-ml-1024884042.md)
 - `mlc/data.ml` as `d` → [mlc/data.ml](File-mlc-data-ml-557434521.md)
 - `mlc/tools.ml` as `t` → [mlc/tools.ml](File-mlc-tools-ml-988451276.md)
@@ -32,7 +33,7 @@ Updates add binding to current scope.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L964)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L965)
 
 <a id="function-function-mlc-codegen-codegen-scope-append-unique-function-append-unique-items-value-mlc-codegen-codegen-scope-ml-873548608"></a>
 ### _append_unique
@@ -49,7 +50,7 @@ Updates append unique.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L261)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L262)
 
 <a id="function-function-mlc-codegen-codegen-scope-arr-has-inline-function-arr-has-arr-value-mlc-codegen-codegen-scope-ml-625151476"></a>
 ### _arr_has
@@ -66,7 +67,7 @@ Manage inline in lexical-scope code generation.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L282)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L283)
 
 <a id="function-function-mlc-codegen-codegen-scope-check-reserved-ident-function-check-reserved-ident-state-name-decl-node-mlc-codegen-codegen-scope-ml-1092621700"></a>
 ### _check_reserved_ident
@@ -84,7 +85,7 @@ Manage check reserved ident in lexical-scope code generation.
 | `decl_node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L970)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L971)
 
 <a id="function-function-mlc-codegen-codegen-scope-coerce-name-function-coerce-name-name-mlc-codegen-codegen-scope-ml-986629978"></a>
 ### _coerce_name
@@ -100,7 +101,7 @@ Manage coerce name in lexical-scope code generation.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L841)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L842)
 
 <a id="function-function-mlc-codegen-codegen-scope-decl-key-function-decl-key-node-name-mlc-codegen-codegen-scope-ml-966656368"></a>
 ### _decl_key
@@ -117,7 +118,7 @@ Manage decl key in lexical-scope code generation.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L944)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L945)
 
 <a id="function-function-mlc-codegen-codegen-scope-decl-node-key-inline-function-decl-node-key-node-mlc-codegen-codegen-scope-ml-188869874"></a>
 ### _decl_node_key
@@ -133,7 +134,7 @@ Manage inline in lexical-scope code generation.
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L324)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L325)
 
 <a id="function-function-mlc-codegen-codegen-scope-declare-in-current-scope-function-declare-in-current-scope-state-b-mlc-codegen-codegen-scope-ml-949818152"></a>
 ### _declare_in_current_scope
@@ -150,7 +151,7 @@ Manage declare in current scope in lexical-scope code generation.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L579)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L580)
 
 <a id="function-function-mlc-codegen-codegen-scope-drop-last-frame-function-drop-last-frame-arr-mlc-codegen-codegen-scope-ml-1384258026"></a>
 ### _drop_last_frame
@@ -166,7 +167,7 @@ Manage drop last frame in lexical-scope code generation.
 | `arr` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L232)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L233)
 
 <a id="function-function-mlc-codegen-codegen-scope-emit-make-error-const-function-emit-make-error-const-state-code-message-mlc-codegen-codegen-scope-ml-556035598"></a>
 ### _emit_make_error_const
@@ -184,7 +185,7 @@ Manage emit make error const in lexical-scope code generation.
 | `message` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L397)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L398)
 
 <a id="function-function-mlc-codegen-codegen-scope-emit-module-init-dependency-error-function-emit-module-init-dependency-error-state-target-name-target-file-target-state-node-mlc-codegen-codegen-scope-ml-67747104"></a>
 ### _emit_module_init_dependency_error
@@ -204,7 +205,7 @@ Manage emit module init dependency error in lexical-scope code generation.
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1467)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1468)
 
 <a id="function-function-mlc-codegen-codegen-scope-frame-last-binding-inline-function-frame-last-binding-frame-name-mlc-codegen-codegen-scope-ml-1237157440"></a>
 ### _frame_last_binding
@@ -221,7 +222,7 @@ Manage inline in lexical-scope code generation.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L191)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L192)
 
 <a id="function-function-mlc-codegen-codegen-scope-func-global-lookup-inline-function-func-global-lookup-arr-name-mlc-codegen-codegen-scope-ml-480068282"></a>
 ### _func_global_lookup
@@ -238,7 +239,7 @@ Manage inline in lexical-scope code generation.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L365)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L366)
 
 <a id="function-function-mlc-codegen-codegen-scope-has-data-label-function-has-data-label-labels-name-mlc-codegen-codegen-scope-ml-312136563"></a>
 ### _has_data_label
@@ -255,7 +256,7 @@ Reports whether has data label.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L386)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L387)
 
 <a id="function-function-mlc-codegen-codegen-scope-heap-cfg-get-any-inline-function-heap-cfg-get-any-state-key-mlc-codegen-codegen-scope-ml-681445032"></a>
 ### _heap_cfg_get_any
@@ -272,7 +273,7 @@ Manage inline in lexical-scope code generation.
 | `key` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L207)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L208)
 
 <a id="function-function-mlc-codegen-codegen-scope-heap-cfg-get-bool-inline-function-heap-cfg-get-bool-state-key-defaultv-mlc-codegen-codegen-scope-ml-263182827"></a>
 ### _heap_cfg_get_bool
@@ -290,7 +291,7 @@ Manage inline in lexical-scope code generation.
 | `defaultv` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L224)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L225)
 
 <a id="function-function-mlc-codegen-codegen-scope-is-ascii-alpha-inline-function-is-ascii-alpha-ch-mlc-codegen-codegen-scope-ml-1897055775"></a>
 ### _is_ascii_alpha
@@ -306,7 +307,7 @@ Manage inline in lexical-scope code generation.
 | `ch` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L100)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L101)
 
 <a id="function-function-mlc-codegen-codegen-scope-is-ascii-digit-inline-function-is-ascii-digit-ch-mlc-codegen-codegen-scope-ml-1063018823"></a>
 ### _is_ascii_digit
@@ -322,7 +323,7 @@ Reports whether a character is an ASCII digit.
 | `ch` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L94)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L95)
 
 <a id="function-function-mlc-codegen-codegen-scope-is-reserved-identifier-inline-function-is-reserved-identifier-state-name-mlc-codegen-codegen-scope-ml-529530772"></a>
 ### _is_reserved_identifier
@@ -339,7 +340,7 @@ Manage inline in lexical-scope code generation.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L249)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L250)
 
 <a id="function-function-mlc-codegen-codegen-scope-map-int-get-inline-function-map-int-get-arr-key-defaultv-mlc-codegen-codegen-scope-ml-1228131745"></a>
 ### _map_int_get
@@ -357,7 +358,7 @@ Manage inline in lexical-scope code generation.
 | `defaultv` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L292)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L293)
 
 <a id="function-function-mlc-codegen-codegen-scope-maybe-emit-module-init-guard-for-global-read-function-maybe-emit-module-init-guard-for-global-read-state-binding-target-name-node-mlc-codegen-codegen-scope-ml-147704174"></a>
 ### _maybe_emit_module_init_guard_for_global_read
@@ -376,7 +377,7 @@ Manage maybe emit module init guard for global read in lexical-scope code genera
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1484)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1485)
 
 <a id="function-function-mlc-codegen-codegen-scope-name-has-dot-inline-function-name-has-dot-name-mlc-codegen-codegen-scope-ml-1624076743"></a>
 ### _name_has_dot
@@ -392,7 +393,7 @@ Manage inline in lexical-scope code generation.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L313)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L314)
 
 <a id="function-function-mlc-codegen-codegen-scope-next-binding-id-function-next-binding-id-state-mlc-codegen-codegen-scope-ml-1544857556"></a>
 ### _next_binding_id
@@ -408,7 +409,7 @@ Manage next binding id in lexical-scope code generation.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L938)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L939)
 
 <a id="function-function-mlc-codegen-codegen-scope-sanitize-ident-function-sanitize-ident-name-mlc-codegen-codegen-scope-ml-2003671040"></a>
 ### _sanitize_ident
@@ -424,7 +425,7 @@ Manage sanitize ident in lexical-scope code generation.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L110)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L111)
 
 <a id="function-function-mlc-codegen-codegen-scope-scope-depth-inline-function-scope-depth-state-mlc-codegen-codegen-scope-ml-367959883"></a>
 ### _scope_depth
@@ -440,7 +441,7 @@ Manage inline in lexical-scope code generation.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L138)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L139)
 
 <a id="function-function-mlc-codegen-codegen-scope-accept-function-accept-s-mlc-codegen-codegen-scope-ml-941567756"></a>
 ### accept
@@ -456,7 +457,7 @@ Manage accept in lexical-scope code generation.
 | `s` | `dynamic` | — | Value supplied for `s`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L873)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L874)
 
 <a id="function-function-mlc-codegen-codegen-scope-analysis-layout-function-locals-function-analysis-layout-function-locals-state-base-offset-mlc-codegen-codegen-scope-ml-965038881"></a>
 ### analysis_layout_function_locals
@@ -473,7 +474,7 @@ Manage analysis layout function locals in lexical-scope code generation.
 | `base_offset` | `dynamic` | — | Value supplied for `base_offset`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1819)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1822)
 
 <a id="function-function-mlc-codegen-codegen-scope-analysis-reset-function-function-analysis-reset-function-state-mlc-codegen-codegen-scope-ml-1837008426"></a>
 ### analysis_reset_function
@@ -489,7 +490,7 @@ Manage analysis reset function in lexical-scope code generation.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1806)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1809)
 
 <a id="function-function-mlc-codegen-codegen-scope-bind-param-function-bind-param-state-name-offset-decl-node-mlc-codegen-codegen-scope-ml-1044192007"></a>
 ### bind_param
@@ -508,7 +509,7 @@ Manage bind param in lexical-scope code generation.
 | `decl_node` | `dynamic` | — | Value supplied for `decl_node`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1331)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1332)
 
 - [mlc.codegen.codegen_scope.CallableBinding](Type-mlc-codegen-codegen-scope-callablebinding-1922308849.md) — struct
 <a id="function-function-mlc-codegen-codegen-scope-cg-declare-binding-function-cg-declare-binding-state-name-kind-is-const-const-expr-const-value-py-decl-node-mlc-codegen-codegen-scope-ml-79290834"></a>
@@ -531,7 +532,7 @@ Manage cg declare binding in lexical-scope code generation.
 | `decl_node` | `dynamic` | — | Value supplied for `decl_node`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L627)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L628)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-next-binding-id-function-cg-next-binding-id-state-mlc-codegen-codegen-scope-ml-843506688"></a>
 ### cg_next_binding_id
@@ -547,7 +548,7 @@ Manage cg next binding id in lexical-scope code generation.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L501)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L502)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-precompute-const-binding-value-function-cg-precompute-const-binding-value-state-name-pyv-mlc-codegen-codegen-scope-ml-632647422"></a>
 ### cg_precompute_const_binding_value
@@ -565,7 +566,7 @@ Manage cg precompute const binding value in lexical-scope code generation.
 | `pyv` | `dynamic` | — | Value supplied for `pyv`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L780)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L781)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-resolve-binding-function-cg-resolve-binding-state-name-mlc-codegen-codegen-scope-ml-1169968655"></a>
 ### cg_resolve_binding
@@ -582,7 +583,7 @@ Resolve the nearest visible binding through the per-scope indexes. A complete in
 | `name` | `dynamic` | — | Identifier to resolve. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L509)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L510)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-resolve-binding-for-write-function-cg-resolve-binding-for-write-state-name-mlc-codegen-codegen-scope-ml-346787647"></a>
 ### cg_resolve_binding_for_write
@@ -599,7 +600,7 @@ Manage cg resolve binding for write in lexical-scope code generation.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L545)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L546)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-scope-depth-function-cg-scope-depth-state-mlc-codegen-codegen-scope-ml-2035357288"></a>
 ### cg_scope_depth
@@ -615,7 +616,7 @@ Manage cg scope depth in lexical-scope code generation.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L446)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L447)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-scope-enter-function-cg-scope-enter-state-mlc-codegen-codegen-scope-ml-208897180"></a>
 ### cg_scope_enter
@@ -631,7 +632,7 @@ Manage cg scope enter in lexical-scope code generation.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L452)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L453)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-scope-leave-function-cg-scope-leave-state-emit-cleanup-mlc-codegen-codegen-scope-ml-265549576"></a>
 ### cg_scope_leave
@@ -648,7 +649,7 @@ Manage cg scope leave in lexical-scope code generation.
 | `emit_cleanup` | `dynamic` | — | Value supplied for `emit_cleanup`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L475)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L476)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-scope-setup-function-cg-scope-setup-state-mlc-codegen-codegen-scope-ml-985598392"></a>
 ### cg_scope_setup
@@ -664,7 +665,7 @@ Manage cg scope setup in lexical-scope code generation.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L423)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L424)
 
 <a id="function-function-mlc-codegen-codegen-scope-cg-set-const-binding-value-function-cg-set-const-binding-value-state-name-pyv-mlc-codegen-codegen-scope-ml-2050073468"></a>
 ### cg_set_const_binding_value
@@ -682,7 +683,7 @@ Manage cg set const binding value in lexical-scope code generation.
 | `pyv` | `dynamic` | — | Value supplied for `pyv`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L710)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L711)
 
 <a id="function-function-mlc-codegen-codegen-scope-declare-callable-binding-root-function-declare-callable-binding-root-state-name-decl-node-mlc-codegen-codegen-scope-ml-641440390"></a>
 ### declare_callable_binding_root
@@ -700,7 +701,7 @@ Manage declare callable binding root in lexical-scope code generation.
 | `decl_node` | `dynamic` | — | Value supplied for `decl_node`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1090)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1091)
 
 <a id="function-function-mlc-codegen-codegen-scope-declare-const-binding-root-deferred-function-declare-const-binding-root-deferred-state-name-decl-node-const-expr-mlc-codegen-codegen-scope-ml-1213810991"></a>
 ### declare_const_binding_root_deferred
@@ -719,7 +720,7 @@ Manage declare const binding root deferred in lexical-scope code generation.
 | `const_expr` | `dynamic` | — | Value supplied for `const_expr`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1142)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1143)
 
 <a id="function-function-mlc-codegen-codegen-scope-declare-fresh-binding-function-declare-fresh-binding-state-name-decl-node-kind-mlc-codegen-codegen-scope-ml-1423674534"></a>
 ### declare_fresh_binding
@@ -738,7 +739,7 @@ Manage declare fresh binding in lexical-scope code generation.
 | `kind` | `dynamic` | — | Value supplied for `kind`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1298)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1299)
 
 <a id="function-function-mlc-codegen-codegen-scope-declare-function-global-function-declare-function-global-state-local-name-qualified-name-mlc-codegen-codegen-scope-ml-1108792341"></a>
 ### declare_function_global
@@ -756,7 +757,7 @@ Manage declare function global in lexical-scope code generation.
 | `qualified_name` | `dynamic` | — | Value supplied for `qualified_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1847)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1850)
 
 <a id="function-function-mlc-codegen-codegen-scope-declare-global-binding-function-declare-global-binding-state-name-decl-node-is-const-const-expr-mlc-codegen-codegen-scope-ml-353176841"></a>
 ### declare_global_binding
@@ -776,7 +777,7 @@ Manage declare global binding in lexical-scope code generation.
 | `const_expr` | `dynamic` | — | Value supplied for `const_expr`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L985)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L986)
 
 <a id="function-function-mlc-codegen-codegen-scope-declare-global-binding-root-function-declare-global-binding-root-state-name-decl-node-is-const-const-expr-mlc-codegen-codegen-scope-ml-924585051"></a>
 ### declare_global_binding_root
@@ -796,7 +797,7 @@ Manage declare global binding root in lexical-scope code generation.
 | `const_expr` | `dynamic` | — | Value supplied for `const_expr`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L996)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L997)
 
 <a id="function-function-mlc-codegen-codegen-scope-declare-local-binding-function-declare-local-binding-state-name-decl-node-is-const-const-expr-mlc-codegen-codegen-scope-ml-431201897"></a>
 ### declare_local_binding
@@ -816,7 +817,7 @@ Manage declare local binding in lexical-scope code generation.
 | `const_expr` | `dynamic` | — | Value supplied for `const_expr`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1288)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1289)
 
 <a id="function-function-mlc-codegen-codegen-scope-emit-cleanup-bindings-function-emit-cleanup-bindings-state-bindings-mlc-codegen-codegen-scope-ml-1409007752"></a>
 ### emit_cleanup_bindings
@@ -833,7 +834,7 @@ Manage emit cleanup bindings in lexical-scope code generation.
 | `bindings` | `dynamic` | — | Value supplied for `bindings`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1422)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1423)
 
 <a id="function-function-mlc-codegen-codegen-scope-emit-cleanup-to-depth-function-emit-cleanup-to-depth-state-target-depth-mlc-codegen-codegen-scope-ml-649807815"></a>
 ### emit_cleanup_to_depth
@@ -850,7 +851,7 @@ Manage emit cleanup to depth in lexical-scope code generation.
 | `target_depth` | `dynamic` | — | Value supplied for `target_depth`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1447)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1448)
 
 <a id="function-function-mlc-codegen-codegen-scope-emit-load-var-scoped-function-emit-load-var-scoped-state-name-mlc-codegen-codegen-scope-ml-2048837639"></a>
 ### emit_load_var_scoped
@@ -867,7 +868,7 @@ Manage emit load var scoped in lexical-scope code generation.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1516)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1517)
 
 <a id="function-function-mlc-codegen-codegen-scope-emit-store-existing-global-function-emit-store-existing-global-state-binding-mlc-codegen-codegen-scope-ml-2015630335"></a>
 ### emit_store_existing_global
@@ -884,7 +885,7 @@ Manage emit store existing global in lexical-scope code generation.
 | `binding` | `dynamic` | — | Value supplied for `binding`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1785)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1788)
 
 <a id="function-function-mlc-codegen-codegen-scope-emit-store-var-scoped-function-emit-store-var-scoped-state-name-node-mlc-codegen-codegen-scope-ml-1932595927"></a>
 ### emit_store_var_scoped
@@ -902,7 +903,7 @@ Manage emit store var scoped in lexical-scope code generation.
 | `node` | `dynamic` | — | Value supplied for `node`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1651)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1652)
 
 <a id="function-function-mlc-codegen-codegen-scope-ensure-binding-for-write-function-ensure-binding-for-write-state-name-decl-node-mlc-codegen-codegen-scope-ml-150283678"></a>
 ### ensure_binding_for_write
@@ -920,7 +921,7 @@ Manage ensure binding for write in lexical-scope code generation.
 | `decl_node` | `dynamic` | — | Value supplied for `decl_node`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1381)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1382)
 
 <a id="function-function-mlc-codegen-codegen-scope-frame-count-inline-function-frame-count-frame-mlc-codegen-codegen-scope-ml-2061155255"></a>
 ### frame_count
@@ -936,7 +937,7 @@ Returns the number of bindings stored in a compiler frame.
 | `frame` | `dynamic` | — | Value supplied for `frame`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L145)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L146)
 
 <a id="function-function-mlc-codegen-codegen-scope-frame-finish-inline-function-frame-finish-frame-mlc-codegen-codegen-scope-ml-98807871"></a>
 ### frame_finish
@@ -952,7 +953,7 @@ Materializes the live bindings from a compiler frame.
 | `frame` | `dynamic` | — | Value supplied for `frame`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L183)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L184)
 
 <a id="function-function-mlc-codegen-codegen-scope-frame-get-inline-function-frame-get-frame-idx-mlc-codegen-codegen-scope-ml-734111256"></a>
 ### frame_get
@@ -969,7 +970,7 @@ Returns one binding from a compiler frame.
 | `idx` | `dynamic` | — | Value supplied for `idx`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L154)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L155)
 
 <a id="function-function-mlc-codegen-codegen-scope-frame-push-inline-function-frame-push-frame-value-mlc-codegen-codegen-scope-ml-338635704"></a>
 ### frame_push
@@ -986,7 +987,7 @@ Appends a binding to a compiler frame.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L173)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L174)
 
 <a id="function-function-mlc-codegen-codegen-scope-frame-set-inline-function-frame-set-frame-idx-value-mlc-codegen-codegen-scope-ml-982770623"></a>
 ### frame_set
@@ -1004,7 +1005,7 @@ Updates one binding in a compiler frame.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L164)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L165)
 
 <a id="function-function-mlc-codegen-codegen-scope-is-ident-function-is-ident-s-mlc-codegen-codegen-scope-ml-624417624"></a>
 ### is_ident
@@ -1020,7 +1021,7 @@ Reports whether is ident.
 | `s` | `dynamic` | — | Value supplied for `s`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L857)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L858)
 
 <a id="function-function-mlc-codegen-codegen-scope-materialize-global-binding-root-function-materialize-global-binding-root-state-name-mlc-codegen-codegen-scope-ml-124725415"></a>
 ### materialize_global_binding_root
@@ -1037,7 +1038,7 @@ Manage materialize global binding root in lexical-scope code generation.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1218)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1219)
 
 <a id="function-function-mlc-codegen-codegen-scope-new-label-id-function-new-label-id-state-mlc-codegen-codegen-scope-ml-673792072"></a>
 ### new_label_id
@@ -1053,7 +1054,7 @@ Creates new label id.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L416)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L417)
 
 <a id="function-function-mlc-codegen-codegen-scope-pop-scope-function-pop-scope-state-emit-cleanup-mlc-codegen-codegen-scope-ml-756384492"></a>
 ### pop_scope
@@ -1070,7 +1071,7 @@ Manage pop scope in lexical-scope code generation.
 | `emit_cleanup` | `dynamic` | — | Value supplied for `emit_cleanup`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L932)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L933)
 
 <a id="function-function-mlc-codegen-codegen-scope-push-scope-function-push-scope-state-mlc-codegen-codegen-scope-ml-533749804"></a>
 ### push_scope
@@ -1086,7 +1087,7 @@ Updates push scope.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L925)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L926)
 
 <a id="function-function-mlc-codegen-codegen-scope-register-decl-site-binding-function-register-decl-site-binding-state-node-name-binding-mlc-codegen-codegen-scope-ml-1681346154"></a>
 ### register_decl_site_binding
@@ -1105,7 +1106,7 @@ Manage register decl site binding in lexical-scope code generation.
 | `binding` | `dynamic` | — | Value supplied for `binding`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1368)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L1369)
 
 <a id="function-function-mlc-codegen-codegen-scope-resolve-binding-function-resolve-binding-state-name-mlc-codegen-codegen-scope-ml-808967299"></a>
 ### resolve_binding
@@ -1122,7 +1123,7 @@ Manage resolve binding in lexical-scope code generation.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L951)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L952)
 
 <a id="function-function-mlc-codegen-codegen-scope-resolve-binding-for-write-function-resolve-binding-for-write-state-name-mlc-codegen-codegen-scope-ml-1783653563"></a>
 ### resolve_binding_for_write
@@ -1139,7 +1140,7 @@ Manage resolve binding for write in lexical-scope code generation.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L958)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L959)
 
 <a id="function-function-mlc-codegen-codegen-scope-scope-depth-function-scope-depth-state-mlc-codegen-codegen-scope-ml-1470761636"></a>
 ### scope_depth
@@ -1155,7 +1156,7 @@ Manage scope depth in lexical-scope code generation.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L829)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L830)
 
 <a id="function-function-mlc-codegen-codegen-scope-scope-global-slots-function-scope-global-slots-state-mlc-codegen-codegen-scope-ml-2126650844"></a>
 ### scope_global_slots
@@ -1171,7 +1172,7 @@ Manage scope global slots in lexical-scope code generation.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L835)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L836)
 
 <a id="function-function-mlc-codegen-codegen-scope-scope-setup-function-scope-setup-state-mlc-codegen-codegen-scope-ml-788759876"></a>
 ### scope_setup
@@ -1187,7 +1188,7 @@ Compatibility wrappers (Python CodegenScope parity).
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L823)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L824)
 
 <a id="function-function-mlc-codegen-codegen-scope-search-function-search-obj-depth-mlc-codegen-codegen-scope-ml-1738047943"></a>
 ### search
@@ -1204,6 +1205,6 @@ Manage search in lexical-scope code generation.
 | `depth` | `dynamic` | — | Value supplied for `depth`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L884)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_scope.ml#L885)
 
 - [mlc.codegen.codegen_scope.VarBinding](Type-mlc-codegen-codegen-scope-varbinding-2015539438.md) — struct

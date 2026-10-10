@@ -68,6 +68,8 @@ const THREAD_TLAB_END = 192
 const THREAD_HANDLE_USERS = 200
 /// Track thread context size.
 const THREAD_CONTEXT_SIZE = 208
+/// Present only in concurrent-GC images; counts real recursive heap locks.
+const THREAD_HEAP_LOCK_DEPTH = 208
 
 /// Public lifecycle states stored in THREAD_STATUS.
 const THREAD_CREATED = 0
@@ -125,8 +127,15 @@ function _new_label_id(state)
   return state.label_id
 end function
 
-/// Materialize global monitors, the main context and coordination counters once.
+/// Reserve one extra depth field only when the background collector is enabled.
 /// @param state Value supplied for `state`.
+function _concurrent_context_extra(state)
+  if mem._heap_cfg_get_bool(state, "gc_concurrent", false) then return 8 end if
+  return 0
+end function
+
+/// Materialize global monitors, the main context and coordination counters once.
+/// @param state Backend state receiving shared thread data.
 function ensure_thread_data(state)
   if d.data_has_label(state.data, "sync_monitor") == false then
     state.data = d.data_pad_align(state.data, 8)
@@ -142,7 +151,7 @@ function ensure_thread_data(state)
   end if
   if d.data_has_label(state.data, "main_thread_context") == false then
     state.data = d.data_pad_align(state.data, 8)
-    state.data = d.data_add_bytes(state.data, "main_thread_context", bytes(THREAD_CONTEXT_SIZE, 0))
+    state.data = d.data_add_bytes(state.data, "main_thread_context", bytes(THREAD_CONTEXT_SIZE + _concurrent_context_extra(state), 0))
   end if
   if d.data_has_label(state.data, "thread_contexts_head") == false then
     state.data = d.data_add_u64(state.data, "thread_contexts_head", 0)
@@ -163,6 +172,7 @@ function emit_sync_init(state)
   state.asm = a.lea_rax_rip(state.asm, "main_thread_context")
   state.asm = a.mov_gs_qword_28_rax(state.asm)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TYPE, 0, false)
+  state = mem.emit_gc_write_barrier(state, "rax", THREAD_RESULT)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_RESULT, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ROOTS, 0, true)
   for i = 0 to 7
@@ -171,10 +181,15 @@ function emit_sync_init(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_NEXT, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_GC_STATE, GC_THREAD_RUNNING, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HANDOFF_CURSOR, 0, false)
+  state = mem.emit_gc_write_barrier(state, "rax", THREAD_ARG)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARG, t.enc_void(), true)
+  state = mem.emit_gc_write_barrier(state, "rax", THREAD_LOGICAL_ID)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_LOGICAL_ID, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARITY, 0, false)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HEAP_BYPASS_DEPTH, 0, false)
+  if mem._heap_cfg_get_bool(state, "gc_concurrent", false) then
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HEAP_LOCK_DEPTH, 0, false)
+  end if
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_START, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_CURSOR, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_END, 0, true)
@@ -182,7 +197,9 @@ function emit_sync_init(state)
   state.asm = a.mov_rip_qword_rax(state.asm, "thread_contexts_head")
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_requested")
-  state.asm = a.mov_rax_imm64(state.asm, 1)
+  initial_count = 1
+  if mem._heap_cfg_get_bool(state, "gc_concurrent", false) then initial_count = 2 end if
+  state.asm = a.mov_rax_imm64(state.asm, initial_count)
   state.asm = a.mov_rip_qword_rax(state.asm, "managed_thread_count")
   monitors = ["sync_monitor", "heap_monitor", "gc_coord_monitor"]
   for i = 0 to len(monitors) - 1
@@ -478,6 +495,11 @@ function emit_heap_enter_function(state)
   state.asm = a.jmp(state.asm, l_retry)
   state.asm = a.mark(state.asm, l_owned)
   state.asm = a.mov_r11_gs_qword_28(state.asm)
+  if mem._heap_cfg_get_bool(state, "gc_concurrent", false) then
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_HEAP_LOCK_DEPTH)
+    state.asm = a.inc_r32(state.asm, "r10d")
+    state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_HEAP_LOCK_DEPTH, "r10d")
+  end if
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_GC_STATE, GC_THREAD_RUNNING, false)
   state.asm = a.lea_rax_rip(state.asm, "gc_coord_monitor")
   state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
@@ -503,6 +525,11 @@ function emit_heap_leave_function(state)
   state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_HEAP_BYPASS_DEPTH, "r10d")
   state.asm = a.ret(state.asm)
   state.asm = a.mark(state.asm, l_locked)
+  if mem._heap_cfg_get_bool(state, "gc_concurrent", false) then
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", THREAD_HEAP_LOCK_DEPTH)
+    state.asm = a.dec_r32(state.asm, "r10d")
+    state.asm = a.mov_membase_disp_r32(state.asm, "r11", THREAD_HEAP_LOCK_DEPTH, "r10d")
+  end if
   state.asm = a.sub_rsp_imm8(state.asm, 0x38)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x20, "rax")
   state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", 0x28, "xmm0")
@@ -653,7 +680,7 @@ function emit_thread_new_function(state)
   // Protect the logical id across managed allocation, including when the
   // constructor is nested in an expression with no named local.
   state = mem.emit_gc_push_root_frame(state, 0x50, 0x48, 0x50)
-  state.asm = a.mov_r32_imm32(state.asm, "ecx", THREAD_CONTEXT_SIZE)
+  state.asm = a.mov_r32_imm32(state.asm, "ecx", THREAD_CONTEXT_SIZE + _concurrent_context_extra(state))
   state.asm = a.call(state.asm, "fn_alloc")
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x30, "rax")
   // Managed storage may be recycled. Initialize every native field rather
@@ -663,8 +690,10 @@ function emit_thread_new_function(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HANDLE, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ID, 0, true)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x38)
+  state = mem.emit_gc_write_barrier(state, "rax", THREAD_CODE)
   state.asm = a.mov_membase_disp_r64(state.asm, "rax", THREAD_CODE, "r11")
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_STOP, 0, true)
+  state = mem.emit_gc_write_barrier(state, "rax", THREAD_RESULT)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_RESULT, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ROOTS, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TMP0 + 0 * 8, t.enc_void(), true)
@@ -677,12 +706,17 @@ function emit_thread_new_function(state)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TMP0 + 7 * 8, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_GC_STATE, GC_THREAD_INACTIVE, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HANDOFF_CURSOR, 0, true)
+  state = mem.emit_gc_write_barrier(state, "rax", THREAD_ARG)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_ARG, t.enc_void(), true)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x48)
+  state = mem.emit_gc_write_barrier(state, "rax", THREAD_LOGICAL_ID)
   state.asm = a.mov_membase_disp_r64(state.asm, "rax", THREAD_LOGICAL_ID, "r11")
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x40)
   state.asm = a.mov_membase_disp_r64(state.asm, "rax", THREAD_ARITY, "r11")
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HEAP_BYPASS_DEPTH, 0, true)
+  if mem._heap_cfg_get_bool(state, "gc_concurrent", false) then
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_HEAP_LOCK_DEPTH, 0, false)
+  end if
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_START, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_CURSOR, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", THREAD_TLAB_END, 0, true)
@@ -740,6 +774,7 @@ function emit_thread_start_function(state)
   state.asm = a.jmp(state.asm, l_claim)
   state.asm = a.mark(state.asm, l_claimed)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STOP, 0, false)
+  state = mem.emit_gc_write_barrier(state, "rcx", THREAD_ARG)
   state.asm = a.mov_membase_disp_r64(state.asm, "rcx", THREAD_ARG, "rdx")
   state = _emit_managed_thread_count_delta(state, 1)
   state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
@@ -766,6 +801,7 @@ function emit_thread_start_function(state)
   state.asm = a.mark(state.asm, l_create_fail)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_STATUS, THREAD_FAILED, false)
+  state = mem.emit_gc_write_barrier(state, "r11", THREAD_ARG)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_ARG, t.enc_void(), true)
   state = _emit_managed_thread_count_delta(state, -1)
   state.asm = a.mark(state.asm, l_wrong_arity)
@@ -966,6 +1002,7 @@ function emit_thread_set_logical_id_function(state)
   state.asm = a.lock_cmpxchg_membase_disp_r32(state.asm, "rcx", THREAD_STATUS, "r11d")
   state.asm = a.cmp_r32_imm(state.asm, "eax", THREAD_CREATED)
   state.asm = a.jcc(state.asm, "ne", l_false)
+  state = mem.emit_gc_write_barrier(state, "rcx", THREAD_LOGICAL_ID)
   state.asm = a.mov_membase_disp_r64(state.asm, "rcx", THREAD_LOGICAL_ID, "rdx")
   state.asm = a.mov_membase_disp_imm32(state.asm, "rcx", THREAD_STATUS, THREAD_CREATED, false)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
@@ -1103,9 +1140,13 @@ function emit_thread_close_function(state)
   state.asm = a.jcc(state.asm, "e", l_restore)
   state.asm = a.mark(state.asm, l_done + "_clear")
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x30)
+  state = mem.emit_gc_write_barrier(state, "r11", THREAD_CODE)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_CODE, t.enc_void(), true)
+  state = mem.emit_gc_write_barrier(state, "r11", THREAD_RESULT)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_RESULT, t.enc_void(), true)
+  state = mem.emit_gc_write_barrier(state, "r11", THREAD_ARG)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_ARG, t.enc_void(), true)
+  state = mem.emit_gc_write_barrier(state, "r11", THREAD_LOGICAL_ID)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_LOGICAL_ID, t.enc_void(), true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_START, 0, true)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r11", THREAD_TLAB_CURSOR, 0, true)
@@ -1202,9 +1243,11 @@ function emit_thread_entry_function(state)
   state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
   state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "r12", THREAD_ARG)
   // The callee parameter slot becomes the precise root before its first poll.
+  state = mem.emit_gc_write_barrier(state, "r12", THREAD_ARG)
   state.asm = a.mov_membase_disp_imm32(state.asm, "r12", THREAD_ARG, t.enc_void(), true)
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r12", THREAD_CODE)
   state.asm = a.call_rax(state.asm)
+  state = mem.emit_gc_write_barrier(state, "r12", THREAD_RESULT)
   state.asm = a.mov_membase_disp_r64(state.asm, "r12", THREAD_RESULT, "rax")
   l_not_error = "thentry_not_error_" + lid
   state.asm = a.mov_r64_r64(state.asm, "r11", "rax")

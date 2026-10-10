@@ -28,6 +28,7 @@ import mlc.codegen.codegen_runtime as rt
 import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_builtins_alloc as bal
 import mlc.codegen.codegen_threads as th
+import mlc.codegen.codegen_concurrent_gc as cgc
 
 /// Complete mutable state threaded through every backend emission function. Collection fields use indexed/capacity-backed representations on hot paths.
 struct CgState
@@ -579,6 +580,15 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   NamedArray("msvcrt.dll", ["_gcvt", "fmod"]),
   NamedArray("shell32.dll", ["CommandLineToArgvW"])
 ]
+  concurrent_config = false
+  if typeof(heap_config) == "array" then
+    for each item in heap_config
+      if typeof(item) == "array" and len(item) >= 2 and item[0] == "gc_concurrent" and item[1] == true then concurrent_config = true end if
+    end for
+  end if
+  if concurrent_config then
+    base_imports[0].values = base_imports[0].values + ["CreateEventW", "SetEvent", "ResetEvent", "QueryPerformanceCounter"]
+  end if
   cg = CgState(
   source,
   filename,
@@ -1791,6 +1801,7 @@ function _helper_supported(lbl)
   if lbl == "fn_heap_free_blocks" then return true end if
   if lbl == "fn_heap_grow" then return true end if
   if lbl == "fn_gc_collect" then return true end if
+  if lbl == "fn_gc_concurrent_request" or lbl == "fn_gc_concurrent_worker" or lbl == "fn_gc_concurrent_cycle" or lbl == "fn_gc_satb_record" or lbl == "fn_gc_satb_pop" then return true end if
   if lbl == "fn_gc_safepoint" then return true end if
   if lbl == "fn_gc_native_enter" then return true end if
   if lbl == "fn_gc_native_leave" then return true end if
@@ -1877,6 +1888,7 @@ function _helper_supported(lbl)
   if lbl == "fn_builtin_copyStringBytes" then return true end if
   if lbl == "fn_builtin_fillBytes" then return true end if
   if lbl == "fn_builtin_gc_collect" then return true end if
+  if lbl == "fn_builtin_gc_collect_async" then return true end if
   if lbl == "fn_builtin_gc_set_limit" then return true end if
   return false
 end function
@@ -1915,7 +1927,10 @@ function _emit_helper_by_label_group0(state, lbl)
   if lbl == "fn_thread_alloc" then return th.emit_thread_alloc_function(state) end if
   if lbl == "fn_alloc" then return mem.emit_alloc_function(state) end if
   if lbl == "fn_heap_grow" then return mem.emit_heap_grow_function(state) end if
-  if lbl == "fn_gc_collect" then return mem.emit_gc_collect_function(state) end if
+  if lbl == "fn_gc_collect" then
+    if cgc.enabled(state) then return cgc.emit_collect(state) end if
+    return mem.emit_gc_collect_function(state)
+  end if
   if lbl == "fn_copy_bytes" then return rt.emit_copy_bytes_function(state) end if
   if lbl == "fn_fill_bytes" then return rt.emit_fill_bytes_function(state) end if
   if lbl == "fn_fill_qwords" then return rt.emit_fill_qwords_function(state) end if
@@ -2034,6 +2049,12 @@ end function
 /// Emit emit helper by label other as shared native-codegen support.
 /// @internal
 function _emit_helper_by_label_other(state, lbl)
+  if lbl == "fn_builtin_gc_collect_async" then return rt.emit_builtin_gc_collect_async_function(state) end if
+  if lbl == "fn_gc_concurrent_request" then return cgc.emit_request(state) end if
+  if lbl == "fn_gc_concurrent_worker" then return cgc.emit_worker(state) end if
+  if lbl == "fn_gc_concurrent_cycle" then return mem.emit_gc_collect_function(state) end if
+  if lbl == "fn_gc_satb_record" then return cgc.emit_satb_record(state) end if
+  if lbl == "fn_gc_satb_pop" then return cgc.emit_satb_pop(state) end if
   if lbl == "fn_input" then return bal.emit_input_function(state) end if
   if lbl == "fn_scan_nul_bytes" then return rt.emit_scan_nul_bytes_function(state) end if
   if lbl == "fn_scan_byte2_bytes" then return rt.emit_scan_byte2_bytes_function(state) end if

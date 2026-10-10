@@ -591,6 +591,7 @@ function inline _builtin_label(name)
   if nm == "typeName" then return "fn_typeName" end if
   if nm == "input" then return "fn_builtin_input" end if
   if nm == "gc_collect" then return "fn_builtin_gc_collect" end if
+  if nm == "gc_collect_async" then return "fn_builtin_gc_collect_async" end if
   if nm == "gc_set_limit" then return "fn_builtin_gc_set_limit" end if
   if nm == "gc_stat" then return "fn_gc_stat" end if
   if nm == "decode" then return "fn_decode" end if
@@ -7096,6 +7097,20 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
     return [state, true]
   end if
 
+  if (callee == "gc_collect_async" or raw_name == "gc_collect_async") then
+    if nargs != 0 then
+      state.diagnostics = state.diagnostics + ["gc_collect_async() expects 0 arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    collector = "fn_gc_collect"
+    if mem._heap_cfg_get_bool(state, "gc_concurrent", false) then collector = "fn_gc_concurrent_request" end if
+    state = mem.emit_gc_release_handoffs(state)
+    state.asm = a.call(state.asm, collector)
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    return [state, true]
+  end if
+
   if (callee == "gc_collect" or raw_name == "gc_collect") then
     if nargs != 0 then
       state.diagnostics = state.diagnostics +["gc_collect() expects 0 arguments"]
@@ -7728,7 +7743,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
         if special_qn == "nativeRawValue" then is_special = true end if
         if special_qn == "nativeValueFromRaw" then is_special = true end if
         if special_qn == "nativeCallback" then is_special = true end if
-        if special_qn == "gc_collect" or special_qn == "gc_set_limit" or special_qn == "gc_stat" or special_qn == "callStats" then is_special = true end if
+        if special_qn == "gc_collect" or special_qn == "gc_collect_async" or special_qn == "gc_set_limit" or special_qn == "gc_stat" or special_qn == "callStats" then is_special = true end if
         if special_qn == "heap_count" or special_qn == "heap_bytes_used" or special_qn == "heap_free_bytes" or special_qn == "heap_free_blocks" then is_special = true end if
         if special_qn == "heap_bytes_committed" or special_qn == "heap_bytes_reserved" then is_special = true end if
         if is_special == false and _state_struct_id_get(state, special_qn, 0) == 0 then
