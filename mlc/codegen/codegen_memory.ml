@@ -22,6 +22,7 @@ import mlc.asm as a
 import mlc.constants as c
 import mlc.tools as t
 import mlc.data as d
+import mlc.codegen.codegen_concurrent_gc as cgc
 
 /// Track mem page size.
 const MEM_PAGE_SIZE = 0x1000
@@ -642,6 +643,9 @@ function emit_alloc_function(state)
   if _heap_cfg_get_bool(state, "gc_concurrent", false) then
     periodic_collector = "fn_gc_concurrent_request"
     state.used_helpers = _append_unique(state.used_helpers, periodic_collector)
+    state = cgc.ensure_data(state)
+    state.used_helpers = _append_unique(state.used_helpers, "fn_gc_free_take")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_gc_free_push")
   end if
   state.asm = a.mark(state.asm, "fn_alloc")
   // Single-threaded targets do not initialize MiniLang's GS context slot.
@@ -834,6 +838,13 @@ function emit_alloc_function(state)
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_miss_size")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_search_size")
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_free_head")
+  if _heap_cfg_get_bool(state, "gc_concurrent", false) then
+    state.asm = a.or_r64_imm(state.asm, "r10", c.GC_BLOCK_FREE_BIT)
+    state.asm = a.mov_membase_disp_r64(state.asm, "r8", 0, "r10")
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
+    state.asm = a.call(state.asm, "fn_gc_free_push")
+    state.asm = a.jmp(state.asm, l_retire_publish + "_done")
+  end if
   // A central TLAB refill splits its 64-KiB range from the front of a free
   // block and links the right remainder at the list head. If no intervening
   // central allocation changed that head, retire the private tail directly
@@ -856,6 +867,7 @@ function emit_alloc_function(state)
   state.asm = a.mov_membase_disp_r64(state.asm, "r8", c.GC_OFF_NEXT_FREE, "rax")
   state.asm = a.mov_r64_r64(state.asm, "rax", "r8")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_head")
+  state.asm = a.mark(state.asm, l_retire_publish + "_done")
   if threaded_heap then state.asm = a.call(state.asm, "fn_heap_leave") end if
   state.asm = a.jmp(state.asm, l_retire_done)
 
@@ -1078,6 +1090,29 @@ function emit_alloc_function(state)
 
   state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 0x20)
   state.asm = a.mark(state.asm, l_try_free)
+  if _heap_cfg_get_bool(state, "gc_concurrent", false) then
+    state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", 72)
+    state.asm = a.call(state.asm, "fn_gc_free_take")
+    state.asm = a.test_r64_r64(state.asm, "r8", "r8")
+    state.asm = a.jcc(state.asm, "e", l_bump)
+    // Account actual partial-TLAB capacity. Pressure may already have reset.
+    state.asm = a.mov_r64_membase_disp(state.asm, "r9", "rsp", 32)
+    state.asm = a.sub_r64_r64(state.asm, "r9", "rcx")
+    state.asm = a.jcc(state.asm, "e", l_free_unlinked)
+    state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 32, "rcx")
+    counters = ["gc_bytes_since", "gc_young_bytes_since"]
+    if _uses_gc_stats(state) then counters = counters + ["gc_central_bytes"] end if
+    for each name in counters
+      state.asm = a.mov_rax_rip_qword(state.asm, name)
+      state.asm = a.cmp_r64_r64(state.asm, "rax", "r9")
+      state.asm = a.jcc(state.asm, "ae", l_try_free + "_adjust_" + name)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r9")
+      state.asm = a.mark(state.asm, l_try_free + "_adjust_" + name)
+      state.asm = a.sub_r64_r64(state.asm, "rax", "r9")
+      state.asm = a.mov_rip_qword_rax(state.asm, name)
+    end for
+    state.asm = a.jmp(state.asm, l_free_unlinked)
+  end if
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_free_miss_size")
   state.asm = a.test_r64_r64(state.asm, "rax", "rax")
   state.asm = a.jcc(state.asm, "e", l_try_free + "_search")
@@ -1158,6 +1193,12 @@ function emit_alloc_function(state)
 
   state.asm = a.or_r64_imm(state.asm, "r11", c.GC_BLOCK_FREE_BIT)
   state.asm = a.mov_membase_disp_r64(state.asm, "rdx", 0, "r11")
+  if _heap_cfg_get_bool(state, "gc_concurrent", false) then
+    state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+    state.asm = a.call(state.asm, "fn_gc_free_push")
+    state.asm = a.mov_membase_disp_r64(state.asm, "r8", 0, "rcx")
+    state.asm = a.jmp(state.asm, l_free_return)
+  end if
   state.asm = a.mov_rax_rip_qword(state.asm, "gc_free_head")
   state.asm = a.mov_membase_disp_r64(state.asm, "rdx", c.GC_OFF_NEXT_FREE, "rax")
   state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
@@ -1473,9 +1514,33 @@ function emit_gc_concurrent_pause_end(state)
   return state
 end function
 
-/// Emit mark/sweep collection. The default stops the world throughout; the
-/// optional SATB worker resumes it after roots and sweeps an isolated frontier.
-/// @param state Value supplied for `state`.
+/// Branch for a snapshot-free address, clobbering only RAX/R8/R9 and flags.
+/// @param state Backend state receiving the exclusion check.
+/// @param pointer Register containing an in-heap address below the frozen frontier.
+/// @param target Label selected when the address belongs to a reusable range.
+function emit_gc_reuse_test(state, pointer, target)
+  done = "gc_reuse_test_" + state.label_id
+  state.label_id = state.label_id + 1
+  // The minimum also disables all bitmap reads on metadata OOM.
+  state.asm = a.mov_rax_rip_qword(state.asm, "gc_reuse_min")
+  state.asm = a.cmp_r64_r64(state.asm, pointer, "rax")
+  state.asm = a.jcc(state.asm, "b", done)
+  state.asm = a.mov_r64_r64(state.asm, "r8", pointer)
+  state.asm = a.mov_rax_rip_qword(state.asm, "heap_base")
+  state.asm = a.sub_r64_r64(state.asm, "r8", "rax")
+  state.asm = a.shr_r64_imm8(state.asm, "r8", 3)
+  state.asm = a.mov_r64_r64(state.asm, "r9", "r8")
+  state.asm = a.shr_r64_imm8(state.asm, "r9", 6)
+  state.asm = a.mov_rax_rip_qword(state.asm, "gc_reuse_bits")
+  state.asm = a.mov_r64_mem_bis(state.asm, "rax", "rax", "r9", 8, 0)
+  state.asm = a.bt_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.jcc(state.asm, "b", target)
+  state.asm = a.mark(state.asm, done)
+  return state
+end function
+
+/// Emit the collector, tracing only the frozen snapshot in concurrent mode.
+/// @param state Backend state receiving the GC runtime.
 function emit_gc_collect_function(state)
   state = ensure_gc_data(state)
   if typeof(state.rdata) == "struct" then
@@ -1569,12 +1634,14 @@ function emit_gc_collect_function(state)
   L_TRIM_DONE = "gc_trim_done_" + lid
 
   if concurrent_gc then
-    // Freeze the old allocation frontier and free list. Refilled TLABs and
-    // reusable tails created after this point stay above that frontier.
+    // Existing free ranges stay allocatable, but their immutable bitmap
+    // excludes them from this snapshot, including all subsequent splits.
     state.asm = a.mov_rax_rip_qword(state.asm, "heap_ptr")
     state.asm = a.mov_rip_qword_rax(state.asm, "gc_concurrent_frontier")
+    state.used_helpers = state.used_helpers + ["fn_gc_reuse_snapshot", "fn_gc_reuse_end"]
+    state.asm = a.call(state.asm, "fn_gc_reuse_snapshot")
     state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
-    for each name in ["gc_free_head", "gc_concurrent_free_head", "gc_concurrent_free_tail", "gc_satb_count", "gc_satb_overflow", "gc_concurrent_marked"]
+    for each name in ["gc_concurrent_free_head", "gc_concurrent_free_tail", "gc_satb_count", "gc_satb_overflow", "gc_concurrent_marked"]
       state.asm = a.mov_rip_qword_rax(state.asm, name)
     end for
   end if
@@ -1640,6 +1707,12 @@ function emit_gc_collect_function(state)
   state.asm = a.jcc(state.asm, "ae", L_MARK_VALUE_RET)
 
   state.asm = a.sub_r64_imm(state.asm, "rdx", c.GC_HEADER_SIZE)
+  if concurrent_gc then
+    // Do not even read a protected header: a mutator may be splitting
+    // it or initializing a new object while the worker traces roots.
+    state = emit_gc_reuse_test(state, "rdx", L_MARK_VALUE_RET)
+    state.asm = a.mov_rax_rip_qword(state.asm, concurrent_gc_bound_label)
+  end if
   state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rdx", 0)
   state.asm = a.test_r64_imm32(state.asm, "r10", c.GC_BLOCK_FREE_BIT)
   state.asm = a.jcc(state.asm, "ne", L_MARK_VALUE_RET)
@@ -2062,6 +2135,7 @@ function emit_gc_collect_function(state)
     state.asm = a.mark(state.asm, L_MARK_DONE + "_retain_loop")
     state.asm = a.cmp_r64_r64(state.asm, "rbx", "r14")
     state.asm = a.jcc(state.asm, "ae", L_MARK_DONE + "_retain_done")
+    state = emit_gc_reuse_test(state, "rbx", L_MARK_DONE + "_retain_reuse")
     state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rbx", 0)
     state.asm = a.test_r64_imm32(state.asm, "r10", c.GC_BLOCK_FREE_BIT)
     state.asm = a.jcc(state.asm, "ne", L_MARK_DONE + "_retain_next")
@@ -2076,6 +2150,11 @@ function emit_gc_collect_function(state)
     state.asm = a.mark(state.asm, L_MARK_DONE + "_retain_next")
     state.asm = a.and_r64_imm(state.asm, "r10", c.GC_BLOCK_SIZE_MASK)
     state.asm = a.add_r64_r64(state.asm, "rbx", "r10")
+    state.asm = a.jmp(state.asm, L_MARK_DONE + "_retain_loop")
+    state.asm = a.mark(state.asm, L_MARK_DONE + "_retain_reuse")
+    state.asm = a.mov_r64_r64(state.asm, "rax", "rbx")
+    state.asm = a.call(state.asm, "fn_gc_reuse_end")
+    state.asm = a.mov_r64_r64(state.asm, "rbx", "rax")
     state.asm = a.jmp(state.asm, L_MARK_DONE + "_retain_loop")
     state.asm = a.mark(state.asm, L_MARK_DONE + "_retain_done")
     state.asm = a.call(state.asm, "fn_heap_enter")
@@ -2104,6 +2183,7 @@ function emit_gc_collect_function(state)
       state.asm = a.mov_rax_rip_qword(state.asm, "gc_concurrent_frontier")
       state.asm = a.cmp_r64_r64(state.asm, "rdi", "rax")
       state.asm = a.jcc(state.asm, "ae", L_MARK_DONE + "_weak_live")
+      state = emit_gc_reuse_test(state, "rdi", L_MARK_DONE + "_weak_live")
     end if
     state.asm = a.lea_r64_membase_disp(state.asm, "r8", "rdi", -c.GC_HEADER_SIZE)
     state.asm = a.sub_r64_r64(state.asm, "r8", "rbp")
@@ -2168,6 +2248,8 @@ function emit_gc_collect_function(state)
   state.asm = a.cmp_r64_r64(state.asm, "rbx", "r14")
   state.asm = a.jcc(state.asm, "ae", L_SWEEP_DONE)
 
+  if concurrent_gc then state = emit_gc_reuse_test(state, "rbx", L_SWEEP_LOOP + "_reuse") end if
+
   state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rbx", 0)
   state.asm = a.test_r64_r64(state.asm, "r10", "r10")
   state.asm = a.jcc(state.asm, "e", L_SWEEP_DONE)
@@ -2206,6 +2288,13 @@ function emit_gc_collect_function(state)
   state.asm = a.add_r64_r64(state.asm, "rbx", "r10")
   state.asm = a.jmp(state.asm, L_SWEEP_LOOP)
 
+  if concurrent_gc then
+    state.asm = a.mark(state.asm, L_SWEEP_LOOP + "_reuse")
+    state.asm = a.mov_r64_r64(state.asm, "rax", "rbx")
+    state.asm = a.call(state.asm, "fn_gc_reuse_end")
+    state.asm = a.mov_r64_r64(state.asm, "rbx", "rax")
+    state.asm = a.jmp(state.asm, L_SWEEP_LOOP)
+  end if
   state.asm = a.mark(state.asm, L_SWEEP_DONE)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r12")
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_live_bytes")
@@ -2227,6 +2316,8 @@ function emit_gc_collect_function(state)
   state.asm = a.cmp_r64_r64(state.asm, "rbx", "r14")
   state.asm = a.jcc(state.asm, "ae", L_REBUILD2_DONE)
 
+  if concurrent_gc then state = emit_gc_reuse_test(state, "rbx", L_REBUILD2_LOOP + "_reuse") end if
+
   state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rbx", 0)
   state.asm = a.test_r64_r64(state.asm, "r10", "r10")
   state.asm = a.jcc(state.asm, "e", L_REBUILD2_DONE)
@@ -2246,6 +2337,8 @@ function emit_gc_collect_function(state)
   state.asm = a.add_r64_r64(state.asm, "r11", "r10")
   state.asm = a.cmp_r64_r64(state.asm, "r11", "r14")
   state.asm = a.jcc(state.asm, "ae", L_COAL2_DONE)
+
+  if concurrent_gc then state = emit_gc_reuse_test(state, "r11", L_COAL2_DONE) end if
 
   state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "r11", 0)
   state.asm = a.test_r64_r64(state.asm, "rcx", "rcx")
@@ -2324,6 +2417,13 @@ function emit_gc_collect_function(state)
   state.asm = a.add_r64_r64(state.asm, "rbx", "r10")
   state.asm = a.jmp(state.asm, L_REBUILD2_LOOP)
 
+  if concurrent_gc then
+    state.asm = a.mark(state.asm, L_REBUILD2_LOOP + "_reuse")
+    state.asm = a.mov_r64_r64(state.asm, "rax", "rbx")
+    state.asm = a.call(state.asm, "fn_gc_reuse_end")
+    state.asm = a.mov_r64_r64(state.asm, "rbx", "rax")
+    state.asm = a.jmp(state.asm, L_REBUILD2_LOOP)
+  end if
   state.asm = a.mark(state.asm, L_REBUILD2_DONE)
   state.asm = a.jmp(state.asm, L_REBUILD2_AFTER)
 
@@ -2488,19 +2588,20 @@ function emit_gc_collect_function(state)
   if concurrent_gc then
     state.asm = a.call(state.asm, "fn_heap_enter")
     state = emit_gc_concurrent_pause_begin(state)
-    state.asm = a.mov_rax_rip_qword(state.asm, "gc_concurrent_free_tail")
-    state.asm = a.test_r64_r64(state.asm, "rax", "rax")
-    state.asm = a.jcc(state.asm, "e", L_MARK_DONE + "_publish_done")
-    state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
-    state.asm = a.mov_rax_rip_qword(state.asm, "gc_free_head")
-    state.asm = a.mov_membase_disp_r64(state.asm, "r11", c.GC_OFF_NEXT_FREE, "rax")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_gc_free_merge")
+    state.used_helpers = _append_unique(state.used_helpers, "fn_gc_free_stats")
     state.asm = a.mov_rax_rip_qword(state.asm, "gc_concurrent_free_head")
-    state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_head")
-    state.asm = a.mark(state.asm, L_MARK_DONE + "_publish_done")
+    state.asm = a.call(state.asm, "fn_gc_free_merge")
     state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
     state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_miss_size")
     state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_search_size")
     state.asm = a.mov_rip_qword_rax(state.asm, "gc_free_search_prev")
+    if _uses_gc_stats(state) then
+      // Sample actual current bins, including partial TLAB splits.
+      state.asm = a.call(state.asm, "fn_gc_free_stats")
+      state.asm = a.mov_r64_r64(state.asm, "rax", "rcx")
+      state.asm = a.mov_rip_qword_rax(state.asm, "gc_largest_free")
+    end if
   end if
   state.asm = a.mov_rax_imm64(state.asm, 0)
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_bytes_since")
@@ -2775,6 +2876,7 @@ end function
 /// Emit emit heap free blocks function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_free_blocks_function(state)
+  if _heap_cfg_get_bool(state, "gc_concurrent", false) then return cgc.emit_heap_free_stat(state, false) end if
   state = ensure_gc_data(state)
   threaded_heap = state.native_threads_possible
   if threaded_heap then
@@ -2845,6 +2947,7 @@ end function
 /// Emit emit heap free bytes function in the managed-memory runtime.
 /// @param state Value supplied for `state`.
 function emit_heap_free_bytes_function(state)
+  if _heap_cfg_get_bool(state, "gc_concurrent", false) then return cgc.emit_heap_free_stat(state, true) end if
   state = ensure_gc_data(state)
   threaded_heap = state.native_threads_possible
   if threaded_heap then

@@ -514,6 +514,10 @@ try {
     [pscustomobject]@{ Name = "GC handoff lifetime"; Source = "gc_handoff_lifetime.ml" },
     [pscustomobject]@{ Name = "GC bitmap words"; Source = "gc_bitmap_words.ml" },
     [pscustomobject]@{ Name = "GC asynchronous fallback"; Source = "gc_async_fallback.ml" },
+    [pscustomobject]@{ Name = "concurrent GC free-range reuse"; Source = "gc_concurrent_reuse.ml" },
+    [pscustomobject]@{ Name = "concurrent GC fragmented reuse"; Source = "gc_concurrent_reuse_fragments.ml" },
+    [pscustomobject]@{ Name = "concurrent GC address-order reuse"; Source = "gc_concurrent_order.ml" },
+    [pscustomobject]@{ Name = "concurrent GC size classes and partial TLABs"; Source = "gc_concurrent_bins.ml" },
     [pscustomobject]@{ Name = "FFI cstr returns"; Source = "ffi_cstr_return.ml" },
     [pscustomobject]@{ Name = "allocation cursor"; Source = "memory_fragmentation_cursor.ml" },
     [pscustomobject]@{ Name = "GC metadata"; Source = "memory_gc_metadata.ml" },
@@ -537,6 +541,11 @@ try {
     $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root) + $effectiveCompilerArgs
     if ($nativeCase.Source -eq "memory_management.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root) }
     if ($nativeCase.Source -eq "memory_heap_ceiling.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root, "--heap-reserve", "40m", "--heap-commit", "32m") }
+    # Concurrent GC deliberately excludes the suite's default heap-shrink flag.
+    if ($nativeCase.Source -eq "gc_concurrent_reuse.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root, "--gc-concurrent", "--heap-reserve", "512m", "--heap-commit", "16m") }
+    if ($nativeCase.Source -eq "gc_concurrent_reuse_fragments.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root, "--gc-concurrent") }
+    if ($nativeCase.Source -eq "gc_concurrent_order.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root, "--gc-concurrent") }
+    if ($nativeCase.Source -eq "gc_concurrent_bins.ml") { $nativeArgs = @($nativeSource, $nativeExe, "-I", $Root, "--gc-concurrent") }
     if ($nativeCase.Source -eq "memory_gc_metadata.ml") { $nativeArgs += @("--heap-shrink", "--heap-shrink-min", "1m") }
     if ($nativeCase.Source -eq "memory_purge.ml") { $nativeArgs += @("--heap-shrink", "--heap-shrink-min", "1m") }
     $results += Invoke-NativeStep ("compile " + $nativeCase.Name) $Compiler $nativeArgs
@@ -744,9 +753,13 @@ try {
       $unrollText = Get-Content -LiteralPath $unrollLabels -Raw
       $mainBlock = [regex]::Match($unrollText, '(?ms)^\[label\] fn_user_main .*?(?=^\[label\] fn_user_|\z)').Value
       $budgetBlock = [regex]::Match($unrollText, '(?ms)^\[label\] fn_user_budgetedLoop .*?(?=^\[label\] fn_user_|\z)').Value
+      $nestedBlock = [regex]::Match($unrollText, '(?ms)^\[label\] fn_user_nestedCondition .*?(?=^\[label\] fn_user_|\z)').Value
+      $literalBlock = [regex]::Match($unrollText, '(?ms)^\[label\] fn_user_literalBudget .*?(?=^\[label\] fn_user_|\z)').Value
       $unrollOk = $mainBlock.Length -gt 0 -and $budgetBlock.Length -gt 0 -and
                   $mainBlock -notmatch 'for_top_|for_cont_|for_end_|__for_end_|__for_step_' -and
-                  $budgetBlock.Contains('for_top_') -and $budgetBlock.Contains('for_end_')
+                  $budgetBlock.Contains('for_top_') -and $budgetBlock.Contains('for_end_') -and
+                  $nestedBlock.Contains('for_top_') -and $nestedBlock.Contains('for_end_') -and
+                  $literalBlock.Length -gt 0 -and $literalBlock -notmatch 'for_top_|for_end_'
     }
     $unrollResult = [pscustomobject]@{
       Name = "verify bounded for-unroll structure"
@@ -759,7 +772,24 @@ try {
     Write-LogLine ($unrollLabel + " bounded for-unroll structure")
   }
 
+  $methodGlobalsExe = Join-Path $script:ResolvedArtifactsDir "method_globals.exe"
+  $results += Invoke-NativeStep "compile method globals regression" $Compiler (@(
+    (Join-Path $Root "tests\method_globals.ml"), $methodGlobalsExe, "-I", $Root
+  ) + $effectiveCompilerArgs)
+  if ($results[-1].ExitCode -eq 0) {
+    $results += Invoke-NativeStep "run method globals regression" $methodGlobalsExe @()
+  }
+
   $listingSrc = Join-Path $Root "tests\native_raw_value_smoke.ml"
+  foreach ($fixture in @("type_flow_context", "type_flow_rebinding", "gui_input")) {
+    $fixtureExe = Join-Path $script:ResolvedArtifactsDir ($fixture + ".exe")
+    $fixtureArgs = @((Join-Path $Root ("tests\" + $fixture + ".ml")), $fixtureExe, "-I", $Root)
+    if ($fixture -eq "gui_input") { $fixtureArgs += @("--subsystem", "windows") }
+    $results += Invoke-NativeStep ("compile " + $fixture) $Compiler ($fixtureArgs + $effectiveCompilerArgs)
+    if ($results[-1].ExitCode -eq 0) {
+      $results += Invoke-NativeStep ("run " + $fixture) $fixtureExe @()
+    }
+  }
   $listingExe = Join-Path $script:ResolvedArtifactsDir "asm_listing_smoke.exe"
   $listingPath = Join-Path $script:ResolvedArtifactsDir "asm_listing_smoke.asm"
   $listingArgs = @(

@@ -427,6 +427,8 @@ function _clone_state_for_object(base, seed_runtime)
   // correctly used the per-binding monitor.
   st.synchronized_globals = _copy_array(base.synchronized_globals)
   st.operator_overloads_present = base.operator_overloads_present
+  st.mutable_user_functions = base.mutable_user_functions
+  st.typeflow_function = void
 
   st.asm = a.newCodegenAsmBuilder()
   if seed_runtime then

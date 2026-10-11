@@ -679,8 +679,14 @@ function _for_unroll_expr_ok(expr, budget)
   if t.ast_is_node(expr) == false or _coerce_name(t.ast_kind(expr)) == "" then return true end if
   if _for_unroll_budget_take(budget) == false then return false end if
   if t.ast_is_leaf(expr) then return true end if
-  if _for_unroll_expr_child_ok(t.ast_left(expr), budget) == false then return false end if
-  if _for_unroll_expr_child_ok(t.ast_right(expr), budget) == false then return false end if
+  // Compact Bin handles and ordinary expression structs must consume the
+  // same budget. Literal payloads are not AST nodes; same-kind children are.
+  if t.ast_kind(expr) == "Bin" then
+    if _for_unroll_expr_child_ok(t.ast_left(expr), budget) == false then return false end if
+    return _for_unroll_expr_child_ok(t.ast_right(expr), budget)
+  end if
+  if _for_unroll_expr_child_ok(try(expr.left), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.right), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.expr), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.cond), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.value), budget) == false then return false end if
@@ -689,6 +695,7 @@ function _for_unroll_expr_ok(expr, budget)
   if _for_unroll_expr_child_ok(try(expr.start), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.end_expr), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.iterable), budget) == false then return false end if
+  if _for_unroll_expr_child_ok(try(expr.callee), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.args), budget) == false then return false end if
   if _for_unroll_expr_child_ok(try(expr.items), budget) == false then return false end if
   return true
@@ -3598,6 +3605,7 @@ function _typeflow_expr_type(state, ex, known)
     if (op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" and right_nonnegative_int then return "int" end if
     if (op_b == "+" or op_b == "-" or op_b == "*") and lb == "int" and rb2 == "int" then return "int" end if
     if op_b == "%" and lb == "int" and rb2 == "int" and right_nonzero then return "int" end if
+    if op_b == "div" and lb == "int" and rb2 == "int" and right_nonzero then return "int" end if
     numeric_l = lb == "int" or lb == "float" or lb == "number"
     numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "+" or op_b == "-" or op_b == "*") and numeric_l and numeric_r then return "number" end if
@@ -3617,7 +3625,7 @@ function _typeflow_expr_type(state, ex, known)
     if typeof(args) != "array" then args = [] end if
     if raw == "len" then return "int" end if
     if raw == "typeof" or raw == "typeName" then return "string" end if
-    fn_qname = exprmod._native_callback_resolve_user_fn(state, cal)
+    fn_qname = exprmod._opt_static_user_fn(state, cal)
     if fn_qname != "" then
       declared_fn = exprmod._user_function_get(state, fn_qname)
       if typeof(declared_fn) == "struct" and (typeof(try(declared_fn.return_optional)) != "bool" or declared_fn.return_optional == false) and typeof(try(declared_fn.return_type)) == "string" then
@@ -3809,6 +3817,8 @@ end function
 /// @internal
 function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   if typeof(fn_node) != "struct" then return [] end if
+  previous_typeflow_function = state.typeflow_function
+  state.typeflow_function = fn_node
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
   inputs = flow_inputs
   if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node, scratch) end if
@@ -3971,6 +3981,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   scratch[5] = dependents
   scratch[6] = validate_queued
   scratch[7] = validate_pending
+  state.typeflow_function = previous_typeflow_function
   return facts_index
 end function
 
@@ -4586,15 +4597,10 @@ end function
 /// Lower resolve global target statement behavior to native x64.
 /// @internal
 function _resolve_global_target(state, name)
-  if typeof(name) != "string" then return "" end if
-  pref = state.current_qname_prefix
-  if typeof(pref) == "string" and pref != "" then
-    if pref[len(pref) - 1] == "." then
-      return pref + name
-    end if
-    return pref + "." + name
-  end if
-  return _join_qname(state.current_file_prefix, name)
+  // Emission must bind the same root slot chosen by the declaration scan.
+  // Blindly prepending a struct-method prefix silently created Canvas.x
+  // instead of updating the existing file/module global x.
+  return _resolve_global_target_scan(state, name, state.current_qname_prefix, state.current_file_prefix)
 end function
 
 /// Lower qname parent prefix statement behavior to native x64.
@@ -4655,6 +4661,64 @@ function _resolve_global_target_scan(state, raw, qpref, fpref)
     return pref_f2 + raw2
   end if
   return raw2
+end function
+
+/// Conservatively mark callable globals that can be rebound, including writes from closures and other threads. Local assignments leave the original callable unchanged.
+/// @internal
+function _collect_mutable_user_functions(state, program)
+  contexts = t.arr_vec_new(64)
+  contexts = t.arr_vec_push(contexts, [void, program])
+  for each item in state.user_functions
+    contexts = t.arr_vec_push(contexts, [item[1], item[1].body])
+  end for
+  for each owner in state.nested_user_functions
+    contexts = t.arr_vec_push(contexts, [owner, owner.body])
+  end for
+  state.mutable_user_functions = t.fastmap_new(64)
+  for each context in t.arr_vec_finish(contexts)
+    owner = context[0]
+    qprefix = ""
+    fprefix = ""
+    if typeof(owner) == "struct" then
+      qname = _coerce_name(owner.name)
+      dot = s.lastIndexOf(qname, ".")
+      if dot >= 0 then qprefix = s.substr(qname, 0, dot + 1) end if
+      fprefix = _strpair_get(state.file_prefix_map, _st_file(owner))
+    end if
+    work = t.arr_vec_new(64)
+    for each st in context[1] work = t.arr_vec_push(work, st) end for
+    cursor = 0
+    while cursor < work.size
+      st = work.data[cursor]
+      cursor = cursor + 1
+      kind = t.ast_kind(st)
+      if kind == "FunctionDef" or kind == "StructDef" or kind == "NamespaceDef" then continue end if
+      names = []
+      if kind == "GlobalDecl" then names = st.names end if
+      if kind == "Assign" or kind == "ConstDecl" or kind == "SynchronizedDecl" then
+        if typeof(owner) != "struct" or s.indexOf(st.name, ".", 0) >= 0 then names = [st.name] end if
+      end if
+      if kind == "SetMember" then
+        obj = _member_qname(st.obj)
+        root = obj
+        dot = s.indexOf(obj, ".", 0)
+        if dot >= 0 then root = s.substr(obj, 0, dot) end if
+        shadowed = false
+        if typeof(owner) == "struct" then shadowed = _arr_has(try(owner._ml_locals), root) or _arr_has(try(owner._ml_captures), root) end if
+        if obj != "" and shadowed == false then names = [obj + "." + st.field] end if
+      end if
+      for each name in names
+        name = exprmod._apply_import_alias(state, name)
+        for each candidate in [name, qprefix + name, fprefix + name]
+          if typeof(exprmod._user_function_get(state, candidate)) == "struct" then
+            state.mutable_user_functions = t.fastmap_set(state.mutable_user_functions, candidate, 1)
+          end if
+        end for
+      end for
+      work = _scan_stmt_children_into(work, st)
+    end while
+  end for
+  return state
 end function
 
 /// Append nested statements directly to an existing capacity-backed worklist. Keeping the parser field order here preserves analysis determinism without materializing and repeatedly concatenating a temporary child array.
@@ -9324,6 +9388,7 @@ function prepare_program_for_objects(state, program)
   state = _mem_probe(state, "pre_flatten")
   state.synchronized_globals = []
   program = _flatten_runtime(state, program)
+  state = _collect_mutable_user_functions(state, program)
   state.inline_only_functions = _analyze_inline_only_functions(state, program)
   state.pruned_inline_functions = []
   state = _mem_probe(state, "flatten_done")
@@ -9908,7 +9973,15 @@ function emit_user_function(state, fn_node, analysis_scratch)
   end if
   analysis_scratch = _prepare_function_analysis_scratch(analysis_scratch)
   flow_inputs_for_fn = _collect_function_flow_inputs(fn_node, analysis_scratch)
+  // Value-flow must resolve typed calls in this function's namespace, not in
+  // whichever module initializer or object fragment happened to run before it.
+  valueflow_saved_qpref = state.current_qname_prefix
+  valueflow_saved_fpref = state.current_file_prefix
+  state.current_qname_prefix = _qname_parent_prefix(qn)
+  state.current_file_prefix = _strpair_get(state.file_prefix_map, _st_file(fn_node))
   known_value_types_for_fn = _infer_known_value_types(state, fn_node, flow_inputs_for_fn, analysis_scratch)
+  state.current_qname_prefix = valueflow_saved_qpref
+  state.current_file_prefix = valueflow_saved_fpref
   promoted_result = _select_promoted_local_registers(state, fn_node, known_value_types_for_fn, flow_inputs_for_fn[9], analysis_scratch)
   state = promoted_result[0]
   promoted_local_regs = promoted_result[1]
@@ -10040,9 +10113,7 @@ function emit_user_function(state, fn_node, analysis_scratch)
   state._current_root_rec_off = root_rec_off
   state._current_root_static_qwords = (root_top - root_base) / 8
   // Resolve package-qualified integer and value-enum constants in the same
-  // context used by body emission. The broader value-flow pass intentionally
-  // keeps its historical context; combining both extra fact sets can perturb
-  // hot internal loop placement without adding a required safety fact.
+  // context used by body emission and the value-flow pass above.
   intflow_saved_qpref = state.current_qname_prefix
   intflow_saved_fpref = state.current_file_prefix
   intflow_qpref = ""

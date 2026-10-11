@@ -272,6 +272,10 @@ struct CgState
   is_linux_target,
   /// Whether the program declares any user-defined operators.
   operator_overloads_present,
+  /// Callable globals that can be rebound; their original return contracts are not stable.
+  mutable_user_functions,
+  /// Function being analyzed before lexical bindings exist, or void during emission.
+  typeflow_function,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
@@ -709,7 +713,9 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   [],
   target,
   target == "linux-x64",
-  false
+  false,
+  t.fastmap_new(64),
+  void
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)
@@ -1802,6 +1808,8 @@ function _helper_supported(lbl)
   if lbl == "fn_heap_grow" then return true end if
   if lbl == "fn_gc_collect" then return true end if
   if lbl == "fn_gc_concurrent_request" or lbl == "fn_gc_concurrent_worker" or lbl == "fn_gc_concurrent_cycle" or lbl == "fn_gc_satb_record" or lbl == "fn_gc_satb_pop" then return true end if
+  if lbl == "fn_gc_reuse_end" or lbl == "fn_gc_reuse_snapshot" then return true end if
+  if lbl == "fn_gc_free_push" or lbl == "fn_gc_free_take" or lbl == "fn_gc_free_merge" or lbl == "fn_gc_free_flatten" or lbl == "fn_gc_free_stats" then return true end if
   if lbl == "fn_gc_safepoint" then return true end if
   if lbl == "fn_gc_native_enter" then return true end if
   if lbl == "fn_gc_native_leave" then return true end if
@@ -2055,6 +2063,13 @@ function _emit_helper_by_label_other(state, lbl)
   if lbl == "fn_gc_concurrent_cycle" then return mem.emit_gc_collect_function(state) end if
   if lbl == "fn_gc_satb_record" then return cgc.emit_satb_record(state) end if
   if lbl == "fn_gc_satb_pop" then return cgc.emit_satb_pop(state) end if
+  if lbl == "fn_gc_reuse_end" then return cgc.emit_reuse_end(state) end if
+  if lbl == "fn_gc_reuse_snapshot" then return cgc.emit_reuse_snapshot(state) end if
+  if lbl == "fn_gc_free_push" then return cgc.emit_free_push(state) end if
+  if lbl == "fn_gc_free_take" then return cgc.emit_free_take(state) end if
+  if lbl == "fn_gc_free_merge" then return cgc.emit_free_merge(state) end if
+  if lbl == "fn_gc_free_flatten" then return cgc.emit_free_flatten(state) end if
+  if lbl == "fn_gc_free_stats" then return cgc.emit_free_stats(state) end if
   if lbl == "fn_input" then return bal.emit_input_function(state) end if
   if lbl == "fn_scan_nul_bytes" then return rt.emit_scan_nul_bytes_function(state) end if
   if lbl == "fn_scan_byte2_bytes" then return rt.emit_scan_byte2_bytes_function(state) end if

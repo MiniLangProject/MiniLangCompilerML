@@ -645,6 +645,26 @@ function inline _next_lid(state)
   return lid
 end function
 
+/// Resolve return contracts only for an unshadowed, immutable callable. A function declaration does not constrain later values stored in its global slot.
+/// @internal
+function _opt_static_user_fn(state, ex)
+  raw = _expr_to_qualname(state, ex)
+  if raw == "" then return "" end if
+  dot = s.indexOf(raw, ".", 0)
+  root = raw
+  if dot >= 0 then root = s.substr(raw, 0, dot) end if
+  owner = state.typeflow_function
+  if typeof(owner) == "struct" then
+    if _arr_has_str(try(owner._ml_locals), root) or _arr_has_str(try(owner._ml_captures), root) or _arr_has_str(try(owner.params), root) then return "" end if
+  else
+    binding = scope.resolve_binding(state, root)
+    if typeof(binding) == "struct" and binding.kind != "global" then return "" end if
+  end if
+  qn = _native_callback_resolve_user_fn(state, ex)
+  if t.fastmap_get(state.mutable_user_functions, qn, 0) != 0 then return "" end if
+  return qn
+end function
+
 /// Lower native callback resolve user fn expression behavior to native x64.
 /// @internal
 function _native_callback_resolve_user_fn(state, ex)
@@ -2868,7 +2888,7 @@ function _opt_expr_known_type(state, ex)
   end if
   if k == "Call" then
     callee = try(ex.callee)
-    fn_qname = _native_callback_resolve_user_fn(state, callee)
+    fn_qname = _opt_static_user_fn(state, callee)
     if fn_qname != "" then
       declared_fn = _user_function_get(state, fn_qname)
       if typeof(declared_fn) == "struct" and (typeof(try(declared_fn.return_optional)) != "bool" or declared_fn.return_optional == false) then
@@ -7827,7 +7847,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     inline_used_bytes = t.fastmap_get(state._inline_emitted_bytes, inline_name, 0)
     if typeof(inline_used_bytes) != "int" then inline_used_bytes = 0 end if
   end if
-  if inline_used_bytes < 4096 and typeof(inline_fn) == "struct" and _function_wants_inline(inline_fn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(inline_fn) then
+  if inline_used_bytes < 4096 and t.fastmap_get(state.mutable_user_functions, inline_name, 0) == 0 and typeof(inline_fn) == "struct" and _function_wants_inline(inline_fn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(inline_fn) then
     inline_binding = scope.cg_resolve_binding(state, inline_name)
     if typeof(inline_binding) != "struct" or inline_binding.kind == "global" then
       state = _emit_inline_call(state, inline_name, call_args)

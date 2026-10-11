@@ -1036,6 +1036,18 @@ Mem probe associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L54)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-mutable-user-functions-mutable-user-functions-mlc-codegen-codegen-core-ml-1597689279"></a>
+### mutable_user_functions
+
+```ml
+mutable_user_functions
+```
+
+Callable globals that can be rebound; their original return contracts are not stable.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L276)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-native-threads-possible-native-threads-possible-mlc-codegen-codegen-core-ml-878101539"></a>
 ### native_threads_possible
 
@@ -1347,6 +1359,18 @@ Trace calls associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L52)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-typeflow-function-typeflow-function-mlc-codegen-codegen-core-ml-190233387"></a>
+### typeflow_function
+
+```ml
+typeflow_function
+```
+
+Function being analyzed before lexical bindings exist, or void during emission.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L278)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-typename-enum-by-id-typename-enum-by-id-mlc-codegen-codegen-core-ml-442694963"></a>
 ### typename_enum_by_id
