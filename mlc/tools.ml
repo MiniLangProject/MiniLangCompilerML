@@ -1542,6 +1542,39 @@ function arr_chunk_push(builder, value)
   return b
 end function
 
+/// Pop the last chunked value without flattening the sequence. Refill an empty
+/// tail from the last sealed chunk, including the second-level page boundary.
+/// @internal
+function arr_chunked_pop(chunks, tail, cap)
+  if arr_chunk_tail_len(tail) == 0 then
+    if _chunks_is_paged(chunks) then
+      pages = chunks[1]
+      chunk_tail = chunks[2]
+      if arr_chunk_tail_len(chunk_tail) == 0 then
+        if len(pages) == 0 then return [chunks, tail] end if
+        chunk_tail = _arr_tail_from_array(pages[len(pages) - 1], 256)
+        chunks[1] = arr_drop_last(pages)
+      end if
+      last = arr_chunk_tail_len(chunk_tail) - 1
+      tail = _arr_tail_from_array(arr_chunk_tail_get(chunk_tail, last, []), cap)
+      chunk_tail.data[last] = 0
+      chunk_tail.used = last
+      chunks[2] = chunk_tail
+    else
+      if typeof(chunks) != "array" or len(chunks) == 0 then return [chunks, tail] end if
+      tail = _arr_tail_from_array(chunks[len(chunks) - 1], cap)
+      chunks = arr_drop_last(chunks)
+    end if
+  end if
+  if typeof(tail) == "array" then
+    tail = arr_drop_last(tail)
+  else if arr_chunk_tail_len(tail) > 0 then
+    tail.used = tail.used - 1
+    tail.data[tail.used] = 0
+  end if
+  return [chunks, tail]
+end function
+
 /// Provide the arr merge chunks balanced compiler utility operation.
 /// @param chunks Value supplied for `chunks`.
 function arr_merge_chunks_balanced(chunks)

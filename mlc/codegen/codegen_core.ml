@@ -276,6 +276,10 @@ struct CgState
   mutable_user_functions,
   /// Function being analyzed before lexical bindings exist, or void during emission.
   typeflow_function,
+  /// Proven nonescaping local structs represented by rooted field slots.
+  scalar_structs,
+  /// Immutable whole-program proof of source-unreferenced function names.
+  dead_functions,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
@@ -715,7 +719,9 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   target == "linux-x64",
   false,
   t.fastmap_new(64),
-  void
+  void,
+  [],
+  t.fastmap_new(64)
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)

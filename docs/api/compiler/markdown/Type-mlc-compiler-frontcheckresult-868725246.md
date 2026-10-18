@@ -12,7 +12,7 @@ struct FrontCheckResult
 Represents front check result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L127)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L128)
 
 ## Members
 
@@ -26,7 +26,7 @@ aliases
 Aliases associated with `FrontCheckResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L135)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L136)
 
 <a id="field-field-mlc-compiler-frontcheckresult-diagnostics-diagnostics-mlc-compiler-ml-1788851207"></a>
 ### diagnostics
@@ -38,7 +38,7 @@ diagnostics
 Diagnostics associated with `FrontCheckResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L129)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L130)
 
 <a id="field-field-mlc-compiler-frontcheckresult-modules-modules-mlc-compiler-ml-1672847843"></a>
 ### modules
@@ -50,7 +50,7 @@ modules
 Modules associated with `FrontCheckResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L133)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L134)
 
 <a id="field-field-mlc-compiler-frontcheckresult-parsed-modules-parsed-modules-mlc-compiler-ml-599998009"></a>
 ### parsed_modules
@@ -62,7 +62,7 @@ parsed_modules
 Parsed modules associated with `FrontCheckResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L137)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L138)
 
 <a id="field-field-mlc-compiler-frontcheckresult-visited-visited-mlc-compiler-ml-758186455"></a>
 ### visited
@@ -74,4 +74,4 @@ visited
 Visited associated with `FrontCheckResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L131)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L132)

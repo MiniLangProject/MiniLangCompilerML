@@ -33,11 +33,12 @@ import mlc.asm as a
 import mlc.data as d
 import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
+import mlc.packing as packing
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.2.20"
+const COMPILER_VERSION = "1.2.21"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.20"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.21"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
@@ -469,6 +470,9 @@ function _usage()
   print "  --profile-compiler-ast  also print AST arena and node-kind telemetry"
   print "Listings:"
   print "  --asm [--asm-out <path>] [--asm-cols addr,opcodes,code]"
+  print "  --pack [--upx <path>]    Pack output; MINILANG_UPX also selects the tool"
+  print "  --pack-exe INPUT OUTPUT --upx PATH    Pack an existing trusted image"
+  print "  --unpack-exe INPUT OUTPUT --upx PATH  Restore exact original bytes"
   print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
   print "Build internals:"
   print "  --object-pipeline    force the memory-bounded .mlo pipeline"
@@ -8073,6 +8077,14 @@ function run_cli(args)
     return 2
   end if
   args = expanded_project.args
+  pack_options = try(packing.parseOptions(args))
+  if typeof(pack_options) == "error" then print "PackError: " + pack_options.message; return 2 end if
+  args = pack_options.args
+  if pack_options.mode == "pack" or pack_options.mode == "unpack" then
+    packed_result = try(packing.transform(_path_abspath(args[0]), _path_abspath(args[1]), _path_abspath(pack_options.upx), pack_options.mode == "unpack", false, _run_child_process))
+    if typeof(packed_result) == "error" then print "PackError: " + packed_result.message; return 2 end if
+    return 0
+  end if
   project_build = expanded_project.project
   project_digest = ""
   project_cache_enabled = false
@@ -8224,7 +8236,7 @@ function run_cli(args)
   subsystem = ss[1]
 
   if typeof(project_build) == "struct" and project_build.incremental then
-    project_cache_enabled = _asm_listing_enabled == false and _dump_labels_path == "" and self_enabled == false and _has_flag(args, "--link-obj-dir") == false
+    project_cache_enabled = _asm_listing_enabled == false and _dump_labels_path == "" and self_enabled == false and _has_flag(args, "--link-obj-dir") == false and pack_options.mode == ""
     if project_cache_enabled then
       project_digest = project.fingerprint(project_build, inp, include_dirs)
       if typeof(project_digest) == "error" then
@@ -8242,6 +8254,10 @@ function run_cli(args)
   link_obj_dir = _get_flag_value(args, "--link-obj-dir")
   if link_obj_dir != "" then
     link_rc = link_obj_dir_to_exe(link_obj_dir, out_path, subsystem)
+    if link_rc == 0 and pack_options.mode == "compile" then
+      packed_result = try(packing.transform(_path_abspath(out_path), _path_abspath(out_path), _path_abspath(pack_options.upx), false, true, _run_child_process))
+      if typeof(packed_result) == "error" then print "PackError: " + packed_result.message; return 2 end if
+    end if
     _compiler_profile_finish()
     return link_rc
   end if
@@ -8272,6 +8288,10 @@ function run_cli(args)
     end if
   else
     compile_rc = compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
+  end if
+  if compile_rc == 0 and pack_options.mode == "compile" and _object_emit_only == false then
+    packed_result = try(packing.transform(_path_abspath(out_path), _path_abspath(out_path), _path_abspath(pack_options.upx), false, true, _run_child_process))
+    if typeof(packed_result) == "error" then print "PackError: " + packed_result.message + "; unpacked compiler output retained"; return 2 end if
   end if
   if compile_rc == 0 and project_cache_enabled then
     cache_store = project.store(project_build, project_digest, out_path)

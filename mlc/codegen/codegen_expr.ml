@@ -25,6 +25,7 @@ import mlc.tools as t
 import mlc.data as d
 import mlc.minilang_parser as ml
 import mlc.codegen.codegen_scope as scope
+import mlc.codegen.codegen_opt as opt
 import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_threads as th
@@ -2049,6 +2050,11 @@ end function
 /// Lower emit expr member expression behavior to native x64.
 /// @internal
 function _emit_expr_member(state, expr)
+  scalar_offset = opt.scalar_slot(state, expr.target, expr.name)
+  if scalar_offset >= 0 then
+    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", scalar_offset)
+    return state
+  end if
   projected = _opt_project_temporary_struct(state, expr)
   if typeof(projected) != "void" then return cg_emit_expr(state, projected) end if
   mname = _coerce_name(try(expr.name))

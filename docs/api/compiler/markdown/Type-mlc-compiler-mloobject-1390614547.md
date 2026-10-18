@@ -12,7 +12,7 @@ struct MloObject
 Represents mlo object.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L295)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L296)
 
 ## Members
 
@@ -26,7 +26,7 @@ asm_labels
 Asm labels associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L311)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L312)
 
 <a id="field-field-mlc-compiler-mloobject-asm-patches-asm-patches-mlc-compiler-ml-812320354"></a>
 ### asm_patches
@@ -38,7 +38,7 @@ asm_patches
 Asm patches associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L313)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L314)
 
 <a id="field-field-mlc-compiler-mloobject-bss-labels-bss-labels-mlc-compiler-ml-50028366"></a>
 ### bss_labels
@@ -50,7 +50,7 @@ bss_labels
 Bss labels associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L323)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L324)
 
 <a id="field-field-mlc-compiler-mloobject-bss-size-bss-size-mlc-compiler-ml-283592930"></a>
 ### bss_size
@@ -62,7 +62,7 @@ bss_size
 Bss size associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L309)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L310)
 
 <a id="field-field-mlc-compiler-mloobject-data-data-mlc-compiler-ml-501673330"></a>
 ### data
@@ -74,7 +74,7 @@ data
 Backing data owned by `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L307)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L308)
 
 <a id="field-field-mlc-compiler-mloobject-data-labels-data-labels-mlc-compiler-ml-418761810"></a>
 ### data_labels
@@ -86,7 +86,7 @@ data_labels
 Data labels associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L319)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L320)
 
 <a id="field-field-mlc-compiler-mloobject-data-patches-data-patches-mlc-compiler-ml-1456525776"></a>
 ### data_patches
@@ -98,7 +98,7 @@ data_patches
 Data patches associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L321)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L322)
 
 <a id="field-field-mlc-compiler-mloobject-entry-label-entry-label-mlc-compiler-ml-125175894"></a>
 ### entry_label
@@ -110,7 +110,7 @@ entry_label
 Entry label associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L301)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L302)
 
 <a id="field-field-mlc-compiler-mloobject-imports-imports-mlc-compiler-ml-1150039506"></a>
 ### imports
@@ -122,7 +122,7 @@ imports
 Imports associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L325)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L326)
 
 <a id="field-field-mlc-compiler-mloobject-kind-kind-mlc-compiler-ml-1753062054"></a>
 ### kind
@@ -134,7 +134,7 @@ kind
 Kind associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L297)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L298)
 
 <a id="field-field-mlc-compiler-mloobject-module-file-module-file-mlc-compiler-ml-1593849750"></a>
 ### module_file
@@ -146,7 +146,7 @@ module_file
 Module file associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L299)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L300)
 
 <a id="field-field-mlc-compiler-mloobject-rdata-rdata-mlc-compiler-ml-394599938"></a>
 ### rdata
@@ -158,7 +158,7 @@ rdata
 Rdata associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L305)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L306)
 
 <a id="field-field-mlc-compiler-mloobject-rdata-labels-rdata-labels-mlc-compiler-ml-1357979554"></a>
 ### rdata_labels
@@ -170,7 +170,7 @@ rdata_labels
 Rdata labels associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L315)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L316)
 
 <a id="field-field-mlc-compiler-mloobject-rdata-patches-rdata-patches-mlc-compiler-ml-1801735462"></a>
 ### rdata_patches
@@ -182,7 +182,7 @@ rdata_patches
 Rdata patches associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L317)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L318)
 
 <a id="field-field-mlc-compiler-mloobject-text-text-mlc-compiler-ml-1701663420"></a>
 ### text
@@ -194,4 +194,4 @@ text
 Text associated with `MloObject`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L303)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L304)

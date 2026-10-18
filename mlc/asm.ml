@@ -90,6 +90,8 @@ struct AsmBuilder
   active_chunk_index,
   /// Conditional relocation immediately before an unlabelled near JMP.
   peephole_prev_jump_patch,
+  /// Last forward branch in the current unlabelled straight-line span.
+  forward_branch,
 end struct
 
 /// Encoded general-purpose-register number, width and REX requirement.
@@ -154,7 +156,7 @@ end function
 function newAsmBuilder()
   cs = 65536
   first_chunk = bytes(cs, 0)
-  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [first_chunk], cs, false, [], [], t.fastmap_new(256), [], [], true, t.fastmap_new(256), first_chunk, 0, 0)
+  asm = AsmBuilder(bytes(0), 0, [], [], [], [], [], [], [], [], [], [], [first_chunk], cs, false, [], [], t.fastmap_new(256), [], [], true, t.fastmap_new(256), first_chunk, 0, 0, [])
   return asm
 end function
 
@@ -225,6 +227,7 @@ end function
 /// Encode or manage materialize and fold local patches in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function materialize_and_fold_local_patches(asm)
+  asm.forward_branch = []
   asm = _materialize_buffer(asm)
   out_b = t.arr_chunk_new(64)
   r = _fold_materialized_patch_set(asm, asm.deferred_patches_chunks, asm.deferred_patches_tail, out_b)
@@ -278,6 +281,7 @@ end function
 /// Encode or manage resolve defined patches in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function resolve_defined_patches(asm)
+  asm.forward_branch = []
   // Resolve only patches emitted since the previous phase. Forward targets
   // move to a deferred generation instead of being scanned again after every
   // 128 functions. This keeps large-program code generation linear.
@@ -294,6 +298,7 @@ end function
 /// Encode or manage resolve all defined patches in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 function resolve_all_defined_patches(asm)
+  asm.forward_branch = []
   // Once helper labels have been emitted, revisit deferred forward references
   // exactly once. Only PE-section/data/IAT relocations remain pending.
   r = _resolve_patch_set(asm, asm.deferred_patches_chunks, asm.deferred_patches_tail, [], [])
@@ -545,22 +550,17 @@ end function
 /// @internal
 function _last_patch(asm)
   tn = t.arr_chunk_tail_len(asm.patches_tail)
-  if tn <= 0 then return 0 end if
-  return t.arr_chunk_tail_get(asm.patches_tail, tn - 1, 0)
+  if tn > 0 then return t.arr_chunk_tail_get(asm.patches_tail, tn - 1, 0) end if
+  count = t.arr_chunked_count(asm.patches_chunks, asm.patches_tail, 256)
+  return t.arr_chunked_get(asm.patches_chunks, asm.patches_tail, count - 1, 256, 0)
 end function
 
 /// Encode or manage drop last patch in the native x64 assembler.
 /// @internal
 function _drop_last_patch(asm)
-  tn = t.arr_chunk_tail_len(asm.patches_tail)
-  if tn <= 0 then return asm end if
-  if typeof(asm.patches_tail) == "array" then
-    asm.patches_tail = t.arr_drop_last(asm.patches_tail)
-    return asm
-  end if
-  if typeof(asm.patches_tail) == "struct" then
-    asm.patches_tail.used = tn - 1
-  end if
+  parts = t.arr_chunked_pop(asm.patches_chunks, asm.patches_tail, 256)
+  asm.patches_chunks = parts[0]
+  asm.patches_tail = parts[1]
   return asm
 end function
 
@@ -771,6 +771,18 @@ function _emit(asm, b)
   end while
   asm.size = need
   asm.buf_valid = false
+  return asm
+end function
+
+/// Align a counted-loop header without allowing an earlier forward branch to
+/// move it afterwards. Include the canonical stream base of an MLO fragment;
+/// its local byte offset alone need not be aligned. Padding is entry-only.
+/// @param asm Assembler whose next instruction begins a counted loop.
+/// @param stream_base Canonical byte origin of this fragment in the final code stream.
+function align_loop(asm, stream_base)
+  asm.forward_branch = []
+  padding = (16 - ((pos(asm) + stream_base) % 16)) % 16
+  if padding > 0 then asm = _emit(asm, bytes(padding, 144)) end if
   return asm
 end function
 
@@ -1144,9 +1156,74 @@ function _gc_tmp_context_offset(label)
   return -1
 end function
 
-/// Encode or manage mark in the native x64 assembler.
-/// @param asm Value supplied for `asm`.
-/// @param name Name of the requested item.
+/// Shorten the last unresolved local forward branch, moving at most 127 bytes.
+/// Rebase labels and unresolved call/RIP fixups; encoded back-edges are barriers.
+/// @param asm Assembler with at most one eligible unresolved forward branch.
+/// @param name Label being defined at the current stream boundary.
+function _relax_forward_branch(asm, name)
+  candidate = asm.forward_branch
+  if typeof(candidate) != "array" or len(candidate) != 4 then return asm end if
+  start = candidate[0]
+  patch = candidate[1]
+  opcode = candidate[2]
+  width = candidate[3]
+  distance = asm.size - (start + width)
+  if distance < 0 or distance > 127 then asm.forward_branch = []; return asm end if
+  if patch.target != name then return asm end if
+  asm.forward_branch = []
+  // Verify that peephole removal has not consumed the remembered relocation.
+  count = t.arr_chunked_count(asm.patches_chunks, asm.patches_tail, 256)
+  found = -1
+  index = count - 1
+  while index >= 0
+    p = t.arr_chunked_get(asm.patches_chunks, asm.patches_tail, index, 256, 0)
+    if p.pos == patch.pos then found = index; break end if
+    if p.pos < patch.pos then break end if
+    index = index - 1
+  end while
+  if found < 0 then return asm end if
+  cut = width - 2
+  if distance == 0 then
+    cut = width
+  else
+    asm = _set_chunk_byte(asm, start, opcode)
+    asm = _set_chunk_byte(asm, start + 1, distance)
+  end if
+  source = start + width
+  while source < asm.size
+    asm = _set_chunk_byte(asm, source - cut, _byte_at(asm, source))
+    source = source + 1
+  end while
+  // The removable branch need not be the last relocation: retain and rebase
+  // intervening calls/RIP loads. Labels inside the span are rebased below.
+  trailing = []
+  while count - 1 > found
+    p = _last_patch(asm)
+    p.pos = p.pos - cut
+    trailing = trailing + [p]
+    asm = _drop_last_patch(asm)
+    count = count - 1
+  end while
+  asm = _drop_last_patch(asm)
+  index = len(trailing) - 1
+  while index >= 0
+    asm = _patch_push(asm, trailing[index])
+    index = index - 1
+  end while
+  index = t.arr_chunked_count(asm.labels_chunks, asm.labels_tail, 256) - 1
+  while index >= 0
+    label = t.arr_chunked_get(asm.labels_chunks, asm.labels_tail, index, 256, 0)
+    if label.pos < start + width then break end if
+    label.pos = label.pos - cut
+    asm.label_pos_map = t.fastmap_set(asm.label_pos_map, label.name, label.pos)
+    index = index - 1
+  end while
+  return _peephole_trim_tail(asm, cut)
+end function
+
+/// Mark a control-flow boundary after bounded local branch relaxation.
+/// @param asm Assembler whose current position defines the label.
+/// @param name Control-flow label to publish after any permitted relaxation.
 function mark(asm, name)
   here = pos(asm)
   // Never fold stack operations across a control-flow boundary.
@@ -1182,6 +1259,7 @@ function mark(asm, name)
   end if
   asm.peephole_last_jump = []
   asm.peephole_prev_jump_patch = 0
+  asm = _relax_forward_branch(asm, name)
   asm.labels = []
   asm = _label_push(asm, AsmLabel(name, pos(asm)))
   if typeof(asm.label_pos_map) != "struct" then asm.label_pos_map = t.fastmap_new(256) end if
@@ -1239,6 +1317,7 @@ end function
 /// @param asm Value supplied for `asm`.
 /// @param label Value supplied for `label`.
 function jmp(asm, label)
+  asm.forward_branch = []
   target = -1
   if typeof(asm.label_pos_map) == "struct" then
     target = t.fastmap_get(asm.label_pos_map, label, -1)
@@ -1270,7 +1349,9 @@ function jmp(asm, label)
   asm = _emit8(asm, 0xE9)
   p = pos(asm)
   asm = _emit32(asm, 0)
-  asm = _patch_push(asm, AsmPatch(p, label, "rel32"))
+  patch = AsmPatch(p, label, "rel32")
+  asm = _patch_push(asm, patch)
+  if target < 0 then asm.forward_branch = [start, patch, 0xEB, 5] end if
   asm.peephole_last_jump = [start, pos(asm), label, p]
   return asm
 end function
@@ -1292,6 +1373,7 @@ end function
 /// @param cc Value supplied for `cc`.
 /// @param label Value supplied for `label`.
 function jcc(asm, cc, label)
+  asm.forward_branch = []
   op = -1
   if cc == "e" or cc == "z" then op = 0x84 end if
   if cc == "ne" or cc == "nz" then op = 0x85 end if
@@ -1330,7 +1412,9 @@ function jcc(asm, cc, label)
   start = pos(asm) - 2
   p = pos(asm)
   asm = _emit32(asm, 0)
-  asm = _patch_push(asm, AsmPatch(p, label, "rel32"))
+  patch = AsmPatch(p, label, "rel32")
+  asm = _patch_push(asm, patch)
+  if target < 0 then asm.forward_branch = [start, patch, 0x70 | (op & 15), 6] end if
   asm.peephole_last_jump = [start, pos(asm), label, p]
   return asm
 end function

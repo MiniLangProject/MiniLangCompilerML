@@ -12,7 +12,7 @@ struct ParsedModule
 Represents parsed module.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L149)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L150)
 
 ## Members
 
@@ -26,7 +26,7 @@ path
 Path associated with `ParsedModule`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L151)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L152)
 
 <a id="field-field-mlc-compiler-parsedmodule-program-program-mlc-compiler-ml-1777790930"></a>
 ### program
@@ -38,7 +38,7 @@ program
 Program associated with `ParsedModule`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L155)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L156)
 
 <a id="field-field-mlc-compiler-parsedmodule-source-source-mlc-compiler-ml-1537846820"></a>
 ### source
@@ -50,4 +50,4 @@ source
 Source associated with `ParsedModule`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L153)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L154)

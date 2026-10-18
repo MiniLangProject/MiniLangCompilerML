@@ -9,6 +9,7 @@ File-mlc-codegen-codegen-core-ml-528695596.md
 File-mlc-codegen-codegen-expr-ml-59843844.md
 File-mlc-codegen-codegen-memory-ml-2136639668.md
 File-mlc-codegen-codegen-ml-1154886880.md
+File-mlc-codegen-codegen-opt-ml-1574478370.md
 File-mlc-codegen-codegen-runtime-ml-1845689217.md
 File-mlc-codegen-codegen-scope-ml-1124416197.md
 File-mlc-codegen-codegen-stmt-ml-1158291323.md
@@ -24,6 +25,7 @@ File-mlc-frontend-ml-1929241497.md
 File-mlc-init-ml-1795718751.md
 File-mlc-linux-runtime-ml-1485387394.md
 File-mlc-minilang-parser-ml-1485036712.md
+File-mlc-packing-ml-1689146092.md
 File-mlc-pe-ml-319201864.md
 File-mlc-project-ml-1332928426.md
 File-mlc-tools-ml-988451276.md
@@ -40,6 +42,7 @@ Package-mlc-codegen-codegen-concurrent-gc-197838730.md
 Package-mlc-codegen-codegen-core-1455908485.md
 Package-mlc-codegen-codegen-expr-1165427189.md
 Package-mlc-codegen-codegen-memory-379518877.md
+Package-mlc-codegen-codegen-opt-461512947.md
 Package-mlc-codegen-codegen-runtime-776404906.md
 Package-mlc-codegen-codegen-scope-545400582.md
 Package-mlc-codegen-codegen-stmt-1832335268.md
@@ -55,6 +58,7 @@ Package-mlc-frontend-839095705.md
 Package-mlc-init-2041447551.md
 Package-mlc-linux-runtime-1318353858.md
 Package-mlc-minilang-parser-1725130264.md
+Package-mlc-packing-810428052.md
 Package-mlc-pe-1521258410.md
 Package-mlc-project-1794969042.md
 Package-mlc-tools-1049496424.md
@@ -76,6 +80,7 @@ Type-mlc-codegen-codegen-core-namedint-1998004339.md
 Type-mlc-codegen-codegen-expr-argnormalizeresult-1648891655.md
 Type-mlc-codegen-codegen-expr-constevalresult-1651772175.md
 Type-mlc-codegen-codegen-expr-inlinestats-1176616483.md
+Type-mlc-codegen-codegen-opt-access-1882272245.md
 Type-mlc-codegen-codegen-scope-callablebinding-1922308849.md
 Type-mlc-codegen-codegen-scope-varbinding-2015539438.md
 Type-mlc-codegen-codegen-stmt-defercollectresult-1309598497.md
@@ -181,6 +186,7 @@ Type-mlc-minilang-parser-var-95406095.md
 Type-mlc-minilang-parser-voidlit-556229069.md
 Type-mlc-minilang-parser-while-1382365767.md
 Type-mlc-minilang-parser-yield-794322735.md
+Type-mlc-packing-options-1916277472.md
 Type-mlc-pe-iatsymbol-1842609754.md
 Type-mlc-pe-idataresult-1462108830.md
 Type-mlc-pe-importdll-591723743.md

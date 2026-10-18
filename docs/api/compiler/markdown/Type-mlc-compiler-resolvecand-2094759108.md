@@ -12,7 +12,7 @@ struct ResolveCand
 Represents resolve cand.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L167)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L168)
 
 ## Members
 
@@ -26,7 +26,7 @@ kind
 Kind associated with `ResolveCand`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L171)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L172)
 
 <a id="field-field-mlc-compiler-resolvecand-path-path-mlc-compiler-ml-1716243715"></a>
 ### path
@@ -38,7 +38,7 @@ path
 Path associated with `ResolveCand`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L169)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L170)
 
 <a id="field-field-mlc-compiler-resolvecand-root-root-mlc-compiler-ml-1654373393"></a>
 ### root
@@ -50,4 +50,4 @@ root
 Root associated with `ResolveCand`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L173)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L174)

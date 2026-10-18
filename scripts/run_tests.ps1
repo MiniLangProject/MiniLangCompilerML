@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.2.20"
+  $expected = "MiniLang Compiler 1.2.21"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -245,9 +245,11 @@ function Test-LinuxRuntimeBlobLayout {
     $start = $constant["RUNTIME_LEGACY_THREAD_START"]
     $end = $constant["RUNTIME_LEGACY_THREAD_END"]
     $finalBytes = $start + $pthreadBytes + ($rawBytes - $end)
-    # WaitForSingleObject now saves/restores RDI and RSI across pthread_join.
-    $passed = ($rawBytes -eq 1846 -and $pthreadBytes -eq 1080 -and
-               $start -eq 563 -and $end -eq 1427 -and $finalBytes -eq 2062)
+    # Canonical forward-branch relaxation shortens both the syscall prefix and
+    # pthread shim. The separate Python blob gate verifies every byte/label;
+    # this dependency-free native gate pins the refreshed layout and imports.
+    $passed = ($rawBytes -eq 1805 -and $pthreadBytes -eq 1074 -and
+               $start -eq 526 -and $end -eq 1390 -and $finalBytes -eq 2015)
     # The blob emitter consumes labels in source order; a correct inventory
     # with unsorted offsets would duplicate slices and silently change code.
     $previousOffset = -1
@@ -415,6 +417,8 @@ try {
     }
 
     $linuxCases = @(
+      [pscustomobject]@{ Name = "Linux optimizer safety"; Source = "optimizer_safety.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux packing format"; Source = "packing_format.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
       [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux double out FFI"; Source = "linux_ffi_out_double.ml"; RunArgs = @() },
@@ -602,6 +606,8 @@ try {
   # constant pooling and module initialization cannot drift from normal builds.
   $parityCompilerArgs = @($effectiveCompilerArgs | Where-Object { $_ -ne "--object-pipeline" })
   $objectParityCases = @(
+    [pscustomobject]@{ Name = "optimizer safety"; Source = Join-Path $Root "tests\optimizer_safety.ml"; Includes = @($Root); Args = @() },
+    [pscustomobject]@{ Name = "Linux optimizer safety"; Source = Join-Path $Root "tests\optimizer_safety.ml"; Includes = @($Root); Args = @("--target", "linux-x64") },
     [pscustomobject]@{
       Name = "variadic escape lifetime"
       Source = Join-Path $Root "tests\variadic_escape_lifetime.ml"

@@ -12,7 +12,7 @@ struct ArgNormalizeResult
 Represents arg normalize result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L61)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L62)
 
 ## Members
 
@@ -26,7 +26,7 @@ args
 Args associated with `ArgNormalizeResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L65)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L66)
 
 <a id="field-field-mlc-codegen-codegen-expr-argnormalizeresult-message-message-mlc-codegen-codegen-expr-ml-1669555380"></a>
 ### message
@@ -38,7 +38,7 @@ message
 Diagnostic message carried by `ArgNormalizeResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L67)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L68)
 
 <a id="field-field-mlc-codegen-codegen-expr-argnormalizeresult-ok-ok-mlc-codegen-codegen-expr-ml-1181158996"></a>
 ### ok
@@ -50,4 +50,4 @@ ok
 Whether `ArgNormalizeResult` represents a successful result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L63)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L64)

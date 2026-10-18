@@ -460,6 +460,18 @@ Dbg line starts associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L174)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-dead-functions-dead-functions-mlc-codegen-codegen-core-ml-1685603823"></a>
+### dead_functions
+
+```ml
+dead_functions
+```
+
+Immutable whole-program proof of source-unreferenced function names.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L282)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-decl-site-bindings-decl-site-bindings-mlc-codegen-codegen-core-ml-483045621"></a>
 ### decl_site_bindings
 
@@ -1131,6 +1143,18 @@ Reserved identifiers associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L82)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-scalar-structs-scalar-structs-mlc-codegen-codegen-core-ml-933891025"></a>
+### scalar_structs
+
+```ml
+scalar_structs
+```
+
+Proven nonescaping local structs represented by rooted field slots.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L280)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-scope-declared-scope-declared-mlc-codegen-codegen-core-ml-1007634773"></a>
 ### scope_declared

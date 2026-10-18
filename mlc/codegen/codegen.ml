@@ -413,6 +413,7 @@ function _clone_state_for_object(base, seed_runtime)
   st.loop_index_fast_stack = []
   st.inline_only_functions = _copy_array(base.inline_only_functions)
   st.pruned_inline_functions = _copy_array(base.pruned_inline_functions)
+  st.dead_functions = base.dead_functions
   st.ext_widebuf_labels = base.ext_widebuf_labels
   st.decl_site_bindings = []
   st.function_local_ids = []

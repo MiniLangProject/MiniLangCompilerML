@@ -184,15 +184,61 @@ function checkAssemblerMaterializedReuse()
   patched = a.ret(patched)
   patched = a.materialize(patched)
   patched_raw = a.finalize(patched)
-  if typeof(patched_raw) != "bytes" or len(patched_raw) != 7 then
+  if typeof(patched_raw) != "bytes" or len(patched_raw) != 4 then
     print "FAIL: assembler patch after materialization length"
     return 1
   end if
-  if patched_raw[0] != 0xE9 or patched_raw[1] != 1 or patched_raw[2] != 0 or patched_raw[3] != 0 or patched_raw[4] != 0 or patched_raw[5] != 0x90 or patched_raw[6] != 0xC3 then
+  if patched_raw[0] != 0xEB or patched_raw[1] != 1 or patched_raw[2] != 0x90 or patched_raw[3] != 0xC3 then
     print "FAIL: assembler patch after materialization bytes"
     return 1
   end if
   return 0
+end function
+
+/// Exercise rel8 limits, intervening labels/calls, byte chunks and relocation
+/// chunks (including second-level pages). A call's opcode must never be patched.
+function checkForwardRelaxation()
+  failures = 0
+  for each size in [0, 1, 126, 127, 128]
+    b = a.jcc(a.newAsmBuilder(), "ne", "done")
+    if size > 0 then for i = 1 to size b = a.nop(b) end for end if
+    b = a.mark(b, "done")
+    raw = a.finalize(b)
+    expected = size + 2
+    if size == 0 then expected = 0 end if
+    if size == 128 then expected = size + 6 end if
+    if len(raw) != expected then print "FAIL: forward branch limit " + size; failures = failures + 1 end if
+    if size > 0 and size <= 127 then
+      if raw[0] != 0x75 or raw[1] != size then print "FAIL: forward rel8 bytes"; failures = failures + 1 end if
+    end if
+  end for
+  for each count in [0, 254, 255, 256, 16383, 65535]
+    b = a.mark(a.newAsmBuilder(), "before")
+    if count > 0 then for i = 1 to count b = a.call(b, "before") end for end if
+    start = a.pos(b)
+    b = a.jcc(b, "e", "done")
+    b = a.mark(b, "middle")
+    b = a.call(b, "before")
+    b = a.lea_rax_rip(b, "done")
+    b = a.mark(b, "done")
+    raw = a.finalize(b)
+    if raw[start] != 0x74 or raw[start + 1] != 12 or raw[start + 2] != 0xE8 then
+      print "FAIL: forward relocation chunk " + count
+      failures = failures + 1
+    end if
+    if a._label_pos(a.get_labels(b), "middle") != start + 2 then print "FAIL: forward label rebase"; failures = failures + 1 end if
+    disp = (raw[start + 3] | (raw[start + 4] << 8) | (raw[start + 5] << 16) | (raw[start + 6] << 24)) & 0xFFFFFFFF
+    if disp != ((0 - start - 7) & 0xFFFFFFFF) then print "FAIL: forward call rebase"; failures = failures + 1 end if
+    if len(a.get_patches(b)) != count + 2 then print "FAIL: forward relocation count"; failures = failures + 1 end if
+  end for
+  b = a.newAsmBuilder()
+  for i = 1 to 65533 b = a.nop(b) end for
+  b = a.jmp(b, "end")
+  b = a.nop(b)
+  b = a.mark(b, "end")
+  raw = a.finalize(b)
+  if hex(slice(raw, 65533, 3)) != "eb0190" then print "FAIL: forward byte chunk"; failures = failures + 1 end if
+  return failures
 end function
 
 function checkCallAndHelperTracking()
@@ -326,7 +372,7 @@ function checkCompactBranches()
     b = a.nop(b)
     b = a.mark(b, "no")
     code = a.finalize(b)
-    if code[1] != 0x84 or len(a.get_patches(b)) != 2 then
+    if code[1] != 0x84 or len(a.get_patches(b)) != 1 then
       print "FAIL: compact branch crossed " + barrier
       failures = failures + 1
     end if
@@ -480,8 +526,8 @@ function main(args)
   b = a.jmp(b, "later")
   b = a.nop(b)
   b = a.mark(b, "later")
-  if len(a.get_patches(b)) != 1 then
-    print "FAIL: forward jmp patch was not recorded"
+  if len(a.get_patches(b)) != 0 then
+    print "FAIL: relaxed forward jmp retained a relocation"
     failures = failures + 1
   end if
   b = a.resolve_defined_patches(b)
@@ -489,7 +535,7 @@ function main(args)
     print "FAIL: defined .text patch was not released"
     failures = failures + 1
   end if
-  failures = failures + checkOpcode("forward jmp remains rel32", b, "e90100000090")
+  failures = failures + checkOpcode("short forward jmp", b, "eb0190")
 
   b = a.newAsmBuilder()
   b = a.jmp(b, "deferred_later")
@@ -526,6 +572,22 @@ function main(args)
   failures = failures + checkAssemblerChunkBoundary()
   failures = failures + checkAssemblerMaterializedReuse()
   failures = failures + checkCallAndHelperTracking()
+  failures = failures + checkForwardRelaxation()
+  for prefix = 0 to 31
+    b = a.newAsmBuilder()
+    b = a.emit(b, bytes(prefix, 144))
+    b = a.jcc(b, "e", "after")
+    b = a.align_loop(b, 12)
+    b = a.mark(b, "loop")
+    loop_position = a.pos(b)
+    if (12 + loop_position) % 16 != 0 then failures = failures + 1 end if
+    b = a.nop(b)
+    b = a.jmp(b, "loop")
+    b = a.mark(b, "after")
+    b = a.resolve_all_defined_patches(b)
+    code = a.finalize(b)
+    if slice(code, loop_position, 3) != fromHex("90ebfd") then failures = failures + 1 end if
+  end for
 
   if failures != 0 then return 6 end if
 

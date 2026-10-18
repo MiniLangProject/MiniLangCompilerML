@@ -25,6 +25,7 @@ import mlc.tools as t
 import mlc.data as d
 import mlc.minilang_parser as ml
 import mlc.codegen.codegen_scope as scope
+import mlc.codegen.codegen_opt as opt
 import mlc.codegen.codegen_expr as exprmod
 import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
@@ -1797,6 +1798,17 @@ function _emit_storage_stmt(state, stmt, k)
     end if
     nm_a = _coerce_name(stmt.name)
     if nm_a == "" then return state end if
+    for each scalar_plan in state.scalar_structs
+      if stmt == scalar_plan[0] then
+        state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+        state = scope.emit_store_var_scoped(state, nm_a, stmt)
+        for arg_i = 0 to len(stmt.expr.args) - 1
+          state = exprmod.cg_emit_expr(state, stmt.expr.args[arg_i])
+          state.asm = a.mov_rsp_disp32_rax(state.asm, scalar_plan[3][arg_i])
+        end for
+        return state
+      end if
+    end for
     qn_a = nm_a
     if state.in_function == false and s.contains(qn_a, ".") == false then
       qn_a = _join_qname(state.current_qname_prefix, qn_a)
@@ -1833,6 +1845,12 @@ function _emit_storage_stmt(state, stmt, k)
 
   if k == "SetMember" then
     obj_expr = try(stmt.obj)
+    scalar_offset = opt.scalar_slot(state, obj_expr, stmt.field)
+    if scalar_offset >= 0 then
+      state = exprmod.cg_emit_expr(state, stmt.expr)
+      state.asm = a.mov_rsp_disp32_rax(state.asm, scalar_offset)
+      return state
+    end if
     target_expr_sm = try(stmt.target)
     if t.ast_is_node(obj_expr) == false and t.ast_is_node(target_expr_sm) then
       obj_expr = target_expr_sm
@@ -2513,6 +2531,9 @@ function _emit_for_stmt(state, stmt)
       state.asm = a.mark(state.asm, l_step_done_f)
     end if
 
+    // Stabilize the measured ELF hot-loop layout. PE keeps its existing policy:
+    // the same padding regressed that layout. Backedges skip entry-only padding.
+    if state.is_linux_target then state.asm = a.align_loop(state.asm, _heap_cfg_get_int(state, "cg_object_text_base", 0)) end if
     state.asm = a.mark(state.asm, l_top_f)
     saved_loop_fast_stack = state.loop_index_fast_stack
     state.loop_index_fast_stack = saved_loop_fast_stack + [[try(loop_index_binding.id), hoist_targets]]
@@ -4030,8 +4051,73 @@ function _promotion_scan_stmts(hot_names, stmts, loop_depth)
   return hot_names
 end function
 
-/// Mirror at most two unique, proven immediate-only locals in Win64 nonvolatile XMM registers. Pointer-like, boxed, captured and ambiguous bindings stay on the canonical stack path so no GC root can disappear into a register.
+/// Plan rooted field slots for unconditional local constructors whose objects
+/// cannot escape. Typed fields, aliases and unsupported syntax retain allocation.
 /// @internal
+function _scalar_candidates(state, fn_node)
+  body = fn_node.body
+  possible = false
+  for each st in body
+    if t.ast_kind(st) == "Assign" and t.ast_kind(st.expr) == "Call" then possible = true end if
+  end for
+  if possible == false then return [] end if
+  records = opt.accesses(body)
+  if typeof(records) != "array" then return [] end if
+  plans = []
+  binding_count = scope.frame_count(state.function_locals)
+  if len(body) == 0 then return plans end if
+  for index = 0 to len(body) - 1
+    st = body[index]
+    if t.ast_kind(st) != "Assign" then continue end if
+    ty = try(st.declared_type)
+    if typeof(ty) == "string" and ty != "" then continue end if
+    call = st.expr
+    if t.ast_kind(call) != "Call" then continue end if
+    if t.ast_kind(call.callee) != "Var" then continue end if
+    raw = t.ast_name(call.callee)
+    local = void
+    count = 0
+    shadowed = false
+    if binding_count > 0 then
+      for bi = 0 to binding_count - 1
+        binding = scope.frame_get(state.function_locals, bi)
+        if binding.name == st.name then local = binding; count = count + 1 end if
+        if binding.name == raw then shadowed = true end if
+      end for
+    end if
+    for each param in fn_node.params if param == raw then shadowed = true end if end for
+    if count != 1 or shadowed then continue end if
+    if local.boxed or local.kind != "local" then continue end if
+    qname = exprmod._qualify_identifier(state, raw)
+    fields = exprmod._state_struct_fields_get(state, qname)
+    if typeof(fields) != "array" or qname == "error" then continue end if
+    if len(fields) < 1 or len(fields) > 8 or len(call.args) != len(fields) then continue end if
+    named = false
+    names = try(call.arg_names)
+    if typeof(names) == "array" then
+      for each arg_name in names if typeof(arg_name) == "string" and arg_name != "" then named = true end if end for
+    end if
+    contracts = exprmod._state_struct_field_types_get(state, qname)
+    if typeof(contracts) == "array" then
+      for each contract in contracts
+        if typeof(contract) == "array" and len(contract) > 0 then
+          if typeof(contract[0]) == "string" and contract[0] != "" then named = true end if
+        end if
+      end for
+    end if
+    if named then continue end if
+    if opt.scalar_uses(records, st, index, fields) then plans = plans + [[st, local, fields, []]] end if
+  end for
+  return plans
+end function
+
+/// Allocate up to six preserved primitive mirrors, reusing nonoverlapping
+/// whole-statement lifetimes. Unsupported syntax keeps the original two homes.
+/// @param state Code-generation state whose register mapping is updated.
+/// @param fn_node Function AST providing statement-level lifetimes.
+/// @param known_types Proven primitive types for local variables.
+/// @param shared_hot_names Optional precomputed loop-use counts.
+/// @param analysis_scratch Reusable bounded function-analysis storage.
 function _select_promoted_local_registers(state, fn_node, known_types, shared_hot_names, analysis_scratch)
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
   hot_names = shared_hot_names
@@ -4053,10 +4139,13 @@ function _select_promoted_local_registers(state, fn_node, known_types, shared_ho
   end if
   assigned = []
   registers = ["xmm6", "xmm7"]
+  lifetimes = void
+  if binding_count > 2 then lifetimes = opt.intervals(fn_node.body) end if
+  if typeof(lifetimes) == "struct" then registers = ["xmm6", "xmm7", "xmm8", "xmm9", "xmm10", "xmm11"] end if
+  occupants = [[], [], [], [], [], []]
   if binding_count > 0 then
     for binding_index2 = 0 to binding_count - 1
       binding = scope.frame_get(bindings, binding_index2)
-      if len(assigned) >= len(registers) then break end if
       if typeof(binding) != "struct" then continue end if
       nm = _coerce_name(try(binding.name))
       fact = _typeflow_base(_typeflow_get(known_types, nm))
@@ -4065,9 +4154,26 @@ function _select_promoted_local_registers(state, fn_node, known_types, shared_ho
       if nm == "" or t.fastmap_has(hot_names, nm) == false or t.fastmap_get(counts, nm, 0) != 1 then continue end if
       if fact != "int" and fact != "bool" then continue end if
       if (typeof(try(binding.boxed)) == "bool" and binding.boxed) or captured then continue end if
-      reg = registers[len(assigned)]
+      interval = [0, len(fn_node.body), 0, 1, false]
+      if typeof(lifetimes) == "struct" then interval = t.fastmap_get(lifetimes, nm, interval) end if
+      reg = ""
+      for ri = 0 to len(registers) - 1
+        writes = interval[3]
+        if writes < 1 then writes = 1 end if
+        if (ri >= 2 or len(occupants[ri]) > 0) and (interval[4] or interval[2] < 3 * writes) then continue end if
+        available = true
+        for each other in occupants[ri]
+          if interval[1] >= other[0] and interval[0] <= other[1] then available = false end if
+        end for
+        if available then
+          reg = registers[ri]
+          occupants[ri] = occupants[ri] + [interval]
+          break
+        end if
+      end for
+      if reg == "" then continue end if
       binding.promoted_xmm = reg
-      assigned = assigned + [reg]
+      if _arr_has(assigned, reg) == false then assigned = assigned + [reg] end if
     end for
   end if
   scratch[2] = hot_names
@@ -8869,6 +8975,7 @@ function _emit_static_global_slot_initializers_from_globals(state)
     gname = _coerce_name(gb.name)
     glabel = _coerce_name(gb.label)
     if gname == "" or glabel == "" then continue end if
+    if t.fastmap_has(state.dead_functions, gname) then continue end if
     obj_lbl = _static_obj_label_for_global_name(state, gname)
     if obj_lbl == "" then continue end if
     blbl = _builtin_code_label_for_name(state, gname)
@@ -8901,7 +9008,9 @@ function _emit_static_callable_objects(state)
       off = d.rdata_used(state.rdata)
       state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_FUNCTION) + t.u32(arity) + bytes(8, 0))
       if off >= 0 then
-        state.rdata = d.rdata_add_abs64_patch(state.rdata, off + 8, "fn_user_" + fn_qn)
+        if t.fastmap_has(state.dead_functions, fn_qn) == false then
+          state.rdata = d.rdata_add_abs64_patch(state.rdata, off + 8, "fn_user_" + fn_qn)
+        end if
         state.function_static_obj_labels = _strpair_set(state.function_static_obj_labels, fn_qn, obj_lbl)
       end if
     end for
@@ -9243,6 +9352,7 @@ function prepare_program_for_objects(state, program)
   state = _mem_probe(state, "decls_done")
 
   state.file_prefix_map = decl_file_prefixes
+  state.dead_functions = opt.unused_functions(state)
   state.nested_user_functions = []
   state = _closure_analyze_program(state, program)
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
@@ -9940,6 +10050,13 @@ function emit_user_function(state, fn_node, analysis_scratch)
   qn = _coerce_name(fn_node.name)
   code_name = _fn_codegen_name(state, fn_node)
   if code_name == "" then return state end if
+  // Still lower unused bodies for semantic diagnostics and deterministic
+  // metadata/inline budgets; only their instruction fragment is discarded.
+  retained_asm = void
+  if t.fastmap_has(state.dead_functions, qn) then
+    retained_asm = state.asm
+    state.asm = a.newCodegenAsmBuilder()
+  end if
 
   if _heap_cfg_get_bool(state, "cg_mem_probe", false) then
     print "[mem][cg] emit_user_function_start name=" + code_name
@@ -9980,6 +10097,8 @@ function emit_user_function(state, fn_node, analysis_scratch)
   state.current_qname_prefix = _qname_parent_prefix(qn)
   state.current_file_prefix = _strpair_get(state.file_prefix_map, _st_file(fn_node))
   known_value_types_for_fn = _infer_known_value_types(state, fn_node, flow_inputs_for_fn, analysis_scratch)
+  old_scalar_structs = state.scalar_structs
+  state.scalar_structs = _scalar_candidates(state, fn_node)
   state.current_qname_prefix = valueflow_saved_qpref
   state.current_file_prefix = valueflow_saved_fpref
   promoted_result = _select_promoted_local_registers(state, fn_node, known_value_types_for_fn, flow_inputs_for_fn[9], analysis_scratch)
@@ -10000,7 +10119,7 @@ function emit_user_function(state, fn_node, analysis_scratch)
   if out_stack_bytes > out_overlap then out_overlap = out_stack_bytes end if
   dbg_save_size = 24
   dbg_save_base = 0x20 + out_overlap
-  // XMM6-XMM7 are nonvolatile under the Win64 ABI. Save their full incoming
+  // XMM6-XMM11 are nonvolatile under the internal Win64-style ABI. Save their full incoming
   // values outside the GC root interval and restore them in the shared epilogue.
   promoted_save_base = dbg_save_base + dbg_save_size
   promoted_save_size = len(promoted_local_regs) * 16
@@ -10009,6 +10128,14 @@ function emit_user_function(state, fn_node, analysis_scratch)
   env_root_off = local_base
   locals_base = local_base + 8
   local_bytes = n_locals * 8
+  scalar_cursor = locals_base + local_bytes
+  for each plan in state.scalar_structs
+    offsets = []
+    for fi = 0 to len(plan[2]) - 1 offsets = offsets + [scalar_cursor + fi * 8] end for
+    plan[3] = offsets
+    scalar_cursor = scalar_cursor + len(plan[2]) * 8
+  end for
+  local_bytes = scalar_cursor - locals_base
   params_base = locals_base + local_bytes
   call_temp_base = params_base
   if typeof(fn_node.params) == "array" then call_temp_base = params_base + len(fn_node.params) * 8 end if
@@ -10556,6 +10683,7 @@ function emit_user_function(state, fn_node, analysis_scratch)
   state.known_value_types = old_known_value_types
   state.loop_index_fast_stack = old_loop_index_fast_stack
   state.current_fn_boxed_names = old_boxed_names
+  state.scalar_structs = old_scalar_structs
   state.current_fn_env_index = old_env_index
   state.current_env_root_off = old_env_root
   state.func_globals = old_func_globals
@@ -10573,6 +10701,7 @@ function emit_user_function(state, fn_node, analysis_scratch)
     print "[dbg][fn] done " + code_name
   end if
   state.qualify_cache = _prepare_qualify_cache(state.qualify_cache, 512)
+  if typeof(retained_asm) == "struct" then state.asm = retained_asm end if
   if code_name == "" then return state end if
   return state
 end function

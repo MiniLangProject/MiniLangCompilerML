@@ -180,11 +180,11 @@ Allocate writable slots that the Linux dynamic loader fills for externs.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L81)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-exit-syscall-offset-const-runtime-exit-syscall-offset-123-mlc-linux-runtime-ml-984858735"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-exit-syscall-offset-const-runtime-exit-syscall-offset-113-mlc-linux-runtime-ml-198364718"></a>
 ### RUNTIME_EXIT_SYSCALL_OFFSET
 
 ```ml
-const RUNTIME_EXIT_SYSCALL_OFFSET = 123
+const RUNTIME_EXIT_SYSCALL_OFFSET = 113
 ```
 
 Stable boundaries inside the checked-in syscall blob. The legacy thread implementation is excluded as one named range and replaced below; keeping these values together prevents unrelated slice/relocation magic numbers.
@@ -192,11 +192,11 @@ Stable boundaries inside the checked-in syscall blob. The legacy thread implemen
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L61)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-legacy-thread-end-const-runtime-legacy-thread-end-1427-mlc-linux-runtime-ml-1817463909"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-legacy-thread-end-const-runtime-legacy-thread-end-1390-mlc-linux-runtime-ml-1235800824"></a>
 ### RUNTIME_LEGACY_THREAD_END
 
 ```ml
-const RUNTIME_LEGACY_THREAD_END = 1427
+const RUNTIME_LEGACY_THREAD_END = 1390
 ```
 
 Track runtime legacy thread end.
@@ -204,11 +204,11 @@ Track runtime legacy thread end.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L65)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-legacy-thread-start-const-runtime-legacy-thread-start-563-mlc-linux-runtime-ml-1171015099"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-legacy-thread-start-const-runtime-legacy-thread-start-526-mlc-linux-runtime-ml-1723754714"></a>
 ### RUNTIME_LEGACY_THREAD_START
 
 ```ml
-const RUNTIME_LEGACY_THREAD_START = 563
+const RUNTIME_LEGACY_THREAD_START = 526
 ```
 
 Track runtime legacy thread start.
@@ -216,11 +216,11 @@ Track runtime legacy thread start.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L63)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-pthread-close-patch-const-runtime-pthread-close-patch-1510-mlc-linux-runtime-ml-1842656442"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-pthread-close-patch-const-runtime-pthread-close-patch-1470-mlc-linux-runtime-ml-2101499301"></a>
 ### RUNTIME_PTHREAD_CLOSE_PATCH
 
 ```ml
-const RUNTIME_PTHREAD_CLOSE_PATCH = 1510
+const RUNTIME_PTHREAD_CLOSE_PATCH = 1470
 ```
 
 Track runtime pthread close patch.
@@ -228,11 +228,11 @@ Track runtime pthread close patch.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L71)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-pthread-create-patch-const-runtime-pthread-create-patch-757-mlc-linux-runtime-ml-868743932"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-pthread-create-patch-const-runtime-pthread-create-patch-720-mlc-linux-runtime-ml-1289339938"></a>
 ### RUNTIME_PTHREAD_CREATE_PATCH
 
 ```ml
-const RUNTIME_PTHREAD_CREATE_PATCH = 757
+const RUNTIME_PTHREAD_CREATE_PATCH = 720
 ```
 
 Track runtime pthread create patch.
@@ -240,11 +240,11 @@ Track runtime pthread create patch.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L67)
 
-<a id="constant-constant-mlc-linux-runtime-runtime-pthread-wait-patch-const-runtime-pthread-wait-patch-1226-mlc-linux-runtime-ml-390973824"></a>
+<a id="constant-constant-mlc-linux-runtime-runtime-pthread-wait-patch-const-runtime-pthread-wait-patch-1189-mlc-linux-runtime-ml-879637574"></a>
 ### RUNTIME_PTHREAD_WAIT_PATCH
 
 ```ml
-const RUNTIME_PTHREAD_WAIT_PATCH = 1226
+const RUNTIME_PTHREAD_WAIT_PATCH = 1189
 ```
 
 Track runtime pthread wait patch.

@@ -12,7 +12,7 @@ struct ModuleInfo
 Parsed module graph nodes and resolution candidates.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L141)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L142)
 
 ## Members
 
@@ -26,7 +26,7 @@ package_name
 Package name associated with `ModuleInfo`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L145)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L146)
 
 <a id="field-field-mlc-compiler-moduleinfo-path-path-mlc-compiler-ml-1263192813"></a>
 ### path
@@ -38,4 +38,4 @@ path
 Path associated with `ModuleInfo`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L143)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L144)

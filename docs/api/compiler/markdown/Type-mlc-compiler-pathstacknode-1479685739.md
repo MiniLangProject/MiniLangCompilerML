@@ -12,7 +12,7 @@ struct PathStackNode
 Represents path stack node.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L191)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L192)
 
 ## Members
 
@@ -26,7 +26,7 @@ parent
 Parent associated with `PathStackNode`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L195)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L196)
 
 <a id="field-field-mlc-compiler-pathstacknode-path-path-mlc-compiler-ml-287856772"></a>
 ### path
@@ -38,4 +38,4 @@ path
 Path associated with `PathStackNode`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L193)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L194)

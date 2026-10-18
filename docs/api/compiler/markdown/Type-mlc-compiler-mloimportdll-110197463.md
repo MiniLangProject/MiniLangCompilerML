@@ -12,7 +12,7 @@ struct MloImportDll
 Represents mlo import dll.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L287)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L288)
 
 ## Members
 
@@ -26,7 +26,7 @@ dll
 Dll associated with `MloImportDll`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L289)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L290)
 
 <a id="field-field-mlc-compiler-mloimportdll-funcs-funcs-mlc-compiler-ml-647666770"></a>
 ### funcs
@@ -38,4 +38,4 @@ funcs
 Funcs associated with `MloImportDll`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L291)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L292)

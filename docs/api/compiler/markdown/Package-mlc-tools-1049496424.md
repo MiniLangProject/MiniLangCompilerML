@@ -79,6 +79,7 @@
 - [`mlc.tools.arr_chunked_finish`](File-mlc-tools-ml-988451276.md#function-function-mlc-tools-arr-chunked-finish-function-arr-chunked-finish-chunks-tail-mlc-tools-ml-746745258) — function
 - [`mlc.tools.arr_chunked_get`](File-mlc-tools-ml-988451276.md#function-function-mlc-tools-arr-chunked-get-function-arr-chunked-get-chunks-tail-idx-cap-defaultv-mlc-tools-ml-245430672) — function
 - [`mlc.tools.arr_chunked_groups`](File-mlc-tools-ml-988451276.md#function-function-mlc-tools-arr-chunked-groups-function-arr-chunked-groups-chunks-tail-mlc-tools-ml-456156734) — function
+- [`mlc.tools.arr_chunked_pop`](File-mlc-tools-ml-988451276.md#function-function-mlc-tools-arr-chunked-pop-function-arr-chunked-pop-chunks-tail-cap-mlc-tools-ml-1083390734) — function
 - [`mlc.tools.arr_chunked_push`](File-mlc-tools-ml-988451276.md#function-function-mlc-tools-arr-chunked-push-function-arr-chunked-push-chunks-tail-value-cap-mlc-tools-ml-1590641689) — function
 - [`mlc.tools.arr_drop_last`](File-mlc-tools-ml-988451276.md#function-function-mlc-tools-arr-drop-last-function-arr-drop-last-values-mlc-tools-ml-425046980) — function
 - [`mlc.tools.arr_merge_chunk_groups_with_tail`](File-mlc-tools-ml-988451276.md#function-function-mlc-tools-arr-merge-chunk-groups-with-tail-function-arr-merge-chunk-groups-with-tail-groups-tail-arr-mlc-tools-ml-914227352) — function

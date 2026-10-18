@@ -30,7 +30,7 @@ Keep gc_collect synchronous while other managed threads continue running. Emerge
 | `state` | `dynamic` | — | Backend state receiving the completion-wait helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L758)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L779)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-free-flatten-function-emit-free-flatten-state-mlc-codegen-codegen-concurrent-gc-ml-765104454"></a>
 ### emit_free_flatten
@@ -146,7 +146,7 @@ Return the completion sequence to wait for, coalescing already-active requests. 
 | `state` | `dynamic` | — | Backend state receiving the asynchronous request helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L688)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L709)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-reuse-end-function-emit-reuse-end-state-mlc-codegen-codegen-concurrent-gc-ml-1043991100"></a>
 ### emit_reuse_end
@@ -226,7 +226,7 @@ Emit a persistent native worker waiting on an auto-reset event between cycles.
 | `state` | `dynamic` | — | Backend state receiving the private worker loop. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L667)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L688)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-enabled-function-enabled-state-mlc-codegen-codegen-concurrent-gc-ml-1973447018"></a>
 ### enabled

@@ -12,7 +12,7 @@ struct ObjBuf
 Capacity-backed binary writer and reader for the .mlo file format.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L369)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L370)
 
 ## Members
 
@@ -26,7 +26,7 @@ parts
 Parts associated with `ObjBuf`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L371)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L372)
 
 <a id="field-field-mlc-compiler-objbuf-total-total-mlc-compiler-ml-1927848421"></a>
 ### total
@@ -38,4 +38,4 @@ total
 Total associated with `ObjBuf`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L373)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L374)

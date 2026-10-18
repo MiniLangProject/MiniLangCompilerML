@@ -160,6 +160,18 @@ Deferred patches tail associated with `AsmBuilder`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L60)
 
+<a id="field-field-mlc-asm-asmbuilder-forward-branch-forward-branch-mlc-asm-ml-131640329"></a>
+### forward_branch
+
+```ml
+forward_branch
+```
+
+Last forward branch in the current unlabelled straight-line span.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L94)
+
 <a id="field-field-mlc-asm-asmbuilder-label-pos-map-label-pos-map-mlc-asm-ml-1962644617"></a>
 ### label_pos_map
 

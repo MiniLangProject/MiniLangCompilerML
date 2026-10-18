@@ -504,7 +504,7 @@ Provide the inline compiler utility operation.
 | `bp` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1781)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1814)
 
 <a id="function-function-mlc-tools-bp-chunk-get-function-bp-chunk-get-bp-idx-mlc-tools-ml-1210112987"></a>
 ### _bp_chunk_get
@@ -521,7 +521,7 @@ Provide the bp chunk get compiler utility operation.
 | `idx` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1801)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1834)
 
 <a id="function-function-mlc-tools-bp-chunk-push-function-bp-chunk-push-bp-page-mlc-tools-ml-22882391"></a>
 ### _bp_chunk_push
@@ -538,7 +538,7 @@ Provide the bp chunk push compiler utility operation.
 | `page` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1842)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1875)
 
 <a id="function-function-mlc-tools-bp-chunk-set-function-bp-chunk-set-bp-idx-page-mlc-tools-ml-702734724"></a>
 ### _bp_chunk_set
@@ -556,7 +556,7 @@ Provide the bp chunk set compiler utility operation.
 | `page` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1826)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1859)
 
 <a id="function-function-mlc-tools-bp-ensure-function-bp-ensure-bp-need-mlc-tools-ml-395796612"></a>
 ### _bp_ensure
@@ -573,7 +573,7 @@ Provide the bp ensure compiler utility operation.
 | `need` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1851)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1884)
 
 <a id="function-function-mlc-tools-chunks-is-paged-inline-function-chunks-is-paged-chunks-mlc-tools-ml-133065431"></a>
 ### _chunks_is_paged
@@ -894,7 +894,7 @@ Provide the arr chunk count compiler utility operation.
 | `builder` | `dynamic` | — | Value supplied for `builder`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1748)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1781)
 
 <a id="function-function-mlc-tools-arr-chunk-finish-function-arr-chunk-finish-builder-mlc-tools-ml-432097025"></a>
 ### arr_chunk_finish
@@ -910,7 +910,7 @@ Provide the arr chunk finish compiler utility operation.
 | `builder` | `dynamic` | — | Value supplied for `builder`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1740)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1773)
 
 <a id="function-function-mlc-tools-arr-chunk-get-function-arr-chunk-get-builder-idx-defaultv-mlc-tools-ml-1773739253"></a>
 ### arr_chunk_get
@@ -928,7 +928,7 @@ Provide the arr chunk get compiler utility operation.
 | `defaultv` | `dynamic` | — | Value supplied for `defaultv`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1757)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1790)
 
 <a id="function-function-mlc-tools-arr-chunk-new-function-arr-chunk-new-cap-mlc-tools-ml-928944558"></a>
 ### arr_chunk_new
@@ -978,7 +978,7 @@ Provide the arr chunk push all compiler utility operation.
 | `values` | `dynamic` | — | Values to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1765)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1798)
 
 <a id="function-function-mlc-tools-arr-chunk-tail-get-function-arr-chunk-tail-get-tail-idx-defaultv-mlc-tools-ml-814018366"></a>
 ### arr_chunk_tail_get
@@ -1048,7 +1048,7 @@ Provide the arr chunked count compiler utility operation.
 | `cap` | `dynamic` | — | Value supplied for `cap`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1672)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1705)
 
 <a id="function-function-mlc-tools-arr-chunked-finish-function-arr-chunked-finish-chunks-tail-mlc-tools-ml-746745258"></a>
 ### arr_chunked_finish
@@ -1065,7 +1065,7 @@ Provide the arr chunked finish compiler utility operation.
 | `tail` | `dynamic` | — | Value supplied for `tail`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1639)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1672)
 
 <a id="function-function-mlc-tools-arr-chunked-get-function-arr-chunked-get-chunks-tail-idx-cap-defaultv-mlc-tools-ml-245430672"></a>
 ### arr_chunked_get
@@ -1085,7 +1085,7 @@ Provide the arr chunked get compiler utility operation.
 | `defaultv` | `dynamic` | — | Value supplied for `defaultv`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1697)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1730)
 
 <a id="function-function-mlc-tools-arr-chunked-groups-function-arr-chunked-groups-chunks-tail-mlc-tools-ml-456156734"></a>
 ### arr_chunked_groups
@@ -1102,7 +1102,25 @@ Return the storage groups of a chunked sequence without flattening their element
 | `tail` | `dynamic` | — | Value supplied for `tail`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1654)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1687)
+
+<a id="function-function-mlc-tools-arr-chunked-pop-function-arr-chunked-pop-chunks-tail-cap-mlc-tools-ml-1083390734"></a>
+### arr_chunked_pop
+
+```ml
+function arr_chunked_pop(chunks, tail, cap)
+```
+
+Pop the last chunked value without flattening the sequence. Refill an empty tail from the last sealed chunk, including the second-level page boundary.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chunks` | `dynamic` | — |  |
+| `tail` | `dynamic` | — |  |
+| `cap` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1548)
 
 <a id="function-function-mlc-tools-arr-chunked-push-function-arr-chunked-push-chunks-tail-value-cap-mlc-tools-ml-1590641689"></a>
 ### arr_chunked_push
@@ -1154,7 +1172,7 @@ Flatten existing chunk groups plus the active tail directly into the final array
 | `tail_arr` | `dynamic` | — | Value supplied for `tail_arr`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1577)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1610)
 
 <a id="function-function-mlc-tools-arr-merge-chunks-balanced-function-arr-merge-chunks-balanced-chunks-mlc-tools-ml-1076984976"></a>
 ### arr_merge_chunks_balanced
@@ -1170,7 +1188,7 @@ Provide the arr merge chunks balanced compiler utility operation.
 | `chunks` | `dynamic` | — | Value supplied for `chunks`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1547)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1580)
 
 <a id="function-function-mlc-tools-arr-merge-variadic-parts-function-arr-merge-variadic-parts-parts-mlc-tools-ml-1010500314"></a>
 ### arr_merge_variadic_parts
@@ -1186,7 +1204,7 @@ Merge short-lived call-site parts without first allocating an outer array. The v
 | `parts...` | `dynamic` | — | Value supplied for `parts`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1609)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1642)
 
 <a id="function-function-mlc-tools-arr-vec-clear-function-arr-vec-clear-vec-mlc-tools-ml-1133666688"></a>
 ### arr_vec_clear
@@ -1752,7 +1770,7 @@ Provide the byte pages append compiler utility operation.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1905)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1938)
 
 <a id="function-function-mlc-tools-byte-pages-append-string-function-byte-pages-append-string-bp-text-mlc-tools-ml-1531761367"></a>
 ### byte_pages_append_string
@@ -1769,7 +1787,7 @@ Append a string's UTF-8 payload without first allocating an equally large tempor
 | `text` | `dynamic` | — | Text to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1936)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1969)
 
 <a id="function-function-mlc-tools-byte-pages-append-u16-function-byte-pages-append-u16-bp-value-mlc-tools-ml-8321011"></a>
 ### byte_pages_append_u16
@@ -1786,7 +1804,7 @@ Append one little-endian 16-bit value without a temporary bytes object.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1966)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1999)
 
 <a id="function-function-mlc-tools-byte-pages-append-u32-function-byte-pages-append-u32-bp-value-mlc-tools-ml-903967159"></a>
 ### byte_pages_append_u32
@@ -1803,7 +1821,7 @@ Append one little-endian 32-bit value without allocating a temporary four-byte o
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1991)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2024)
 
 <a id="function-function-mlc-tools-byte-pages-append-u64-function-byte-pages-append-u64-bp-value-mlc-tools-ml-753763469"></a>
 ### byte_pages_append_u64
@@ -1820,7 +1838,7 @@ Append one little-endian 64-bit value. MiniLang integers carry 61 payload bits; 
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2022)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2055)
 
 <a id="function-function-mlc-tools-byte-pages-get-byte-function-byte-pages-get-byte-bp-idx-defaultv-mlc-tools-ml-327960060"></a>
 ### byte_pages_get_byte
@@ -1838,7 +1856,7 @@ Provide the byte pages get byte compiler utility operation.
 | `defaultv` | `dynamic` | — | Value supplied for `defaultv`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2135)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2168)
 
 <a id="function-function-mlc-tools-byte-pages-len-function-byte-pages-len-bp-mlc-tools-ml-1492352224"></a>
 ### byte_pages_len
@@ -1854,7 +1872,7 @@ Provide the byte pages len compiler utility operation.
 | `bp` | `dynamic` | — | Value supplied for `bp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1863)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1896)
 
 <a id="function-function-mlc-tools-byte-pages-new-function-byte-pages-new-mlc-tools-ml-454273826"></a>
 ### byte_pages_new
@@ -1866,7 +1884,7 @@ function byte_pages_new()
 Create an empty paged byte buffer.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1775)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1808)
 
 <a id="function-function-mlc-tools-byte-pages-page-function-byte-pages-page-bp-page-index-mlc-tools-ml-1020656758"></a>
 ### byte_pages_page
@@ -1883,7 +1901,7 @@ Provide the byte pages page compiler utility operation.
 | `page_index` | `dynamic` | — | Value supplied for `page_index`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1883)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1916)
 
 <a id="function-function-mlc-tools-byte-pages-page-count-function-byte-pages-page-count-bp-mlc-tools-ml-818479086"></a>
 ### byte_pages_page_count
@@ -1899,7 +1917,7 @@ Expose read-only pages to streaming serializers. The final page may contain spar
 | `bp` | `dynamic` | — | Value supplied for `bp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1871)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1904)
 
 <a id="function-function-mlc-tools-byte-pages-page-used-function-byte-pages-page-used-bp-page-index-mlc-tools-ml-64526912"></a>
 ### byte_pages_page_used
@@ -1916,7 +1934,7 @@ Provide the byte pages page used compiler utility operation.
 | `page_index` | `dynamic` | — | Value supplied for `page_index`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1892)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L1925)
 
 <a id="function-function-mlc-tools-byte-pages-set-byte-function-byte-pages-set-byte-bp-idx-value-mlc-tools-ml-1066816434"></a>
 ### byte_pages_set_byte
@@ -1934,7 +1952,7 @@ Provide the byte pages set byte compiler utility operation.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2115)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2148)
 
 <a id="function-function-mlc-tools-byte-pages-to-bytes-function-byte-pages-to-bytes-bp-mlc-tools-ml-1090167482"></a>
 ### byte_pages_to_bytes
@@ -1950,7 +1968,7 @@ Provide the byte pages to bytes compiler utility operation.
 | `bp` | `dynamic` | — | Value supplied for `bp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2087)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2120)
 
 <a id="function-function-mlc-tools-byte-pages-write-at-function-byte-pages-write-at-bp-offset-src-mlc-tools-ml-949290513"></a>
 ### byte_pages_write_at
@@ -1968,7 +1986,7 @@ Provide the byte pages write at compiler utility operation.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2055)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L2088)
 
 - [mlc.tools.BytePages](Type-mlc-tools-bytepages-121699952.md) — struct
 <a id="function-function-mlc-tools-enc-bool-function-enc-bool-b-mlc-tools-ml-1930511380"></a>

@@ -1,23 +1,23 @@
 # Binary compiler packages
 
-Release 1.2.20 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.2.21 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
 either compiler distribution.
 
-## Release 1.2.20 checksums
+## Release 1.2.21 checksums
 
-The download archives are `MiniLangCompilerML-1.2.20-windows-x64.zip` and
-`MiniLangCompilerML-1.2.20-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.20).
+The download archives are `MiniLangCompilerML-1.2.21-windows-x64.zip` and
+`MiniLangCompilerML-1.2.21-linux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.21).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 57,280,512 | `3AE28058916B6931DD4B13AF49A3306E3EEC7166128FDD7EAD7AE60FDEAD6426` |
-| Linux `mlc` | 57,278,800 | `D458F61655B085566FF658B0CB1A9B17C5A404A38919E36A1A48927B11B78CD9` |
+| Windows `mlc.exe` | 56,576,512 | `68BC63C79F7CE5B50B750652BAAEFDFCB808EA1BD825280B927A143D8EA0BEBE` |
+| Linux `mlc` | 56,586,912 | `6C28B63B871DCEC6263CE0102B049FD67E02CDC361809796421D8EBAA87005FD` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -43,13 +43,20 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.2.20 compiler-source revision and executable hash.
+The manifest identifies the 1.2.21 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
+## Optional executable packing
+
+The distributed compiler is unpacked. To opt in for your own programs, supply
+an explicit trusted UPX 5.2.1 executable with `--pack --upx PATH`. UPX is not
+bundled. See [the included guide](docs/EXECUTABLE_PACKING.md) for exact unpacking,
+startup/memory trade-offs and signing constraints.
+
 ## Native media runtime
 
-Release 1.2.20 packages include the native-media
+Release 1.2.21 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 

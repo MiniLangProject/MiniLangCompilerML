@@ -12,7 +12,7 @@ struct ResolveResult
 Represents resolve result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L177)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L178)
 
 ## Members
 
@@ -26,7 +26,7 @@ matches
 Matches associated with `ResolveResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L183)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L184)
 
 <a id="field-field-mlc-compiler-resolveresult-resolved-resolved-mlc-compiler-ml-346415822"></a>
 ### resolved
@@ -38,7 +38,7 @@ resolved
 Resolved associated with `ResolveResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L179)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L180)
 
 <a id="field-field-mlc-compiler-resolveresult-resolved-kind-resolved-kind-mlc-compiler-ml-604929690"></a>
 ### resolved_kind
@@ -50,7 +50,7 @@ resolved_kind
 Resolved kind associated with `ResolveResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L185)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L186)
 
 <a id="field-field-mlc-compiler-resolveresult-resolved-root-resolved-root-mlc-compiler-ml-232111558"></a>
 ### resolved_root
@@ -62,7 +62,7 @@ resolved_root
 Resolved root associated with `ResolveResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L187)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L188)
 
 <a id="field-field-mlc-compiler-resolveresult-tried-tried-mlc-compiler-ml-1182872530"></a>
 ### tried
@@ -74,4 +74,4 @@ tried
 Tried associated with `ResolveResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L181)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L182)
