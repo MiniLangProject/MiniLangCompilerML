@@ -8,19 +8,19 @@ Static metrics are calculated from target-specific preprocessed MiniLang files i
 
 | Metric | Value |
 | --- | ---: |
-| Blank lines | 5111 |
+| Blank lines | 5115 |
 | Clone groups | 1132 |
-| Cognitive complexity | 22771 (maximum per function: 557) |
-| Comment lines | 7387 |
-| Cyclomatic complexity | 15500 (average: 8.48, maximum: 214) |
-| Documentation coverage | 99.79% (3386 of 3393 documentation items) |
-| Duplicated lines | 6102 (11.88%) |
+| Cognitive complexity | 22787 (maximum per function: 557) |
+| Comment lines | 7421 |
+| Cyclomatic complexity | 15523 (average: 8.46, maximum: 214) |
+| Documentation coverage | 99.8% (3411 of 3418 documentation items) |
+| Duplicated lines | 6102 (11.85%) |
 | Files | 28 |
-| Functions | 1828 |
+| Functions | 1835 |
 | Maintainability index | 0.3 / 100 |
-| Physical lines | 63874 |
-| Source lines | 51381 |
-| Statements | 45567 |
+| Physical lines | 64042 |
+| Source lines | 51511 |
+| Statements | 45692 |
 
 ## Documentation coverage
 
@@ -28,35 +28,35 @@ Coverage is split by documentation contract so strong API summaries cannot hide 
 
 | Category | Documented | Total | Coverage |
 | --- | ---: | ---: | ---: |
-| API declarations | 887 | 887 | 100% |
+| API declarations | 893 | 893 | 100% |
 | Constants | 158 | 162 | 97.53% |
 | Enum variants | 0 | 0 | 100% |
 | Fields | 768 | 771 | 99.61% |
 | Globals | 78 | 78 | 100% |
-| Overall | 3386 | 3393 | 99.79% |
-| Parameters | 1495 | 1495 | 100% |
+| Overall | 3411 | 3418 | 99.8% |
+| Parameters | 1514 | 1514 | 100% |
 
 ## Halstead metrics
 
 | Distinct operators | Distinct operands | Total operators | Total operands | Vocabulary | Length | Volume | Difficulty | Effort | Estimated defects |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 59 | 10109 | 275317 | 224653 | 10168 | 499970 | 6655474.81 | 655.58 | 4363199648.89 | 2218.49 |
+| 59 | 10136 | 276181 | 225452 | 10195 | 501633 | 6679531.41 | 656.16 | 4382838852.21 | 2226.51 |
 
 ## Files
 
 | File | SLOC | Functions | Cyclomatic total / avg / max | Cognitive total / max | Duplication | Halstead volume | MI |
 | --- | ---: | ---: | --- | --- | --- | ---: | ---: |
 | [`mlc/__init__.ml`](File-mlc-init-ml-1795718751.md) | 2 | 0 | 0 / 0. / 0 | 0 / 0 | 0 (0%) | 24 | 83.77 |
-| [`mlc/asm.ml`](File-mlc-asm-ml-1368648960.md) | 2548 | 325 | 944 / 2.9 / 49 | 740 / 48 | 301 (11.81%) | 214901.52 | 0 |
+| [`mlc/asm.ml`](File-mlc-asm-ml-1368648960.md) | 2620 | 332 | 967 / 2.91 / 49 | 756 / 48 | 301 (11.49%) | 222566.99 | 0 |
 | [`mlc/codegen/__init__.ml`](File-mlc-codegen-init-ml-1019260381.md) | 2 | 0 | 0 / 0. / 0 | 0 / 0 | 0 (0%) | 31.7 | 82.92 |
 | [`mlc/codegen/codegen.ml`](File-mlc-codegen-codegen-ml-1154886880.md) | 439 | 38 | 124 / 3.26 / 11 | 99 / 12 | 6 (1.37%) | 29036.88 | 0 |
 | [`mlc/codegen/codegen_builtins_alloc.ml`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md) | 2549 | 34 | 83 / 2.44 / 18 | 102 / 41 | 579 (22.71%) | 338942.38 | 0 |
-| [`mlc/codegen/codegen_concurrent_gc.ml`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md) | 751 | 16 | 44 / 2.75 / 13 | 34 / 17 | 6 (0.8%) | 88134.3 | 0 |
+| [`mlc/codegen/codegen_concurrent_gc.ml`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md) | 722 | 16 | 44 / 2.75 / 13 | 34 / 17 | 6 (0.83%) | 84010.37 | 0 |
 | [`mlc/codegen/codegen_core.ml`](File-mlc-codegen-codegen-core-ml-528695596.md) | 1727 | 86 | 693 / 8.06 / 128 | 769 / 127 | 158 (9.15%) | 142578.99 | 0 |
 | [`mlc/codegen/codegen_expr.ml`](File-mlc-codegen-codegen-expr-ml-59843844.md) | 9304 | 141 | 2769 / 19.64 / 214 | 4592 / 557 | 1174 (12.62%) | 1128802.86 | 0 |
 | [`mlc/codegen/codegen_memory.ml`](File-mlc-codegen-codegen-memory-ml-2136639668.md) | 2588 | 42 | 211 / 5.02 / 49 | 193 / 57 | 325 (12.56%) | 320770.17 | 0 |
 | [`mlc/codegen/codegen_opt.ml`](File-mlc-codegen-codegen-opt-ml-1574478370.md) | 165 | 7 | 120 / 17.14 / 32 | 170 / 56 | 0 (0%) | 13682.62 | 6.53 |
-| [`mlc/codegen/codegen_runtime.ml`](File-mlc-codegen-codegen-runtime-ml-1845689217.md) | 3395 | 62 | 125 / 2.02 / 37 | 136 / 102 | 664 (19.56%) | 462407.52 | 0 |
+| [`mlc/codegen/codegen_runtime.ml`](File-mlc-codegen-codegen-runtime-ml-1845689217.md) | 3482 | 62 | 125 / 2.02 / 37 | 136 / 102 | 664 (19.07%) | 478007.66 | 0 |
 | [`mlc/codegen/codegen_scope.ml`](File-mlc-codegen-codegen-scope-ml-1124416197.md) | 1460 | 69 | 660 / 9.57 / 53 | 814 / 73 | 250 (17.12%) | 106721.48 | 0 |
 | [`mlc/codegen/codegen_stmt.ml`](File-mlc-codegen-codegen-stmt-ml-1158291323.md) | 9493 | 262 | 3841 / 14.66 / 171 | 6713 / 431 | 1048 (11.04%) | 954129.81 | 0 |
 | [`mlc/codegen/codegen_threads.ml`](File-mlc-codegen-codegen-threads-ml-1261658982.md) | 1091 | 34 | 68 / 2 / 8 | 37 / 7 | 182 (16.68%) | 121964.57 | 0 |
@@ -82,329 +82,336 @@ Coverage is split by documentation contract so strong API summaries cannot hide 
 | [`main`](File-mlc-win64-ml-1630996773.md#function-function-main-function-main-args-mlc-win64-ml-1802758867) | `mlc_win64.ml:29` | 3 | 1 | 1 | 0 | 0 | 36 | 78.56 |
 | [`mlc.asm._alloc_zero_bytes_keepalive`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-alloc-zero-bytes-keepalive-function-alloc-zero-bytes-keepalive-keepalive-size-mlc-asm-ml-1846823705) | `mlc/asm.ml:151` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
 | [`mlc.asm._array_contains_text`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-array-contains-text-function-array-contains-text-arr-value-mlc-asm-ml-1782568426) | `mlc/asm.ml:135` | 7 | 6 | 5 | 5 | 2 | 267.19 | 63.9 |
-| [`mlc.asm._byte_at`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-byte-at-function-byte-at-asm-idx-mlc-asm-ml-1250101900) | `mlc/asm.ml:488` | 31 | 25 | 24 | 41 | 5 | 1714.96 | 41.59 |
+| [`mlc.asm._byte_at`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-byte-at-function-byte-at-asm-idx-mlc-asm-ml-1250101900) | `mlc/asm.ml:494` | 31 | 25 | 24 | 41 | 5 | 1714.96 | 41.59 |
 | [`mlc.asm._call_push`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-push-function-call-push-asm-label-mlc-asm-ml-613941761) | `mlc/asm.ml:364` | 6 | 4 | 1 | 0 | 0 | 197.65 | 66.82 |
-| [`mlc.asm._chunk_count`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-chunk-count-function-chunk-count-asm-mlc-asm-ml-1851627509) | `mlc/asm.ml:569` | 6 | 5 | 2 | 1 | 1 | 229.25 | 66.23 |
-| [`mlc.asm._chunk_get`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-chunk-get-function-chunk-get-asm-idx-mlc-asm-ml-1612250432) | `mlc/asm.ml:578` | 27 | 19 | 15 | 18 | 3 | 1276.9 | 45.01 |
-| [`mlc.asm._chunk_push`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-chunk-push-function-chunk-push-asm-chunk-mlc-asm-ml-606385708) | `mlc/asm.ml:626` | 6 | 4 | 1 | 0 | 0 | 197.65 | 66.82 |
-| [`mlc.asm._chunk_set`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-chunk-set-function-chunk-set-asm-idx-chunk-mlc-asm-ml-1543979153) | `mlc/asm.ml:608` | 15 | 12 | 2 | 1 | 1 | 503.66 | 55.16 |
-| [`mlc.asm._drop_last_patch`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-drop-last-patch-function-drop-last-patch-asm-mlc-asm-ml-1532661093) | `mlc/asm.ml:560` | 6 | 4 | 1 | 0 | 0 | 177.2 | 67.15 |
-| [`mlc.asm._emit`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-function-emit-asm-b-mlc-asm-ml-1930020033) | `mlc/asm.ml:751` | 25 | 23 | 6 | 7 | 2 | 925.59 | 47.93 |
-| [`mlc.asm._emit32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit32-function-emit32-asm-x-mlc-asm-ml-1113740717) | `mlc/asm.ml:820` | 22 | 19 | 2 | 1 | 1 | 937.57 | 49.64 |
-| [`mlc.asm._emit64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit64-function-emit64-asm-x-mlc-asm-ml-1860428419) | `mlc/asm.ml:854` | 26 | 22 | 3 | 2 | 1 | 1191.41 | 47.19 |
-| [`mlc.asm._emit8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit8-function-emit8-asm-x-mlc-asm-ml-1284744155) | `mlc/asm.ml:791` | 20 | 16 | 5 | 4 | 1 | 617.34 | 51.41 |
-| [`mlc.asm._emit_bin_rr`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-bin-rr-function-emit-bin-rr-asm-op-dst-src-w-mlc-asm-ml-1848370970) | `mlc/asm.ml:2016` | 9 | 8 | 3 | 2 | 1 | 461.25 | 60.13 |
-| [`mlc.asm._emit_bytes_u8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-bytes-u8-function-emit-bytes-u8-v-mlc-asm-ml-1443579904) | `mlc/asm.ml:925` | 5 | 3 | 1 | 0 | 0 | 102.19 | 70.55 |
-| [`mlc.asm._emit_modrm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-modrm-function-emit-modrm-asm-mod-reg-rm-mlc-asm-ml-1252926862) | `mlc/asm.ml:900` | 4 | 2 | 1 | 0 | 0 | 203.13 | 70.57 |
-| [`mlc.asm._emit_rex`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-rex-function-emit-rex-asm-w-r-x-b-force-mlc-asm-ml-1575744541) | `mlc/asm.ml:890` | 7 | 4 | 3 | 2 | 1 | 408.07 | 62.88 |
-| [`mlc.asm._emit_shift_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-shift-imm8-function-emit-shift-imm8-asm-subop-reg-name-imm-w-mlc-asm-ml-2024202764) | `mlc/asm.ml:2234` | 13 | 11 | 3 | 2 | 1 | 580 | 55.95 |
-| [`mlc.asm._emit_sse_rr`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-sse-rr-function-emit-sse-rr-asm-prefix1-prefix2-opcode-dst-xmm-src-xmm-mlc-asm-ml-877527765) | `mlc/asm.ml:3416` | 12 | 13 | 5 | 4 | 1 | 675.95 | 55.97 |
-| [`mlc.asm._encode_mem`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-encode-mem-function-encode-mem-reg-field-base-id-disp-mlc-asm-ml-809964036) | `mlc/asm.ml:933` | 35 | 28 | 9 | 9 | 2 | 1066.48 | 43.91 |
-| [`mlc.asm._encode_mem_bis`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-encode-mem-bis-function-encode-mem-bis-reg-field-base-id-index-id-scale-disp-mlc-asm-ml-25078216) | `mlc/asm.ml:985` | 32 | 26 | 9 | 9 | 2 | 1044.11 | 44.82 |
-| [`mlc.asm._ensure_capacity`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ensure-capacity-function-ensure-capacity-asm-need-mlc-asm-ml-710290421) | `mlc/asm.ml:664` | 17 | 18 | 10 | 9 | 1 | 803.09 | 51.47 |
-| [`mlc.asm._fits_i8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fits-i8-function-fits-i8-x-as-int-returns-bool-mlc-asm-ml-581218552) | `mlc/asm.ml:919` | 3 | 1 | 1 | 0 | 0 | 81.75 | 76.07 |
-| [`mlc.asm._fmt_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fmt-disp-function-fmt-disp-disp-mlc-asm-ml-615676156) | `mlc/asm.ml:3926` | 3 | 1 | 1 | 0 | 0 | 27 | 79.44 |
-| [`mlc.asm._fmt_mem`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fmt-mem-function-fmt-mem-base-disp-mlc-asm-ml-455923723) | `mlc/asm.ml:3932` | 3 | 1 | 1 | 0 | 0 | 36.54 | 78.52 |
-| [`mlc.asm._fmt_mem_sib`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fmt-mem-sib-function-fmt-mem-sib-base-index-reg-scale-disp-mlc-asm-ml-1478242070) | `mlc/asm.ml:3938` | 3 | 1 | 1 | 0 | 0 | 53.77 | 77.34 |
+| [`mlc.asm._chunk_count`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-chunk-count-function-chunk-count-asm-mlc-asm-ml-1851627509) | `mlc/asm.ml:575` | 6 | 5 | 2 | 1 | 1 | 229.25 | 66.23 |
+| [`mlc.asm._chunk_get`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-chunk-get-function-chunk-get-asm-idx-mlc-asm-ml-1612250432) | `mlc/asm.ml:584` | 27 | 19 | 15 | 18 | 3 | 1276.9 | 45.01 |
+| [`mlc.asm._chunk_push`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-chunk-push-function-chunk-push-asm-chunk-mlc-asm-ml-606385708) | `mlc/asm.ml:632` | 6 | 4 | 1 | 0 | 0 | 197.65 | 66.82 |
+| [`mlc.asm._chunk_set`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-chunk-set-function-chunk-set-asm-idx-chunk-mlc-asm-ml-1543979153) | `mlc/asm.ml:614` | 15 | 12 | 2 | 1 | 1 | 503.66 | 55.16 |
+| [`mlc.asm._drop_last_patch`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-drop-last-patch-function-drop-last-patch-asm-mlc-asm-ml-1532661093) | `mlc/asm.ml:566` | 6 | 4 | 1 | 0 | 0 | 177.2 | 67.15 |
+| [`mlc.asm._emit`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-function-emit-asm-b-mlc-asm-ml-1930020033) | `mlc/asm.ml:757` | 25 | 23 | 6 | 7 | 2 | 925.59 | 47.93 |
+| [`mlc.asm._emit32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit32-function-emit32-asm-x-mlc-asm-ml-1113740717) | `mlc/asm.ml:826` | 22 | 19 | 2 | 1 | 1 | 937.57 | 49.64 |
+| [`mlc.asm._emit64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit64-function-emit64-asm-x-mlc-asm-ml-1860428419) | `mlc/asm.ml:860` | 26 | 22 | 3 | 2 | 1 | 1191.41 | 47.19 |
+| [`mlc.asm._emit8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit8-function-emit8-asm-x-mlc-asm-ml-1284744155) | `mlc/asm.ml:797` | 20 | 16 | 5 | 4 | 1 | 617.34 | 51.41 |
+| [`mlc.asm._emit_bin_rr`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-bin-rr-function-emit-bin-rr-asm-op-dst-src-w-mlc-asm-ml-1848370970) | `mlc/asm.ml:2022` | 9 | 8 | 3 | 2 | 1 | 461.25 | 60.13 |
+| [`mlc.asm._emit_bytes_u8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-bytes-u8-function-emit-bytes-u8-v-mlc-asm-ml-1443579904) | `mlc/asm.ml:931` | 5 | 3 | 1 | 0 | 0 | 102.19 | 70.55 |
+| [`mlc.asm._emit_modrm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-modrm-function-emit-modrm-asm-mod-reg-rm-mlc-asm-ml-1252926862) | `mlc/asm.ml:906` | 4 | 2 | 1 | 0 | 0 | 203.13 | 70.57 |
+| [`mlc.asm._emit_rex`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-rex-function-emit-rex-asm-w-r-x-b-force-mlc-asm-ml-1575744541) | `mlc/asm.ml:896` | 7 | 4 | 3 | 2 | 1 | 408.07 | 62.88 |
+| [`mlc.asm._emit_shift_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-shift-imm8-function-emit-shift-imm8-asm-subop-reg-name-imm-w-mlc-asm-ml-2024202764) | `mlc/asm.ml:2240` | 13 | 11 | 3 | 2 | 1 | 580 | 55.95 |
+| [`mlc.asm._emit_sse_rr`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-sse-rr-function-emit-sse-rr-asm-prefix1-prefix2-opcode-dst-xmm-src-xmm-mlc-asm-ml-877527765) | `mlc/asm.ml:3522` | 12 | 13 | 5 | 4 | 1 | 675.95 | 55.97 |
+| [`mlc.asm._encode_mem`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-encode-mem-function-encode-mem-reg-field-base-id-disp-mlc-asm-ml-809964036) | `mlc/asm.ml:939` | 35 | 28 | 9 | 9 | 2 | 1066.48 | 43.91 |
+| [`mlc.asm._encode_mem_bis`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-encode-mem-bis-function-encode-mem-bis-reg-field-base-id-index-id-scale-disp-mlc-asm-ml-25078216) | `mlc/asm.ml:991` | 32 | 26 | 9 | 9 | 2 | 1044.11 | 44.82 |
+| [`mlc.asm._ensure_capacity`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ensure-capacity-function-ensure-capacity-asm-need-mlc-asm-ml-710290421) | `mlc/asm.ml:670` | 17 | 18 | 10 | 9 | 1 | 803.09 | 51.47 |
+| [`mlc.asm._fits_i8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fits-i8-function-fits-i8-x-as-int-returns-bool-mlc-asm-ml-581218552) | `mlc/asm.ml:925` | 3 | 1 | 1 | 0 | 0 | 81.75 | 76.07 |
+| [`mlc.asm._fmt_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fmt-disp-function-fmt-disp-disp-mlc-asm-ml-615676156) | `mlc/asm.ml:4032` | 3 | 1 | 1 | 0 | 0 | 27 | 79.44 |
+| [`mlc.asm._fmt_mem`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fmt-mem-function-fmt-mem-base-disp-mlc-asm-ml-455923723) | `mlc/asm.ml:4038` | 3 | 1 | 1 | 0 | 0 | 36.54 | 78.52 |
+| [`mlc.asm._fmt_mem_sib`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fmt-mem-sib-function-fmt-mem-sib-base-index-reg-scale-disp-mlc-asm-ml-1478242070) | `mlc/asm.ml:4044` | 3 | 1 | 1 | 0 | 0 | 53.77 | 77.34 |
 | [`mlc.asm._fold_materialized_patch_set`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-fold-materialized-patch-set-function-fold-materialized-patch-set-asm-patch-chunks-patch-tail-out-b-mlc-asm-ml-337632046) | `mlc/asm.ml:191` | 35 | 29 | 18 | 46 | 7 | 2005.5 | 40.77 |
-| [`mlc.asm._format_call`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-format-call-function-format-call-name-args-kwargs-mlc-asm-ml-1522458895) | `mlc/asm.ml:3944` | 3 | 1 | 1 | 0 | 0 | 44.97 | 77.88 |
-| [`mlc.asm._gc_tmp_context_offset`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-gc-tmp-context-offset-function-gc-tmp-context-offset-label-mlc-asm-ml-492348028) | `mlc/asm.ml:1147` | 11 | 17 | 9 | 8 | 1 | 394.2 | 57.9 |
-| [`mlc.asm._grp1_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-grp1-imm-function-grp1-imm-asm-size-subop-rm-imm-mlc-asm-ml-1131576307) | `mlc/asm.ml:1837` | 40 | 37 | 17 | 19 | 2 | 1768.4 | 40.03 |
-| [`mlc.asm._grp1_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-grp1-r8-imm8-function-grp1-r8-imm8-asm-subop-reg8-imm-mlc-asm-ml-817252349) | `mlc/asm.ml:2632` | 14 | 12 | 3 | 2 | 1 | 585.15 | 55.22 |
-| [`mlc.asm._is_force_rex_8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-is-force-rex-8-function-is-force-rex-8-name-as-string-returns-bool-mlc-asm-ml-1735187869) | `mlc/asm.ml:482` | 3 | 1 | 1 | 0 | 0 | 110.36 | 75.15 |
+| [`mlc.asm._format_call`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-format-call-function-format-call-name-args-kwargs-mlc-asm-ml-1522458895) | `mlc/asm.ml:4050` | 3 | 1 | 1 | 0 | 0 | 44.97 | 77.88 |
+| [`mlc.asm._gc_tmp_context_offset`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-gc-tmp-context-offset-function-gc-tmp-context-offset-label-mlc-asm-ml-492348028) | `mlc/asm.ml:1153` | 11 | 17 | 9 | 8 | 1 | 394.2 | 57.9 |
+| [`mlc.asm._grp1_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-grp1-imm-function-grp1-imm-asm-size-subop-rm-imm-mlc-asm-ml-1131576307) | `mlc/asm.ml:1843` | 40 | 37 | 17 | 19 | 2 | 1768.4 | 40.03 |
+| [`mlc.asm._grp1_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-grp1-r8-imm8-function-grp1-r8-imm8-asm-subop-reg8-imm-mlc-asm-ml-817252349) | `mlc/asm.ml:2638` | 14 | 12 | 3 | 2 | 1 | 585.15 | 55.22 |
+| [`mlc.asm._is_force_rex_8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-is-force-rex-8-function-is-force-rex-8-name-as-string-returns-bool-mlc-asm-ml-1735187869) | `mlc/asm.ml:488` | 3 | 1 | 1 | 0 | 0 | 110.36 | 75.15 |
 | [`mlc.asm._is_r32_name`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-is-r32-name-function-is-r32-name-name-as-string-returns-bool-mlc-asm-ml-809474229) | `mlc/asm.ml:476` | 3 | 1 | 1 | 0 | 0 | 364.35 | 71.52 |
+| [`mlc.asm._is_r64_name`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-is-r64-name-function-is-r64-name-name-as-string-returns-bool-mlc-asm-ml-1554939301) | `mlc/asm.ml:482` | 3 | 1 | 1 | 0 | 0 | 125.1 | 74.77 |
 | [`mlc.asm._is_r8_name`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-is-r8-name-function-is-r8-name-name-as-string-returns-bool-mlc-asm-ml-790496333) | `mlc/asm.ml:470` | 3 | 1 | 1 | 0 | 0 | 364.35 | 71.52 |
-| [`mlc.asm._jcc_mnemonic`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jcc-mnemonic-function-jcc-mnemonic-cc-mlc-asm-ml-1301070904) | `mlc/asm.ml:3920` | 3 | 1 | 1 | 0 | 0 | 25.27 | 79.64 |
+| [`mlc.asm._jcc_mnemonic`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jcc-mnemonic-function-jcc-mnemonic-cc-mlc-asm-ml-1301070904) | `mlc/asm.ml:4026` | 3 | 1 | 1 | 0 | 0 | 25.27 | 79.64 |
 | [`mlc.asm._keepalive_barrier`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-keepalive-barrier-function-keepalive-barrier-value-mlc-asm-ml-59488951) | `mlc/asm.ml:145` | 3 | 1 | 1 | 0 | 0 | 25.27 | 79.64 |
 | [`mlc.asm._label_index`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-label-index-function-label-index-labels-name-mlc-asm-ml-22519306) | `mlc/asm.ml:430` | 7 | 6 | 4 | 4 | 2 | 238.42 | 64.38 |
 | [`mlc.asm._label_pos`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-label-pos-function-label-pos-labels-name-mlc-asm-ml-1728841002) | `mlc/asm.ml:440` | 5 | 4 | 2 | 1 | 1 | 151.62 | 69.21 |
 | [`mlc.asm._label_push`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-label-push-function-label-push-asm-label-mlc-asm-ml-566373889) | `mlc/asm.ml:421` | 6 | 4 | 1 | 0 | 0 | 197.65 | 66.82 |
-| [`mlc.asm._last_patch`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-last-patch-function-last-patch-asm-mlc-asm-ml-1493029077) | `mlc/asm.ml:551` | 6 | 5 | 2 | 1 | 1 | 357.23 | 64.88 |
-| [`mlc.asm._materialize_buffer`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-materialize-buffer-function-materialize-buffer-asm-mlc-asm-ml-1600056139) | `mlc/asm.ml:700` | 45 | 42 | 11 | 12 | 2 | 1523.07 | 40.17 |
-| [`mlc.asm._modrm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-modrm-function-modrm-mod-reg-rm-mlc-asm-ml-786224505) | `mlc/asm.ml:3908` | 3 | 1 | 1 | 0 | 0 | 82.45 | 76.04 |
-| [`mlc.asm._modrm_byte`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-modrm-byte-function-modrm-byte-mod-as-int-reg-as-int-rm-as-int-returns-int-mlc-asm-ml-51179326) | `mlc/asm.ml:907` | 3 | 1 | 1 | 0 | 0 | 191.16 | 73.48 |
+| [`mlc.asm._last_patch`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-last-patch-function-last-patch-asm-mlc-asm-ml-1493029077) | `mlc/asm.ml:557` | 6 | 5 | 2 | 1 | 1 | 357.23 | 64.88 |
+| [`mlc.asm._materialize_buffer`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-materialize-buffer-function-materialize-buffer-asm-mlc-asm-ml-1600056139) | `mlc/asm.ml:706` | 45 | 42 | 11 | 12 | 2 | 1523.07 | 40.17 |
+| [`mlc.asm._modrm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-modrm-function-modrm-mod-reg-rm-mlc-asm-ml-786224505) | `mlc/asm.ml:4014` | 3 | 1 | 1 | 0 | 0 | 82.45 | 76.04 |
+| [`mlc.asm._modrm_byte`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-modrm-byte-function-modrm-byte-mod-as-int-reg-as-int-rm-as-int-returns-int-mlc-asm-ml-51179326) | `mlc/asm.ml:913` | 3 | 1 | 1 | 0 | 0 | 191.16 | 73.48 |
 | [`mlc.asm._patch_push`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-patch-push-function-patch-push-asm-patch-mlc-asm-ml-1045153109) | `mlc/asm.ml:355` | 6 | 4 | 1 | 0 | 0 | 197.65 | 66.82 |
-| [`mlc.asm._patches_replace`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-patches-replace-function-patches-replace-asm-patches-mlc-asm-ml-1863022165) | `mlc/asm.ml:522` | 11 | 9 | 3 | 2 | 1 | 348.39 | 59.08 |
-| [`mlc.asm._peephole_trim_tail`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-peephole-trim-tail-function-peephole-trim-tail-asm-n-mlc-asm-ml-1495235887) | `mlc/asm.ml:3855` | 8 | 8 | 5 | 4 | 1 | 329.71 | 62 |
-| [`mlc.asm._relax_forward_branch`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-relax-forward-branch-function-relax-forward-branch-asm-name-mlc-asm-ml-1967572062) | `mlc/asm.ml:1163` | 57 | 57 | 16 | 18 | 2 | 2752.05 | 35.46 |
-| [`mlc.asm._remove_patch_at`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-remove-patch-at-function-remove-patch-at-asm-idx-mlc-asm-ml-2107070144) | `mlc/asm.ml:536` | 12 | 10 | 6 | 6 | 2 | 420 | 57.28 |
+| [`mlc.asm._patches_replace`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-patches-replace-function-patches-replace-asm-patches-mlc-asm-ml-1863022165) | `mlc/asm.ml:528` | 11 | 9 | 3 | 2 | 1 | 348.39 | 59.08 |
+| [`mlc.asm._peephole_trim_tail`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-peephole-trim-tail-function-peephole-trim-tail-asm-n-mlc-asm-ml-1495235887) | `mlc/asm.ml:3961` | 8 | 8 | 5 | 4 | 1 | 329.71 | 62 |
+| [`mlc.asm._relax_forward_branch`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-relax-forward-branch-function-relax-forward-branch-asm-name-mlc-asm-ml-1967572062) | `mlc/asm.ml:1169` | 57 | 57 | 16 | 18 | 2 | 2752.05 | 35.46 |
+| [`mlc.asm._remove_patch_at`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-remove-patch-at-function-remove-patch-at-asm-idx-mlc-asm-ml-2107070144) | `mlc/asm.ml:542` | 12 | 10 | 6 | 6 | 2 | 420 | 57.28 |
 | [`mlc.asm._resolve_patch_set`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-resolve-patch-set-function-resolve-patch-set-asm-patch-chunks-patch-tail-kept-chunks-kept-tail-mlc-asm-ml-1415396307) | `mlc/asm.ml:248` | 32 | 27 | 12 | 20 | 4 | 1750.53 | 42.84 |
-| [`mlc.asm._restore_materialized_chunks`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-restore-materialized-chunks-function-restore-materialized-chunks-asm-mlc-asm-ml-1366154781) | `mlc/asm.ml:635` | 25 | 28 | 12 | 12 | 2 | 1197.02 | 46.34 |
-| [`mlc.asm._rex`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rex-function-rex-w-r-x-b-force-mlc-asm-ml-1532133820) | `mlc/asm.ml:3899` | 6 | 3 | 3 | 2 | 1 | 380.39 | 64.56 |
+| [`mlc.asm._restore_materialized_chunks`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-restore-materialized-chunks-function-restore-materialized-chunks-asm-mlc-asm-ml-1366154781) | `mlc/asm.ml:641` | 25 | 28 | 12 | 12 | 2 | 1197.02 | 46.34 |
+| [`mlc.asm._rex`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rex-function-rex-w-r-x-b-force-mlc-asm-ml-1532133820) | `mlc/asm.ml:4005` | 6 | 3 | 3 | 2 | 1 | 380.39 | 64.56 |
 | [`mlc.asm._rid_any`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rid-any-function-rid-any-name-mlc-asm-ml-1601508049) | `mlc/asm.ml:448` | 19 | 33 | 49 | 48 | 1 | 1761.92 | 42.79 |
-| [`mlc.asm._scale_bits`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-scale-bits-function-scale-bits-scale-mlc-asm-ml-1350604720) | `mlc/asm.ml:975` | 7 | 9 | 5 | 4 | 1 | 224.74 | 64.43 |
-| [`mlc.asm._set_chunk_byte`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-set-chunk-byte-function-set-chunk-byte-asm-idx-value-mlc-asm-ml-58383037) | `mlc/asm.ml:687` | 10 | 8 | 1 | 0 | 0 | 307.67 | 60.63 |
-| [`mlc.asm._sib`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sib-function-sib-scale-index-base-mlc-asm-ml-719836301) | `mlc/asm.ml:3914` | 3 | 1 | 1 | 0 | 0 | 82.45 | 76.04 |
-| [`mlc.asm._sib_byte`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sib-byte-function-sib-byte-scale-as-int-index-as-int-base-as-int-returns-int-mlc-asm-ml-133039292) | `mlc/asm.ml:913` | 3 | 1 | 1 | 0 | 0 | 191.16 | 73.48 |
+| [`mlc.asm._scale_bits`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-scale-bits-function-scale-bits-scale-mlc-asm-ml-1350604720) | `mlc/asm.ml:981` | 7 | 9 | 5 | 4 | 1 | 224.74 | 64.43 |
+| [`mlc.asm._set_chunk_byte`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-set-chunk-byte-function-set-chunk-byte-asm-idx-value-mlc-asm-ml-58383037) | `mlc/asm.ml:693` | 10 | 8 | 1 | 0 | 0 | 307.67 | 60.63 |
+| [`mlc.asm._sib`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sib-function-sib-scale-index-base-mlc-asm-ml-719836301) | `mlc/asm.ml:4020` | 3 | 1 | 1 | 0 | 0 | 82.45 | 76.04 |
+| [`mlc.asm._sib_byte`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sib-byte-function-sib-byte-scale-as-int-index-as-int-base-as-int-returns-int-mlc-asm-ml-133039292) | `mlc/asm.ml:919` | 3 | 1 | 1 | 0 | 0 | 191.16 | 73.48 |
 | [`mlc.asm._spill_before_call`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-spill-before-call-function-spill-before-call-asm-mlc-asm-ml-495611853) | `mlc/asm.ml:405` | 13 | 14 | 9 | 11 | 2 | 653.62 | 54.78 |
 | [`mlc.asm._starts_with_text`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-starts-with-text-function-starts-with-text-text-prefix-mlc-asm-ml-634186839) | `mlc/asm.ml:122` | 10 | 12 | 7 | 7 | 2 | 432.66 | 58.79 |
 | [`mlc.asm._track_helper_label`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-track-helper-label-function-track-helper-label-asm-label-mlc-asm-ml-656463849) | `mlc/asm.ml:373` | 25 | 25 | 14 | 19 | 4 | 1294.22 | 45.83 |
-| [`mlc.asm._vex3`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vex3-function-vex3-m-w-vvvv-l-pp-r-x-b-mlc-asm-ml-1694335052) | `mlc/asm.ml:1023` | 17 | 16 | 5 | 4 | 1 | 856.73 | 51.95 |
-| [`mlc.asm._xmm_id`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xmm-id-function-xmm-id-name-mlc-asm-ml-1056018291) | `mlc/asm.ml:1043` | 19 | 33 | 17 | 16 | 1 | 835.64 | 49.36 |
-| [`mlc.asm._ymm_id`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ymm-id-function-ymm-id-name-mlc-asm-ml-446720225) | `mlc/asm.ml:1065` | 19 | 33 | 17 | 16 | 1 | 835.64 | 49.36 |
-| [`mlc.asm.add_patch`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-patch-function-add-patch-asm-position-label-kind-mlc-asm-ml-1666246762) | `mlc/asm.ml:848` | 3 | 1 | 1 | 0 | 0 | 99.91 | 75.46 |
-| [`mlc.asm.add_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r32-imm-function-add-r32-imm-asm-reg-name-imm-mlc-asm-ml-1236754780) | `mlc/asm.ml:1972` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.add_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r32-r32-function-add-r32-r32-asm-dst-src-mlc-asm-ml-441334020) | `mlc/asm.ml:2040` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.add_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r64-imm-function-add-r64-imm-asm-reg-name-imm-mlc-asm-ml-526115370) | `mlc/asm.ml:1887` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.add_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r64-imm8-function-add-r64-imm8-asm-reg-name-imm-mlc-asm-ml-1865708626) | `mlc/asm.ml:1923` | 3 | 1 | 1 | 0 | 0 | 69.19 | 76.57 |
-| [`mlc.asm.add_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r64-r64-function-add-r64-r64-asm-dst-src-mlc-asm-ml-606237132) | `mlc/asm.ml:2030` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.add_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r8-imm8-function-add-r8-imm8-asm-reg8-imm-mlc-asm-ml-1379506176) | `mlc/asm.ml:2667` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
-| [`mlc.asm.add_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rax-imm8-function-add-rax-imm8-asm-imm-mlc-asm-ml-1294979934) | `mlc/asm.ml:2218` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.add_rax_r10`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rax-r10-function-add-rax-r10-asm-mlc-asm-ml-1577336883) | `mlc/asm.ml:2211` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.add_rcx_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rcx-imm32-function-add-rcx-imm32-asm-imm-mlc-asm-ml-936260126) | `mlc/asm.ml:2359` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.add_rcx_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rcx-imm8-function-add-rcx-imm8-asm-imm-mlc-asm-ml-1756460366) | `mlc/asm.ml:2352` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.add_rsp_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rsp-imm32-function-add-rsp-imm32-asm-imm-mlc-asm-ml-1850344526) | `mlc/asm.ml:2389` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
-| [`mlc.asm.add_rsp_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rsp-imm8-function-add-rsp-imm8-asm-imm-mlc-asm-ml-2144943166) | `mlc/asm.ml:2374` | 4 | 3 | 2 | 1 | 1 | 105.49 | 72.43 |
-| [`mlc.asm.addsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-addsd-xmm-xmm-function-addsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-579743080) | `mlc/asm.ml:3441` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.align_loop`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-align-loop-function-align-loop-asm-stream-base-mlc-asm-ml-125625747) | `mlc/asm.ml:782` | 6 | 5 | 2 | 1 | 1 | 271.03 | 65.72 |
-| [`mlc.asm.and_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r32-imm-function-and-r32-imm-asm-reg-name-imm-mlc-asm-ml-1221207828) | `mlc/asm.ml:1982` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.and_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r32-r32-function-and-r32-r32-asm-dst-src-mlc-asm-ml-458899852) | `mlc/asm.ml:2065` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.and_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r64-imm-function-and-r64-imm-asm-reg-name-imm-mlc-asm-ml-292145406) | `mlc/asm.ml:1897` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.and_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r64-imm8-function-and-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-221705171) | `mlc/asm.ml:1941` | 3 | 1 | 1 | 0 | 0 | 112 | 75.11 |
-| [`mlc.asm.and_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r64-r64-function-and-r64-r64-asm-dst-src-mlc-asm-ml-1545923012) | `mlc/asm.ml:2060` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.and_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r8-imm8-function-and-r8-imm8-asm-reg8-imm-mlc-asm-ml-852967172) | `mlc/asm.ml:2652` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
-| [`mlc.asm.and_r8_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r8-r8-function-and-r8-r8-asm-dst-src-mlc-asm-ml-1341814340) | `mlc/asm.ml:2080` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.and_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-rax-imm8-function-and-rax-imm8-asm-imm-mlc-asm-ml-363316942) | `mlc/asm.ml:2226` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.bsf_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bsf-r32-r32-function-bsf-r32-r32-asm-dst32-src32-mlc-asm-ml-1189041242) | `mlc/asm.ml:2764` | 14 | 15 | 5 | 4 | 1 | 635.9 | 54.7 |
-| [`mlc.asm.bsr_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bsr-r32-r32-function-bsr-r32-r32-asm-dst32-src32-mlc-asm-ml-869848634) | `mlc/asm.ml:2783` | 14 | 15 | 5 | 4 | 1 | 635.9 | 54.7 |
-| [`mlc.asm.bt_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bt-r64-r64-function-bt-r64-r64-asm-value-index-mlc-asm-ml-1825960186) | `mlc/asm.ml:3333` | 9 | 8 | 3 | 2 | 1 | 466.15 | 60.1 |
-| [`mlc.asm.bts_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bts-r64-r64-function-bts-r64-r64-asm-dst-index-mlc-asm-ml-792663558) | `mlc/asm.ml:3319` | 9 | 8 | 3 | 2 | 1 | 466.15 | 60.1 |
-| [`mlc.asm.call`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-function-call-asm-label-mlc-asm-ml-332714073) | `mlc/asm.ml:1474` | 12 | 10 | 3 | 3 | 2 | 422.64 | 57.67 |
-| [`mlc.asm.call_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-membase-disp-function-call-membase-disp-asm-base-disp-mlc-asm-ml-677240064) | `mlc/asm.ml:1500` | 10 | 9 | 2 | 1 | 1 | 402.36 | 59.68 |
-| [`mlc.asm.call_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-rax-function-call-rax-asm-mlc-asm-ml-1240620053) | `mlc/asm.ml:1489` | 6 | 4 | 1 | 0 | 0 | 114.71 | 68.47 |
-| [`mlc.asm.call_rip_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-rip-qword-function-call-rip-qword-asm-label-mlc-asm-ml-1481692961) | `mlc/asm.ml:1514` | 9 | 7 | 1 | 0 | 0 | 272.32 | 62 |
+| [`mlc.asm._vex3`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vex3-function-vex3-m-w-vvvv-l-pp-r-x-b-mlc-asm-ml-1694335052) | `mlc/asm.ml:1029` | 17 | 16 | 5 | 4 | 1 | 856.73 | 51.95 |
+| [`mlc.asm._xmm_id`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xmm-id-function-xmm-id-name-mlc-asm-ml-1056018291) | `mlc/asm.ml:1049` | 19 | 33 | 17 | 16 | 1 | 835.64 | 49.36 |
+| [`mlc.asm._ymm_id`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ymm-id-function-ymm-id-name-mlc-asm-ml-446720225) | `mlc/asm.ml:1071` | 19 | 33 | 17 | 16 | 1 | 835.64 | 49.36 |
+| [`mlc.asm.add_patch`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-patch-function-add-patch-asm-position-label-kind-mlc-asm-ml-1666246762) | `mlc/asm.ml:854` | 3 | 1 | 1 | 0 | 0 | 99.91 | 75.46 |
+| [`mlc.asm.add_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r32-imm-function-add-r32-imm-asm-reg-name-imm-mlc-asm-ml-1236754780) | `mlc/asm.ml:1978` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.add_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r32-r32-function-add-r32-r32-asm-dst-src-mlc-asm-ml-441334020) | `mlc/asm.ml:2046` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.add_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r64-imm-function-add-r64-imm-asm-reg-name-imm-mlc-asm-ml-526115370) | `mlc/asm.ml:1893` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.add_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r64-imm8-function-add-r64-imm8-asm-reg-name-imm-mlc-asm-ml-1865708626) | `mlc/asm.ml:1929` | 3 | 1 | 1 | 0 | 0 | 69.19 | 76.57 |
+| [`mlc.asm.add_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r64-r64-function-add-r64-r64-asm-dst-src-mlc-asm-ml-606237132) | `mlc/asm.ml:2036` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.add_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-r8-imm8-function-add-r8-imm8-asm-reg8-imm-mlc-asm-ml-1379506176) | `mlc/asm.ml:2673` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
+| [`mlc.asm.add_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rax-imm8-function-add-rax-imm8-asm-imm-mlc-asm-ml-1294979934) | `mlc/asm.ml:2224` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.add_rax_r10`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rax-r10-function-add-rax-r10-asm-mlc-asm-ml-1577336883) | `mlc/asm.ml:2217` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.add_rcx_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rcx-imm32-function-add-rcx-imm32-asm-imm-mlc-asm-ml-936260126) | `mlc/asm.ml:2365` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.add_rcx_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rcx-imm8-function-add-rcx-imm8-asm-imm-mlc-asm-ml-1756460366) | `mlc/asm.ml:2358` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.add_rsp_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rsp-imm32-function-add-rsp-imm32-asm-imm-mlc-asm-ml-1850344526) | `mlc/asm.ml:2395` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
+| [`mlc.asm.add_rsp_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-add-rsp-imm8-function-add-rsp-imm8-asm-imm-mlc-asm-ml-2144943166) | `mlc/asm.ml:2380` | 4 | 3 | 2 | 1 | 1 | 105.49 | 72.43 |
+| [`mlc.asm.addsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-addsd-xmm-xmm-function-addsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-579743080) | `mlc/asm.ml:3547` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.align_loop`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-align-loop-function-align-loop-asm-stream-base-mlc-asm-ml-125625747) | `mlc/asm.ml:788` | 6 | 5 | 2 | 1 | 1 | 271.03 | 65.72 |
+| [`mlc.asm.and_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r32-imm-function-and-r32-imm-asm-reg-name-imm-mlc-asm-ml-1221207828) | `mlc/asm.ml:1988` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.and_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r32-r32-function-and-r32-r32-asm-dst-src-mlc-asm-ml-458899852) | `mlc/asm.ml:2071` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.and_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r64-imm-function-and-r64-imm-asm-reg-name-imm-mlc-asm-ml-292145406) | `mlc/asm.ml:1903` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.and_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r64-imm8-function-and-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-221705171) | `mlc/asm.ml:1947` | 3 | 1 | 1 | 0 | 0 | 112 | 75.11 |
+| [`mlc.asm.and_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r64-r64-function-and-r64-r64-asm-dst-src-mlc-asm-ml-1545923012) | `mlc/asm.ml:2066` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.and_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r8-imm8-function-and-r8-imm8-asm-reg8-imm-mlc-asm-ml-852967172) | `mlc/asm.ml:2658` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
+| [`mlc.asm.and_r8_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-r8-r8-function-and-r8-r8-asm-dst-src-mlc-asm-ml-1341814340) | `mlc/asm.ml:2086` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.and_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-and-rax-imm8-function-and-rax-imm8-asm-imm-mlc-asm-ml-363316942) | `mlc/asm.ml:2232` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.bsf_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bsf-r32-r32-function-bsf-r32-r32-asm-dst32-src32-mlc-asm-ml-1189041242) | `mlc/asm.ml:2770` | 14 | 15 | 5 | 4 | 1 | 635.9 | 54.7 |
+| [`mlc.asm.bsf_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bsf-r64-r64-function-bsf-r64-r64-asm-dst-src-mlc-asm-ml-972401228) | `mlc/asm.ml:2808` | 10 | 9 | 3 | 2 | 1 | 509.48 | 58.83 |
+| [`mlc.asm.bsr_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bsr-r32-r32-function-bsr-r32-r32-asm-dst32-src32-mlc-asm-ml-869848634) | `mlc/asm.ml:2789` | 14 | 15 | 5 | 4 | 1 | 635.9 | 54.7 |
+| [`mlc.asm.bsr_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bsr-r64-r64-function-bsr-r64-r64-asm-dst-src-mlc-asm-ml-109314676) | `mlc/asm.ml:2823` | 10 | 9 | 3 | 2 | 1 | 509.48 | 58.83 |
+| [`mlc.asm.bt_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bt-r64-r64-function-bt-r64-r64-asm-value-index-mlc-asm-ml-1825960186) | `mlc/asm.ml:3439` | 9 | 8 | 3 | 2 | 1 | 466.15 | 60.1 |
+| [`mlc.asm.bts_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-bts-r64-r64-function-bts-r64-r64-asm-dst-index-mlc-asm-ml-792663558) | `mlc/asm.ml:3425` | 9 | 8 | 3 | 2 | 1 | 466.15 | 60.1 |
+| [`mlc.asm.call`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-function-call-asm-label-mlc-asm-ml-332714073) | `mlc/asm.ml:1480` | 12 | 10 | 3 | 3 | 2 | 422.64 | 57.67 |
+| [`mlc.asm.call_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-membase-disp-function-call-membase-disp-asm-base-disp-mlc-asm-ml-677240064) | `mlc/asm.ml:1506` | 10 | 9 | 2 | 1 | 1 | 402.36 | 59.68 |
+| [`mlc.asm.call_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-rax-function-call-rax-asm-mlc-asm-ml-1240620053) | `mlc/asm.ml:1495` | 6 | 4 | 1 | 0 | 0 | 114.71 | 68.47 |
+| [`mlc.asm.call_rip_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-call-rip-qword-function-call-rip-qword-asm-label-mlc-asm-ml-1481692961) | `mlc/asm.ml:1520` | 9 | 7 | 1 | 0 | 0 | 272.32 | 62 |
 | [`mlc.asm.clear_calls`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-clear-calls-function-clear-calls-asm-mlc-asm-ml-319950115) | `mlc/asm.ml:333` | 5 | 3 | 1 | 0 | 0 | 77.71 | 71.38 |
 | [`mlc.asm.clear_tracked_helpers`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-clear-tracked-helpers-function-clear-tracked-helpers-asm-mlc-asm-ml-805444525) | `mlc/asm.ml:341` | 5 | 3 | 1 | 0 | 0 | 100 | 70.61 |
-| [`mlc.asm.cmp_membase_disp_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-membase-disp-imm8-function-cmp-membase-disp-imm8-asm-base-disp-imm-mlc-asm-ml-492106309) | `mlc/asm.ml:2729` | 10 | 9 | 2 | 1 | 1 | 421.99 | 59.53 |
-| [`mlc.asm.cmp_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r32-imm-function-cmp-r32-imm-asm-reg-name-imm-mlc-asm-ml-45694778) | `mlc/asm.ml:1997` | 6 | 3 | 2 | 1 | 1 | 166.8 | 67.2 |
-| [`mlc.asm.cmp_r32_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r32-imm32-function-cmp-r32-imm32-asm-reg-name-imm-mlc-asm-ml-1636248900) | `mlc/asm.ml:2007` | 1 | 1 | 1 | 0 | 0 | 69.19 | 86.98 |
-| [`mlc.asm.cmp_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r32-r32-function-cmp-r32-r32-asm-left-right-mlc-asm-ml-211470546) | `mlc/asm.ml:2096` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.cmp_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r64-imm-function-cmp-r64-imm-asm-reg-name-imm-mlc-asm-ml-1783015044) | `mlc/asm.ml:1912` | 6 | 3 | 2 | 1 | 1 | 166.8 | 67.2 |
-| [`mlc.asm.cmp_r64_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r64-imm32-function-cmp-r64-imm32-asm-reg-name-imm-mlc-asm-ml-1486450838) | `mlc/asm.ml:2012` | 1 | 1 | 1 | 0 | 0 | 69.19 | 86.98 |
-| [`mlc.asm.cmp_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r64-imm8-function-cmp-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-1127591647) | `mlc/asm.ml:1964` | 3 | 1 | 1 | 0 | 0 | 112 | 75.11 |
-| [`mlc.asm.cmp_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r64-r64-function-cmp-r64-r64-asm-left-right-mlc-asm-ml-502250) | `mlc/asm.ml:2091` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.cmp_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r8-imm8-function-cmp-r8-imm8-asm-reg8-imm-mlc-asm-ml-921352058) | `mlc/asm.ml:2678` | 6 | 3 | 2 | 1 | 1 | 155.32 | 67.41 |
-| [`mlc.asm.cmp_r8_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r8-membase-disp-function-cmp-r8-membase-disp-asm-reg8-base-disp-mlc-asm-ml-1368943660) | `mlc/asm.ml:2709` | 14 | 15 | 5 | 4 | 1 | 683.71 | 54.48 |
-| [`mlc.asm.cmp_rax_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-rax-imm32-function-cmp-rax-imm32-asm-imm-mlc-asm-ml-819904964) | `mlc/asm.ml:2325` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.cmp_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-rax-imm8-function-cmp-rax-imm8-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-1064240996) | `mlc/asm.ml:2318` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
-| [`mlc.asm.cmp_rax_r10`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-rax-r10-function-cmp-rax-r10-asm-mlc-asm-ml-478965601) | `mlc/asm.ml:2310` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
-| [`mlc.asm.cpuid`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cpuid-function-cpuid-asm-mlc-asm-ml-960815007) | `mlc/asm.ml:3399` | 5 | 3 | 1 | 0 | 0 | 89.62 | 70.95 |
-| [`mlc.asm.cqo`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cqo-function-cqo-asm-mlc-asm-ml-246911879) | `mlc/asm.ml:3285` | 5 | 3 | 1 | 0 | 0 | 128.93 | 69.84 |
-| [`mlc.asm.crc32_r32_membase_disp8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-crc32-r32-membase-disp8-function-crc32-r32-membase-disp8-asm-dst32-base-disp-mlc-asm-ml-719330366) | `mlc/asm.ml:2822` | 14 | 14 | 4 | 3 | 1 | 743.4 | 54.36 |
-| [`mlc.asm.crc32_r64_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-crc32-r64-membase-disp-function-crc32-r64-membase-disp-asm-dst64-base-disp-mlc-asm-ml-1760457167) | `mlc/asm.ml:2803` | 13 | 12 | 3 | 2 | 1 | 634.25 | 55.68 |
-| [`mlc.asm.cvtsd2ss_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cvtsd2ss-xmm-xmm-function-cvtsd2ss-xmm-xmm-asm-dst-src-mlc-asm-ml-302972442) | `mlc/asm.ml:3721` | 11 | 10 | 3 | 2 | 1 | 525.14 | 57.83 |
-| [`mlc.asm.cvtsi2sd_xmm_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cvtsi2sd-xmm-r64-function-cvtsi2sd-xmm-r64-asm-dst-xmm-src-reg-mlc-asm-ml-1035364584) | `mlc/asm.ml:3536` | 11 | 10 | 3 | 2 | 1 | 530 | 57.8 |
-| [`mlc.asm.cvtss2sd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cvtss2sd-xmm-xmm-function-cvtss2sd-xmm-xmm-asm-dst-src-mlc-asm-ml-977744022) | `mlc/asm.ml:3737` | 11 | 10 | 3 | 2 | 1 | 525.14 | 57.83 |
-| [`mlc.asm.cvttsd2si_r64_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cvttsd2si-r64-xmm-function-cvttsd2si-r64-xmm-asm-dst-reg-src-xmm-mlc-asm-ml-1942516160) | `mlc/asm.ml:3552` | 11 | 10 | 3 | 2 | 1 | 530 | 57.8 |
-| [`mlc.asm.dec_membase_disp_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-dec-membase-disp-qword-function-dec-membase-disp-qword-asm-base-disp-mlc-asm-ml-1642462268) | `mlc/asm.ml:2903` | 9 | 8 | 2 | 1 | 1 | 369.21 | 60.94 |
-| [`mlc.asm.dec_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-dec-r32-function-dec-r32-asm-reg-name-mlc-asm-ml-1829827573) | `mlc/asm.ml:2876` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
-| [`mlc.asm.dec_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-dec-r64-function-dec-r64-asm-reg-name-mlc-asm-ml-342211095) | `mlc/asm.ml:2852` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
-| [`mlc.asm.disable_listing`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-disable-listing-function-disable-listing-asm-mlc-asm-ml-1312507739) | `mlc/asm.ml:3876` | 3 | 1 | 1 | 0 | 0 | 25.27 | 79.64 |
-| [`mlc.asm.div_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-div-r64-function-div-r64-asm-reg-name-mlc-asm-ml-806295681) | `mlc/asm.ml:3306` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
-| [`mlc.asm.divsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-divsd-xmm-xmm-function-divsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-788105124) | `mlc/asm.ml:3465` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.emit`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-function-emit-asm-b-mlc-asm-ml-892766301) | `mlc/asm.ml:1088` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
-| [`mlc.asm.emit32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit32-function-emit32-asm-x-mlc-asm-ml-875885211) | `mlc/asm.ml:1102` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
-| [`mlc.asm.emit64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit64-function-emit64-asm-x-mlc-asm-ml-1942395999) | `mlc/asm.ml:1109` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
-| [`mlc.asm.emit8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit8-function-emit8-asm-x-mlc-asm-ml-1396847481) | `mlc/asm.ml:1095` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
-| [`mlc.asm.emit_placeholder`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-placeholder-function-emit-placeholder-asm-text-mlc-asm-ml-1552718002) | `mlc/asm.ml:3958` | 3 | 1 | 1 | 0 | 0 | 34.87 | 78.66 |
-| [`mlc.asm.enable_listing`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-enable-listing-function-enable-listing-asm-path-show-addr-show-bytes-show-text-mlc-asm-ml-429631043) | `mlc/asm.ml:3870` | 3 | 1 | 1 | 0 | 0 | 60.94 | 76.96 |
-| [`mlc.asm.finalize`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-finalize-function-finalize-asm-mlc-asm-ml-1223055845) | `mlc/asm.ml:1272` | 37 | 30 | 12 | 21 | 3 | 1969.31 | 41.11 |
+| [`mlc.asm.cmp_membase_disp_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-membase-disp-imm8-function-cmp-membase-disp-imm8-asm-base-disp-imm-mlc-asm-ml-492106309) | `mlc/asm.ml:2735` | 10 | 9 | 2 | 1 | 1 | 421.99 | 59.53 |
+| [`mlc.asm.cmp_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r32-imm-function-cmp-r32-imm-asm-reg-name-imm-mlc-asm-ml-45694778) | `mlc/asm.ml:2003` | 6 | 3 | 2 | 1 | 1 | 166.8 | 67.2 |
+| [`mlc.asm.cmp_r32_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r32-imm32-function-cmp-r32-imm32-asm-reg-name-imm-mlc-asm-ml-1636248900) | `mlc/asm.ml:2013` | 1 | 1 | 1 | 0 | 0 | 69.19 | 86.98 |
+| [`mlc.asm.cmp_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r32-r32-function-cmp-r32-r32-asm-left-right-mlc-asm-ml-211470546) | `mlc/asm.ml:2102` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.cmp_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r64-imm-function-cmp-r64-imm-asm-reg-name-imm-mlc-asm-ml-1783015044) | `mlc/asm.ml:1918` | 6 | 3 | 2 | 1 | 1 | 166.8 | 67.2 |
+| [`mlc.asm.cmp_r64_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r64-imm32-function-cmp-r64-imm32-asm-reg-name-imm-mlc-asm-ml-1486450838) | `mlc/asm.ml:2018` | 1 | 1 | 1 | 0 | 0 | 69.19 | 86.98 |
+| [`mlc.asm.cmp_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r64-imm8-function-cmp-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-1127591647) | `mlc/asm.ml:1970` | 3 | 1 | 1 | 0 | 0 | 112 | 75.11 |
+| [`mlc.asm.cmp_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r64-r64-function-cmp-r64-r64-asm-left-right-mlc-asm-ml-502250) | `mlc/asm.ml:2097` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.cmp_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r8-imm8-function-cmp-r8-imm8-asm-reg8-imm-mlc-asm-ml-921352058) | `mlc/asm.ml:2684` | 6 | 3 | 2 | 1 | 1 | 155.32 | 67.41 |
+| [`mlc.asm.cmp_r8_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-r8-membase-disp-function-cmp-r8-membase-disp-asm-reg8-base-disp-mlc-asm-ml-1368943660) | `mlc/asm.ml:2715` | 14 | 15 | 5 | 4 | 1 | 683.71 | 54.48 |
+| [`mlc.asm.cmp_rax_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-rax-imm32-function-cmp-rax-imm32-asm-imm-mlc-asm-ml-819904964) | `mlc/asm.ml:2331` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.cmp_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-rax-imm8-function-cmp-rax-imm8-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-1064240996) | `mlc/asm.ml:2324` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
+| [`mlc.asm.cmp_rax_r10`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cmp-rax-r10-function-cmp-rax-r10-asm-mlc-asm-ml-478965601) | `mlc/asm.ml:2316` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
+| [`mlc.asm.cpuid`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cpuid-function-cpuid-asm-mlc-asm-ml-960815007) | `mlc/asm.ml:3505` | 5 | 3 | 1 | 0 | 0 | 89.62 | 70.95 |
+| [`mlc.asm.cqo`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cqo-function-cqo-asm-mlc-asm-ml-246911879) | `mlc/asm.ml:3391` | 5 | 3 | 1 | 0 | 0 | 128.93 | 69.84 |
+| [`mlc.asm.crc32_r32_membase_disp8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-crc32-r32-membase-disp8-function-crc32-r32-membase-disp8-asm-dst32-base-disp-mlc-asm-ml-719330366) | `mlc/asm.ml:2928` | 14 | 14 | 4 | 3 | 1 | 743.4 | 54.36 |
+| [`mlc.asm.crc32_r64_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-crc32-r64-membase-disp-function-crc32-r64-membase-disp-asm-dst64-base-disp-mlc-asm-ml-1760457167) | `mlc/asm.ml:2909` | 13 | 12 | 3 | 2 | 1 | 634.25 | 55.68 |
+| [`mlc.asm.cvtsd2ss_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cvtsd2ss-xmm-xmm-function-cvtsd2ss-xmm-xmm-asm-dst-src-mlc-asm-ml-302972442) | `mlc/asm.ml:3827` | 11 | 10 | 3 | 2 | 1 | 525.14 | 57.83 |
+| [`mlc.asm.cvtsi2sd_xmm_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cvtsi2sd-xmm-r64-function-cvtsi2sd-xmm-r64-asm-dst-xmm-src-reg-mlc-asm-ml-1035364584) | `mlc/asm.ml:3642` | 11 | 10 | 3 | 2 | 1 | 530 | 57.8 |
+| [`mlc.asm.cvtss2sd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cvtss2sd-xmm-xmm-function-cvtss2sd-xmm-xmm-asm-dst-src-mlc-asm-ml-977744022) | `mlc/asm.ml:3843` | 11 | 10 | 3 | 2 | 1 | 525.14 | 57.83 |
+| [`mlc.asm.cvttsd2si_r64_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-cvttsd2si-r64-xmm-function-cvttsd2si-r64-xmm-asm-dst-reg-src-xmm-mlc-asm-ml-1942516160) | `mlc/asm.ml:3658` | 11 | 10 | 3 | 2 | 1 | 530 | 57.8 |
+| [`mlc.asm.dec_membase_disp_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-dec-membase-disp-qword-function-dec-membase-disp-qword-asm-base-disp-mlc-asm-ml-1642462268) | `mlc/asm.ml:3009` | 9 | 8 | 2 | 1 | 1 | 369.21 | 60.94 |
+| [`mlc.asm.dec_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-dec-r32-function-dec-r32-asm-reg-name-mlc-asm-ml-1829827573) | `mlc/asm.ml:2982` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
+| [`mlc.asm.dec_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-dec-r64-function-dec-r64-asm-reg-name-mlc-asm-ml-342211095) | `mlc/asm.ml:2958` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
+| [`mlc.asm.disable_listing`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-disable-listing-function-disable-listing-asm-mlc-asm-ml-1312507739) | `mlc/asm.ml:3982` | 3 | 1 | 1 | 0 | 0 | 25.27 | 79.64 |
+| [`mlc.asm.div_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-div-r64-function-div-r64-asm-reg-name-mlc-asm-ml-806295681) | `mlc/asm.ml:3412` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
+| [`mlc.asm.divsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-divsd-xmm-xmm-function-divsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-788105124) | `mlc/asm.ml:3571` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.emit`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-function-emit-asm-b-mlc-asm-ml-892766301) | `mlc/asm.ml:1094` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
+| [`mlc.asm.emit32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit32-function-emit32-asm-x-mlc-asm-ml-875885211) | `mlc/asm.ml:1108` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
+| [`mlc.asm.emit64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit64-function-emit64-asm-x-mlc-asm-ml-1942395999) | `mlc/asm.ml:1115` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
+| [`mlc.asm.emit8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit8-function-emit8-asm-x-mlc-asm-ml-1396847481) | `mlc/asm.ml:1101` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
+| [`mlc.asm.emit_placeholder`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-emit-placeholder-function-emit-placeholder-asm-text-mlc-asm-ml-1552718002) | `mlc/asm.ml:4064` | 3 | 1 | 1 | 0 | 0 | 34.87 | 78.66 |
+| [`mlc.asm.enable_listing`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-enable-listing-function-enable-listing-asm-path-show-addr-show-bytes-show-text-mlc-asm-ml-429631043) | `mlc/asm.ml:3976` | 3 | 1 | 1 | 0 | 0 | 60.94 | 76.96 |
+| [`mlc.asm.finalize`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-finalize-function-finalize-asm-mlc-asm-ml-1223055845) | `mlc/asm.ml:1278` | 37 | 30 | 12 | 21 | 3 | 1969.31 | 41.11 |
 | [`mlc.asm.get_calls`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-get-calls-function-get-calls-asm-mlc-asm-ml-1257997533) | `mlc/asm.ml:318` | 3 | 1 | 1 | 0 | 0 | 74.01 | 76.37 |
 | [`mlc.asm.get_labels`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-get-labels-function-get-labels-asm-mlc-asm-ml-1671839357) | `mlc/asm.ml:324` | 6 | 3 | 3 | 2 | 1 | 203.56 | 66.46 |
 | [`mlc.asm.get_patches`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-get-patches-function-get-patches-asm-mlc-asm-ml-1802592391) | `mlc/asm.ml:172` | 16 | 10 | 5 | 6 | 2 | 722.42 | 53.04 |
 | [`mlc.asm.get_tracked_helpers`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-get-tracked-helpers-function-get-tracked-helpers-asm-mlc-asm-ml-233960775) | `mlc/asm.ml:349` | 3 | 1 | 1 | 0 | 0 | 34.87 | 78.66 |
-| [`mlc.asm.gpr`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-gpr-function-gpr-name-mlc-asm-ml-897082947) | `mlc/asm.ml:3882` | 14 | 9 | 4 | 3 | 1 | 403.82 | 56.21 |
-| [`mlc.asm.idiv_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-idiv-r64-function-idiv-r64-asm-reg-name-mlc-asm-ml-772090109) | `mlc/asm.ml:3294` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
-| [`mlc.asm.imul_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-imul-r64-r64-function-imul-r64-r64-asm-dst-src-mlc-asm-ml-107696754) | `mlc/asm.ml:3250` | 10 | 9 | 3 | 2 | 1 | 480.88 | 59 |
-| [`mlc.asm.imul_r64_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-imul-r64-r64-imm-function-imul-r64-r64-imm-asm-dst-src-imm-mlc-asm-ml-2034570803) | `mlc/asm.ml:3266` | 16 | 14 | 5 | 4 | 1 | 766.2 | 52.86 |
-| [`mlc.asm.inc_membase_disp_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-inc-membase-disp-qword-function-inc-membase-disp-qword-asm-base-disp-mlc-asm-ml-2113439912) | `mlc/asm.ml:2889` | 9 | 8 | 2 | 1 | 1 | 369.21 | 60.94 |
-| [`mlc.asm.inc_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-inc-r32-function-inc-r32-asm-reg-name-mlc-asm-ml-1991958713) | `mlc/asm.ml:2864` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
-| [`mlc.asm.inc_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-inc-r64-function-inc-r64-asm-reg-name-mlc-asm-ml-1857234975) | `mlc/asm.ml:2840` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
-| [`mlc.asm.ja`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ja-function-ja-asm-label-mlc-asm-ml-1629144245) | `mlc/asm.ml:1465` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jae`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jae-function-jae-asm-label-mlc-asm-ml-103205741) | `mlc/asm.ml:1469` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jb`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jb-function-jb-asm-label-mlc-asm-ml-328316909) | `mlc/asm.ml:1457` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jbe`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jbe-function-jbe-asm-label-mlc-asm-ml-180839243) | `mlc/asm.ml:1461` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jcc`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jcc-function-jcc-asm-cc-label-mlc-asm-ml-225047267) | `mlc/asm.ml:1375` | 44 | 58 | 26 | 27 | 2 | 2583.76 | 36.76 |
-| [`mlc.asm.je`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-je-function-je-asm-label-mlc-asm-ml-604694101) | `mlc/asm.ml:1425` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jg`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jg-function-jg-asm-label-mlc-asm-ml-783503489) | `mlc/asm.ml:1449` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jge`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jge-function-jge-asm-label-mlc-asm-ml-761932241) | `mlc/asm.ml:1453` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jl`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jl-function-jl-asm-label-mlc-asm-ml-481496257) | `mlc/asm.ml:1441` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jle`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jle-function-jle-asm-label-mlc-asm-ml-257641171) | `mlc/asm.ml:1445` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jmp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jmp-function-jmp-asm-label-mlc-asm-ml-1247247907) | `mlc/asm.ml:1319` | 38 | 31 | 17 | 24 | 4 | 1902 | 40.29 |
-| [`mlc.asm.jmp_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jmp-r64-function-jmp-r64-asm-reg-mlc-asm-ml-1944190845) | `mlc/asm.ml:1362` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
-| [`mlc.asm.jne`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jne-function-jne-asm-label-mlc-asm-ml-532552035) | `mlc/asm.ml:1433` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jnz`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jnz-function-jnz-asm-label-mlc-asm-ml-1967950889) | `mlc/asm.ml:1437` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.jz`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jz-function-jz-asm-label-mlc-asm-ml-201224317) | `mlc/asm.ml:1429` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.lea_r11_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r11-rip-function-lea-r11-rip-asm-label-mlc-asm-ml-1655740875) | `mlc/asm.ml:1585` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.lea_r64_mem_bis`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r64-mem-bis-function-lea-r64-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-26051556) | `mlc/asm.ml:3196` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
-| [`mlc.asm.lea_r64_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r64-membase-disp-function-lea-r64-membase-disp-asm-dst-base-disp-mlc-asm-ml-613633253) | `mlc/asm.ml:2587` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
-| [`mlc.asm.lea_r64_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r64-rip-function-lea-r64-rip-asm-dst-label-mlc-asm-ml-859437180) | `mlc/asm.ml:1540` | 11 | 10 | 2 | 1 | 1 | 513.83 | 58.03 |
-| [`mlc.asm.lea_r8_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r8-rip-function-lea-r8-rip-asm-label-mlc-asm-ml-524136109) | `mlc/asm.ml:1571` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.lea_r9_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r9-rip-function-lea-r9-rip-asm-label-mlc-asm-ml-1511291985) | `mlc/asm.ml:1578` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.lea_rax_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-rax-rip-function-lea-rax-rip-asm-as-struct-label-as-string-returns-struct-mlc-asm-ml-1441810659) | `mlc/asm.ml:1557` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
-| [`mlc.asm.lea_rdx_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-rdx-rip-function-lea-rdx-rip-asm-label-mlc-asm-ml-2075327575) | `mlc/asm.ml:1564` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.leave`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-leave-function-leave-asm-mlc-asm-ml-1220138275) | `mlc/asm.ml:1532` | 3 | 1 | 1 | 0 | 0 | 46.51 | 77.78 |
-| [`mlc.asm.lock_cmpxchg_membase_disp_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lock-cmpxchg-membase-disp-r32-function-lock-cmpxchg-membase-disp-r32-asm-base-disp-src-mlc-asm-ml-2099308470) | `mlc/asm.ml:2470` | 14 | 14 | 4 | 3 | 1 | 628.96 | 54.86 |
-| [`mlc.asm.lock_cmpxchg_membase_disp_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lock-cmpxchg-membase-disp-r64-function-lock-cmpxchg-membase-disp-r64-asm-base-disp-src-mlc-asm-ml-1265994932) | `mlc/asm.ml:2490` | 14 | 14 | 4 | 3 | 1 | 628.96 | 54.86 |
-| [`mlc.asm.mark`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mark-function-mark-asm-name-mlc-asm-ml-1003268770) | `mlc/asm.ml:1227` | 39 | 33 | 19 | 27 | 4 | 2011.86 | 39.61 |
-| [`mlc.asm.materialize`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-materialize-function-materialize-asm-mlc-asm-ml-1305979579) | `mlc/asm.ml:814` | 3 | 1 | 1 | 0 | 0 | 36 | 78.56 |
+| [`mlc.asm.gpr`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-gpr-function-gpr-name-mlc-asm-ml-897082947) | `mlc/asm.ml:3988` | 14 | 9 | 4 | 3 | 1 | 403.82 | 56.21 |
+| [`mlc.asm.idiv_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-idiv-r64-function-idiv-r64-asm-reg-name-mlc-asm-ml-772090109) | `mlc/asm.ml:3400` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
+| [`mlc.asm.imul_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-imul-r64-r64-function-imul-r64-r64-asm-dst-src-mlc-asm-ml-107696754) | `mlc/asm.ml:3356` | 10 | 9 | 3 | 2 | 1 | 480.88 | 59 |
+| [`mlc.asm.imul_r64_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-imul-r64-r64-imm-function-imul-r64-r64-imm-asm-dst-src-imm-mlc-asm-ml-2034570803) | `mlc/asm.ml:3372` | 16 | 14 | 5 | 4 | 1 | 766.2 | 52.86 |
+| [`mlc.asm.inc_membase_disp_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-inc-membase-disp-qword-function-inc-membase-disp-qword-asm-base-disp-mlc-asm-ml-2113439912) | `mlc/asm.ml:2995` | 9 | 8 | 2 | 1 | 1 | 369.21 | 60.94 |
+| [`mlc.asm.inc_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-inc-r32-function-inc-r32-asm-reg-name-mlc-asm-ml-1991958713) | `mlc/asm.ml:2970` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
+| [`mlc.asm.inc_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-inc-r64-function-inc-r64-asm-reg-name-mlc-asm-ml-1857234975) | `mlc/asm.ml:2946` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
+| [`mlc.asm.ja`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ja-function-ja-asm-label-mlc-asm-ml-1629144245) | `mlc/asm.ml:1471` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jae`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jae-function-jae-asm-label-mlc-asm-ml-103205741) | `mlc/asm.ml:1475` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jb`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jb-function-jb-asm-label-mlc-asm-ml-328316909) | `mlc/asm.ml:1463` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jbe`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jbe-function-jbe-asm-label-mlc-asm-ml-180839243) | `mlc/asm.ml:1467` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jcc`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jcc-function-jcc-asm-cc-label-mlc-asm-ml-225047267) | `mlc/asm.ml:1381` | 44 | 58 | 26 | 27 | 2 | 2583.76 | 36.76 |
+| [`mlc.asm.je`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-je-function-je-asm-label-mlc-asm-ml-604694101) | `mlc/asm.ml:1431` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jg`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jg-function-jg-asm-label-mlc-asm-ml-783503489) | `mlc/asm.ml:1455` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jge`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jge-function-jge-asm-label-mlc-asm-ml-761932241) | `mlc/asm.ml:1459` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jl`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jl-function-jl-asm-label-mlc-asm-ml-481496257) | `mlc/asm.ml:1447` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jle`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jle-function-jle-asm-label-mlc-asm-ml-257641171) | `mlc/asm.ml:1451` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jmp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jmp-function-jmp-asm-label-mlc-asm-ml-1247247907) | `mlc/asm.ml:1325` | 38 | 31 | 17 | 24 | 4 | 1902 | 40.29 |
+| [`mlc.asm.jmp_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jmp-r64-function-jmp-r64-asm-reg-mlc-asm-ml-1944190845) | `mlc/asm.ml:1368` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
+| [`mlc.asm.jne`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jne-function-jne-asm-label-mlc-asm-ml-532552035) | `mlc/asm.ml:1439` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jnz`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jnz-function-jnz-asm-label-mlc-asm-ml-1967950889) | `mlc/asm.ml:1443` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.jz`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-jz-function-jz-asm-label-mlc-asm-ml-201224317) | `mlc/asm.ml:1435` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.lea_r11_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r11-rip-function-lea-r11-rip-asm-label-mlc-asm-ml-1655740875) | `mlc/asm.ml:1591` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.lea_r64_mem_bis`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r64-mem-bis-function-lea-r64-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-26051556) | `mlc/asm.ml:3302` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
+| [`mlc.asm.lea_r64_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r64-membase-disp-function-lea-r64-membase-disp-asm-dst-base-disp-mlc-asm-ml-613633253) | `mlc/asm.ml:2593` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
+| [`mlc.asm.lea_r64_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r64-rip-function-lea-r64-rip-asm-dst-label-mlc-asm-ml-859437180) | `mlc/asm.ml:1546` | 11 | 10 | 2 | 1 | 1 | 513.83 | 58.03 |
+| [`mlc.asm.lea_r8_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r8-rip-function-lea-r8-rip-asm-label-mlc-asm-ml-524136109) | `mlc/asm.ml:1577` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.lea_r9_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-r9-rip-function-lea-r9-rip-asm-label-mlc-asm-ml-1511291985) | `mlc/asm.ml:1584` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.lea_rax_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-rax-rip-function-lea-rax-rip-asm-as-struct-label-as-string-returns-struct-mlc-asm-ml-1441810659) | `mlc/asm.ml:1563` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
+| [`mlc.asm.lea_rdx_rip`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lea-rdx-rip-function-lea-rdx-rip-asm-label-mlc-asm-ml-2075327575) | `mlc/asm.ml:1570` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.leave`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-leave-function-leave-asm-mlc-asm-ml-1220138275) | `mlc/asm.ml:1538` | 3 | 1 | 1 | 0 | 0 | 46.51 | 77.78 |
+| [`mlc.asm.lock_cmpxchg_membase_disp_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lock-cmpxchg-membase-disp-r32-function-lock-cmpxchg-membase-disp-r32-asm-base-disp-src-mlc-asm-ml-2099308470) | `mlc/asm.ml:2476` | 14 | 14 | 4 | 3 | 1 | 628.96 | 54.86 |
+| [`mlc.asm.lock_cmpxchg_membase_disp_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-lock-cmpxchg-membase-disp-r64-function-lock-cmpxchg-membase-disp-r64-asm-base-disp-src-mlc-asm-ml-1265994932) | `mlc/asm.ml:2496` | 14 | 14 | 4 | 3 | 1 | 628.96 | 54.86 |
+| [`mlc.asm.mark`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mark-function-mark-asm-name-mlc-asm-ml-1003268770) | `mlc/asm.ml:1233` | 39 | 33 | 19 | 27 | 4 | 2011.86 | 39.61 |
+| [`mlc.asm.materialize`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-materialize-function-materialize-asm-mlc-asm-ml-1305979579) | `mlc/asm.ml:820` | 3 | 1 | 1 | 0 | 0 | 36 | 78.56 |
 | [`mlc.asm.materialize_and_fold_local_patches`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-materialize-and-fold-local-patches-function-materialize-and-fold-local-patches-asm-mlc-asm-ml-1626421277) | `mlc/asm.ml:229` | 14 | 12 | 1 | 0 | 0 | 532.55 | 55.77 |
-| [`mlc.asm.mov_eax_rip_dword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-eax-rip-dword-function-mov-eax-rip-dword-asm-label-mlc-asm-ml-628017397) | `mlc/asm.ml:2937` | 8 | 6 | 1 | 0 | 0 | 242.03 | 63.47 |
-| [`mlc.asm.mov_gs_qword_28_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-gs-qword-28-rax-function-mov-gs-qword-28-rax-asm-mlc-asm-ml-61670697) | `mlc/asm.ml:1139` | 5 | 4 | 2 | 1 | 1 | 253.82 | 67.65 |
-| [`mlc.asm.mov_mem_bis_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-mem-bis-r32-function-mov-mem-bis-r32-asm-base-index-reg-scale-disp-src-mlc-asm-ml-1479592515) | `mlc/asm.ml:3175` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
-| [`mlc.asm.mov_mem_bis_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-mem-bis-r64-function-mov-mem-bis-r64-asm-base-index-reg-scale-disp-src-mlc-asm-ml-1183844457) | `mlc/asm.ml:3133` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
-| [`mlc.asm.mov_membase_disp_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-imm32-function-mov-membase-disp-imm32-asm-base-disp-imm-qword-mlc-asm-ml-1249385460) | `mlc/asm.ml:2553` | 12 | 12 | 3 | 2 | 1 | 499.4 | 57.16 |
-| [`mlc.asm.mov_membase_disp_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-imm8-function-mov-membase-disp-imm8-asm-base-disp-imm-mlc-asm-ml-1208277533) | `mlc/asm.ml:2571` | 10 | 9 | 2 | 1 | 1 | 417.79 | 59.57 |
-| [`mlc.asm.mov_membase_disp_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-r32-function-mov-membase-disp-r32-asm-base-disp-src-mlc-asm-ml-685623958) | `mlc/asm.ml:2452` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
-| [`mlc.asm.mov_membase_disp_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-r64-function-mov-membase-disp-r64-asm-base-disp-src-mlc-asm-ml-458693250) | `mlc/asm.ml:2416` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
-| [`mlc.asm.mov_membase_disp_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-r8-function-mov-membase-disp-r8-asm-base-disp-src-mlc-asm-ml-1028143956) | `mlc/asm.ml:2532` | 14 | 15 | 5 | 4 | 1 | 683.71 | 54.48 |
-| [`mlc.asm.mov_qword_ptr_rsp20_rax_zero`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-qword-ptr-rsp20-rax-zero-function-mov-qword-ptr-rsp20-rax-zero-asm-mlc-asm-ml-367685549) | `mlc/asm.ml:2928` | 5 | 3 | 1 | 0 | 0 | 121.11 | 70.03 |
-| [`mlc.asm.mov_r10_gs_qword_28`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r10-gs-qword-28-function-mov-r10-gs-qword-28-asm-mlc-asm-ml-1215678217) | `mlc/asm.ml:1131` | 5 | 4 | 2 | 1 | 1 | 253.82 | 67.65 |
-| [`mlc.asm.mov_r10_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r10-rax-function-mov-r10-rax-asm-mlc-asm-ml-1449439221) | `mlc/asm.ml:2198` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.mov_r11_gs_qword_28`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r11-gs-qword-28-function-mov-r11-gs-qword-28-asm-mlc-asm-ml-1509164471) | `mlc/asm.ml:1123` | 5 | 4 | 2 | 1 | 1 | 253.82 | 67.65 |
-| [`mlc.asm.mov_r11_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r11-rax-function-mov-r11-rax-asm-mlc-asm-ml-1397694019) | `mlc/asm.ml:2201` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.mov_r32_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r32-imm32-function-mov-r32-imm32-asm-dst-imm-mlc-asm-ml-169497319) | `mlc/asm.ml:1707` | 10 | 8 | 3 | 2 | 1 | 350.94 | 59.96 |
-| [`mlc.asm.mov_r32_mem_bis`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r32-mem-bis-function-mov-r32-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-1049579638) | `mlc/asm.ml:3154` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
-| [`mlc.asm.mov_r32_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r32-membase-disp-function-mov-r32-membase-disp-asm-dst-base-disp-mlc-asm-ml-1325186121) | `mlc/asm.ml:2434` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
-| [`mlc.asm.mov_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r32-r32-function-mov-r32-r32-asm-dst-src-mlc-asm-ml-1598840574) | `mlc/asm.ml:1807` | 10 | 10 | 4 | 3 | 1 | 485.78 | 58.84 |
-| [`mlc.asm.mov_r64_imm64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-imm64-function-mov-r64-imm64-asm-dst-imm-mlc-asm-ml-1310864951) | `mlc/asm.ml:1678` | 24 | 21 | 6 | 5 | 1 | 1039.37 | 47.96 |
-| [`mlc.asm.mov_r64_mem_bis`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-mem-bis-function-mov-r64-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-142204508) | `mlc/asm.ml:3112` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
-| [`mlc.asm.mov_r64_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-membase-disp-function-mov-r64-membase-disp-asm-dst-base-disp-mlc-asm-ml-1782241665) | `mlc/asm.ml:2398` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
-| [`mlc.asm.mov_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-r64-function-mov-r64-r64-asm-dst-src-mlc-asm-ml-148248406) | `mlc/asm.ml:1792` | 10 | 10 | 4 | 3 | 1 | 485.78 | 58.84 |
-| [`mlc.asm.mov_r64_tagged_int`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-tagged-int-function-mov-r64-tagged-int-asm-dst-value-mlc-asm-ml-1688631105) | `mlc/asm.ml:1730` | 8 | 5 | 3 | 2 | 1 | 359.05 | 62.01 |
-| [`mlc.asm.mov_r64_u64_hi_lo_exact`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-u64-hi-lo-exact-function-mov-r64-u64-hi-lo-exact-asm-dst-hi32-lo32-mlc-asm-ml-1052138660) | `mlc/asm.ml:1755` | 9 | 8 | 2 | 1 | 1 | 398.35 | 60.71 |
-| [`mlc.asm.mov_r8_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r8-membase-disp-function-mov-r8-membase-disp-asm-dst-base-disp-mlc-asm-ml-738477459) | `mlc/asm.ml:2512` | 14 | 15 | 5 | 4 | 1 | 683.71 | 54.48 |
-| [`mlc.asm.mov_r8_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r8-r8-function-mov-r8-r8-asm-dst-src-mlc-asm-ml-414949710) | `mlc/asm.ml:1822` | 12 | 13 | 6 | 5 | 1 | 687.32 | 55.79 |
-| [`mlc.asm.mov_r8d_edx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r8d-edx-function-mov-r8d-edx-asm-mlc-asm-ml-1968024003) | `mlc/asm.ml:2922` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
-| [`mlc.asm.mov_r8d_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r8d-imm32-function-mov-r8d-imm32-asm-imm-mlc-asm-ml-740310858) | `mlc/asm.ml:1784` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.mov_r9d_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r9d-imm32-function-mov-r9d-imm32-asm-imm-mlc-asm-ml-1767898340) | `mlc/asm.ml:2916` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.mov_rax_gs_qword_28`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-gs-qword-28-function-mov-rax-gs-qword-28-asm-mlc-asm-ml-142508073) | `mlc/asm.ml:1115` | 5 | 4 | 2 | 1 | 1 | 253.82 | 67.65 |
-| [`mlc.asm.mov_rax_imm64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-imm64-function-mov-rax-imm64-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-1640675460) | `mlc/asm.ml:1722` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
-| [`mlc.asm.mov_rax_r10`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-r10-function-mov-rax-r10-asm-mlc-asm-ml-1093562805) | `mlc/asm.ml:2204` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.mov_rax_r11`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-r11-function-mov-rax-r11-asm-mlc-asm-ml-1630066275) | `mlc/asm.ml:2207` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.mov_rax_rip_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-rip-qword-function-mov-rax-rip-qword-asm-label-mlc-asm-ml-1876247681) | `mlc/asm.ml:2961` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
-| [`mlc.asm.mov_rax_rsp_disp32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-rsp-disp32-function-mov-rax-rsp-disp32-asm-as-struct-disp-as-int-returns-struct-mlc-asm-ml-1973125325) | `mlc/asm.ml:2618` | 3 | 1 | 1 | 0 | 0 | 104 | 75.33 |
-| [`mlc.asm.mov_rax_rsp_disp8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-rsp-disp8-function-mov-rax-rsp-disp8-asm-disp-mlc-asm-ml-49401983) | `mlc/asm.ml:2603` | 3 | 1 | 1 | 0 | 0 | 71.7 | 76.47 |
-| [`mlc.asm.mov_rax_tagged_int`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-tagged-int-function-mov-rax-tagged-int-asm-as-struct-value-as-int-returns-struct-mlc-asm-ml-1077351336) | `mlc/asm.ml:1746` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
-| [`mlc.asm.mov_rax_u64_hi_lo_exact`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-u64-hi-lo-exact-function-mov-rax-u64-hi-lo-exact-asm-hi32-lo32-mlc-asm-ml-695477375) | `mlc/asm.ml:1769` | 3 | 1 | 1 | 0 | 0 | 78.87 | 76.18 |
-| [`mlc.asm.mov_rbp_rsp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rbp-rsp-function-mov-rbp-rsp-asm-mlc-asm-ml-1836418983) | `mlc/asm.ml:1670` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
-| [`mlc.asm.mov_rbx_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rbx-rax-function-mov-rbx-rax-asm-mlc-asm-ml-1330816591) | `mlc/asm.ml:2189` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.mov_rcx_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rcx-imm32-function-mov-rcx-imm32-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-414152510) | `mlc/asm.ml:1777` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
-| [`mlc.asm.mov_rcx_rbx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rcx-rbx-function-mov-rcx-rbx-asm-mlc-asm-ml-1629593247) | `mlc/asm.ml:2192` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.mov_rdx_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rdx-rax-function-mov-rdx-rax-asm-mlc-asm-ml-1191991607) | `mlc/asm.ml:2195` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.mov_rdx_rip_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rdx-rip-qword-function-mov-rdx-rip-qword-asm-label-mlc-asm-ml-141231447) | `mlc/asm.ml:2982` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
-| [`mlc.asm.mov_rip_dword_eax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-dword-eax-function-mov-rip-dword-eax-asm-label-mlc-asm-ml-641073653) | `mlc/asm.ml:2949` | 8 | 6 | 1 | 0 | 0 | 242.03 | 63.47 |
-| [`mlc.asm.mov_rip_qword_r11`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-r11-function-mov-rip-qword-r11-asm-label-mlc-asm-ml-457063355) | `mlc/asm.ml:3045` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
-| [`mlc.asm.mov_rip_qword_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-r8-function-mov-rip-qword-r8-asm-label-mlc-asm-ml-381099973) | `mlc/asm.ml:3066` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
-| [`mlc.asm.mov_rip_qword_r9`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-r9-function-mov-rip-qword-r9-asm-label-mlc-asm-ml-1250695393) | `mlc/asm.ml:3087` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
-| [`mlc.asm.mov_rip_qword_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-rax-function-mov-rip-qword-rax-asm-label-mlc-asm-ml-52223953) | `mlc/asm.ml:3003` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
-| [`mlc.asm.mov_rip_qword_rdx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-rdx-function-mov-rip-qword-rdx-asm-label-mlc-asm-ml-148857199) | `mlc/asm.ml:3024` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
-| [`mlc.asm.mov_rsp_disp32_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rsp-disp32-rax-function-mov-rsp-disp32-rax-asm-as-struct-disp-as-int-returns-struct-mlc-asm-ml-1597720757) | `mlc/asm.ml:2626` | 3 | 1 | 1 | 0 | 0 | 104 | 75.33 |
-| [`mlc.asm.mov_rsp_disp8_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rsp-disp8-rax-function-mov-rsp-disp8-rax-asm-disp-mlc-asm-ml-1247760079) | `mlc/asm.ml:2610` | 3 | 1 | 1 | 0 | 0 | 71.7 | 76.47 |
-| [`mlc.asm.movapd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movapd-xmm-xmm-function-movapd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-979594844) | `mlc/asm.ml:3491` | 4 | 3 | 2 | 1 | 1 | 150.12 | 71.36 |
-| [`mlc.asm.movd_r32_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movd-r32-xmm-function-movd-r32-xmm-asm-dst-src-mlc-asm-ml-1735264306) | `mlc/asm.ml:3619` | 12 | 12 | 4 | 3 | 1 | 635.9 | 56.29 |
-| [`mlc.asm.movdqu_membase_disp_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movdqu-membase-disp-xmm-function-movdqu-membase-disp-xmm-asm-base-disp-src-mlc-asm-ml-560316024) | `mlc/asm.ml:3655` | 12 | 11 | 3 | 2 | 1 | 591.97 | 56.64 |
-| [`mlc.asm.movdqu_xmm_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movdqu-xmm-membase-disp-function-movdqu-xmm-membase-disp-asm-dst-base-disp-mlc-asm-ml-1044452691) | `mlc/asm.ml:3637` | 12 | 11 | 3 | 2 | 1 | 591.97 | 56.64 |
-| [`mlc.asm.movq_r64_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movq-r64-xmm-function-movq-r64-xmm-asm-dst-reg-src-xmm-mlc-asm-ml-1852506596) | `mlc/asm.ml:3603` | 11 | 10 | 3 | 2 | 1 | 530 | 57.8 |
-| [`mlc.asm.movq_xmm_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movq-xmm-r64-function-movq-xmm-r64-asm-dst-xmm-src-reg-mlc-asm-ml-360973076) | `mlc/asm.ml:3587` | 11 | 10 | 3 | 2 | 1 | 530 | 57.8 |
-| [`mlc.asm.movsd_membase_disp_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movsd-membase-disp-xmm-function-movsd-membase-disp-xmm-asm-base-disp-src-xmm-mlc-asm-ml-1171982343) | `mlc/asm.ml:3519` | 12 | 11 | 3 | 2 | 1 | 591.97 | 56.64 |
-| [`mlc.asm.movsd_xmm_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movsd-xmm-membase-disp-function-movsd-xmm-membase-disp-asm-dst-xmm-base-disp-mlc-asm-ml-536705176) | `mlc/asm.ml:3501` | 12 | 11 | 3 | 2 | 1 | 591.97 | 56.64 |
-| [`mlc.asm.movsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movsd-xmm-xmm-function-movsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-510813534) | `mlc/asm.ml:3433` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.movzx_eax_al`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movzx-eax-al-function-movzx-eax-al-asm-as-struct-returns-struct-mlc-asm-ml-1256030034) | `mlc/asm.ml:2183` | 3 | 1 | 1 | 0 | 0 | 76.15 | 76.28 |
-| [`mlc.asm.movzx_r32_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movzx-r32-membase-disp-function-movzx-r32-membase-disp-asm-dst32-base-disp-mlc-asm-ml-1997771456) | `mlc/asm.ml:2745` | 14 | 15 | 5 | 4 | 1 | 690.22 | 54.45 |
-| [`mlc.asm.movzx_r32_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movzx-r32-r8-function-movzx-r32-r8-asm-dst-src8-mlc-asm-ml-1686395618) | `mlc/asm.ml:2168` | 11 | 10 | 3 | 2 | 1 | 594.54 | 57.45 |
-| [`mlc.asm.mul_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mul-r64-function-mul-r64-asm-reg-name-mlc-asm-ml-1218474035) | `mlc/asm.ml:3346` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
-| [`mlc.asm.mulsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mulsd-xmm-xmm-function-mulsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-1083944914) | `mlc/asm.ml:3457` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.neg_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-neg-r64-function-neg-r64-asm-reg-name-mlc-asm-ml-2043155571) | `mlc/asm.ml:2293` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
-| [`mlc.asm.neg_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-neg-rax-function-neg-rax-asm-mlc-asm-ml-1373429613) | `mlc/asm.ml:2304` | 3 | 1 | 1 | 0 | 0 | 46.51 | 77.78 |
+| [`mlc.asm.mov_eax_rip_dword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-eax-rip-dword-function-mov-eax-rip-dword-asm-label-mlc-asm-ml-628017397) | `mlc/asm.ml:3043` | 8 | 6 | 1 | 0 | 0 | 242.03 | 63.47 |
+| [`mlc.asm.mov_gs_qword_28_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-gs-qword-28-rax-function-mov-gs-qword-28-rax-asm-mlc-asm-ml-61670697) | `mlc/asm.ml:1145` | 5 | 4 | 2 | 1 | 1 | 253.82 | 67.65 |
+| [`mlc.asm.mov_mem_bis_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-mem-bis-r32-function-mov-mem-bis-r32-asm-base-index-reg-scale-disp-src-mlc-asm-ml-1479592515) | `mlc/asm.ml:3281` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
+| [`mlc.asm.mov_mem_bis_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-mem-bis-r64-function-mov-mem-bis-r64-asm-base-index-reg-scale-disp-src-mlc-asm-ml-1183844457) | `mlc/asm.ml:3239` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
+| [`mlc.asm.mov_membase_disp_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-imm32-function-mov-membase-disp-imm32-asm-base-disp-imm-qword-mlc-asm-ml-1249385460) | `mlc/asm.ml:2559` | 12 | 12 | 3 | 2 | 1 | 499.4 | 57.16 |
+| [`mlc.asm.mov_membase_disp_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-imm8-function-mov-membase-disp-imm8-asm-base-disp-imm-mlc-asm-ml-1208277533) | `mlc/asm.ml:2577` | 10 | 9 | 2 | 1 | 1 | 417.79 | 59.57 |
+| [`mlc.asm.mov_membase_disp_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-r32-function-mov-membase-disp-r32-asm-base-disp-src-mlc-asm-ml-685623958) | `mlc/asm.ml:2458` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
+| [`mlc.asm.mov_membase_disp_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-r64-function-mov-membase-disp-r64-asm-base-disp-src-mlc-asm-ml-458693250) | `mlc/asm.ml:2422` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
+| [`mlc.asm.mov_membase_disp_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-membase-disp-r8-function-mov-membase-disp-r8-asm-base-disp-src-mlc-asm-ml-1028143956) | `mlc/asm.ml:2538` | 14 | 15 | 5 | 4 | 1 | 683.71 | 54.48 |
+| [`mlc.asm.mov_qword_ptr_rsp20_rax_zero`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-qword-ptr-rsp20-rax-zero-function-mov-qword-ptr-rsp20-rax-zero-asm-mlc-asm-ml-367685549) | `mlc/asm.ml:3034` | 5 | 3 | 1 | 0 | 0 | 121.11 | 70.03 |
+| [`mlc.asm.mov_r10_gs_qword_28`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r10-gs-qword-28-function-mov-r10-gs-qword-28-asm-mlc-asm-ml-1215678217) | `mlc/asm.ml:1137` | 5 | 4 | 2 | 1 | 1 | 253.82 | 67.65 |
+| [`mlc.asm.mov_r10_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r10-rax-function-mov-r10-rax-asm-mlc-asm-ml-1449439221) | `mlc/asm.ml:2204` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.mov_r11_gs_qword_28`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r11-gs-qword-28-function-mov-r11-gs-qword-28-asm-mlc-asm-ml-1509164471) | `mlc/asm.ml:1129` | 5 | 4 | 2 | 1 | 1 | 253.82 | 67.65 |
+| [`mlc.asm.mov_r11_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r11-rax-function-mov-r11-rax-asm-mlc-asm-ml-1397694019) | `mlc/asm.ml:2207` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.mov_r32_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r32-imm32-function-mov-r32-imm32-asm-dst-imm-mlc-asm-ml-169497319) | `mlc/asm.ml:1713` | 10 | 8 | 3 | 2 | 1 | 350.94 | 59.96 |
+| [`mlc.asm.mov_r32_mem_bis`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r32-mem-bis-function-mov-r32-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-1049579638) | `mlc/asm.ml:3260` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
+| [`mlc.asm.mov_r32_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r32-membase-disp-function-mov-r32-membase-disp-asm-dst-base-disp-mlc-asm-ml-1325186121) | `mlc/asm.ml:2440` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
+| [`mlc.asm.mov_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r32-r32-function-mov-r32-r32-asm-dst-src-mlc-asm-ml-1598840574) | `mlc/asm.ml:1813` | 10 | 10 | 4 | 3 | 1 | 485.78 | 58.84 |
+| [`mlc.asm.mov_r64_imm64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-imm64-function-mov-r64-imm64-asm-dst-imm-mlc-asm-ml-1310864951) | `mlc/asm.ml:1684` | 24 | 21 | 6 | 5 | 1 | 1039.37 | 47.96 |
+| [`mlc.asm.mov_r64_mem_bis`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-mem-bis-function-mov-r64-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-142204508) | `mlc/asm.ml:3218` | 13 | 13 | 5 | 4 | 1 | 643.95 | 55.36 |
+| [`mlc.asm.mov_r64_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-membase-disp-function-mov-r64-membase-disp-asm-dst-base-disp-mlc-asm-ml-1782241665) | `mlc/asm.ml:2404` | 12 | 12 | 4 | 3 | 1 | 536.57 | 56.81 |
+| [`mlc.asm.mov_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-r64-function-mov-r64-r64-asm-dst-src-mlc-asm-ml-148248406) | `mlc/asm.ml:1798` | 10 | 10 | 4 | 3 | 1 | 485.78 | 58.84 |
+| [`mlc.asm.mov_r64_tagged_int`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-tagged-int-function-mov-r64-tagged-int-asm-dst-value-mlc-asm-ml-1688631105) | `mlc/asm.ml:1736` | 8 | 5 | 3 | 2 | 1 | 359.05 | 62.01 |
+| [`mlc.asm.mov_r64_u64_hi_lo_exact`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r64-u64-hi-lo-exact-function-mov-r64-u64-hi-lo-exact-asm-dst-hi32-lo32-mlc-asm-ml-1052138660) | `mlc/asm.ml:1761` | 9 | 8 | 2 | 1 | 1 | 398.35 | 60.71 |
+| [`mlc.asm.mov_r8_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r8-membase-disp-function-mov-r8-membase-disp-asm-dst-base-disp-mlc-asm-ml-738477459) | `mlc/asm.ml:2518` | 14 | 15 | 5 | 4 | 1 | 683.71 | 54.48 |
+| [`mlc.asm.mov_r8_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r8-r8-function-mov-r8-r8-asm-dst-src-mlc-asm-ml-414949710) | `mlc/asm.ml:1828` | 12 | 13 | 6 | 5 | 1 | 687.32 | 55.79 |
+| [`mlc.asm.mov_r8d_edx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r8d-edx-function-mov-r8d-edx-asm-mlc-asm-ml-1968024003) | `mlc/asm.ml:3028` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
+| [`mlc.asm.mov_r8d_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r8d-imm32-function-mov-r8d-imm32-asm-imm-mlc-asm-ml-740310858) | `mlc/asm.ml:1790` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.mov_r9d_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-r9d-imm32-function-mov-r9d-imm32-asm-imm-mlc-asm-ml-1767898340) | `mlc/asm.ml:3022` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.mov_rax_gs_qword_28`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-gs-qword-28-function-mov-rax-gs-qword-28-asm-mlc-asm-ml-142508073) | `mlc/asm.ml:1121` | 5 | 4 | 2 | 1 | 1 | 253.82 | 67.65 |
+| [`mlc.asm.mov_rax_imm64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-imm64-function-mov-rax-imm64-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-1640675460) | `mlc/asm.ml:1728` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
+| [`mlc.asm.mov_rax_r10`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-r10-function-mov-rax-r10-asm-mlc-asm-ml-1093562805) | `mlc/asm.ml:2210` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.mov_rax_r11`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-r11-function-mov-rax-r11-asm-mlc-asm-ml-1630066275) | `mlc/asm.ml:2213` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.mov_rax_rip_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-rip-qword-function-mov-rax-rip-qword-asm-label-mlc-asm-ml-1876247681) | `mlc/asm.ml:3067` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
+| [`mlc.asm.mov_rax_rsp_disp32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-rsp-disp32-function-mov-rax-rsp-disp32-asm-as-struct-disp-as-int-returns-struct-mlc-asm-ml-1973125325) | `mlc/asm.ml:2624` | 3 | 1 | 1 | 0 | 0 | 104 | 75.33 |
+| [`mlc.asm.mov_rax_rsp_disp8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-rsp-disp8-function-mov-rax-rsp-disp8-asm-disp-mlc-asm-ml-49401983) | `mlc/asm.ml:2609` | 3 | 1 | 1 | 0 | 0 | 71.7 | 76.47 |
+| [`mlc.asm.mov_rax_tagged_int`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-tagged-int-function-mov-rax-tagged-int-asm-as-struct-value-as-int-returns-struct-mlc-asm-ml-1077351336) | `mlc/asm.ml:1752` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
+| [`mlc.asm.mov_rax_u64_hi_lo_exact`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rax-u64-hi-lo-exact-function-mov-rax-u64-hi-lo-exact-asm-hi32-lo32-mlc-asm-ml-695477375) | `mlc/asm.ml:1775` | 3 | 1 | 1 | 0 | 0 | 78.87 | 76.18 |
+| [`mlc.asm.mov_rbp_rsp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rbp-rsp-function-mov-rbp-rsp-asm-mlc-asm-ml-1836418983) | `mlc/asm.ml:1676` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
+| [`mlc.asm.mov_rbx_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rbx-rax-function-mov-rbx-rax-asm-mlc-asm-ml-1330816591) | `mlc/asm.ml:2195` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.mov_rcx_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rcx-imm32-function-mov-rcx-imm32-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-414152510) | `mlc/asm.ml:1783` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
+| [`mlc.asm.mov_rcx_rbx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rcx-rbx-function-mov-rcx-rbx-asm-mlc-asm-ml-1629593247) | `mlc/asm.ml:2198` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.mov_rdx_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rdx-rax-function-mov-rdx-rax-asm-mlc-asm-ml-1191991607) | `mlc/asm.ml:2201` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.mov_rdx_rip_qword`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rdx-rip-qword-function-mov-rdx-rip-qword-asm-label-mlc-asm-ml-141231447) | `mlc/asm.ml:3088` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
+| [`mlc.asm.mov_rip_dword_eax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-dword-eax-function-mov-rip-dword-eax-asm-label-mlc-asm-ml-641073653) | `mlc/asm.ml:3055` | 8 | 6 | 1 | 0 | 0 | 242.03 | 63.47 |
+| [`mlc.asm.mov_rip_qword_r11`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-r11-function-mov-rip-qword-r11-asm-label-mlc-asm-ml-457063355) | `mlc/asm.ml:3151` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
+| [`mlc.asm.mov_rip_qword_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-r8-function-mov-rip-qword-r8-asm-label-mlc-asm-ml-381099973) | `mlc/asm.ml:3172` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
+| [`mlc.asm.mov_rip_qword_r9`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-r9-function-mov-rip-qword-r9-asm-label-mlc-asm-ml-1250695393) | `mlc/asm.ml:3193` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
+| [`mlc.asm.mov_rip_qword_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-rax-function-mov-rip-qword-rax-asm-label-mlc-asm-ml-52223953) | `mlc/asm.ml:3109` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
+| [`mlc.asm.mov_rip_qword_rdx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rip-qword-rdx-function-mov-rip-qword-rdx-asm-label-mlc-asm-ml-148857199) | `mlc/asm.ml:3130` | 17 | 14 | 2 | 1 | 1 | 615.58 | 53.36 |
+| [`mlc.asm.mov_rsp_disp32_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rsp-disp32-rax-function-mov-rsp-disp32-rax-asm-as-struct-disp-as-int-returns-struct-mlc-asm-ml-1597720757) | `mlc/asm.ml:2632` | 3 | 1 | 1 | 0 | 0 | 104 | 75.33 |
+| [`mlc.asm.mov_rsp_disp8_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mov-rsp-disp8-rax-function-mov-rsp-disp8-rax-asm-disp-mlc-asm-ml-1247760079) | `mlc/asm.ml:2616` | 3 | 1 | 1 | 0 | 0 | 71.7 | 76.47 |
+| [`mlc.asm.movapd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movapd-xmm-xmm-function-movapd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-979594844) | `mlc/asm.ml:3597` | 4 | 3 | 2 | 1 | 1 | 150.12 | 71.36 |
+| [`mlc.asm.movd_r32_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movd-r32-xmm-function-movd-r32-xmm-asm-dst-src-mlc-asm-ml-1735264306) | `mlc/asm.ml:3725` | 12 | 12 | 4 | 3 | 1 | 635.9 | 56.29 |
+| [`mlc.asm.movdqu_membase_disp_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movdqu-membase-disp-xmm-function-movdqu-membase-disp-xmm-asm-base-disp-src-mlc-asm-ml-560316024) | `mlc/asm.ml:3761` | 12 | 11 | 3 | 2 | 1 | 591.97 | 56.64 |
+| [`mlc.asm.movdqu_xmm_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movdqu-xmm-membase-disp-function-movdqu-xmm-membase-disp-asm-dst-base-disp-mlc-asm-ml-1044452691) | `mlc/asm.ml:3743` | 12 | 11 | 3 | 2 | 1 | 591.97 | 56.64 |
+| [`mlc.asm.movq_r64_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movq-r64-xmm-function-movq-r64-xmm-asm-dst-reg-src-xmm-mlc-asm-ml-1852506596) | `mlc/asm.ml:3709` | 11 | 10 | 3 | 2 | 1 | 530 | 57.8 |
+| [`mlc.asm.movq_xmm_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movq-xmm-r64-function-movq-xmm-r64-asm-dst-xmm-src-reg-mlc-asm-ml-360973076) | `mlc/asm.ml:3693` | 11 | 10 | 3 | 2 | 1 | 530 | 57.8 |
+| [`mlc.asm.movsd_membase_disp_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movsd-membase-disp-xmm-function-movsd-membase-disp-xmm-asm-base-disp-src-xmm-mlc-asm-ml-1171982343) | `mlc/asm.ml:3625` | 12 | 11 | 3 | 2 | 1 | 591.97 | 56.64 |
+| [`mlc.asm.movsd_xmm_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movsd-xmm-membase-disp-function-movsd-xmm-membase-disp-asm-dst-xmm-base-disp-mlc-asm-ml-536705176) | `mlc/asm.ml:3607` | 12 | 11 | 3 | 2 | 1 | 591.97 | 56.64 |
+| [`mlc.asm.movsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movsd-xmm-xmm-function-movsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-510813534) | `mlc/asm.ml:3539` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.movzx_eax_al`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movzx-eax-al-function-movzx-eax-al-asm-as-struct-returns-struct-mlc-asm-ml-1256030034) | `mlc/asm.ml:2189` | 3 | 1 | 1 | 0 | 0 | 76.15 | 76.28 |
+| [`mlc.asm.movzx_r32_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movzx-r32-membase-disp-function-movzx-r32-membase-disp-asm-dst32-base-disp-mlc-asm-ml-1997771456) | `mlc/asm.ml:2751` | 14 | 15 | 5 | 4 | 1 | 690.22 | 54.45 |
+| [`mlc.asm.movzx_r32_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-movzx-r32-r8-function-movzx-r32-r8-asm-dst-src8-mlc-asm-ml-1686395618) | `mlc/asm.ml:2174` | 11 | 10 | 3 | 2 | 1 | 594.54 | 57.45 |
+| [`mlc.asm.mul_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mul-r64-function-mul-r64-asm-reg-name-mlc-asm-ml-1218474035) | `mlc/asm.ml:3452` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
+| [`mlc.asm.mulsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-mulsd-xmm-xmm-function-mulsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-1083944914) | `mlc/asm.ml:3563` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.neg_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-neg-r64-function-neg-r64-asm-reg-name-mlc-asm-ml-2043155571) | `mlc/asm.ml:2299` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
+| [`mlc.asm.neg_rax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-neg-rax-function-neg-rax-asm-mlc-asm-ml-1373429613) | `mlc/asm.ml:2310` | 3 | 1 | 1 | 0 | 0 | 46.51 | 77.78 |
 | [`mlc.asm.newAsmBuilder`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-newasmbuilder-function-newasmbuilder-mlc-asm-ml-1431619198) | `mlc/asm.ml:156` | 6 | 4 | 1 | 0 | 0 | 474.97 | 64.15 |
 | [`mlc.asm.newCodegenAsmBuilder`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-newcodegenasmbuilder-function-newcodegenasmbuilder-mlc-asm-ml-938104422) | `mlc/asm.ml:164` | 5 | 3 | 1 | 0 | 0 | 64.53 | 71.95 |
-| [`mlc.asm.nop`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-nop-function-nop-asm-mlc-asm-ml-2087544563) | `mlc/asm.ml:1312` | 3 | 1 | 1 | 0 | 0 | 46.51 | 77.78 |
-| [`mlc.asm.or_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r32-imm-function-or-r32-imm-asm-reg-name-imm-mlc-asm-ml-2119945822) | `mlc/asm.ml:1987` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.or_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r32-r32-function-or-r32-r32-asm-dst-src-mlc-asm-ml-524216550) | `mlc/asm.ml:2075` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.or_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r64-imm-function-or-r64-imm-asm-reg-name-imm-mlc-asm-ml-482312102) | `mlc/asm.ml:1902` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.or_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r64-imm8-function-or-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-1883212291) | `mlc/asm.ml:1949` | 3 | 1 | 1 | 0 | 0 | 112 | 75.11 |
-| [`mlc.asm.or_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r64-r64-function-or-r64-r64-asm-dst-src-mlc-asm-ml-1307837550) | `mlc/asm.ml:2070` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.or_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r8-imm8-function-or-r8-imm8-asm-reg8-imm-mlc-asm-ml-306939044) | `mlc/asm.ml:2657` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
-| [`mlc.asm.or_r8_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r8-r8-function-or-r8-r8-asm-dst-src-mlc-asm-ml-1924097734) | `mlc/asm.ml:2085` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.or_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-rax-imm8-function-or-rax-imm8-asm-imm-mlc-asm-ml-1120167116) | `mlc/asm.ml:2230` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.pcmpeqb_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pcmpeqb-xmm-xmm-function-pcmpeqb-xmm-xmm-asm-dst-src-mlc-asm-ml-2108371974) | `mlc/asm.ml:3680` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.pcmpeqw_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pcmpeqw-xmm-xmm-function-pcmpeqw-xmm-xmm-asm-dst-src-mlc-asm-ml-1576300584) | `mlc/asm.ml:3688` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.pmovmskb_r32_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pmovmskb-r32-xmm-function-pmovmskb-r32-xmm-asm-dst32-src-mlc-asm-ml-619996841) | `mlc/asm.ml:3696` | 12 | 12 | 4 | 3 | 1 | 635.9 | 56.29 |
-| [`mlc.asm.pop_r12`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-r12-function-pop-r12-asm-mlc-asm-ml-1042614159) | `mlc/asm.ml:1642` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.pop_r13`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-r13-function-pop-r13-asm-mlc-asm-ml-1838337293) | `mlc/asm.ml:1648` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.pop_r14`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-r14-function-pop-r14-asm-mlc-asm-ml-358460295) | `mlc/asm.ml:1654` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.pop_r15`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-r15-function-pop-r15-asm-mlc-asm-ml-2094100481) | `mlc/asm.ml:1660` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.pop_rbp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-rbp-function-pop-rbp-asm-mlc-asm-ml-422139573) | `mlc/asm.ml:1666` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.pop_rbx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-rbx-function-pop-rbx-asm-mlc-asm-ml-1671558325) | `mlc/asm.ml:1636` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.pop_reg`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-reg-function-pop-reg-asm-reg-mlc-asm-ml-1393436341) | `mlc/asm.ml:1608` | 22 | 21 | 15 | 17 | 2 | 1077.9 | 47.46 |
-| [`mlc.asm.pos`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pos-function-pos-asm-as-struct-returns-int-mlc-asm-ml-1706267734) | `mlc/asm.ml:884` | 3 | 1 | 1 | 0 | 0 | 55.51 | 77.24 |
-| [`mlc.asm.punpcklqdq_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-punpcklqdq-xmm-xmm-function-punpcklqdq-xmm-xmm-asm-dst-src-mlc-asm-ml-1607809610) | `mlc/asm.ml:3713` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.push_r12`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-r12-function-push-r12-asm-mlc-asm-ml-46261877) | `mlc/asm.ml:1639` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.push_r13`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-r13-function-push-r13-asm-mlc-asm-ml-633460721) | `mlc/asm.ml:1645` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.push_r14`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-r14-function-push-r14-asm-mlc-asm-ml-482627021) | `mlc/asm.ml:1651` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.push_r15`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-r15-function-push-r15-asm-mlc-asm-ml-705463233) | `mlc/asm.ml:1657` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.push_rbp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-rbp-function-push-rbp-asm-mlc-asm-ml-1777877629) | `mlc/asm.ml:1663` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.push_rbx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-rbx-function-push-rbx-asm-mlc-asm-ml-659445613) | `mlc/asm.ml:1633` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
-| [`mlc.asm.push_reg`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-reg-function-push-reg-asm-reg-mlc-asm-ml-717522433) | `mlc/asm.ml:1592` | 12 | 10 | 3 | 2 | 1 | 370 | 58.07 |
-| [`mlc.asm.pxor_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pxor-xmm-xmm-function-pxor-xmm-xmm-asm-dst-src-mlc-asm-ml-699906910) | `mlc/asm.ml:3672` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.rep_movsb`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rep-movsb-function-rep-movsb-asm-mlc-asm-ml-1261806823) | `mlc/asm.ml:3357` | 5 | 3 | 1 | 0 | 0 | 89.62 | 70.95 |
-| [`mlc.asm.rep_movsq`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rep-movsq-function-rep-movsq-asm-mlc-asm-ml-1056503325) | `mlc/asm.ml:3365` | 6 | 4 | 1 | 0 | 0 | 122.11 | 68.28 |
-| [`mlc.asm.rep_stosb`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rep-stosb-function-rep-stosb-asm-mlc-asm-ml-1069603535) | `mlc/asm.ml:3374` | 5 | 3 | 1 | 0 | 0 | 89.62 | 70.95 |
-| [`mlc.asm.rep_stosq`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rep-stosq-function-rep-stosq-asm-mlc-asm-ml-2133024377) | `mlc/asm.ml:3382` | 6 | 4 | 1 | 0 | 0 | 122.11 | 68.28 |
-| [`mlc.asm.repe_cmpsb`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-repe-cmpsb-function-repe-cmpsb-asm-mlc-asm-ml-1180550533) | `mlc/asm.ml:3391` | 5 | 3 | 1 | 0 | 0 | 89.62 | 70.95 |
+| [`mlc.asm.nop`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-nop-function-nop-asm-mlc-asm-ml-2087544563) | `mlc/asm.ml:1318` | 3 | 1 | 1 | 0 | 0 | 46.51 | 77.78 |
+| [`mlc.asm.or_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r32-imm-function-or-r32-imm-asm-reg-name-imm-mlc-asm-ml-2119945822) | `mlc/asm.ml:1993` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.or_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r32-r32-function-or-r32-r32-asm-dst-src-mlc-asm-ml-524216550) | `mlc/asm.ml:2081` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.or_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r64-imm-function-or-r64-imm-asm-reg-name-imm-mlc-asm-ml-482312102) | `mlc/asm.ml:1908` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.or_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r64-imm8-function-or-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-1883212291) | `mlc/asm.ml:1955` | 3 | 1 | 1 | 0 | 0 | 112 | 75.11 |
+| [`mlc.asm.or_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r64-r64-function-or-r64-r64-asm-dst-src-mlc-asm-ml-1307837550) | `mlc/asm.ml:2076` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.or_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r8-imm8-function-or-r8-imm8-asm-reg8-imm-mlc-asm-ml-306939044) | `mlc/asm.ml:2663` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
+| [`mlc.asm.or_r8_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-r8-r8-function-or-r8-r8-asm-dst-src-mlc-asm-ml-1924097734) | `mlc/asm.ml:2091` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.or_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-or-rax-imm8-function-or-rax-imm8-asm-imm-mlc-asm-ml-1120167116) | `mlc/asm.ml:2236` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.pand_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pand-xmm-xmm-function-pand-xmm-xmm-asm-dst-src-mlc-asm-ml-467700434) | `mlc/asm.ml:2858` | 11 | 10 | 3 | 2 | 1 | 519.57 | 57.86 |
+| [`mlc.asm.pclmulqdq_xmm_xmm_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pclmulqdq-xmm-xmm-imm8-function-pclmulqdq-xmm-xmm-imm8-asm-dst-src-imm-mlc-asm-ml-723981587) | `mlc/asm.ml:2839` | 14 | 14 | 5 | 4 | 1 | 729.46 | 54.28 |
+| [`mlc.asm.pcmpeqb_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pcmpeqb-xmm-xmm-function-pcmpeqb-xmm-xmm-asm-dst-src-mlc-asm-ml-2108371974) | `mlc/asm.ml:3786` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.pcmpeqw_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pcmpeqw-xmm-xmm-function-pcmpeqw-xmm-xmm-asm-dst-src-mlc-asm-ml-1576300584) | `mlc/asm.ml:3794` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.pmovmskb_r32_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pmovmskb-r32-xmm-function-pmovmskb-r32-xmm-asm-dst32-src-mlc-asm-ml-619996841) | `mlc/asm.ml:3802` | 12 | 12 | 4 | 3 | 1 | 635.9 | 56.29 |
+| [`mlc.asm.pop_r12`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-r12-function-pop-r12-asm-mlc-asm-ml-1042614159) | `mlc/asm.ml:1648` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.pop_r13`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-r13-function-pop-r13-asm-mlc-asm-ml-1838337293) | `mlc/asm.ml:1654` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.pop_r14`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-r14-function-pop-r14-asm-mlc-asm-ml-358460295) | `mlc/asm.ml:1660` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.pop_r15`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-r15-function-pop-r15-asm-mlc-asm-ml-2094100481) | `mlc/asm.ml:1666` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.pop_rbp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-rbp-function-pop-rbp-asm-mlc-asm-ml-422139573) | `mlc/asm.ml:1672` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.pop_rbx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-rbx-function-pop-rbx-asm-mlc-asm-ml-1671558325) | `mlc/asm.ml:1642` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.pop_reg`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pop-reg-function-pop-reg-asm-reg-mlc-asm-ml-1393436341) | `mlc/asm.ml:1614` | 22 | 21 | 15 | 17 | 2 | 1077.9 | 47.46 |
+| [`mlc.asm.pos`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pos-function-pos-asm-as-struct-returns-int-mlc-asm-ml-1706267734) | `mlc/asm.ml:890` | 3 | 1 | 1 | 0 | 0 | 55.51 | 77.24 |
+| [`mlc.asm.pslldq_xmm_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pslldq-xmm-imm8-function-pslldq-xmm-imm8-asm-dst-imm-mlc-asm-ml-518220479) | `mlc/asm.ml:2891` | 12 | 12 | 4 | 3 | 1 | 589.87 | 56.52 |
+| [`mlc.asm.psrldq_xmm_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-psrldq-xmm-imm8-function-psrldq-xmm-imm8-asm-dst-imm-mlc-asm-ml-464795607) | `mlc/asm.ml:2874` | 12 | 12 | 4 | 3 | 1 | 589.87 | 56.52 |
+| [`mlc.asm.punpcklqdq_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-punpcklqdq-xmm-xmm-function-punpcklqdq-xmm-xmm-asm-dst-src-mlc-asm-ml-1607809610) | `mlc/asm.ml:3819` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.push_r12`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-r12-function-push-r12-asm-mlc-asm-ml-46261877) | `mlc/asm.ml:1645` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.push_r13`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-r13-function-push-r13-asm-mlc-asm-ml-633460721) | `mlc/asm.ml:1651` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.push_r14`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-r14-function-push-r14-asm-mlc-asm-ml-482627021) | `mlc/asm.ml:1657` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.push_r15`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-r15-function-push-r15-asm-mlc-asm-ml-705463233) | `mlc/asm.ml:1663` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.push_rbp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-rbp-function-push-rbp-asm-mlc-asm-ml-1777877629) | `mlc/asm.ml:1669` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.push_rbx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-rbx-function-push-rbx-asm-mlc-asm-ml-659445613) | `mlc/asm.ml:1639` | 1 | 1 | 1 | 0 | 0 | 46.51 | 88.19 |
+| [`mlc.asm.push_reg`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-push-reg-function-push-reg-asm-reg-mlc-asm-ml-717522433) | `mlc/asm.ml:1598` | 12 | 10 | 3 | 2 | 1 | 370 | 58.07 |
+| [`mlc.asm.pxor_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-pxor-xmm-xmm-function-pxor-xmm-xmm-asm-dst-src-mlc-asm-ml-699906910) | `mlc/asm.ml:3778` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.rep_movsb`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rep-movsb-function-rep-movsb-asm-mlc-asm-ml-1261806823) | `mlc/asm.ml:3463` | 5 | 3 | 1 | 0 | 0 | 89.62 | 70.95 |
+| [`mlc.asm.rep_movsq`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rep-movsq-function-rep-movsq-asm-mlc-asm-ml-1056503325) | `mlc/asm.ml:3471` | 6 | 4 | 1 | 0 | 0 | 122.11 | 68.28 |
+| [`mlc.asm.rep_stosb`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rep-stosb-function-rep-stosb-asm-mlc-asm-ml-1069603535) | `mlc/asm.ml:3480` | 5 | 3 | 1 | 0 | 0 | 89.62 | 70.95 |
+| [`mlc.asm.rep_stosq`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-rep-stosq-function-rep-stosq-asm-mlc-asm-ml-2133024377) | `mlc/asm.ml:3488` | 6 | 4 | 1 | 0 | 0 | 122.11 | 68.28 |
+| [`mlc.asm.repe_cmpsb`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-repe-cmpsb-function-repe-cmpsb-asm-mlc-asm-ml-1180550533) | `mlc/asm.ml:3497` | 5 | 3 | 1 | 0 | 0 | 89.62 | 70.95 |
 | [`mlc.asm.resolve_all_defined_patches`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-resolve-all-defined-patches-function-resolve-all-defined-patches-asm-mlc-asm-ml-714751327) | `mlc/asm.ml:300` | 13 | 11 | 1 | 0 | 0 | 476.84 | 56.81 |
 | [`mlc.asm.resolve_defined_patches`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-resolve-defined-patches-function-resolve-defined-patches-asm-mlc-asm-ml-480973383) | `mlc/asm.ml:283` | 11 | 9 | 1 | 0 | 0 | 348.46 | 59.35 |
-| [`mlc.asm.ret`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ret-function-ret-asm-mlc-asm-ml-346769639) | `mlc/asm.ml:1526` | 3 | 1 | 1 | 0 | 0 | 46.51 | 77.78 |
-| [`mlc.asm.roundsd_xmm_xmm_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-roundsd-xmm-xmm-imm8-function-roundsd-xmm-xmm-imm8-asm-dst-xmm-src-xmm-imm8-mlc-asm-ml-583451099) | `mlc/asm.ml:3569` | 13 | 12 | 3 | 2 | 1 | 625.5 | 55.72 |
-| [`mlc.asm.sar_r32_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sar-r32-imm8-function-sar-r32-imm8-asm-reg-name-imm-mlc-asm-ml-847216226) | `mlc/asm.ml:2274` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.sar_r64_cl`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sar-r64-cl-function-sar-r64-cl-asm-reg-name-mlc-asm-ml-938518801) | `mlc/asm.ml:3237` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
-| [`mlc.asm.sar_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sar-r64-imm8-function-sar-r64-imm8-asm-reg-name-imm-mlc-asm-ml-998880162) | `mlc/asm.ml:2264` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.sar_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sar-rax-imm8-function-sar-rax-imm8-asm-imm-mlc-asm-ml-1716300758) | `mlc/asm.ml:2284` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.setcc_al`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-setcc-al-function-setcc-al-asm-as-struct-cc-as-string-returns-struct-mlc-asm-ml-492450819) | `mlc/asm.ml:2160` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
-| [`mlc.asm.setcc_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-setcc-r8-function-setcc-r8-asm-cc-dst8-mlc-asm-ml-1154957978) | `mlc/asm.ml:2127` | 28 | 44 | 21 | 20 | 1 | 1739.92 | 42.92 |
-| [`mlc.asm.shl_r32_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shl-r32-imm8-function-shl-r32-imm8-asm-reg-name-imm-mlc-asm-ml-647376018) | `mlc/asm.ml:2269` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.shl_r64_cl`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shl-r64-cl-function-shl-r64-cl-asm-reg-name-mlc-asm-ml-114711749) | `mlc/asm.ml:3213` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
-| [`mlc.asm.shl_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shl-r64-imm8-function-shl-r64-imm8-asm-reg-name-imm-mlc-asm-ml-1909873058) | `mlc/asm.ml:2254` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.shl_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shl-rax-imm8-function-shl-rax-imm8-asm-imm-mlc-asm-ml-417650282) | `mlc/asm.ml:2288` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.shr_r32_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shr-r32-imm8-function-shr-r32-imm8-asm-reg-name-imm-mlc-asm-ml-753174902) | `mlc/asm.ml:2279` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.shr_r64_cl`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shr-r64-cl-function-shr-r64-cl-asm-reg-name-mlc-asm-ml-2076990297) | `mlc/asm.ml:3225` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
-| [`mlc.asm.shr_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shr-r64-imm8-function-shr-r64-imm8-asm-reg-name-imm-mlc-asm-ml-2146344306) | `mlc/asm.ml:2259` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.sub_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r32-imm-function-sub-r32-imm-asm-reg-name-imm-mlc-asm-ml-523102558) | `mlc/asm.ml:1977` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.sub_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r32-r32-function-sub-r32-r32-asm-dst-src-mlc-asm-ml-1020021374) | `mlc/asm.ml:2045` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.sub_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r64-imm-function-sub-r64-imm-asm-reg-name-imm-mlc-asm-ml-488582696) | `mlc/asm.ml:1892` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.sub_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r64-imm8-function-sub-r64-imm8-asm-reg-name-imm-mlc-asm-ml-2039558970) | `mlc/asm.ml:1933` | 3 | 1 | 1 | 0 | 0 | 69.19 | 76.57 |
-| [`mlc.asm.sub_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r64-r64-function-sub-r64-r64-asm-dst-src-mlc-asm-ml-1393772758) | `mlc/asm.ml:2035` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.sub_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r8-imm8-function-sub-r8-imm8-asm-reg8-imm-mlc-asm-ml-2002575582) | `mlc/asm.ml:2672` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
-| [`mlc.asm.sub_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-rax-imm8-function-sub-rax-imm8-asm-imm-mlc-asm-ml-1877733982) | `mlc/asm.ml:2222` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
-| [`mlc.asm.sub_rax_r11`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-rax-r11-function-sub-rax-r11-asm-mlc-asm-ml-2138846559) | `mlc/asm.ml:2214` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
-| [`mlc.asm.sub_rsp_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-rsp-imm32-function-sub-rsp-imm32-asm-imm-mlc-asm-ml-1228510736) | `mlc/asm.ml:2382` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
-| [`mlc.asm.sub_rsp_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-rsp-imm8-function-sub-rsp-imm8-asm-imm-mlc-asm-ml-542282190) | `mlc/asm.ml:2366` | 4 | 3 | 2 | 1 | 1 | 105.49 | 72.43 |
-| [`mlc.asm.subsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-subsd-xmm-xmm-function-subsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-1553390274) | `mlc/asm.ml:3449` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
-| [`mlc.asm.test_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-r32-r32-function-test-r32-r32-asm-left-right-mlc-asm-ml-1179640542) | `mlc/asm.ml:2106` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.test_r64_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-r64-imm32-function-test-r64-imm32-asm-reg-name-imm-mlc-asm-ml-1887492770) | `mlc/asm.ml:2689` | 13 | 11 | 3 | 2 | 1 | 500.5 | 56.4 |
-| [`mlc.asm.test_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-r64-r64-function-test-r64-r64-asm-left-right-mlc-asm-ml-1283886030) | `mlc/asm.ml:2101` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.test_r8_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-r8-r8-function-test-r8-r8-asm-left-right-mlc-asm-ml-1004369990) | `mlc/asm.ml:2112` | 10 | 9 | 3 | 2 | 1 | 569.8 | 58.49 |
-| [`mlc.asm.test_rax_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-rax-imm32-function-test-rax-imm32-asm-imm-mlc-asm-ml-616207034) | `mlc/asm.ml:2332` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
-| [`mlc.asm.ucomisd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ucomisd-xmm-xmm-function-ucomisd-xmm-xmm-asm-as-struct-left-xmm-as-string-right-xmm-as-string-returns-struct-mlc-asm-ml-1513138393) | `mlc/asm.ml:3474` | 3 | 1 | 1 | 0 | 0 | 148.68 | 74.25 |
-| [`mlc.asm.vmovdqu_membase_disp_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vmovdqu-membase-disp-ymm-function-vmovdqu-membase-disp-ymm-asm-base-disp-src-mlc-asm-ml-1709641806) | `mlc/asm.ml:3770` | 10 | 9 | 3 | 2 | 1 | 551.03 | 58.59 |
-| [`mlc.asm.vmovdqu_ymm_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vmovdqu-ymm-membase-disp-function-vmovdqu-ymm-membase-disp-asm-dst-base-disp-mlc-asm-ml-1163881377) | `mlc/asm.ml:3754` | 10 | 9 | 3 | 2 | 1 | 551.03 | 58.59 |
-| [`mlc.asm.vpcmpeqb_ymm_ymm_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vpcmpeqb-ymm-ymm-ymm-function-vpcmpeqb-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-144417041) | `mlc/asm.ml:3786` | 10 | 9 | 4 | 3 | 1 | 549.92 | 58.46 |
-| [`mlc.asm.vpcmpeqw_ymm_ymm_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vpcmpeqw-ymm-ymm-ymm-function-vpcmpeqw-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-191103173) | `mlc/asm.ml:3802` | 10 | 9 | 4 | 3 | 1 | 549.92 | 58.46 |
-| [`mlc.asm.vpmovmskb_r32_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vpmovmskb-r32-ymm-function-vpmovmskb-r32-ymm-asm-dst32-src-mlc-asm-ml-643392095) | `mlc/asm.ml:3817` | 10 | 10 | 4 | 3 | 1 | 599.71 | 58.2 |
-| [`mlc.asm.vpxor_ymm_ymm_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vpxor-ymm-ymm-ymm-function-vpxor-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-173507307) | `mlc/asm.ml:3833` | 10 | 9 | 4 | 3 | 1 | 549.92 | 58.46 |
-| [`mlc.asm.vzeroupper`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vzeroupper-function-vzeroupper-asm-mlc-asm-ml-1059775613) | `mlc/asm.ml:3846` | 6 | 4 | 1 | 0 | 0 | 122.11 | 68.28 |
-| [`mlc.asm.write_listing`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-write-listing-function-write-listing-asm-path-mlc-asm-ml-1316893246) | `mlc/asm.ml:3951` | 3 | 1 | 1 | 0 | 0 | 34.87 | 78.66 |
-| [`mlc.asm.xgetbv`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xgetbv-function-xgetbv-asm-mlc-asm-ml-2016278405) | `mlc/asm.ml:3407` | 6 | 4 | 1 | 0 | 0 | 122.11 | 68.28 |
-| [`mlc.asm.xor_eax_eax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-eax-eax-function-xor-eax-eax-asm-mlc-asm-ml-1366683683) | `mlc/asm.ml:2345` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
-| [`mlc.asm.xor_ecx_ecx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-ecx-ecx-function-xor-ecx-ecx-asm-mlc-asm-ml-1641165587) | `mlc/asm.ml:2339` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
-| [`mlc.asm.xor_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r32-imm-function-xor-r32-imm-asm-reg-name-imm-mlc-asm-ml-264693208) | `mlc/asm.ml:1992` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.xor_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r32-r32-function-xor-r32-r32-asm-dst-src-mlc-asm-ml-166464732) | `mlc/asm.ml:2055` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.xor_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r64-imm-function-xor-r64-imm-asm-reg-name-imm-mlc-asm-ml-753519682) | `mlc/asm.ml:1907` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.xor_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r64-imm8-function-xor-r64-imm8-asm-reg-name-imm-mlc-asm-ml-246689566) | `mlc/asm.ml:1956` | 3 | 1 | 1 | 0 | 0 | 69.19 | 76.57 |
-| [`mlc.asm.xor_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r64-r64-function-xor-r64-r64-asm-dst-src-mlc-asm-ml-2140562780) | `mlc/asm.ml:2050` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
-| [`mlc.asm.xor_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r8-imm8-function-xor-r8-imm8-asm-reg8-imm-mlc-asm-ml-1404167300) | `mlc/asm.ml:2662` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
-| [`mlc.asm.xorpd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xorpd-xmm-xmm-function-xorpd-xmm-xmm-asm-as-struct-dst-xmm-as-string-src-xmm-as-string-returns-struct-mlc-asm-ml-681801965) | `mlc/asm.ml:3483` | 3 | 1 | 1 | 0 | 0 | 148.68 | 74.25 |
+| [`mlc.asm.ret`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ret-function-ret-asm-mlc-asm-ml-346769639) | `mlc/asm.ml:1532` | 3 | 1 | 1 | 0 | 0 | 46.51 | 77.78 |
+| [`mlc.asm.roundsd_xmm_xmm_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-roundsd-xmm-xmm-imm8-function-roundsd-xmm-xmm-imm8-asm-dst-xmm-src-xmm-imm8-mlc-asm-ml-583451099) | `mlc/asm.ml:3675` | 13 | 12 | 3 | 2 | 1 | 625.5 | 55.72 |
+| [`mlc.asm.sar_r32_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sar-r32-imm8-function-sar-r32-imm8-asm-reg-name-imm-mlc-asm-ml-847216226) | `mlc/asm.ml:2280` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.sar_r64_cl`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sar-r64-cl-function-sar-r64-cl-asm-reg-name-mlc-asm-ml-938518801) | `mlc/asm.ml:3343` | 8 | 7 | 2 | 1 | 1 | 329.03 | 62.41 |
+| [`mlc.asm.sar_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sar-r64-imm8-function-sar-r64-imm8-asm-reg-name-imm-mlc-asm-ml-998880162) | `mlc/asm.ml:2270` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.sar_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sar-rax-imm8-function-sar-rax-imm8-asm-imm-mlc-asm-ml-1716300758) | `mlc/asm.ml:2290` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.setcc_al`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-setcc-al-function-setcc-al-asm-as-struct-cc-as-string-returns-struct-mlc-asm-ml-492450819) | `mlc/asm.ml:2166` | 3 | 1 | 1 | 0 | 0 | 93.77 | 75.65 |
+| [`mlc.asm.setcc_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-setcc-r8-function-setcc-r8-asm-cc-dst8-mlc-asm-ml-1154957978) | `mlc/asm.ml:2133` | 28 | 44 | 21 | 20 | 1 | 1739.92 | 42.92 |
+| [`mlc.asm.shl_r32_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shl-r32-imm8-function-shl-r32-imm8-asm-reg-name-imm-mlc-asm-ml-647376018) | `mlc/asm.ml:2275` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.shl_r64_cl`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shl-r64-cl-function-shl-r64-cl-asm-reg-name-mlc-asm-ml-114711749) | `mlc/asm.ml:3319` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
+| [`mlc.asm.shl_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shl-r64-imm8-function-shl-r64-imm8-asm-reg-name-imm-mlc-asm-ml-1909873058) | `mlc/asm.ml:2260` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.shl_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shl-rax-imm8-function-shl-rax-imm8-asm-imm-mlc-asm-ml-417650282) | `mlc/asm.ml:2294` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.shr_r32_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shr-r32-imm8-function-shr-r32-imm8-asm-reg-name-imm-mlc-asm-ml-753174902) | `mlc/asm.ml:2285` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.shr_r64_cl`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shr-r64-cl-function-shr-r64-cl-asm-reg-name-mlc-asm-ml-2076990297) | `mlc/asm.ml:3331` | 8 | 7 | 2 | 1 | 1 | 332.84 | 62.37 |
+| [`mlc.asm.shr_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-shr-r64-imm8-function-shr-r64-imm8-asm-reg-name-imm-mlc-asm-ml-2146344306) | `mlc/asm.ml:2265` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.sub_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r32-imm-function-sub-r32-imm-asm-reg-name-imm-mlc-asm-ml-523102558) | `mlc/asm.ml:1983` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.sub_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r32-r32-function-sub-r32-r32-asm-dst-src-mlc-asm-ml-1020021374) | `mlc/asm.ml:2051` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.sub_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r64-imm-function-sub-r64-imm-asm-reg-name-imm-mlc-asm-ml-488582696) | `mlc/asm.ml:1898` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.sub_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r64-imm8-function-sub-r64-imm8-asm-reg-name-imm-mlc-asm-ml-2039558970) | `mlc/asm.ml:1939` | 3 | 1 | 1 | 0 | 0 | 69.19 | 76.57 |
+| [`mlc.asm.sub_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r64-r64-function-sub-r64-r64-asm-dst-src-mlc-asm-ml-1393772758) | `mlc/asm.ml:2041` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.sub_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-r8-imm8-function-sub-r8-imm8-asm-reg8-imm-mlc-asm-ml-2002575582) | `mlc/asm.ml:2678` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
+| [`mlc.asm.sub_rax_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-rax-imm8-function-sub-rax-imm8-asm-imm-mlc-asm-ml-1877733982) | `mlc/asm.ml:2228` | 1 | 1 | 1 | 0 | 0 | 62.27 | 87.3 |
+| [`mlc.asm.sub_rax_r11`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-rax-r11-function-sub-rax-r11-asm-mlc-asm-ml-2138846559) | `mlc/asm.ml:2220` | 1 | 1 | 1 | 0 | 0 | 55.35 | 87.66 |
+| [`mlc.asm.sub_rsp_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-rsp-imm32-function-sub-rsp-imm32-asm-imm-mlc-asm-ml-1228510736) | `mlc/asm.ml:2388` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
+| [`mlc.asm.sub_rsp_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-sub-rsp-imm8-function-sub-rsp-imm8-asm-imm-mlc-asm-ml-542282190) | `mlc/asm.ml:2372` | 4 | 3 | 2 | 1 | 1 | 105.49 | 72.43 |
+| [`mlc.asm.subsd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-subsd-xmm-xmm-function-subsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-1553390274) | `mlc/asm.ml:3555` | 3 | 1 | 1 | 0 | 0 | 105.49 | 75.29 |
+| [`mlc.asm.test_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-r32-r32-function-test-r32-r32-asm-left-right-mlc-asm-ml-1179640542) | `mlc/asm.ml:2112` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.test_r64_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-r64-imm32-function-test-r64-imm32-asm-reg-name-imm-mlc-asm-ml-1887492770) | `mlc/asm.ml:2695` | 13 | 11 | 3 | 2 | 1 | 500.5 | 56.4 |
+| [`mlc.asm.test_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-r64-r64-function-test-r64-r64-asm-left-right-mlc-asm-ml-1283886030) | `mlc/asm.ml:2107` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.test_r8_r8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-r8-r8-function-test-r8-r8-asm-left-right-mlc-asm-ml-1004369990) | `mlc/asm.ml:2118` | 10 | 9 | 3 | 2 | 1 | 569.8 | 58.49 |
+| [`mlc.asm.test_rax_imm32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-test-rax-imm32-function-test-rax-imm32-asm-imm-mlc-asm-ml-616207034) | `mlc/asm.ml:2338` | 3 | 1 | 1 | 0 | 0 | 62.27 | 76.89 |
+| [`mlc.asm.ucomisd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-ucomisd-xmm-xmm-function-ucomisd-xmm-xmm-asm-as-struct-left-xmm-as-string-right-xmm-as-string-returns-struct-mlc-asm-ml-1513138393) | `mlc/asm.ml:3580` | 3 | 1 | 1 | 0 | 0 | 148.68 | 74.25 |
+| [`mlc.asm.vmovdqu_membase_disp_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vmovdqu-membase-disp-ymm-function-vmovdqu-membase-disp-ymm-asm-base-disp-src-mlc-asm-ml-1709641806) | `mlc/asm.ml:3876` | 10 | 9 | 3 | 2 | 1 | 551.03 | 58.59 |
+| [`mlc.asm.vmovdqu_ymm_membase_disp`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vmovdqu-ymm-membase-disp-function-vmovdqu-ymm-membase-disp-asm-dst-base-disp-mlc-asm-ml-1163881377) | `mlc/asm.ml:3860` | 10 | 9 | 3 | 2 | 1 | 551.03 | 58.59 |
+| [`mlc.asm.vpcmpeqb_ymm_ymm_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vpcmpeqb-ymm-ymm-ymm-function-vpcmpeqb-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-144417041) | `mlc/asm.ml:3892` | 10 | 9 | 4 | 3 | 1 | 549.92 | 58.46 |
+| [`mlc.asm.vpcmpeqw_ymm_ymm_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vpcmpeqw-ymm-ymm-ymm-function-vpcmpeqw-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-191103173) | `mlc/asm.ml:3908` | 10 | 9 | 4 | 3 | 1 | 549.92 | 58.46 |
+| [`mlc.asm.vpmovmskb_r32_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vpmovmskb-r32-ymm-function-vpmovmskb-r32-ymm-asm-dst32-src-mlc-asm-ml-643392095) | `mlc/asm.ml:3923` | 10 | 10 | 4 | 3 | 1 | 599.71 | 58.2 |
+| [`mlc.asm.vpxor_ymm_ymm_ymm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vpxor-ymm-ymm-ymm-function-vpxor-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-173507307) | `mlc/asm.ml:3939` | 10 | 9 | 4 | 3 | 1 | 549.92 | 58.46 |
+| [`mlc.asm.vzeroupper`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-vzeroupper-function-vzeroupper-asm-mlc-asm-ml-1059775613) | `mlc/asm.ml:3952` | 6 | 4 | 1 | 0 | 0 | 122.11 | 68.28 |
+| [`mlc.asm.write_listing`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-write-listing-function-write-listing-asm-path-mlc-asm-ml-1316893246) | `mlc/asm.ml:4057` | 3 | 1 | 1 | 0 | 0 | 34.87 | 78.66 |
+| [`mlc.asm.xgetbv`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xgetbv-function-xgetbv-asm-mlc-asm-ml-2016278405) | `mlc/asm.ml:3513` | 6 | 4 | 1 | 0 | 0 | 122.11 | 68.28 |
+| [`mlc.asm.xor_eax_eax`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-eax-eax-function-xor-eax-eax-asm-mlc-asm-ml-1366683683) | `mlc/asm.ml:2351` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
+| [`mlc.asm.xor_ecx_ecx`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-ecx-ecx-function-xor-ecx-ecx-asm-mlc-asm-ml-1641165587) | `mlc/asm.ml:2345` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
+| [`mlc.asm.xor_r32_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r32-imm-function-xor-r32-imm-asm-reg-name-imm-mlc-asm-ml-264693208) | `mlc/asm.ml:1998` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.xor_r32_r32`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r32-r32-function-xor-r32-r32-asm-dst-src-mlc-asm-ml-166464732) | `mlc/asm.ml:2061` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.xor_r64_imm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r64-imm-function-xor-r64-imm-asm-reg-name-imm-mlc-asm-ml-753519682) | `mlc/asm.ml:1913` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.xor_r64_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r64-imm8-function-xor-r64-imm8-asm-reg-name-imm-mlc-asm-ml-246689566) | `mlc/asm.ml:1962` | 3 | 1 | 1 | 0 | 0 | 69.19 | 76.57 |
+| [`mlc.asm.xor_r64_r64`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r64-r64-function-xor-r64-r64-asm-dst-src-mlc-asm-ml-2140562780) | `mlc/asm.ml:2056` | 1 | 1 | 1 | 0 | 0 | 88.81 | 86.22 |
+| [`mlc.asm.xor_r8_imm8`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xor-r8-imm8-function-xor-r8-imm8-asm-reg8-imm-mlc-asm-ml-1404167300) | `mlc/asm.ml:2668` | 1 | 1 | 1 | 0 | 0 | 78.87 | 86.58 |
+| [`mlc.asm.xorpd_xmm_xmm`](File-mlc-asm-ml-1368648960.md#function-function-mlc-asm-xorpd-xmm-xmm-function-xorpd-xmm-xmm-asm-as-struct-dst-xmm-as-string-src-xmm-as-string-returns-struct-mlc-asm-ml-681801965) | `mlc/asm.ml:3589` | 3 | 1 | 1 | 0 | 0 | 148.68 | 74.25 |
 | [`mlc.codegen.codegen.__init__`](File-mlc-codegen-codegen-ml-1154886880.md#function-function-mlc-codegen-codegen-init-function-init-cg-mlc-codegen-codegen-ml-841707717) | `mlc/codegen/codegen.ml:279` | 7 | 5 | 3 | 2 | 1 | 187.65 | 65.24 |
 | [`mlc.codegen.codegen._arr_has`](File-mlc-codegen-codegen-ml-1154886880.md#function-function-mlc-codegen-codegen-arr-has-function-arr-has-arr-value-mlc-codegen-codegen-ml-1028508207) | `mlc/codegen/codegen.ml:41` | 7 | 6 | 5 | 5 | 2 | 267.19 | 63.9 |
 | [`mlc.codegen.codegen._clone_state_for_object`](File-mlc-codegen-codegen-ml-1154886880.md#function-function-mlc-codegen-codegen-clone-state-for-object-function-clone-state-for-object-base-seed-runtime-mlc-codegen-codegen-ml-970806124) | `mlc/codegen/codegen.ml:304` | 130 | 125 | 3 | 2 | 1 | 6948.07 | 26.58 |
@@ -477,19 +484,19 @@ Coverage is split by documentation contract so strong API summaries cannot hide 
 | [`mlc.codegen.codegen_builtins_alloc.emit_string_to_upper_ascii_function`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md#function-function-mlc-codegen-codegen-builtins-alloc-emit-string-to-upper-ascii-function-function-emit-string-to-upper-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-367254172) | `mlc/codegen/codegen_builtins_alloc.ml:2711` | 94 | 92 | 1 | 0 | 0 | 9507.47 | 28.97 |
 | [`mlc.codegen.codegen_builtins_alloc.emit_string_trim_ascii_function`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md#function-function-mlc-codegen-codegen-builtins-alloc-emit-string-trim-ascii-function-function-emit-string-trim-ascii-function-state-mlc-codegen-codegen-builtins-alloc-ml-1979931772) | `mlc/codegen/codegen_builtins_alloc.ml:2365` | 91 | 89 | 1 | 0 | 0 | 8697.94 | 29.55 |
 | [`mlc.codegen.codegen_builtins_alloc.emit_value_to_string_function`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md#function-function-mlc-codegen-codegen-builtins-alloc-emit-value-to-string-function-function-emit-value-to-string-function-state-mlc-codegen-codegen-builtins-alloc-ml-586077162) | `mlc/codegen/codegen_builtins_alloc.ml:859` | 212 | 210 | 16 | 41 | 5 | 22261.97 | 16.66 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_collect`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-collect-function-emit-collect-state-mlc-codegen-codegen-concurrent-gc-ml-1862035436) | `mlc/codegen/codegen_concurrent_gc.ml:779` | 63 | 61 | 1 | 0 | 0 | 5546.08 | 34.4 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_free_flatten`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-flatten-function-emit-free-flatten-state-mlc-codegen-codegen-concurrent-gc-ml-765104454) | `mlc/codegen/codegen_concurrent_gc.ml:223` | 30 | 28 | 1 | 0 | 0 | 2386.25 | 43.99 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_free_merge`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-merge-function-emit-free-merge-state-mlc-codegen-codegen-concurrent-gc-ml-585741254) | `mlc/codegen/codegen_concurrent_gc.ml:203` | 17 | 15 | 1 | 0 | 0 | 1051.5 | 51.87 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_free_push`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-push-function-emit-free-push-state-mlc-codegen-codegen-concurrent-gc-ml-779324812) | `mlc/codegen/codegen_concurrent_gc.ml:171` | 29 | 25 | 3 | 2 | 1 | 2200.37 | 44.29 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_free_stats`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-stats-function-emit-free-stats-state-mlc-codegen-codegen-concurrent-gc-ml-1705844124) | `mlc/codegen/codegen_concurrent_gc.ml:323` | 71 | 67 | 3 | 2 | 1 | 6467.68 | 32.53 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_free_take`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-take-function-emit-free-take-state-mlc-codegen-codegen-concurrent-gc-ml-50248700) | `mlc/codegen/codegen_concurrent_gc.ml:259` | 56 | 53 | 2 | 1 | 1 | 4932.1 | 35.74 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_heap_free_stat`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-heap-free-stat-function-emit-heap-free-stat-state-byte-sum-mlc-codegen-codegen-concurrent-gc-ml-1943389042) | `mlc/codegen/codegen_concurrent_gc.ml:398` | 23 | 19 | 3 | 2 | 1 | 1128.3 | 48.52 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_request`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-request-function-emit-request-state-mlc-codegen-codegen-concurrent-gc-ml-1529982796) | `mlc/codegen/codegen_concurrent_gc.ml:709` | 64 | 62 | 3 | 3 | 2 | 5531.07 | 33.99 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_reuse_end`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-reuse-end-function-emit-reuse-end-state-mlc-codegen-codegen-concurrent-gc-ml-1043991100) | `mlc/codegen/codegen_concurrent_gc.ml:424` | 39 | 37 | 1 | 0 | 0 | 3315.62 | 40.51 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_reuse_snapshot`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-reuse-snapshot-function-emit-reuse-snapshot-state-mlc-codegen-codegen-concurrent-gc-ml-2082369434) | `mlc/codegen/codegen_concurrent_gc.ml:468` | 206 | 201 | 4 | 3 | 1 | 22332.12 | 18.54 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_collect`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-collect-function-emit-collect-state-mlc-codegen-codegen-concurrent-gc-ml-1862035436) | `mlc/codegen/codegen_concurrent_gc.ml:750` | 63 | 61 | 1 | 0 | 0 | 5546.08 | 34.4 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_free_flatten`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-flatten-function-emit-free-flatten-state-mlc-codegen-codegen-concurrent-gc-ml-765104454) | `mlc/codegen/codegen_concurrent_gc.ml:214` | 30 | 28 | 1 | 0 | 0 | 2386.25 | 43.99 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_free_merge`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-merge-function-emit-free-merge-state-mlc-codegen-codegen-concurrent-gc-ml-585741254) | `mlc/codegen/codegen_concurrent_gc.ml:194` | 17 | 15 | 1 | 0 | 0 | 1051.5 | 51.87 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_free_push`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-push-function-emit-free-push-state-mlc-codegen-codegen-concurrent-gc-ml-779324812) | `mlc/codegen/codegen_concurrent_gc.ml:171` | 20 | 16 | 3 | 2 | 1 | 1328.67 | 49.35 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_free_stats`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-stats-function-emit-free-stats-state-mlc-codegen-codegen-concurrent-gc-ml-1705844124) | `mlc/codegen/codegen_concurrent_gc.ml:306` | 71 | 67 | 3 | 2 | 1 | 6467.68 | 32.53 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_free_take`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-free-take-function-emit-free-take-state-mlc-codegen-codegen-concurrent-gc-ml-50248700) | `mlc/codegen/codegen_concurrent_gc.ml:250` | 48 | 45 | 2 | 1 | 1 | 4083.17 | 37.77 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_heap_free_stat`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-heap-free-stat-function-emit-heap-free-stat-state-byte-sum-mlc-codegen-codegen-concurrent-gc-ml-1943389042) | `mlc/codegen/codegen_concurrent_gc.ml:381` | 23 | 19 | 3 | 2 | 1 | 1128.3 | 48.52 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_request`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-request-function-emit-request-state-mlc-codegen-codegen-concurrent-gc-ml-1529982796) | `mlc/codegen/codegen_concurrent_gc.ml:680` | 64 | 62 | 3 | 3 | 2 | 5531.07 | 33.99 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_reuse_end`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-reuse-end-function-emit-reuse-end-state-mlc-codegen-codegen-concurrent-gc-ml-1043991100) | `mlc/codegen/codegen_concurrent_gc.ml:407` | 32 | 30 | 1 | 0 | 0 | 2586.63 | 43.14 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_reuse_snapshot`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-reuse-snapshot-function-emit-reuse-snapshot-state-mlc-codegen-codegen-concurrent-gc-ml-2082369434) | `mlc/codegen/codegen_concurrent_gc.ml:444` | 201 | 196 | 4 | 3 | 1 | 21680.55 | 18.86 |
 | [`mlc.codegen.codegen_concurrent_gc.emit_satb_pop`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-satb-pop-function-emit-satb-pop-state-mlc-codegen-codegen-concurrent-gc-ml-2098694756) | `mlc/codegen/codegen_concurrent_gc.ml:144` | 24 | 22 | 1 | 0 | 0 | 1821.91 | 46.93 |
 | [`mlc.codegen.codegen_concurrent_gc.emit_satb_record`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-satb-record-function-emit-satb-record-state-mlc-codegen-codegen-concurrent-gc-ml-1227143900) | `mlc/codegen/codegen_concurrent_gc.ml:63` | 72 | 70 | 1 | 0 | 0 | 6745.5 | 32.54 |
-| [`mlc.codegen.codegen_concurrent_gc.emit_worker`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-worker-function-emit-worker-state-mlc-codegen-codegen-concurrent-gc-ml-1044421100) | `mlc/codegen/codegen_concurrent_gc.ml:688` | 17 | 15 | 1 | 0 | 0 | 1030.65 | 51.93 |
+| [`mlc.codegen.codegen_concurrent_gc.emit_worker`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-emit-worker-function-emit-worker-state-mlc-codegen-codegen-concurrent-gc-ml-1044421100) | `mlc/codegen/codegen_concurrent_gc.ml:659` | 17 | 15 | 1 | 0 | 0 | 1030.65 | 51.93 |
 | [`mlc.codegen.codegen_concurrent_gc.enabled`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-enabled-function-enabled-state-mlc-codegen-codegen-concurrent-gc-ml-1973447018) | `mlc/codegen/codegen_concurrent_gc.ml:35` | 3 | 1 | 1 | 0 | 0 | 66.61 | 76.69 |
 | [`mlc.codegen.codegen_concurrent_gc.ensure_data`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-ensure-data-function-ensure-data-state-mlc-codegen-codegen-concurrent-gc-ml-2106950210) | `mlc/codegen/codegen_concurrent_gc.ml:41` | 18 | 12 | 5 | 4 | 1 | 1225.35 | 50.32 |
 | [`mlc.codegen.codegen_concurrent_gc.satb_capacity`](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md#function-function-mlc-codegen-codegen-concurrent-gc-satb-capacity-function-satb-capacity-state-mlc-codegen-codegen-concurrent-gc-ml-2026097214) | `mlc/codegen/codegen_concurrent_gc.ml:17` | 13 | 13 | 13 | 17 | 3 | 738.75 | 53.87 |
@@ -769,68 +776,68 @@ Coverage is split by documentation contract so strong API summaries cannot hide 
 | [`mlc.codegen.codegen_opt.scalar_slot`](File-mlc-codegen-codegen-opt-ml-1574478370.md#function-function-mlc-codegen-codegen-opt-scalar-slot-function-scalar-slot-state-target-field-mlc-codegen-codegen-opt-ml-1131777581) | `mlc/codegen/codegen_opt.ml:205` | 12 | 12 | 8 | 11 | 3 | 697.47 | 55.47 |
 | [`mlc.codegen.codegen_opt.scalar_uses`](File-mlc-codegen-codegen-opt-ml-1574478370.md#function-function-mlc-codegen-codegen-opt-scalar-uses-function-scalar-uses-records-declaration-index-fields-mlc-codegen-codegen-opt-ml-1870508664) | `mlc/codegen/codegen_opt.ml:181` | 19 | 24 | 19 | 27 | 3 | 1066.79 | 48.35 |
 | [`mlc.codegen.codegen_opt.unused_functions`](File-mlc-codegen-codegen-opt-ml-1574478370.md#function-function-mlc-codegen-codegen-opt-unused-functions-function-unused-functions-state-mlc-codegen-codegen-opt-ml-320904552) | `mlc/codegen/codegen_opt.ml:33` | 51 | 61 | 31 | 56 | 4 | 3529.27 | 33.74 |
-| [`mlc.codegen.codegen_runtime._emit_build_args_linux`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-build-args-linux-function-emit-build-args-linux-state-mlc-codegen-codegen-runtime-ml-745727140) | `mlc/codegen/codegen_runtime.ml:3231` | 79 | 77 | 1 | 0 | 0 | 7824.7 | 31.21 |
+| [`mlc.codegen.codegen_runtime._emit_build_args_linux`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-build-args-linux-function-emit-build-args-linux-state-mlc-codegen-codegen-runtime-ml-745727140) | `mlc/codegen/codegen_runtime.ml:3322` | 79 | 77 | 1 | 0 | 0 | 7824.7 | 31.21 |
 | [`mlc.codegen.codegen_runtime._emit_force_xmm0_to_float_value`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-force-xmm0-to-float-value-function-emit-force-xmm0-to-float-value-state-mlc-codegen-codegen-runtime-ml-26923332) | `mlc/codegen/codegen_runtime.ml:183` | 19 | 17 | 1 | 0 | 0 | 1144.21 | 50.56 |
 | [`mlc.codegen.codegen_runtime._emit_mov_rax_i64_max`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-mov-rax-i64-max-function-emit-mov-rax-i64-max-state-mlc-codegen-codegen-runtime-ml-2102702944) | `mlc/codegen/codegen_runtime.ml:74` | 11 | 8 | 2 | 1 | 1 | 413.68 | 58.69 |
 | [`mlc.codegen.codegen_runtime._emit_mov_rax_u64_hi_lo`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-mov-rax-u64-hi-lo-function-emit-mov-rax-u64-hi-lo-state-hi32-lo32-mlc-codegen-codegen-runtime-ml-1071085340) | `mlc/codegen/codegen_runtime.ml:62` | 9 | 6 | 2 | 1 | 1 | 385.44 | 60.81 |
-| [`mlc.codegen.codegen_runtime._emit_native_crc_wrapper`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-native-crc-wrapper-function-emit-native-crc-wrapper-state-label-raw-label-mlc-codegen-codegen-runtime-ml-65970373) | `mlc/codegen/codegen_runtime.ml:968` | 61 | 59 | 1 | 0 | 0 | 5759.18 | 34.59 |
+| [`mlc.codegen.codegen_runtime._emit_native_crc_wrapper`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-native-crc-wrapper-function-emit-native-crc-wrapper-state-label-raw-label-mlc-codegen-codegen-runtime-ml-65970373) | `mlc/codegen/codegen_runtime.ml:1038` | 61 | 59 | 1 | 0 | 0 | 5759.18 | 34.59 |
 | [`mlc.codegen.codegen_runtime._emit_normalize_xmm0_to_value`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-normalize-xmm0-to-value-function-emit-normalize-xmm0-to-value-state-mlc-codegen-codegen-runtime-ml-2037712558) | `mlc/codegen/codegen_runtime.ml:144` | 31 | 29 | 1 | 0 | 0 | 2116.45 | 44.05 |
 | [`mlc.codegen.codegen_runtime._emit_to_double_xmm`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-to-double-xmm-function-emit-to-double-xmm-state-xmm-fail-label-mlc-codegen-codegen-runtime-ml-1880184763) | `mlc/codegen/codegen_runtime.ml:88` | 48 | 40 | 7 | 6 | 1 | 3352.21 | 37.7 |
-| [`mlc.codegen.codegen_runtime._ensure_byte_search_table`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-ensure-byte-search-table-function-ensure-byte-search-table-state-mlc-codegen-codegen-runtime-ml-19967732) | `mlc/codegen/codegen_runtime.ml:530` | 11 | 8 | 4 | 4 | 2 | 385 | 58.64 |
-| [`mlc.codegen.codegen_runtime._ensure_crc_tables`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-ensure-crc-tables-function-ensure-crc-tables-state-mlc-codegen-codegen-runtime-ml-1516024476) | `mlc/codegen/codegen_runtime.ml:867` | 9 | 5 | 3 | 2 | 1 | 343.38 | 61.03 |
-| [`mlc.codegen.codegen_runtime._make_crc_table`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-make-crc-table-function-make-crc-table-poly-mlc-codegen-codegen-runtime-ml-672147517) | `mlc/codegen/codegen_runtime.ml:849` | 15 | 13 | 4 | 6 | 3 | 622.67 | 54.24 |
+| [`mlc.codegen.codegen_runtime._ensure_byte_search_table`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-ensure-byte-search-table-function-ensure-byte-search-table-state-mlc-codegen-codegen-runtime-ml-19967732) | `mlc/codegen/codegen_runtime.ml:543` | 11 | 8 | 4 | 4 | 2 | 385 | 58.64 |
+| [`mlc.codegen.codegen_runtime._ensure_crc_tables`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-ensure-crc-tables-function-ensure-crc-tables-state-mlc-codegen-codegen-runtime-ml-1516024476) | `mlc/codegen/codegen_runtime.ml:880` | 9 | 5 | 3 | 2 | 1 | 343.38 | 61.03 |
+| [`mlc.codegen.codegen_runtime._make_crc_table`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-make-crc-table-function-make-crc-table-poly-mlc-codegen-codegen-runtime-ml-672147517) | `mlc/codegen/codegen_runtime.ml:862` | 15 | 13 | 4 | 6 | 3 | 622.67 | 54.24 |
 | [`mlc.codegen.codegen_runtime.cg_runtime_init`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-cg-runtime-init-function-cg-runtime-init-state-mlc-codegen-codegen-runtime-ml-2039830360) | `mlc/codegen/codegen_runtime.ml:56` | 3 | 1 | 1 | 0 | 0 | 25.27 | 79.64 |
-| [`mlc.codegen.codegen_runtime.emit_build_args_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-build-args-function-function-emit-build-args-function-state-mlc-codegen-codegen-runtime-ml-534829940) | `mlc/codegen/codegen_runtime.ml:3319` | 126 | 125 | 2 | 1 | 1 | 13212.88 | 25.06 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_copyArray_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-copyarray-function-function-emit-builtin-copyarray-function-state-mlc-codegen-codegen-runtime-ml-1370754338) | `mlc/codegen/codegen_runtime.ml:3597` | 104 | 102 | 1 | 0 | 0 | 10141.31 | 27.82 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_copyBytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-copybytes-function-function-emit-builtin-copybytes-function-state-mlc-codegen-codegen-runtime-ml-367431250) | `mlc/codegen/codegen_runtime.ml:3491` | 91 | 89 | 1 | 0 | 0 | 8685.77 | 29.55 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_copyStringBytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-copystringbytes-function-function-emit-builtin-copystringbytes-function-state-mlc-codegen-codegen-runtime-ml-1181575084) | `mlc/codegen/codegen_runtime.ml:1770` | 91 | 89 | 1 | 0 | 0 | 8711.57 | 29.54 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_fillBytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-fillbytes-function-function-emit-builtin-fillbytes-function-state-mlc-codegen-codegen-runtime-ml-1031161770) | `mlc/codegen/codegen_runtime.ml:3716` | 69 | 67 | 1 | 0 | 0 | 6297.89 | 33.15 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_gc_collect_async_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-collect-async-function-function-emit-builtin-gc-collect-async-function-state-mlc-codegen-codegen-runtime-ml-1097920536) | `mlc/codegen/codegen_runtime.ml:3864` | 12 | 11 | 2 | 1 | 1 | 615 | 56.66 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_gc_collect_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-collect-function-function-emit-builtin-gc-collect-function-state-mlc-codegen-codegen-runtime-ml-1836857400) | `mlc/codegen/codegen_runtime.ml:3879` | 10 | 8 | 1 | 0 | 0 | 478.32 | 59.29 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_gc_set_limit_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-set-limit-function-function-emit-builtin-gc-set-limit-function-state-mlc-codegen-codegen-runtime-ml-1019220532) | `mlc/codegen/codegen_runtime.ml:3894` | 50 | 48 | 1 | 0 | 0 | 3854.48 | 37.7 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_input_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-input-function-function-emit-builtin-input-function-state-mlc-codegen-codegen-runtime-ml-1368324302) | `mlc/codegen/codegen_runtime.ml:3838` | 19 | 17 | 1 | 0 | 0 | 1063.28 | 50.78 |
-| [`mlc.codegen.codegen_runtime.emit_builtin_len_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-len-function-function-emit-builtin-len-function-state-mlc-codegen-codegen-runtime-ml-919784296) | `mlc/codegen/codegen_runtime.ml:3797` | 32 | 30 | 1 | 0 | 0 | 2445.49 | 43.31 |
-| [`mlc.codegen.codegen_runtime.emit_bytes_compare_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-compare-function-function-emit-bytes-compare-function-state-mlc-codegen-codegen-runtime-ml-170599544) | `mlc/codegen/codegen_runtime.ml:1692` | 66 | 64 | 1 | 0 | 0 | 6272.92 | 33.58 |
-| [`mlc.codegen.codegen_runtime.emit_bytes_constant_time_eq_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-constant-time-eq-function-function-emit-bytes-constant-time-eq-function-state-mlc-codegen-codegen-runtime-ml-1957626140) | `mlc/codegen/codegen_runtime.ml:474` | 53 | 51 | 1 | 0 | 0 | 4636.05 | 36.58 |
-| [`mlc.codegen.codegen_runtime.emit_bytes_endswith_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-endswith-function-function-emit-bytes-endswith-function-state-mlc-codegen-codegen-runtime-ml-619147724) | `mlc/codegen/codegen_runtime.ml:1470` | 50 | 48 | 1 | 0 | 0 | 4346.45 | 37.33 |
-| [`mlc.codegen.codegen_runtime.emit_bytes_hash_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-hash-function-function-emit-bytes-hash-function-state-mlc-codegen-codegen-runtime-ml-1093074800) | `mlc/codegen/codegen_runtime.ml:1326` | 37 | 35 | 1 | 0 | 0 | 3057.31 | 41.25 |
-| [`mlc.codegen.codegen_runtime.emit_bytes_indexof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-indexof-function-function-emit-bytes-indexof-function-state-mlc-codegen-codegen-runtime-ml-2096478812) | `mlc/codegen/codegen_runtime.ml:1529` | 80 | 78 | 1 | 0 | 0 | 7554.28 | 31.2 |
-| [`mlc.codegen.codegen_runtime.emit_bytes_lastindexof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-lastindexof-function-function-emit-bytes-lastindexof-function-state-mlc-codegen-codegen-runtime-ml-1410025644) | `mlc/codegen/codegen_runtime.ml:1622` | 59 | 57 | 1 | 0 | 0 | 5267.17 | 35.18 |
-| [`mlc.codegen.codegen_runtime.emit_bytes_startswith_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-startswith-function-function-emit-bytes-startswith-function-state-mlc-codegen-codegen-runtime-ml-1583047876) | `mlc/codegen/codegen_runtime.ml:1414` | 47 | 45 | 1 | 0 | 0 | 4025.57 | 38.15 |
-| [`mlc.codegen.codegen_runtime.emit_callStats_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-callstats-function-function-emit-callstats-function-state-mlc-codegen-codegen-runtime-ml-1296788652) | `mlc/codegen/codegen_runtime.ml:3960` | 50 | 45 | 10 | 12 | 3 | 4299.17 | 36.15 |
-| [`mlc.codegen.codegen_runtime.emit_copy_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-copy-bytes-function-function-emit-copy-bytes-function-state-mlc-codegen-codegen-runtime-ml-710271692) | `mlc/codegen/codegen_runtime.ml:1882` | 109 | 107 | 1 | 0 | 0 | 10023.42 | 27.41 |
-| [`mlc.codegen.codegen_runtime.emit_cpu_init_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-cpu-init-function-function-emit-cpu-init-function-state-mlc-codegen-codegen-runtime-ml-156433868) | `mlc/codegen/codegen_runtime.ml:208` | 88 | 86 | 1 | 0 | 0 | 7853.95 | 30.18 |
-| [`mlc.codegen.codegen_runtime.emit_crc32_update_raw_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-crc32-update-raw-function-function-emit-crc32-update-raw-function-state-mlc-codegen-codegen-runtime-ml-549775004) | `mlc/codegen/codegen_runtime.ml:936` | 29 | 27 | 1 | 0 | 0 | 2090.69 | 44.72 |
-| [`mlc.codegen.codegen_runtime.emit_crc32c_update_raw_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-crc32c-update-raw-function-function-emit-crc32c-update-raw-function-state-mlc-codegen-codegen-runtime-ml-1330212860) | `mlc/codegen/codegen_runtime.ml:879` | 54 | 52 | 1 | 0 | 0 | 4398.14 | 36.56 |
-| [`mlc.codegen.codegen_runtime.emit_fill_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-fill-bytes-function-function-emit-fill-bytes-function-state-mlc-codegen-codegen-runtime-ml-665054572) | `mlc/codegen/codegen_runtime.ml:2006` | 89 | 87 | 1 | 0 | 0 | 7857.93 | 30.07 |
-| [`mlc.codegen.codegen_runtime.emit_fill_qwords_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-fill-qwords-function-function-emit-fill-qwords-function-state-mlc-codegen-codegen-runtime-ml-1398510114) | `mlc/codegen/codegen_runtime.ml:2110` | 38 | 36 | 1 | 0 | 0 | 2928.11 | 41.13 |
-| [`mlc.codegen.codegen_runtime.emit_find_byte_forward_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-find-byte-forward-function-function-emit-find-byte-forward-function-state-mlc-codegen-codegen-runtime-ml-948367850) | `mlc/codegen/codegen_runtime.ml:544` | 87 | 85 | 1 | 0 | 0 | 7752.43 | 30.32 |
-| [`mlc.codegen.codegen_runtime.emit_find_byte_reverse_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-find-byte-reverse-function-function-emit-find-byte-reverse-function-state-mlc-codegen-codegen-runtime-ml-1832090052) | `mlc/codegen/codegen_runtime.ml:634` | 85 | 83 | 1 | 0 | 0 | 7502.1 | 30.64 |
-| [`mlc.codegen.codegen_runtime.emit_init_argvw_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-init-argvw-function-function-emit-init-argvw-function-state-mlc-codegen-codegen-runtime-ml-1233742276) | `mlc/codegen/codegen_runtime.ml:3196` | 25 | 23 | 1 | 0 | 0 | 1599.61 | 46.94 |
-| [`mlc.codegen.codegen_runtime.emit_int_to_dec_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-int-to-dec-function-function-emit-int-to-dec-function-state-mlc-codegen-codegen-runtime-ml-1742139360) | `mlc/codegen/codegen_runtime.ml:2157` | 49 | 47 | 1 | 0 | 0 | 4302 | 37.55 |
+| [`mlc.codegen.codegen_runtime.emit_build_args_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-build-args-function-function-emit-build-args-function-state-mlc-codegen-codegen-runtime-ml-534829940) | `mlc/codegen/codegen_runtime.ml:3410` | 126 | 125 | 2 | 1 | 1 | 13212.88 | 25.06 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_copyArray_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-copyarray-function-function-emit-builtin-copyarray-function-state-mlc-codegen-codegen-runtime-ml-1370754338) | `mlc/codegen/codegen_runtime.ml:3688` | 104 | 102 | 1 | 0 | 0 | 10141.31 | 27.82 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_copyBytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-copybytes-function-function-emit-builtin-copybytes-function-state-mlc-codegen-codegen-runtime-ml-367431250) | `mlc/codegen/codegen_runtime.ml:3582` | 91 | 89 | 1 | 0 | 0 | 8685.77 | 29.55 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_copyStringBytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-copystringbytes-function-function-emit-builtin-copystringbytes-function-state-mlc-codegen-codegen-runtime-ml-1181575084) | `mlc/codegen/codegen_runtime.ml:1840` | 91 | 89 | 1 | 0 | 0 | 8711.57 | 29.54 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_fillBytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-fillbytes-function-function-emit-builtin-fillbytes-function-state-mlc-codegen-codegen-runtime-ml-1031161770) | `mlc/codegen/codegen_runtime.ml:3807` | 69 | 67 | 1 | 0 | 0 | 6297.89 | 33.15 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_gc_collect_async_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-collect-async-function-function-emit-builtin-gc-collect-async-function-state-mlc-codegen-codegen-runtime-ml-1097920536) | `mlc/codegen/codegen_runtime.ml:3955` | 12 | 11 | 2 | 1 | 1 | 615 | 56.66 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_gc_collect_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-collect-function-function-emit-builtin-gc-collect-function-state-mlc-codegen-codegen-runtime-ml-1836857400) | `mlc/codegen/codegen_runtime.ml:3970` | 10 | 8 | 1 | 0 | 0 | 478.32 | 59.29 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_gc_set_limit_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-set-limit-function-function-emit-builtin-gc-set-limit-function-state-mlc-codegen-codegen-runtime-ml-1019220532) | `mlc/codegen/codegen_runtime.ml:3985` | 50 | 48 | 1 | 0 | 0 | 3854.48 | 37.7 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_input_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-input-function-function-emit-builtin-input-function-state-mlc-codegen-codegen-runtime-ml-1368324302) | `mlc/codegen/codegen_runtime.ml:3929` | 19 | 17 | 1 | 0 | 0 | 1063.28 | 50.78 |
+| [`mlc.codegen.codegen_runtime.emit_builtin_len_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-builtin-len-function-function-emit-builtin-len-function-state-mlc-codegen-codegen-runtime-ml-919784296) | `mlc/codegen/codegen_runtime.ml:3888` | 32 | 30 | 1 | 0 | 0 | 2445.49 | 43.31 |
+| [`mlc.codegen.codegen_runtime.emit_bytes_compare_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-compare-function-function-emit-bytes-compare-function-state-mlc-codegen-codegen-runtime-ml-170599544) | `mlc/codegen/codegen_runtime.ml:1762` | 66 | 64 | 1 | 0 | 0 | 6272.92 | 33.58 |
+| [`mlc.codegen.codegen_runtime.emit_bytes_constant_time_eq_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-constant-time-eq-function-function-emit-bytes-constant-time-eq-function-state-mlc-codegen-codegen-runtime-ml-1957626140) | `mlc/codegen/codegen_runtime.ml:487` | 53 | 51 | 1 | 0 | 0 | 4636.05 | 36.58 |
+| [`mlc.codegen.codegen_runtime.emit_bytes_endswith_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-endswith-function-function-emit-bytes-endswith-function-state-mlc-codegen-codegen-runtime-ml-619147724) | `mlc/codegen/codegen_runtime.ml:1540` | 50 | 48 | 1 | 0 | 0 | 4346.45 | 37.33 |
+| [`mlc.codegen.codegen_runtime.emit_bytes_hash_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-hash-function-function-emit-bytes-hash-function-state-mlc-codegen-codegen-runtime-ml-1093074800) | `mlc/codegen/codegen_runtime.ml:1396` | 37 | 35 | 1 | 0 | 0 | 3057.31 | 41.25 |
+| [`mlc.codegen.codegen_runtime.emit_bytes_indexof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-indexof-function-function-emit-bytes-indexof-function-state-mlc-codegen-codegen-runtime-ml-2096478812) | `mlc/codegen/codegen_runtime.ml:1599` | 80 | 78 | 1 | 0 | 0 | 7554.28 | 31.2 |
+| [`mlc.codegen.codegen_runtime.emit_bytes_lastindexof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-lastindexof-function-function-emit-bytes-lastindexof-function-state-mlc-codegen-codegen-runtime-ml-1410025644) | `mlc/codegen/codegen_runtime.ml:1692` | 59 | 57 | 1 | 0 | 0 | 5267.17 | 35.18 |
+| [`mlc.codegen.codegen_runtime.emit_bytes_startswith_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-bytes-startswith-function-function-emit-bytes-startswith-function-state-mlc-codegen-codegen-runtime-ml-1583047876) | `mlc/codegen/codegen_runtime.ml:1484` | 47 | 45 | 1 | 0 | 0 | 4025.57 | 38.15 |
+| [`mlc.codegen.codegen_runtime.emit_callStats_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-callstats-function-function-emit-callstats-function-state-mlc-codegen-codegen-runtime-ml-1296788652) | `mlc/codegen/codegen_runtime.ml:4051` | 50 | 45 | 10 | 12 | 3 | 4299.17 | 36.15 |
+| [`mlc.codegen.codegen_runtime.emit_copy_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-copy-bytes-function-function-emit-copy-bytes-function-state-mlc-codegen-codegen-runtime-ml-710271692) | `mlc/codegen/codegen_runtime.ml:1952` | 128 | 126 | 1 | 0 | 0 | 12537.41 | 25.2 |
+| [`mlc.codegen.codegen_runtime.emit_cpu_init_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-cpu-init-function-function-emit-cpu-init-function-state-mlc-codegen-codegen-runtime-ml-156433868) | `mlc/codegen/codegen_runtime.ml:208` | 100 | 98 | 1 | 0 | 0 | 9104.32 | 28.51 |
+| [`mlc.codegen.codegen_runtime.emit_crc32_update_raw_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-crc32-update-raw-function-function-emit-crc32-update-raw-function-state-mlc-codegen-codegen-runtime-ml-549775004) | `mlc/codegen/codegen_runtime.ml:949` | 86 | 84 | 1 | 0 | 0 | 8216.4 | 30.26 |
+| [`mlc.codegen.codegen_runtime.emit_crc32c_update_raw_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-crc32c-update-raw-function-function-emit-crc32c-update-raw-function-state-mlc-codegen-codegen-runtime-ml-1330212860) | `mlc/codegen/codegen_runtime.ml:892` | 54 | 52 | 1 | 0 | 0 | 4398.14 | 36.56 |
+| [`mlc.codegen.codegen_runtime.emit_fill_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-fill-bytes-function-function-emit-fill-bytes-function-state-mlc-codegen-codegen-runtime-ml-665054572) | `mlc/codegen/codegen_runtime.ml:2096` | 88 | 86 | 1 | 0 | 0 | 7834.92 | 30.18 |
+| [`mlc.codegen.codegen_runtime.emit_fill_qwords_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-fill-qwords-function-function-emit-fill-qwords-function-state-mlc-codegen-codegen-runtime-ml-1398510114) | `mlc/codegen/codegen_runtime.ml:2201` | 38 | 36 | 1 | 0 | 0 | 2928.11 | 41.13 |
+| [`mlc.codegen.codegen_runtime.emit_find_byte_forward_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-find-byte-forward-function-function-emit-find-byte-forward-function-state-mlc-codegen-codegen-runtime-ml-948367850) | `mlc/codegen/codegen_runtime.ml:557` | 87 | 85 | 1 | 0 | 0 | 7752.43 | 30.32 |
+| [`mlc.codegen.codegen_runtime.emit_find_byte_reverse_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-find-byte-reverse-function-function-emit-find-byte-reverse-function-state-mlc-codegen-codegen-runtime-ml-1832090052) | `mlc/codegen/codegen_runtime.ml:647` | 85 | 83 | 1 | 0 | 0 | 7502.1 | 30.64 |
+| [`mlc.codegen.codegen_runtime.emit_init_argvw_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-init-argvw-function-function-emit-init-argvw-function-state-mlc-codegen-codegen-runtime-ml-1233742276) | `mlc/codegen/codegen_runtime.ml:3287` | 25 | 23 | 1 | 0 | 0 | 1599.61 | 46.94 |
+| [`mlc.codegen.codegen_runtime.emit_int_to_dec_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-int-to-dec-function-function-emit-int-to-dec-function-state-mlc-codegen-codegen-runtime-ml-1742139360) | `mlc/codegen/codegen_runtime.ml:2248` | 49 | 47 | 1 | 0 | 0 | 4302 | 37.55 |
 | [`mlc.codegen.codegen_runtime.emit_make_error_const_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-make-error-const-function-function-emit-make-error-const-function-state-mlc-codegen-codegen-runtime-ml-2096214464) | `mlc/codegen/codegen_runtime.ml:29` | 25 | 23 | 1 | 0 | 0 | 2049.24 | 46.18 |
-| [`mlc.codegen.codegen_runtime.emit_mem_eq_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-mem-eq-bytes-function-function-emit-mem-eq-bytes-function-state-mlc-codegen-codegen-runtime-ml-261482808) | `mlc/codegen/codegen_runtime.ml:373` | 86 | 84 | 1 | 0 | 0 | 7575.07 | 30.5 |
-| [`mlc.codegen.codegen_runtime.emit_mem_indexof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-mem-indexof-function-function-emit-mem-indexof-function-state-mlc-codegen-codegen-runtime-ml-148236232) | `mlc/codegen/codegen_runtime.ml:722` | 65 | 63 | 1 | 0 | 0 | 6010.18 | 33.86 |
-| [`mlc.codegen.codegen_runtime.emit_mem_lastindexof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-mem-lastindexof-function-function-emit-mem-lastindexof-function-state-mlc-codegen-codegen-runtime-ml-263126932) | `mlc/codegen/codegen_runtime.ml:790` | 56 | 54 | 1 | 0 | 0 | 4911.68 | 35.88 |
-| [`mlc.codegen.codegen_runtime.emit_native_crc32_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-native-crc32-function-function-emit-native-crc32-function-state-mlc-codegen-codegen-runtime-ml-296402724) | `mlc/codegen/codegen_runtime.ml:1038` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
-| [`mlc.codegen.codegen_runtime.emit_native_crc32c_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-native-crc32c-function-function-emit-native-crc32c-function-state-mlc-codegen-codegen-runtime-ml-581375542) | `mlc/codegen/codegen_runtime.ml:1032` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
-| [`mlc.codegen.codegen_runtime.emit_runtime_cpu_active_features_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-runtime-cpu-active-features-function-function-emit-runtime-cpu-active-features-function-state-mlc-codegen-codegen-runtime-ml-698579582) | `mlc/codegen/codegen_runtime.ml:322` | 8 | 6 | 1 | 0 | 0 | 352.3 | 62.33 |
-| [`mlc.codegen.codegen_runtime.emit_runtime_cpu_features_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-runtime-cpu-features-function-function-emit-runtime-cpu-features-function-state-mlc-codegen-codegen-runtime-ml-1281190268) | `mlc/codegen/codegen_runtime.ml:311` | 8 | 6 | 1 | 0 | 0 | 352.3 | 62.33 |
-| [`mlc.codegen.codegen_runtime.emit_runtime_cpu_set_mask_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-runtime-cpu-set-mask-function-function-emit-runtime-cpu-set-mask-function-state-mlc-codegen-codegen-runtime-ml-1204335896) | `mlc/codegen/codegen_runtime.ml:333` | 37 | 35 | 1 | 0 | 0 | 2788.4 | 41.53 |
-| [`mlc.codegen.codegen_runtime.emit_scan_byte2_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-scan-byte2-bytes-function-function-emit-scan-byte2-bytes-function-state-mlc-codegen-codegen-runtime-ml-339157064) | `mlc/codegen/codegen_runtime.ml:1137` | 77 | 75 | 1 | 0 | 0 | 6883.08 | 31.84 |
-| [`mlc.codegen.codegen_runtime.emit_scan_nul_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-scan-nul-bytes-function-function-emit-scan-nul-bytes-function-state-mlc-codegen-codegen-runtime-ml-1043760700) | `mlc/codegen/codegen_runtime.ml:1044` | 80 | 78 | 1 | 0 | 0 | 6979.83 | 31.44 |
-| [`mlc.codegen.codegen_runtime.emit_scan_nul_wchars_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-scan-nul-wchars-function-function-emit-scan-nul-wchars-function-state-mlc-codegen-codegen-runtime-ml-831721098) | `mlc/codegen/codegen_runtime.ml:1226` | 87 | 85 | 1 | 0 | 0 | 7706.12 | 30.34 |
-| [`mlc.codegen.codegen_runtime.emit_string_eq_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-string-eq-function-function-emit-string-eq-function-state-mlc-codegen-codegen-runtime-ml-2116402438) | `mlc/codegen/codegen_runtime.ml:2783` | 30 | 28 | 1 | 0 | 0 | 2155.95 | 44.3 |
-| [`mlc.codegen.codegen_runtime.emit_string_hash_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-string-hash-function-function-emit-string-hash-function-state-mlc-codegen-codegen-runtime-ml-325949198) | `mlc/codegen/codegen_runtime.ml:1370` | 37 | 35 | 1 | 0 | 0 | 3057.31 | 41.25 |
-| [`mlc.codegen.codegen_runtime.emit_strlen_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-strlen-function-function-emit-strlen-function-state-mlc-codegen-codegen-runtime-ml-1167218460) | `mlc/codegen/codegen_runtime.ml:2773` | 7 | 5 | 1 | 0 | 0 | 280.93 | 64.29 |
-| [`mlc.codegen.codegen_runtime.emit_toFloat_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-tofloat-function-function-emit-tofloat-function-state-mlc-codegen-codegen-runtime-ml-1619213004) | `mlc/codegen/codegen_runtime.ml:2413` | 22 | 20 | 1 | 0 | 0 | 1334.52 | 48.7 |
-| [`mlc.codegen.codegen_runtime.emit_toNumber_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-tonumber-function-function-emit-tonumber-function-state-mlc-codegen-codegen-runtime-ml-612955968) | `mlc/codegen/codegen_runtime.ml:2218` | 166 | 164 | 1 | 0 | 0 | 16355.83 | 21.93 |
-| [`mlc.codegen.codegen_runtime.emit_typeName_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-typename-function-function-emit-typename-function-state-mlc-codegen-codegen-runtime-ml-604461264) | `mlc/codegen/codegen_runtime.ml:2574` | 178 | 176 | 37 | 102 | 5 | 15716.96 | 16.55 |
-| [`mlc.codegen.codegen_runtime.emit_typeof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-typeof-function-function-emit-typeof-function-state-mlc-codegen-codegen-runtime-ml-884885964) | `mlc/codegen/codegen_runtime.ml:2441` | 111 | 109 | 1 | 0 | 0 | 9645.71 | 27.35 |
-| [`mlc.codegen.codegen_runtime.emit_unhandled_error_exit_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-function-emit-unhandled-error-exit-function-state-mlc-codegen-codegen-runtime-ml-856176908) | `mlc/codegen/codegen_runtime.ml:3040` | 115 | 100 | 1 | 0 | 0 | 10837.09 | 26.66 |
-| [`mlc.codegen.codegen_runtime.emit_unhandled_error_exit_function.local._emit_writefile`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#nested_function-nested-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-local-emit-writefile-function-emit-writefile-state2-lbl-ln-mlc-codegen-codegen-runtime-ml-54962409) | `mlc/codegen/codegen_runtime.ml:3057` | 5 | 3 | 1 | 0 | 0 | 179.85 | 68.83 |
-| [`mlc.codegen.codegen_runtime.emit_unhandled_error_exit_function.local._emit_writefile_ptr_len`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#nested_function-nested-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-local-emit-writefile-ptr-len-function-emit-writefile-ptr-len-state2-mlc-codegen-codegen-runtime-ml-338525475) | `mlc/codegen/codegen_runtime.ml:3046` | 8 | 6 | 1 | 0 | 0 | 338.21 | 62.46 |
-| [`mlc.codegen.codegen_runtime.emit_value_eq_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-value-eq-function-function-emit-value-eq-function-state-mlc-codegen-codegen-runtime-ml-183796344) | `mlc/codegen/codegen_runtime.ml:2822` | 193 | 191 | 1 | 0 | 0 | 20659.17 | 19.79 |
+| [`mlc.codegen.codegen_runtime.emit_mem_eq_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-mem-eq-bytes-function-function-emit-mem-eq-bytes-function-state-mlc-codegen-codegen-runtime-ml-261482808) | `mlc/codegen/codegen_runtime.ml:386` | 86 | 84 | 1 | 0 | 0 | 7575.07 | 30.5 |
+| [`mlc.codegen.codegen_runtime.emit_mem_indexof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-mem-indexof-function-function-emit-mem-indexof-function-state-mlc-codegen-codegen-runtime-ml-148236232) | `mlc/codegen/codegen_runtime.ml:735` | 65 | 63 | 1 | 0 | 0 | 6010.18 | 33.86 |
+| [`mlc.codegen.codegen_runtime.emit_mem_lastindexof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-mem-lastindexof-function-function-emit-mem-lastindexof-function-state-mlc-codegen-codegen-runtime-ml-263126932) | `mlc/codegen/codegen_runtime.ml:803` | 56 | 54 | 1 | 0 | 0 | 4911.68 | 35.88 |
+| [`mlc.codegen.codegen_runtime.emit_native_crc32_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-native-crc32-function-function-emit-native-crc32-function-state-mlc-codegen-codegen-runtime-ml-296402724) | `mlc/codegen/codegen_runtime.ml:1108` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
+| [`mlc.codegen.codegen_runtime.emit_native_crc32c_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-native-crc32c-function-function-emit-native-crc32c-function-state-mlc-codegen-codegen-runtime-ml-581375542) | `mlc/codegen/codegen_runtime.ml:1102` | 3 | 1 | 1 | 0 | 0 | 55.35 | 77.25 |
+| [`mlc.codegen.codegen_runtime.emit_runtime_cpu_active_features_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-runtime-cpu-active-features-function-function-emit-runtime-cpu-active-features-function-state-mlc-codegen-codegen-runtime-ml-698579582) | `mlc/codegen/codegen_runtime.ml:335` | 8 | 6 | 1 | 0 | 0 | 352.3 | 62.33 |
+| [`mlc.codegen.codegen_runtime.emit_runtime_cpu_features_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-runtime-cpu-features-function-function-emit-runtime-cpu-features-function-state-mlc-codegen-codegen-runtime-ml-1281190268) | `mlc/codegen/codegen_runtime.ml:324` | 8 | 6 | 1 | 0 | 0 | 352.3 | 62.33 |
+| [`mlc.codegen.codegen_runtime.emit_runtime_cpu_set_mask_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-runtime-cpu-set-mask-function-function-emit-runtime-cpu-set-mask-function-state-mlc-codegen-codegen-runtime-ml-1204335896) | `mlc/codegen/codegen_runtime.ml:346` | 37 | 35 | 1 | 0 | 0 | 2788.4 | 41.53 |
+| [`mlc.codegen.codegen_runtime.emit_scan_byte2_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-scan-byte2-bytes-function-function-emit-scan-byte2-bytes-function-state-mlc-codegen-codegen-runtime-ml-339157064) | `mlc/codegen/codegen_runtime.ml:1207` | 77 | 75 | 1 | 0 | 0 | 6883.08 | 31.84 |
+| [`mlc.codegen.codegen_runtime.emit_scan_nul_bytes_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-scan-nul-bytes-function-function-emit-scan-nul-bytes-function-state-mlc-codegen-codegen-runtime-ml-1043760700) | `mlc/codegen/codegen_runtime.ml:1114` | 80 | 78 | 1 | 0 | 0 | 6979.83 | 31.44 |
+| [`mlc.codegen.codegen_runtime.emit_scan_nul_wchars_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-scan-nul-wchars-function-function-emit-scan-nul-wchars-function-state-mlc-codegen-codegen-runtime-ml-831721098) | `mlc/codegen/codegen_runtime.ml:1296` | 87 | 85 | 1 | 0 | 0 | 7706.12 | 30.34 |
+| [`mlc.codegen.codegen_runtime.emit_string_eq_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-string-eq-function-function-emit-string-eq-function-state-mlc-codegen-codegen-runtime-ml-2116402438) | `mlc/codegen/codegen_runtime.ml:2874` | 30 | 28 | 1 | 0 | 0 | 2155.95 | 44.3 |
+| [`mlc.codegen.codegen_runtime.emit_string_hash_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-string-hash-function-function-emit-string-hash-function-state-mlc-codegen-codegen-runtime-ml-325949198) | `mlc/codegen/codegen_runtime.ml:1440` | 37 | 35 | 1 | 0 | 0 | 3057.31 | 41.25 |
+| [`mlc.codegen.codegen_runtime.emit_strlen_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-strlen-function-function-emit-strlen-function-state-mlc-codegen-codegen-runtime-ml-1167218460) | `mlc/codegen/codegen_runtime.ml:2864` | 7 | 5 | 1 | 0 | 0 | 280.93 | 64.29 |
+| [`mlc.codegen.codegen_runtime.emit_toFloat_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-tofloat-function-function-emit-tofloat-function-state-mlc-codegen-codegen-runtime-ml-1619213004) | `mlc/codegen/codegen_runtime.ml:2504` | 22 | 20 | 1 | 0 | 0 | 1334.52 | 48.7 |
+| [`mlc.codegen.codegen_runtime.emit_toNumber_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-tonumber-function-function-emit-tonumber-function-state-mlc-codegen-codegen-runtime-ml-612955968) | `mlc/codegen/codegen_runtime.ml:2309` | 166 | 164 | 1 | 0 | 0 | 16355.83 | 21.93 |
+| [`mlc.codegen.codegen_runtime.emit_typeName_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-typename-function-function-emit-typename-function-state-mlc-codegen-codegen-runtime-ml-604461264) | `mlc/codegen/codegen_runtime.ml:2665` | 178 | 176 | 37 | 102 | 5 | 15716.96 | 16.55 |
+| [`mlc.codegen.codegen_runtime.emit_typeof_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-typeof-function-function-emit-typeof-function-state-mlc-codegen-codegen-runtime-ml-884885964) | `mlc/codegen/codegen_runtime.ml:2532` | 111 | 109 | 1 | 0 | 0 | 9645.71 | 27.35 |
+| [`mlc.codegen.codegen_runtime.emit_unhandled_error_exit_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-function-emit-unhandled-error-exit-function-state-mlc-codegen-codegen-runtime-ml-856176908) | `mlc/codegen/codegen_runtime.ml:3131` | 115 | 100 | 1 | 0 | 0 | 10837.09 | 26.66 |
+| [`mlc.codegen.codegen_runtime.emit_unhandled_error_exit_function.local._emit_writefile`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#nested_function-nested-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-local-emit-writefile-function-emit-writefile-state2-lbl-ln-mlc-codegen-codegen-runtime-ml-54962409) | `mlc/codegen/codegen_runtime.ml:3148` | 5 | 3 | 1 | 0 | 0 | 179.85 | 68.83 |
+| [`mlc.codegen.codegen_runtime.emit_unhandled_error_exit_function.local._emit_writefile_ptr_len`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#nested_function-nested-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-local-emit-writefile-ptr-len-function-emit-writefile-ptr-len-state2-mlc-codegen-codegen-runtime-ml-338525475) | `mlc/codegen/codegen_runtime.ml:3137` | 8 | 6 | 1 | 0 | 0 | 338.21 | 62.46 |
+| [`mlc.codegen.codegen_runtime.emit_value_eq_function`](File-mlc-codegen-codegen-runtime-ml-1845689217.md#function-function-mlc-codegen-codegen-runtime-emit-value-eq-function-function-emit-value-eq-function-state-mlc-codegen-codegen-runtime-ml-183796344) | `mlc/codegen/codegen_runtime.ml:2913` | 193 | 191 | 1 | 0 | 0 | 20659.17 | 19.79 |
 | [`mlc.codegen.codegen_scope._add_binding_to_current_scope`](File-mlc-codegen-codegen-scope-ml-1124416197.md#function-function-mlc-codegen-codegen-scope-add-binding-to-current-scope-function-add-binding-to-current-scope-state-b-mlc-codegen-codegen-scope-ml-1481177074) | `mlc/codegen/codegen_scope.ml:965` | 3 | 1 | 1 | 0 | 0 | 53.15 | 77.38 |
 | [`mlc.codegen.codegen_scope._append_unique`](File-mlc-codegen-codegen-scope-ml-1124416197.md#function-function-mlc-codegen-codegen-scope-append-unique-function-append-unique-items-value-mlc-codegen-codegen-scope-ml-873548608) | `mlc/codegen/codegen_scope.ml:262` | 18 | 14 | 9 | 17 | 4 | 646.29 | 51.73 |
 | [`mlc.codegen.codegen_scope._arr_has`](File-mlc-codegen-codegen-scope-ml-1124416197.md#function-function-mlc-codegen-codegen-scope-arr-has-inline-function-arr-has-arr-value-mlc-codegen-codegen-scope-ml-625151476) | `mlc/codegen/codegen_scope.ml:283` | 7 | 6 | 5 | 5 | 2 | 274.79 | 63.81 |
@@ -1917,42 +1924,12 @@ Found 1132 clone group(s). At most 200 groups are shown.
 <details>
 <summary>Clone 1 — 2 occurrences</summary>
 
+    mod = 0
+    disp_bytes = bytes ( 0 )
+    if disp == 0 and base_lo != 5 then
+    mod = 0
     else
     if _fits_i8 ( disp ) then
-    mod = 1
-    disp_bytes = _emit_bytes_u8 ( disp )
-    else
-    mod = 2
-
-- [`mlc/asm.ml:1000`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:946`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 2 — 2 occurrences</summary>
-
-    if _fits_i8 ( disp ) then
-    mod = 1
-    disp_bytes = _emit_bytes_u8 ( disp )
-    else
-    mod = 2
-    disp_bytes = t . u32 ( disp )
-
-- [`mlc/asm.ml:1001`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:947`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 3 — 2 occurrences</summary>
-
-    mod = 1
-    disp_bytes = _emit_bytes_u8 ( disp )
-    else
-    mod = 2
-    disp_bytes = t . u32 ( disp )
-    end if
 
 - [`mlc/asm.ml:1002`](File-mlc-asm-ml-1368648960.md)
 - [`mlc/asm.ml:948`](File-mlc-asm-ml-1368648960.md)
@@ -1960,7 +1937,97 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
+<summary>Clone 2 — 2 occurrences</summary>
+
+    disp_bytes = bytes ( 0 )
+    if disp == 0 and base_lo != 5 then
+    mod = 0
+    else
+    if _fits_i8 ( disp ) then
+    mod = 1
+
+- [`mlc/asm.ml:1003`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:949`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 3 — 2 occurrences</summary>
+
+    if disp == 0 and base_lo != 5 then
+    mod = 0
+    else
+    if _fits_i8 ( disp ) then
+    mod = 1
+    disp_bytes = _emit_bytes_u8 ( disp )
+
+- [`mlc/asm.ml:1004`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:950`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
 <summary>Clone 4 — 2 occurrences</summary>
+
+    mod = 0
+    else
+    if _fits_i8 ( disp ) then
+    mod = 1
+    disp_bytes = _emit_bytes_u8 ( disp )
+    else
+
+- [`mlc/asm.ml:1005`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:951`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 5 — 2 occurrences</summary>
+
+    else
+    if _fits_i8 ( disp ) then
+    mod = 1
+    disp_bytes = _emit_bytes_u8 ( disp )
+    else
+    mod = 2
+
+- [`mlc/asm.ml:1006`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:952`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 6 — 2 occurrences</summary>
+
+    if _fits_i8 ( disp ) then
+    mod = 1
+    disp_bytes = _emit_bytes_u8 ( disp )
+    else
+    mod = 2
+    disp_bytes = t . u32 ( disp )
+
+- [`mlc/asm.ml:1007`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:953`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 7 — 2 occurrences</summary>
+
+    mod = 1
+    disp_bytes = _emit_bytes_u8 ( disp )
+    else
+    mod = 2
+    disp_bytes = t . u32 ( disp )
+    end if
+
+- [`mlc/asm.ml:1008`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:954`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 8 — 2 occurrences</summary>
 
     disp_bytes = _emit_bytes_u8 ( disp )
     else
@@ -1969,13 +2036,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     end if
     end if
 
-- [`mlc/asm.ml:1003`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:949`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:1009`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:955`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 5 — 2 occurrences</summary>
+<summary>Clone 9 — 2 occurrences</summary>
 
     if typeof ( text ) != "string" then return false end if
     if typeof ( prefix ) != "string" then return false end if
@@ -1990,7 +2057,7 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
-<summary>Clone 6 — 2 occurrences</summary>
+<summary>Clone 10 — 2 occurrences</summary>
 
     if typeof ( prefix ) != "string" then return false end if
     if len ( prefix ) <= 0 then return true end if
@@ -2005,7 +2072,7 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
-<summary>Clone 7 — 2 occurrences</summary>
+<summary>Clone 11 — 2 occurrences</summary>
 
     if len ( prefix ) <= 0 then return true end if
     if len ( text ) < len ( prefix ) then return false end if
@@ -2020,7 +2087,7 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
-<summary>Clone 8 — 2 occurrences</summary>
+<summary>Clone 12 — 2 occurrences</summary>
 
     if len ( text ) < len ( prefix ) then return false end if
     for i = 0 to len ( prefix ) - 1
@@ -2035,7 +2102,7 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
-<summary>Clone 9 — 2 occurrences</summary>
+<summary>Clone 13 — 2 occurrences</summary>
 
     target = - 1
     if typeof ( asm . label_pos_map ) == "struct" then
@@ -2044,13 +2111,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     end if
     if target >= 0 then
 
-- [`mlc/asm.ml:1321`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:1396`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:1327`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:1402`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 10 — 2 occurrences</summary>
+<summary>Clone 14 — 2 occurrences</summary>
 
     if typeof ( asm . label_pos_map ) == "struct" then
     target = t . fastmap_get ( asm . label_pos_map , label , - 1 )
@@ -2059,13 +2126,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     if target >= 0 then
     disp8 = target - ( pos ( asm ) + 2 )
 
-- [`mlc/asm.ml:1322`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:1397`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:1328`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:1403`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 11 — 2 occurrences</summary>
+<summary>Clone 15 — 2 occurrences</summary>
 
     target = t . fastmap_get ( asm . label_pos_map , label , - 1 )
     if typeof ( target ) != "int" then target = - 1 end if
@@ -2074,13 +2141,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     disp8 = target - ( pos ( asm ) + 2 )
     if disp8 >= - 128 and disp8 <= 127 then
 
-- [`mlc/asm.ml:1323`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:1398`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:1329`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:1404`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 12 — 6 occurrences</summary>
+<summary>Clone 16 — 6 occurrences</summary>
 
     if typeof ( arr ) != "array" or len ( arr ) <= 0 then return false end if
     for i = 0 to len ( arr ) - 1
@@ -2099,7 +2166,7 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
-<summary>Clone 13 — 3 occurrences</summary>
+<summary>Clone 17 — 3 occurrences</summary>
 
     asm = _emit8 ( asm , 0x15 )
     p = pos ( asm )
@@ -2108,14 +2175,14 @@ Found 1132 clone group(s). At most 200 groups are shown.
     return asm
     end function
 
-- [`mlc/asm.ml:1517`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2993`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3035`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:1523`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3099`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3141`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 14 — 3 occurrences</summary>
+<summary>Clone 18 — 3 occurrences</summary>
 
     d = _rid_any ( dst )
     b = _rid_any ( base )
@@ -2124,14 +2191,14 @@ Found 1132 clone group(s). At most 200 groups are shown.
     rex_r = 0
     if d >= 8 then rex_r = 1 end if
 
-- [`mlc/asm.ml:2399`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2435`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2588`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2405`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2441`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2594`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 15 — 2 occurrences</summary>
+<summary>Clone 19 — 2 occurrences</summary>
 
     b = _rid_any ( base )
     if d < 0 or b < 0 then return asm end if
@@ -2140,13 +2207,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     if d >= 8 then rex_r = 1 end if
     asm = _emit_rex ( asm , 1 , rex_r , enc . rex_x , enc . rex_b , false )
 
-- [`mlc/asm.ml:2400`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2589`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2406`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2595`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 16 — 2 occurrences</summary>
+<summary>Clone 20 — 2 occurrences</summary>
 
     rex_r = 0
     if d >= 8 then rex_r = 1 end if
@@ -2155,13 +2222,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     asm = _emit ( asm , enc . tail )
     return asm
 
-- [`mlc/asm.ml:2403`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3118`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2409`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3224`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 17 — 2 occurrences</summary>
+<summary>Clone 21 — 2 occurrences</summary>
 
     if d >= 8 then rex_r = 1 end if
     asm = _emit_rex ( asm , 1 , rex_r , enc . rex_x , enc . rex_b , false )
@@ -2170,13 +2237,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     return asm
     end function
 
-- [`mlc/asm.ml:2404`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3119`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2410`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3225`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 18 — 4 occurrences</summary>
+<summary>Clone 22 — 4 occurrences</summary>
 
     sreg = _rid_any ( src )
     b = _rid_any ( base )
@@ -2185,15 +2252,15 @@ Found 1132 clone group(s). At most 200 groups are shown.
     rex_r = 0
     if sreg >= 8 then rex_r = 1 end if
 
-- [`mlc/asm.ml:2417`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2453`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2471`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2493`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2423`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2459`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2477`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2499`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 19 — 2 occurrences</summary>
+<summary>Clone 23 — 2 occurrences</summary>
 
     rex_r = 0
     if sreg >= 8 then rex_r = 1 end if
@@ -2202,13 +2269,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     asm = _emit ( asm , enc . tail )
     return asm
 
-- [`mlc/asm.ml:2421`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3139`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2427`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3245`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 20 — 2 occurrences</summary>
+<summary>Clone 24 — 2 occurrences</summary>
 
     if sreg >= 8 then rex_r = 1 end if
     asm = _emit_rex ( asm , 1 , rex_r , enc . rex_x , enc . rex_b , false )
@@ -2217,13 +2284,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     return asm
     end function
 
-- [`mlc/asm.ml:2422`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3140`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2428`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3246`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 21 — 2 occurrences</summary>
+<summary>Clone 25 — 2 occurrences</summary>
 
     b = _rid_any ( base )
     if d < 0 or b < 0 then return asm end if
@@ -2232,73 +2299,73 @@ Found 1132 clone group(s). At most 200 groups are shown.
     if d >= 8 then rex_r = 1 end if
     asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
 
-- [`mlc/asm.ml:2436`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2748`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 22 — 2 occurrences</summary>
-
-    rex_r = 0
-    if d >= 8 then rex_r = 1 end if
-    asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
-    asm = _emit8 ( asm , 0x8B )
-    asm = _emit ( asm , enc . tail )
-    return asm
-
-- [`mlc/asm.ml:2439`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3160`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 23 — 2 occurrences</summary>
-
-    if d >= 8 then rex_r = 1 end if
-    asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
-    asm = _emit8 ( asm , 0x8B )
-    asm = _emit ( asm , enc . tail )
-    return asm
-    end function
-
-- [`mlc/asm.ml:2440`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3161`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 24 — 2 occurrences</summary>
-
-    rex_r = 0
-    if sreg >= 8 then rex_r = 1 end if
-    asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
-    asm = _emit8 ( asm , 0x89 )
-    asm = _emit ( asm , enc . tail )
-    return asm
-
-- [`mlc/asm.ml:2457`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3181`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 25 — 2 occurrences</summary>
-
-    if sreg >= 8 then rex_r = 1 end if
-    asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
-    asm = _emit8 ( asm , 0x89 )
-    asm = _emit ( asm , enc . tail )
-    return asm
-    end function
-
-- [`mlc/asm.ml:2458`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3182`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2442`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2754`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
 <summary>Clone 26 — 2 occurrences</summary>
+
+    rex_r = 0
+    if d >= 8 then rex_r = 1 end if
+    asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
+    asm = _emit8 ( asm , 0x8B )
+    asm = _emit ( asm , enc . tail )
+    return asm
+
+- [`mlc/asm.ml:2445`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3266`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 27 — 2 occurrences</summary>
+
+    if d >= 8 then rex_r = 1 end if
+    asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
+    asm = _emit8 ( asm , 0x8B )
+    asm = _emit ( asm , enc . tail )
+    return asm
+    end function
+
+- [`mlc/asm.ml:2446`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3267`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 28 — 2 occurrences</summary>
+
+    rex_r = 0
+    if sreg >= 8 then rex_r = 1 end if
+    asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
+    asm = _emit8 ( asm , 0x89 )
+    asm = _emit ( asm , enc . tail )
+    return asm
+
+- [`mlc/asm.ml:2463`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3287`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 29 — 2 occurrences</summary>
+
+    if sreg >= 8 then rex_r = 1 end if
+    asm = _emit_rex ( asm , 0 , rex_r , enc . rex_x , enc . rex_b , false )
+    asm = _emit8 ( asm , 0x89 )
+    asm = _emit ( asm , enc . tail )
+    return asm
+    end function
+
+- [`mlc/asm.ml:2464`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3288`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 30 — 2 occurrences</summary>
 
     b = _rid_any ( base )
     if sreg < 0 or b < 0 then return asm end if
@@ -2307,68 +2374,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
     if sreg >= 8 then rex_r = 1 end if
     asm = _emit8 ( asm , 0xF0 )
 
-- [`mlc/asm.ml:2472`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2494`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 27 — 2 occurrences</summary>
-
-    rex_r = 0
-    if d >= 8 then rex_r = 1 end if
-    asm = _emit_rex ( asm , 1 , rex_r , enc . rex_x , enc . rex_b , false )
-    asm = _emit8 ( asm , 0x8D )
-    asm = _emit ( asm , enc . tail )
-    return asm
-
-- [`mlc/asm.ml:2592`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3202`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 28 — 2 occurrences</summary>
-
-    if d >= 8 then rex_r = 1 end if
-    asm = _emit_rex ( asm , 1 , rex_r , enc . rex_x , enc . rex_b , false )
-    asm = _emit8 ( asm , 0x8D )
-    asm = _emit ( asm , enc . tail )
-    return asm
-    end function
-
-- [`mlc/asm.ml:2593`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3203`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 29 — 2 occurrences</summary>
-
-    d = _rid_any ( dst32 )
-    s = _rid_any ( src32 )
-    rex_r = 0
-    if d >= 8 then rex_r = 1 end if
-    rex_b = 0
-    if s >= 8 then rex_b = 1 end if
-
-- [`mlc/asm.ml:2766`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2785`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 30 — 2 occurrences</summary>
-
-    s = _rid_any ( src32 )
-    rex_r = 0
-    if d >= 8 then rex_r = 1 end if
-    rex_b = 0
-    if s >= 8 then rex_b = 1 end if
-    asm = _emit_rex ( asm , 0 , rex_r , 0 , rex_b , false )
-
-- [`mlc/asm.ml:2767`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2786`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2478`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2500`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
@@ -2377,33 +2384,78 @@ Found 1132 clone group(s). At most 200 groups are shown.
 
     rex_r = 0
     if d >= 8 then rex_r = 1 end if
-    rex_b = 0
-    if s >= 8 then rex_b = 1 end if
-    asm = _emit_rex ( asm , 0 , rex_r , 0 , rex_b , false )
-    asm = _emit8 ( asm , 0x0F )
+    asm = _emit_rex ( asm , 1 , rex_r , enc . rex_x , enc . rex_b , false )
+    asm = _emit8 ( asm , 0x8D )
+    asm = _emit ( asm , enc . tail )
+    return asm
 
-- [`mlc/asm.ml:2768`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2787`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2598`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3308`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
 <summary>Clone 32 — 2 occurrences</summary>
 
-    b = _rid_any ( base )
-    if d < 0 or b < 0 then return asm end if
-    enc = _encode_mem ( d & 7 , b , disp )
-    asm = _emit8 ( asm , 0xF2 )
-    asm = _emit_rex ( asm , 0 , ( d >> 3 ) & 1 , enc . rex_x , enc . rex_b , false )
-    asm = _emit8 ( asm , 0x0F )
+    if d >= 8 then rex_r = 1 end if
+    asm = _emit_rex ( asm , 1 , rex_r , enc . rex_x , enc . rex_b , false )
+    asm = _emit8 ( asm , 0x8D )
+    asm = _emit ( asm , enc . tail )
+    return asm
+    end function
 
-- [`mlc/asm.ml:2825`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3503`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2599`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3309`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
 <summary>Clone 33 — 2 occurrences</summary>
+
+    d = _rid_any ( dst32 )
+    s = _rid_any ( src32 )
+    rex_r = 0
+    if d >= 8 then rex_r = 1 end if
+    rex_b = 0
+    if s >= 8 then rex_b = 1 end if
+
+- [`mlc/asm.ml:2772`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2791`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 34 — 2 occurrences</summary>
+
+    s = _rid_any ( src32 )
+    rex_r = 0
+    if d >= 8 then rex_r = 1 end if
+    rex_b = 0
+    if s >= 8 then rex_b = 1 end if
+    asm = _emit_rex ( asm , 0 , rex_r , 0 , rex_b , false )
+
+- [`mlc/asm.ml:2773`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2792`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 35 — 2 occurrences</summary>
+
+    rex_r = 0
+    if d >= 8 then rex_r = 1 end if
+    rex_b = 0
+    if s >= 8 then rex_b = 1 end if
+    asm = _emit_rex ( asm , 0 , rex_r , 0 , rex_b , false )
+    asm = _emit8 ( asm , 0x0F )
+
+- [`mlc/asm.ml:2774`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:2793`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 36 — 2 occurrences</summary>
 
     asm = r [ 0 ]
     asm . deferred_patches_chunks = r [ 1 ]
@@ -2418,7 +2470,7 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
-<summary>Clone 34 — 2 occurrences</summary>
+<summary>Clone 37 — 2 occurrences</summary>
 
     asm . deferred_patches_chunks = r [ 1 ]
     asm . deferred_patches_tail = r [ 2 ]
@@ -2433,7 +2485,7 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
-<summary>Clone 35 — 2 occurrences</summary>
+<summary>Clone 38 — 2 occurrences</summary>
 
     asm . deferred_patches_tail = r [ 2 ]
     asm . patches_chunks = [ ]
@@ -2448,7 +2500,22 @@ Found 1132 clone group(s). At most 200 groups are shown.
 </details>
 
 <details>
-<summary>Clone 36 — 2 occurrences</summary>
+<summary>Clone 39 — 2 occurrences</summary>
+
+    b = _rid_any ( base )
+    if d < 0 or b < 0 then return asm end if
+    enc = _encode_mem ( d & 7 , b , disp )
+    asm = _emit8 ( asm , 0xF2 )
+    asm = _emit_rex ( asm , 0 , ( d >> 3 ) & 1 , enc . rex_x , enc . rex_b , false )
+    asm = _emit8 ( asm , 0x0F )
+
+- [`mlc/asm.ml:2931`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3609`](File-mlc-asm-ml-1368648960.md)
+
+</details>
+
+<details>
+<summary>Clone 40 — 2 occurrences</summary>
 
     asm = _emit8 ( asm , 0x8B )
     asm = _emit8 ( asm , 0x05 )
@@ -2457,13 +2524,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     asm = _patch_push ( asm , AsmPatch ( p , label , "rip32" ) )
     return asm
 
-- [`mlc/asm.ml:2938`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2971`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3044`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3077`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 37 — 5 occurrences</summary>
+<summary>Clone 41 — 5 occurrences</summary>
 
     asm = _emit8 ( asm , 0x05 )
     p = pos ( asm )
@@ -2472,16 +2539,16 @@ Found 1132 clone group(s). At most 200 groups are shown.
     return asm
     end function
 
-- [`mlc/asm.ml:2939`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2951`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:2972`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3014`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3077`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3045`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3057`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3078`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3120`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3183`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 38 — 3 occurrences</summary>
+<summary>Clone 42 — 3 occurrences</summary>
 
     asm = _emit8 ( asm , 0x89 )
     asm = _emit8 ( asm , 0x05 )
@@ -2490,14 +2557,14 @@ Found 1132 clone group(s). At most 200 groups are shown.
     asm = _patch_push ( asm , AsmPatch ( p , label , "rip32" ) )
     return asm
 
-- [`mlc/asm.ml:2950`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3013`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3076`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3056`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3119`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3182`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 39 — 3 occurrences</summary>
+<summary>Clone 43 — 3 occurrences</summary>
 
     d = _rid_any ( dst )
     b = _rid_any ( base )
@@ -2506,14 +2573,14 @@ Found 1132 clone group(s). At most 200 groups are shown.
     enc = _encode_mem_bis ( d & 7 , b , idx , scale , disp )
     rex_r = 0
 
-- [`mlc/asm.ml:3113`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3155`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3197`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3219`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3261`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3303`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 40 — 3 occurrences</summary>
+<summary>Clone 44 — 3 occurrences</summary>
 
     b = _rid_any ( base )
     idx = _rid_any ( index_reg )
@@ -2522,14 +2589,14 @@ Found 1132 clone group(s). At most 200 groups are shown.
     rex_r = 0
     if d >= 8 then rex_r = 1 end if
 
-- [`mlc/asm.ml:3114`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3156`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3198`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3220`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3262`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3304`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 41 — 2 occurrences</summary>
+<summary>Clone 45 — 2 occurrences</summary>
 
     idx = _rid_any ( index_reg )
     if d < 0 or b < 0 or idx < 0 then return asm end if
@@ -2538,13 +2605,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     if d >= 8 then rex_r = 1 end if
     asm = _emit_rex ( asm , 1 , rex_r , enc . rex_x , enc . rex_b , false )
 
-- [`mlc/asm.ml:3115`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3199`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3221`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3305`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 42 — 2 occurrences</summary>
+<summary>Clone 46 — 2 occurrences</summary>
 
     sreg = _rid_any ( src )
     b = _rid_any ( base )
@@ -2553,13 +2620,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     enc = _encode_mem_bis ( sreg & 7 , b , idx , scale , disp )
     rex_r = 0
 
-- [`mlc/asm.ml:3134`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3176`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3240`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3282`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 43 — 2 occurrences</summary>
+<summary>Clone 47 — 2 occurrences</summary>
 
     b = _rid_any ( base )
     idx = _rid_any ( index_reg )
@@ -2568,13 +2635,13 @@ Found 1132 clone group(s). At most 200 groups are shown.
     rex_r = 0
     if sreg >= 8 then rex_r = 1 end if
 
-- [`mlc/asm.ml:3135`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3177`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3241`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3283`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
 <details>
-<summary>Clone 44 — 2 occurrences</summary>
+<summary>Clone 48 — 2 occurrences</summary>
 
     asm = _emit_rex ( asm , 0 , ( d >> 3 ) & 1 , 0 , ( s >> 3 ) & 1 , false )
     asm = _emit8 ( asm , 0x0F )
@@ -2583,68 +2650,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
     return asm
     end function
 
-- [`mlc/asm.ml:3726`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:3742`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 45 — 2 occurrences</summary>
-
-    mod = 0
-    disp_bytes = bytes ( 0 )
-    if disp == 0 and base_lo != 5 then
-    mod = 0
-    else
-    if _fits_i8 ( disp ) then
-
-- [`mlc/asm.ml:942`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:996`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 46 — 2 occurrences</summary>
-
-    disp_bytes = bytes ( 0 )
-    if disp == 0 and base_lo != 5 then
-    mod = 0
-    else
-    if _fits_i8 ( disp ) then
-    mod = 1
-
-- [`mlc/asm.ml:943`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:997`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 47 — 2 occurrences</summary>
-
-    if disp == 0 and base_lo != 5 then
-    mod = 0
-    else
-    if _fits_i8 ( disp ) then
-    mod = 1
-    disp_bytes = _emit_bytes_u8 ( disp )
-
-- [`mlc/asm.ml:944`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:998`](File-mlc-asm-ml-1368648960.md)
-
-</details>
-
-<details>
-<summary>Clone 48 — 2 occurrences</summary>
-
-    mod = 0
-    else
-    if _fits_i8 ( disp ) then
-    mod = 1
-    disp_bytes = _emit_bytes_u8 ( disp )
-    else
-
-- [`mlc/asm.ml:945`](File-mlc-asm-ml-1368648960.md)
-- [`mlc/asm.ml:999`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3832`](File-mlc-asm-ml-1368648960.md)
+- [`mlc/asm.ml:3848`](File-mlc-asm-ml-1368648960.md)
 
 </details>
 
@@ -2968,8 +2975,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 - [`mlc/codegen/codegen_builtins_alloc.ml:2225`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2301`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2378`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1543`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1634`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1613`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1704`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3039,8 +3046,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 
 - [`mlc/codegen/codegen_builtins_alloc.ml:1825`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:1916`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1553`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1644`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1623`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1714`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3087,8 +3094,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 - [`mlc/codegen/codegen_builtins_alloc.ml:1974`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2031`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2829`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1424`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1480`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1494`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1550`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3105,8 +3112,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 - [`mlc/codegen/codegen_builtins_alloc.ml:1975`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2032`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2830`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1425`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1481`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1495`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1551`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3123,8 +3130,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 - [`mlc/codegen/codegen_builtins_alloc.ml:1976`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2033`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2831`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1426`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1482`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1496`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1552`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3141,8 +3148,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 - [`mlc/codegen/codegen_builtins_alloc.ml:1977`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2034`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2832`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1427`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1483`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1497`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1553`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3159,8 +3166,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 - [`mlc/codegen/codegen_builtins_alloc.ml:1978`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2035`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2833`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1428`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1484`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1498`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1554`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3177,8 +3184,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 - [`mlc/codegen/codegen_builtins_alloc.ml:1979`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2036`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2834`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1429`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1485`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1499`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1555`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3275,8 +3282,8 @@ Found 1132 clone group(s). At most 200 groups are shown.
 
 - [`mlc/codegen/codegen_builtins_alloc.ml:1994`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2051`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1443`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
-- [`mlc/codegen/codegen_runtime.ml:1499`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1513`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1569`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 
@@ -3292,7 +3299,7 @@ Found 1132 clone group(s). At most 200 groups are shown.
 
 - [`mlc/codegen/codegen_builtins_alloc.ml:1995`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
 - [`mlc/codegen/codegen_builtins_alloc.ml:2052`](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md)
-- [`mlc/codegen/codegen_runtime.ml:1444`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
+- [`mlc/codegen/codegen_runtime.ml:1514`](File-mlc-codegen-codegen-runtime-ml-1845689217.md)
 
 </details>
 

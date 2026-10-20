@@ -218,6 +218,8 @@ function emit_cpu_init_function(state)
   l_no_avx = "cpuinit_no_avx_" + lid
   l_no_avx2 = "cpuinit_no_avx2_" + lid
   l_no_sha = "cpuinit_no_sha_" + lid
+  l_no_erms = "cpuinit_no_erms_" + lid
+  l_no_fsrm = "cpuinit_no_fsrm_" + lid
   l_store = "cpuinit_store_" + lid
   l_done = "cpuinit_done_" + lid
 
@@ -291,6 +293,17 @@ function emit_cpu_init_function(state)
   state.asm = a.jcc(state.asm, "e", l_no_sha)
   state.asm = a.or_r32_imm(state.asm, "r9d", 64)
   state.asm = a.mark(state.asm, l_no_sha)
+  // ERMS: CPUID.7.0:EBX[9]; FSRM: EDX[4] (MOVS only, not STOS).
+  state.asm = a.mov_r32_r32(state.asm, "r8d", "ebx")
+  state.asm = a.and_r32_imm(state.asm, "r8d", 1 << 9)
+  state.asm = a.jcc(state.asm, "e", l_no_erms)
+  state.asm = a.or_r32_imm(state.asm, "r9d", 128)
+  state.asm = a.mark(state.asm, l_no_erms)
+  state.asm = a.mov_r32_r32(state.asm, "r8d", "edx")
+  state.asm = a.and_r32_imm(state.asm, "r8d", 1 << 4)
+  state.asm = a.jcc(state.asm, "e", l_no_fsrm)
+  state.asm = a.or_r32_imm(state.asm, "r9d", 256)
+  state.asm = a.mark(state.asm, l_no_fsrm)
 
   state.asm = a.mark(state.asm, l_store)
   state.asm = a.mov_r32_r32(state.asm, "eax", "r9d")
@@ -931,15 +944,72 @@ function emit_crc32c_update_raw_function(state)
   return state
 end function
 
-/// Emit emit crc32 update raw function in the native runtime.
+/// Emit IEEE CRC32 with PCLMUL folding for at least 64 bytes and an exact table tail. Folding/reduction adapted from Intel ISA-L; see THIRD_PARTY_NOTICES.md. Uses only volatile XMM registers, no overreads or allocation.
 /// @param state Value supplied for `state`.
 function emit_crc32_update_raw_function(state)
   state = _ensure_crc_tables(state)
+  state.rdata = d.rdata_add_bytes(state.rdata, "crc32_fold_constants", fromHex("9e00aacc00000000d0971975010000009e00aacc000000002461cd6301000000401601f701000000400671db0100000000000000ffffffffffffffffffffffffffffffffffffffff0000000000000000"))
   state.asm = a.mark(state.asm, "fn_crc32_update_raw")
   lid = state.label_id
   state.label_id = state.label_id + 1
   l_loop = "crc32_sw_loop_" + lid
   l_finish = "crc32_finish_" + lid
+  l_table = "crc32_table_" + lid
+  l_fold = "crc32_fold_" + lid
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rdx")
+  state.asm = a.mov_r32_r32(state.asm, "r10d", "r8d")
+  state.asm = a.cmp_r32_imm(state.asm, "r8d", 64)
+  state.asm = a.jcc(state.asm, "b", l_table)
+  state.asm = a.mov_eax_rip_dword(state.asm, "cpu_features_active")
+  state.asm = a.and_r32_imm(state.asm, "eax", 32)
+  state.asm = a.jcc(state.asm, "e", l_table)
+  state.asm = a.mov_r32_r32(state.asm, "eax", "ecx")
+  state.asm = a.xor_r32_imm(state.asm, "eax", 0xFFFFFFFF)
+  state.asm = a.movq_xmm_r64(state.asm, "xmm0", "rax")
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm1", "r9", 0)
+  state.asm = a.pxor_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.lea_r11_rip(state.asm, "crc32_fold_constants")
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm3", "r11", 0)
+  state.asm = a.add_r64_imm(state.asm, "r9", 16)
+  state.asm = a.sub_r32_imm(state.asm, "r10d", 16)
+  state.asm = a.mark(state.asm, l_fold)
+  state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
+  state.asm = a.pclmulqdq_xmm_xmm_imm8(state.asm, "xmm0", "xmm3", 1)
+  state.asm = a.pclmulqdq_xmm_xmm_imm8(state.asm, "xmm1", "xmm3", 16)
+  state.asm = a.pxor_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm1", "r9", 0)
+  state.asm = a.pxor_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.add_r64_imm(state.asm, "r9", 16)
+  state.asm = a.sub_r32_imm(state.asm, "r10d", 16)
+  state.asm = a.cmp_r32_imm(state.asm, "r10d", 16)
+  state.asm = a.jcc(state.asm, "ae", l_fold)
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm3", "r11", 16)
+  state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
+  state.asm = a.pclmulqdq_xmm_xmm_imm8(state.asm, "xmm0", "xmm3", 0)
+  state.asm = a.psrldq_xmm_imm8(state.asm, "xmm1", 8)
+  state.asm = a.pxor_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
+  state.asm = a.pslldq_xmm_imm8(state.asm, "xmm0", 4)
+  state.asm = a.pclmulqdq_xmm_xmm_imm8(state.asm, "xmm0", "xmm3", 16)
+  state.asm = a.pxor_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm3", "r11", 48)
+  state.asm = a.pand_xmm_xmm(state.asm, "xmm0", "xmm3")
+  state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
+  state.asm = a.movapd_xmm_xmm(state.asm, "xmm2", "xmm0")
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm3", "r11", 32)
+  state.asm = a.pclmulqdq_xmm_xmm_imm8(state.asm, "xmm0", "xmm3", 0)
+  state.asm = a.pxor_xmm_xmm(state.asm, "xmm0", "xmm2")
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm2", "r11", 64)
+  state.asm = a.pand_xmm_xmm(state.asm, "xmm0", "xmm2")
+  state.asm = a.movapd_xmm_xmm(state.asm, "xmm2", "xmm0")
+  state.asm = a.pclmulqdq_xmm_xmm_imm8(state.asm, "xmm0", "xmm3", 16)
+  state.asm = a.pxor_xmm_xmm(state.asm, "xmm0", "xmm2")
+  state.asm = a.pxor_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.psrldq_xmm_imm8(state.asm, "xmm0", 8)
+  state.asm = a.movd_r32_xmm(state.asm, "eax", "xmm0")
+  state.asm = a.lea_r11_rip(state.asm, "crc32_table")
+  state.asm = a.jmp(state.asm, l_loop)
+  state.asm = a.mark(state.asm, l_table)
   state.asm = a.mov_r32_r32(state.asm, "eax", "ecx")
   state.asm = a.xor_r32_imm(state.asm, "eax", 0xFFFFFFFF)
   state.asm = a.mov_r64_r64(state.asm, "r9", "rdx")
@@ -1877,7 +1947,7 @@ function emit_builtin_copyStringBytes_function(state)
   return state
 end function
 
-/// Emit emit copy bytes function in the native runtime.
+/// Copy non-overlapping ranges with bounded small loads, vectors, and ERMS from 64 KiB. FSRM alone does not select short REP, which regresses unaligned Zen copies.
 /// @param state Value supplied for `state`.
 function emit_copy_bytes_function(state)
   state.asm = a.mark(state.asm, "fn_copy_bytes")
@@ -1892,9 +1962,10 @@ function emit_copy_bytes_function(state)
   l_large = "cpy_large_" + lid
   l_avx_loop = "cpy_avx_loop_" + lid
   l_avx_done = "cpy_avx_done_" + lid
-  l_sse_loop = "cpy_sse_loop_" + lid
-  l_tail = "cpy_tail_" + lid
+  l_avx_tail = "cpy_avx_tail_" + lid
   l_rep = "cpy_rep_" + lid
+  l_dispatch = "cpy_dispatch_" + lid
+  l_vector = "cpy_vector_" + lid
 
   state.asm = a.test_r32_r32(state.asm, "r8d", "r8d")
   state.asm = a.jcc(state.asm, "e", l_ret)
@@ -1944,47 +2015,66 @@ function emit_copy_bytes_function(state)
   state.asm = a.ret(state.asm)
 
   state.asm = a.mark(state.asm, l_large)
+  state.asm = a.cmp_r32_imm(state.asm, "r8d", 64)
+  state.asm = a.jcc(state.asm, "a", l_dispatch)
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm0", "rdx", 0)
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm1", "rdx", 16)
+  state.asm = a.movdqu_membase_disp_xmm(state.asm, "rcx", 0, "xmm0")
+  state.asm = a.movdqu_membase_disp_xmm(state.asm, "rcx", 16, "xmm1")
+  state.asm = a.mov_r32_r32(state.asm, "r11d", "r8d")
+  state.asm = a.sub_r32_imm(state.asm, "r11d", 32)
+  state.asm = a.lea_r64_mem_bis(state.asm, "r10", "rdx", "r11", 1, 0)
+  state.asm = a.lea_r64_mem_bis(state.asm, "r9", "rcx", "r11", 1, 0)
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm0", "r10", 0)
+  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm1", "r10", 16)
+  state.asm = a.movdqu_membase_disp_xmm(state.asm, "r9", 0, "xmm0")
+  state.asm = a.movdqu_membase_disp_xmm(state.asm, "r9", 16, "xmm1")
+  state.asm = a.ret(state.asm)
+  state.asm = a.mark(state.asm, l_dispatch)
+  // Keep doubling string copies below 64 KiB vectorized: an earlier REP
+  // crossover regresses allocation-heavy stringRepeat workloads on Zen.
+  state.asm = a.cmp_r32_imm(state.asm, "r8d", 65536)
+  state.asm = a.jcc(state.asm, "b", l_vector)
+  state.asm = a.mov_eax_rip_dword(state.asm, "cpu_features_active")
+  state.asm = a.and_r32_imm(state.asm, "eax", 128)
+  state.asm = a.jcc(state.asm, "ne", l_rep)
+  state.asm = a.mark(state.asm, l_vector)
   state.asm = a.mov_r64_r64(state.asm, "r9", "rcx")
   state.asm = a.mov_r64_r64(state.asm, "r10", "rdx")
   state.asm = a.mov_r32_r32(state.asm, "r11d", "r8d")
   state.asm = a.mov_eax_rip_dword(state.asm, "cpu_has_avx2")
   state.asm = a.test_r32_r32(state.asm, "eax", "eax")
   state.asm = a.jcc(state.asm, "e", l_rep)
-  state.asm = a.cmp_r32_imm(state.asm, "r11d", 64)
-  state.asm = a.jcc(state.asm, "b", l_sse_loop)
 
   state.asm = a.mark(state.asm, l_avx_loop)
+  // Interleave loads/stores: grouping both loads penalizes the measured
+  // hot-source / newly allocated destination string-concatenation case.
+  state.asm = a.vmovdqu_ymm_membase_disp(state.asm, "ymm0", "r10", 0)
+  state.asm = a.vmovdqu_membase_disp_ymm(state.asm, "r9", 0, "ymm0")
+  state.asm = a.vmovdqu_ymm_membase_disp(state.asm, "ymm1", "r10", 32)
+  state.asm = a.vmovdqu_membase_disp_ymm(state.asm, "r9", 32, "ymm1")
+  state.asm = a.add_r64_imm(state.asm, "r9", 64)
+  state.asm = a.add_r64_imm(state.asm, "r10", 64)
+  state.asm = a.sub_r32_imm(state.asm, "r11d", 64)
+  state.asm = a.cmp_r32_imm(state.asm, "r11d", 64)
+  state.asm = a.jcc(state.asm, "ae", l_avx_loop)
   state.asm = a.cmp_r32_imm(state.asm, "r11d", 32)
-  state.asm = a.jcc(state.asm, "b", l_avx_done)
+  state.asm = a.jcc(state.asm, "b", l_avx_tail)
   state.asm = a.vmovdqu_ymm_membase_disp(state.asm, "ymm0", "r10", 0)
   state.asm = a.vmovdqu_membase_disp_ymm(state.asm, "r9", 0, "ymm0")
   state.asm = a.add_r64_imm(state.asm, "r9", 32)
   state.asm = a.add_r64_imm(state.asm, "r10", 32)
   state.asm = a.sub_r32_imm(state.asm, "r11d", 32)
-  state.asm = a.jmp(state.asm, l_avx_loop)
-
+  state.asm = a.mark(state.asm, l_avx_tail)
+  state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
+  state.asm = a.jcc(state.asm, "e", l_avx_done)
+  state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r10", "r11", 1, -32)
+  state.asm = a.lea_r64_mem_bis(state.asm, "r9", "r9", "r11", 1, -32)
+  state.asm = a.vmovdqu_ymm_membase_disp(state.asm, "ymm0", "r10", 0)
+  state.asm = a.vmovdqu_membase_disp_ymm(state.asm, "r9", 0, "ymm0")
   state.asm = a.mark(state.asm, l_avx_done)
   state.asm = a.vzeroupper(state.asm)
-
-  state.asm = a.mark(state.asm, l_sse_loop)
-  state.asm = a.cmp_r32_imm(state.asm, "r11d", 16)
-  state.asm = a.jcc(state.asm, "b", l_tail)
-  state.asm = a.movdqu_xmm_membase_disp(state.asm, "xmm0", "r10", 0)
-  state.asm = a.movdqu_membase_disp_xmm(state.asm, "r9", 0, "xmm0")
-  state.asm = a.add_r64_imm(state.asm, "r9", 16)
-  state.asm = a.add_r64_imm(state.asm, "r10", 16)
-  state.asm = a.sub_r32_imm(state.asm, "r11d", 16)
-  state.asm = a.jmp(state.asm, l_sse_loop)
-
-  state.asm = a.mark(state.asm, l_tail)
-  state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
-  state.asm = a.jcc(state.asm, "e", l_ret)
-  state.asm = a.mov_r8_membase_disp(state.asm, "al", "r10", 0)
-  state.asm = a.mov_membase_disp_r8(state.asm, "r9", 0, "al")
-  state.asm = a.inc_r64(state.asm, "r9")
-  state.asm = a.inc_r64(state.asm, "r10")
-  state.asm = a.dec_r32(state.asm, "r11d")
-  state.asm = a.jmp(state.asm, l_tail)
+  state.asm = a.ret(state.asm)
 
   state.asm = a.mark(state.asm, l_rep)
   state.asm = a.push_reg(state.asm, "rsi")
@@ -2001,7 +2091,7 @@ function emit_copy_bytes_function(state)
   return state
 end function
 
-/// Emit emit fill bytes function in the native runtime.
+/// Fill bounded ranges with SSE2 through 256 bytes, then the established REP STOSB path. Avoid dispatch loads and unnecessary vector setup for large fills; FSRM is not a store capability.
 /// @param state Value supplied for `state`.
 function emit_fill_bytes_function(state)
   state.asm = a.mark(state.asm, "fn_fill_bytes")
@@ -2022,6 +2112,9 @@ function emit_fill_bytes_function(state)
   state.asm = a.jcc(state.asm, "e", l_ret)
   state.asm = a.cmp_r32_imm(state.asm, "edx", 8)
   state.asm = a.jcc(state.asm, "b", l_scalar)
+  // Avoid dispatch-global loads and vector setup for cache-sized STOS workloads.
+  state.asm = a.cmp_r32_imm(state.asm, "edx", 256)
+  state.asm = a.jcc(state.asm, "a", l_rep)
 
   state.asm = a.movzx_r32_r8(state.asm, "eax", "r8b")
   state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
@@ -2053,8 +2146,6 @@ function emit_fill_bytes_function(state)
   state.asm = a.punpcklqdq_xmm_xmm(state.asm, "xmm0", "xmm0")
   state.asm = a.cmp_r32_imm(state.asm, "edx", 32)
   state.asm = a.jcc(state.asm, "be", l_xmm)
-  state.asm = a.cmp_r32_imm(state.asm, "edx", 64)
-  state.asm = a.jcc(state.asm, "a", l_rep)
 
   state.asm = a.mov_r64_r64(state.asm, "r9", "rcx")
   state.asm = a.mov_r32_r32(state.asm, "r10d", "edx")
@@ -2087,10 +2178,10 @@ function emit_fill_bytes_function(state)
   state.asm = a.mark(state.asm, l_tail)
   state.asm = a.test_r32_r32(state.asm, "r10d", "r10d")
   state.asm = a.jcc(state.asm, "e", l_ret)
-  state.asm = a.mov_membase_disp_r8(state.asm, "r9", 0, "r8b")
-  state.asm = a.inc_r64(state.asm, "r9")
-  state.asm = a.dec_r32(state.asm, "r10d")
-  state.asm = a.jmp(state.asm, l_tail)
+  // At least two vectors were stored; the final overlapping vector is in bounds.
+  state.asm = a.lea_r64_mem_bis(state.asm, "r9", "r9", "r10", 1, -16)
+  state.asm = a.movdqu_membase_disp_xmm(state.asm, "r9", 0, "xmm0")
+  state.asm = a.ret(state.asm)
 
   state.asm = a.mark(state.asm, l_rep)
   state.asm = a.push_reg(state.asm, "rdi")

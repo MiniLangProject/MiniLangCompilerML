@@ -30,7 +30,7 @@ Keep gc_collect synchronous while other managed threads continue running. Emerge
 | `state` | `dynamic` | — | Backend state receiving the completion-wait helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L779)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L750)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-free-flatten-function-emit-free-flatten-state-mlc-codegen-codegen-concurrent-gc-ml-765104454"></a>
 ### emit_free_flatten
@@ -46,7 +46,7 @@ Detach all bins into gc_free_head only while preparing a snapshot.
 | `state` | `dynamic` | — | Backend state receiving the native allocator helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L223)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L214)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-free-merge-function-emit-free-merge-state-mlc-codegen-codegen-concurrent-gc-ml-585741254"></a>
 ### emit_free_merge
@@ -62,7 +62,7 @@ Move a detached list at RAX into size bins under the heap monitor.
 | `state` | `dynamic` | — | Backend state receiving the native allocator helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L203)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L194)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-free-push-function-emit-free-push-state-mlc-codegen-codegen-concurrent-gc-ml-779324812"></a>
 ### emit_free_push
@@ -94,7 +94,7 @@ Return validated bin count RAX, byte sum RDX and largest block RCX.
 | `state` | `dynamic` | — | Backend state receiving the native allocator helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L323)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L306)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-free-take-function-emit-free-take-state-mlc-codegen-codegen-concurrent-gc-ml-50248700"></a>
 ### emit_free_take
@@ -113,7 +113,7 @@ block size RDX and actual request RCX. Caller holds the heap monitor.
 | `state` | `dynamic` | — | Backend state receiving the native allocator helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L259)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L250)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-heap-free-stat-function-emit-heap-free-stat-state-byte-sum-mlc-codegen-codegen-concurrent-gc-ml-1943389042"></a>
 ### emit_heap_free_stat
@@ -130,7 +130,7 @@ Emit the public free-byte/count query over all size bins.
 | `byte_sum` | `dynamic` | — | Select the sum of free bytes instead of the free block count. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L398)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L381)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-request-function-emit-request-state-mlc-codegen-codegen-concurrent-gc-ml-1529982796"></a>
 ### emit_request
@@ -146,7 +146,7 @@ Return the completion sequence to wait for, coalescing already-active requests. 
 | `state` | `dynamic` | — | Backend state receiving the asynchronous request helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L709)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L680)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-reuse-end-function-emit-reuse-end-state-mlc-codegen-codegen-concurrent-gc-ml-1043991100"></a>
 ### emit_reuse_end
@@ -162,7 +162,7 @@ Return the end of the protected run containing header RAX (leaf).
 | `state` | `dynamic` | — | Backend state receiving the snapshot reuse helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L424)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L407)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-reuse-snapshot-function-emit-reuse-snapshot-state-mlc-codegen-codegen-concurrent-gc-ml-2082369434"></a>
 ### emit_reuse_snapshot
@@ -178,7 +178,7 @@ Protect and coalesce central free ranges while all mutators are parked.
 | `state` | `dynamic` | — | Backend state receiving the snapshot reuse helper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L468)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L444)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-emit-satb-pop-function-emit-satb-pop-state-mlc-codegen-codegen-concurrent-gc-ml-2098694756"></a>
 ### emit_satb_pop
@@ -226,7 +226,7 @@ Emit a persistent native worker waiting on an auto-reset event between cycles.
 | `state` | `dynamic` | — | Backend state receiving the private worker loop. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L688)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_concurrent_gc.ml#L659)
 
 <a id="function-function-mlc-codegen-codegen-concurrent-gc-enabled-function-enabled-state-mlc-codegen-codegen-concurrent-gc-ml-1973447018"></a>
 ### enabled

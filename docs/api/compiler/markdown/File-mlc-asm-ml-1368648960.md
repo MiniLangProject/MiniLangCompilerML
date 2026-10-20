@@ -63,7 +63,7 @@ Encode or manage byte at in the native x64 assembler.
 | `idx` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L488)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L494)
 
 <a id="function-function-mlc-asm-call-push-function-call-push-asm-label-mlc-asm-ml-613941761"></a>
 ### _call_push
@@ -96,7 +96,7 @@ Encode or manage chunk count in the native x64 assembler.
 | `asm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L569)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L575)
 
 <a id="function-function-mlc-asm-chunk-get-function-chunk-get-asm-idx-mlc-asm-ml-1612250432"></a>
 ### _chunk_get
@@ -113,7 +113,7 @@ Encode or manage chunk get in the native x64 assembler.
 | `idx` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L578)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L584)
 
 <a id="function-function-mlc-asm-chunk-push-function-chunk-push-asm-chunk-mlc-asm-ml-606385708"></a>
 ### _chunk_push
@@ -130,7 +130,7 @@ Encode or manage chunk push in the native x64 assembler.
 | `chunk` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L626)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L632)
 
 <a id="function-function-mlc-asm-chunk-set-function-chunk-set-asm-idx-chunk-mlc-asm-ml-1543979153"></a>
 ### _chunk_set
@@ -148,7 +148,7 @@ Encode or manage chunk set in the native x64 assembler.
 | `chunk` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L608)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L614)
 
 <a id="function-function-mlc-asm-drop-last-patch-function-drop-last-patch-asm-mlc-asm-ml-1532661093"></a>
 ### _drop_last_patch
@@ -164,7 +164,7 @@ Encode or manage drop last patch in the native x64 assembler.
 | `asm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L560)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L566)
 
 <a id="function-function-mlc-asm-emit-function-emit-asm-b-mlc-asm-ml-1930020033"></a>
 ### _emit
@@ -181,7 +181,7 @@ Encode or manage emit in the native x64 assembler.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L751)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L757)
 
 <a id="function-function-mlc-asm-emit32-function-emit32-asm-x-mlc-asm-ml-1113740717"></a>
 ### _emit32
@@ -198,7 +198,7 @@ Encode or manage emit32 in the native x64 assembler.
 | `x` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L820)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L826)
 
 <a id="function-function-mlc-asm-emit64-function-emit64-asm-x-mlc-asm-ml-1860428419"></a>
 ### _emit64
@@ -215,7 +215,7 @@ Encode or manage emit64 in the native x64 assembler.
 | `x` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L854)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L860)
 
 <a id="function-function-mlc-asm-emit8-function-emit8-asm-x-mlc-asm-ml-1284744155"></a>
 ### _emit8
@@ -232,7 +232,7 @@ Encode or manage emit8 in the native x64 assembler.
 | `x` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L791)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L797)
 
 <a id="function-function-mlc-asm-emit-bin-rr-function-emit-bin-rr-asm-op-dst-src-w-mlc-asm-ml-1848370970"></a>
 ### _emit_bin_rr
@@ -252,7 +252,7 @@ Encode or manage emit bin rr in the native x64 assembler.
 | `w` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2016)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2022)
 
 <a id="function-function-mlc-asm-emit-bytes-u8-function-emit-bytes-u8-v-mlc-asm-ml-1443579904"></a>
 ### _emit_bytes_u8
@@ -268,7 +268,7 @@ Encode or manage emit bytes u8 in the native x64 assembler.
 | `v` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L925)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L931)
 
 <a id="function-function-mlc-asm-emit-modrm-function-emit-modrm-asm-mod-reg-rm-mlc-asm-ml-1252926862"></a>
 ### _emit_modrm
@@ -287,7 +287,7 @@ Encode or manage emit modrm in the native x64 assembler.
 | `rm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L900)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L906)
 
 <a id="function-function-mlc-asm-emit-rex-function-emit-rex-asm-w-r-x-b-force-mlc-asm-ml-1575744541"></a>
 ### _emit_rex
@@ -308,7 +308,7 @@ Encode or manage emit rex in the native x64 assembler.
 | `force` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L890)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L896)
 
 <a id="function-function-mlc-asm-emit-shift-imm8-function-emit-shift-imm8-asm-subop-reg-name-imm-w-mlc-asm-ml-2024202764"></a>
 ### _emit_shift_imm8
@@ -328,7 +328,7 @@ Encode or manage emit shift imm8 in the native x64 assembler.
 | `w` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2234)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2240)
 
 <a id="function-function-mlc-asm-emit-sse-rr-function-emit-sse-rr-asm-prefix1-prefix2-opcode-dst-xmm-src-xmm-mlc-asm-ml-877527765"></a>
 ### _emit_sse_rr
@@ -349,7 +349,7 @@ Encode or manage emit sse rr in the native x64 assembler.
 | `src_xmm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3416)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3522)
 
 <a id="function-function-mlc-asm-encode-mem-function-encode-mem-reg-field-base-id-disp-mlc-asm-ml-809964036"></a>
 ### _encode_mem
@@ -367,7 +367,7 @@ Converts encode mem.
 | `disp` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L933)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L939)
 
 <a id="function-function-mlc-asm-encode-mem-bis-function-encode-mem-bis-reg-field-base-id-index-id-scale-disp-mlc-asm-ml-25078216"></a>
 ### _encode_mem_bis
@@ -387,7 +387,7 @@ Converts encode mem bis.
 | `disp` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L985)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L991)
 
 <a id="function-function-mlc-asm-ensure-capacity-function-ensure-capacity-asm-need-mlc-asm-ml-710290421"></a>
 ### _ensure_capacity
@@ -404,7 +404,7 @@ Encode or manage ensure capacity in the native x64 assembler.
 | `need` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L664)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L670)
 
 <a id="function-function-mlc-asm-fits-i8-function-fits-i8-x-as-int-returns-bool-mlc-asm-ml-581218552"></a>
 ### _fits_i8
@@ -420,7 +420,7 @@ Encode or manage fits i8 in the native x64 assembler.
 | `x` | `int` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L919)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L925)
 
 <a id="function-function-mlc-asm-fmt-disp-function-fmt-disp-disp-mlc-asm-ml-615676156"></a>
 ### _fmt_disp
@@ -436,7 +436,7 @@ Encode or manage fmt disp in the native x64 assembler.
 | `disp` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3926)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4032)
 
 <a id="function-function-mlc-asm-fmt-mem-function-fmt-mem-base-disp-mlc-asm-ml-455923723"></a>
 ### _fmt_mem
@@ -453,7 +453,7 @@ Encode or manage fmt mem in the native x64 assembler.
 | `disp` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3932)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4038)
 
 <a id="function-function-mlc-asm-fmt-mem-sib-function-fmt-mem-sib-base-index-reg-scale-disp-mlc-asm-ml-1478242070"></a>
 ### _fmt_mem_sib
@@ -472,7 +472,7 @@ Encode or manage fmt mem sib in the native x64 assembler.
 | `disp` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3938)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4044)
 
 <a id="function-function-mlc-asm-fold-materialized-patch-set-function-fold-materialized-patch-set-asm-patch-chunks-patch-tail-out-b-mlc-asm-ml-337632046"></a>
 ### _fold_materialized_patch_set
@@ -509,7 +509,7 @@ Converts format call.
 | `kwargs` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3944)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4050)
 
 <a id="function-function-mlc-asm-gc-tmp-context-offset-function-gc-tmp-context-offset-label-mlc-asm-ml-492348028"></a>
 ### _gc_tmp_context_offset
@@ -525,7 +525,7 @@ Encode or manage gc tmp context offset in the native x64 assembler.
 | `label` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1147)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1153)
 
 <a id="function-function-mlc-asm-grp1-imm-function-grp1-imm-asm-size-subop-rm-imm-mlc-asm-ml-1131576307"></a>
 ### _grp1_imm
@@ -545,7 +545,7 @@ Encode or manage grp1 imm in the native x64 assembler.
 | `imm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1837)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1843)
 
 <a id="function-function-mlc-asm-grp1-r8-imm8-function-grp1-r8-imm8-asm-subop-reg8-imm-mlc-asm-ml-817252349"></a>
 ### _grp1_r8_imm8
@@ -564,7 +564,7 @@ Encode or manage grp1 r8 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2632)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2638)
 
 <a id="function-function-mlc-asm-is-force-rex-8-function-is-force-rex-8-name-as-string-returns-bool-mlc-asm-ml-1735187869"></a>
 ### _is_force_rex_8
@@ -580,7 +580,7 @@ Reports whether is force rex 8.
 | `name` | `string` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L482)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L488)
 
 <a id="function-function-mlc-asm-is-r32-name-function-is-r32-name-name-as-string-returns-bool-mlc-asm-ml-809474229"></a>
 ### _is_r32_name
@@ -597,6 +597,22 @@ Reports whether is r32 name.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L476)
+
+<a id="function-function-mlc-asm-is-r64-name-function-is-r64-name-name-as-string-returns-bool-mlc-asm-ml-1554939301"></a>
+### _is_r64_name
+
+```ml
+function _is_r64_name(name as string) returns bool
+```
+
+Recognize full-width GPRs without accepting their byte/dword aliases.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L482)
 
 <a id="function-function-mlc-asm-is-r8-name-function-is-r8-name-name-as-string-returns-bool-mlc-asm-ml-790496333"></a>
 ### _is_r8_name
@@ -628,7 +644,7 @@ Encode or manage jcc mnemonic in the native x64 assembler.
 | `cc` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3920)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4026)
 
 <a id="function-function-mlc-asm-keepalive-barrier-function-keepalive-barrier-value-mlc-asm-ml-59488951"></a>
 ### _keepalive_barrier
@@ -711,7 +727,7 @@ Encode or manage last patch in the native x64 assembler.
 | `asm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L551)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L557)
 
 <a id="function-function-mlc-asm-materialize-buffer-function-materialize-buffer-asm-mlc-asm-ml-1600056139"></a>
 ### _materialize_buffer
@@ -727,7 +743,7 @@ Encode or manage materialize buffer in the native x64 assembler.
 | `asm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L700)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L706)
 
 <a id="global-global-mlc-asm-materialize-keepalive-materialize-keepalive-mlc-asm-ml-315293872"></a>
 ### _materialize_keepalive
@@ -757,7 +773,7 @@ Encode or manage modrm in the native x64 assembler.
 | `rm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3908)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4014)
 
 <a id="function-function-mlc-asm-modrm-byte-function-modrm-byte-mod-as-int-reg-as-int-rm-as-int-returns-int-mlc-asm-ml-51179326"></a>
 ### _modrm_byte
@@ -775,7 +791,7 @@ Encode or manage modrm byte in the native x64 assembler.
 | `rm` | `int` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L907)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L913)
 
 <a id="function-function-mlc-asm-patch-push-function-patch-push-asm-patch-mlc-asm-ml-1045153109"></a>
 ### _patch_push
@@ -809,7 +825,7 @@ Encode or manage patches replace in the native x64 assembler.
 | `patches` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L522)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L528)
 
 <a id="function-function-mlc-asm-peephole-trim-tail-function-peephole-trim-tail-asm-n-mlc-asm-ml-1495235887"></a>
 ### _peephole_trim_tail
@@ -826,7 +842,7 @@ Encode or manage peephole trim tail in the native x64 assembler.
 | `n` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3855)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3961)
 
 <a id="function-function-mlc-asm-relax-forward-branch-function-relax-forward-branch-asm-name-mlc-asm-ml-1967572062"></a>
 ### _relax_forward_branch
@@ -843,7 +859,7 @@ Shorten the last unresolved local forward branch, moving at most 127 bytes. Reba
 | `name` | `dynamic` | — | Label being defined at the current stream boundary. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1163)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1169)
 
 <a id="function-function-mlc-asm-remove-patch-at-function-remove-patch-at-asm-idx-mlc-asm-ml-2107070144"></a>
 ### _remove_patch_at
@@ -860,7 +876,7 @@ Releases or resets remove patch at.
 | `idx` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L536)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L542)
 
 <a id="function-function-mlc-asm-resolve-patch-set-function-resolve-patch-set-asm-patch-chunks-patch-tail-kept-chunks-kept-tail-mlc-asm-ml-1415396307"></a>
 ### _resolve_patch_set
@@ -896,7 +912,7 @@ Materialization releases the paged backing store to reduce compiler peak memory.
 | `asm` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L635)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L641)
 
 <a id="function-function-mlc-asm-rex-function-rex-w-r-x-b-force-mlc-asm-ml-1532133820"></a>
 ### _rex
@@ -916,7 +932,7 @@ Encode or manage rex in the native x64 assembler.
 | `force` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3899)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4005)
 
 <a id="function-function-mlc-asm-rid-any-function-rid-any-name-mlc-asm-ml-1601508049"></a>
 ### _rid_any
@@ -948,7 +964,7 @@ Encode or manage scale bits in the native x64 assembler.
 | `scale` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L975)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L981)
 
 <a id="function-function-mlc-asm-set-chunk-byte-function-set-chunk-byte-asm-idx-value-mlc-asm-ml-58383037"></a>
 ### _set_chunk_byte
@@ -966,7 +982,7 @@ Updates set chunk byte.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L687)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L693)
 
 <a id="function-function-mlc-asm-sib-function-sib-scale-index-base-mlc-asm-ml-719836301"></a>
 ### _sib
@@ -984,7 +1000,7 @@ Encode or manage sib in the native x64 assembler.
 | `base` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3914)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4020)
 
 <a id="function-function-mlc-asm-sib-byte-function-sib-byte-scale-as-int-index-as-int-base-as-int-returns-int-mlc-asm-ml-133039292"></a>
 ### _sib_byte
@@ -1002,7 +1018,7 @@ Encode or manage sib byte in the native x64 assembler.
 | `base` | `int` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L913)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L919)
 
 <a id="function-function-mlc-asm-spill-before-call-function-spill-before-call-asm-mlc-asm-ml-495611853"></a>
 ### _spill_before_call
@@ -1075,7 +1091,7 @@ Encode or manage vex3 in the native x64 assembler.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1023)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1029)
 
 <a id="function-function-mlc-asm-xmm-id-function-xmm-id-name-mlc-asm-ml-1056018291"></a>
 ### _xmm_id
@@ -1091,7 +1107,7 @@ Encode or manage xmm id in the native x64 assembler.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1043)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1049)
 
 <a id="function-function-mlc-asm-ymm-id-function-ymm-id-name-mlc-asm-ml-446720225"></a>
 ### _ymm_id
@@ -1107,7 +1123,7 @@ Encode or manage ymm id in the native x64 assembler.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1065)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1071)
 
 <a id="function-function-mlc-asm-add-patch-function-add-patch-asm-position-label-kind-mlc-asm-ml-1666246762"></a>
 ### add_patch
@@ -1126,7 +1142,7 @@ Add a relocation owned by a separately assembled fragment. This keeps large pare
 | `kind` | `dynamic` | — | Value supplied for `kind`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L848)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L854)
 
 <a id="function-function-mlc-asm-add-r32-imm-function-add-r32-imm-asm-reg-name-imm-mlc-asm-ml-1236754780"></a>
 ### add_r32_imm
@@ -1144,7 +1160,7 @@ Updates add r32 imm.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1972)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1978)
 
 <a id="function-function-mlc-asm-add-r32-r32-function-add-r32-r32-asm-dst-src-mlc-asm-ml-441334020"></a>
 ### add_r32_r32
@@ -1162,7 +1178,7 @@ Updates add r32 r32.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2040)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2046)
 
 <a id="function-function-mlc-asm-add-r64-imm-function-add-r64-imm-asm-reg-name-imm-mlc-asm-ml-526115370"></a>
 ### add_r64_imm
@@ -1180,7 +1196,7 @@ Updates add r64 imm.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1887)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1893)
 
 <a id="function-function-mlc-asm-add-r64-imm8-function-add-r64-imm8-asm-reg-name-imm-mlc-asm-ml-1865708626"></a>
 ### add_r64_imm8
@@ -1198,7 +1214,7 @@ Updates add r64 imm8.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1923)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1929)
 
 <a id="function-function-mlc-asm-add-r64-r64-function-add-r64-r64-asm-dst-src-mlc-asm-ml-606237132"></a>
 ### add_r64_r64
@@ -1216,7 +1232,7 @@ Updates add r64 r64.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2030)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2036)
 
 <a id="function-function-mlc-asm-add-r8-imm8-function-add-r8-imm8-asm-reg8-imm-mlc-asm-ml-1379506176"></a>
 ### add_r8_imm8
@@ -1234,7 +1250,7 @@ Updates add r8 imm8.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2667)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2673)
 
 <a id="function-function-mlc-asm-add-rax-imm8-function-add-rax-imm8-asm-imm-mlc-asm-ml-1294979934"></a>
 ### add_rax_imm8
@@ -1251,7 +1267,7 @@ Updates add rax imm8.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2218)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2224)
 
 <a id="function-function-mlc-asm-add-rax-r10-function-add-rax-r10-asm-mlc-asm-ml-1577336883"></a>
 ### add_rax_r10
@@ -1267,7 +1283,7 @@ Updates add rax r10.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2211)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2217)
 
 <a id="function-function-mlc-asm-add-rcx-imm32-function-add-rcx-imm32-asm-imm-mlc-asm-ml-936260126"></a>
 ### add_rcx_imm32
@@ -1284,7 +1300,7 @@ Updates add rcx imm32.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2359)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2365)
 
 <a id="function-function-mlc-asm-add-rcx-imm8-function-add-rcx-imm8-asm-imm-mlc-asm-ml-1756460366"></a>
 ### add_rcx_imm8
@@ -1301,7 +1317,7 @@ Updates add rcx imm8.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2352)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2358)
 
 <a id="function-function-mlc-asm-add-rsp-imm32-function-add-rsp-imm32-asm-imm-mlc-asm-ml-1850344526"></a>
 ### add_rsp_imm32
@@ -1318,7 +1334,7 @@ Updates add rsp imm32.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2389)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2395)
 
 <a id="function-function-mlc-asm-add-rsp-imm8-function-add-rsp-imm8-asm-imm-mlc-asm-ml-2144943166"></a>
 ### add_rsp_imm8
@@ -1335,7 +1351,7 @@ Updates add rsp imm8.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2374)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2380)
 
 <a id="function-function-mlc-asm-addsd-xmm-xmm-function-addsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-579743080"></a>
 ### addsd_xmm_xmm
@@ -1353,7 +1369,7 @@ Updates addsd xmm xmm.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3441)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3547)
 
 <a id="function-function-mlc-asm-align-loop-function-align-loop-asm-stream-base-mlc-asm-ml-125625747"></a>
 ### align_loop
@@ -1370,7 +1386,7 @@ Align a counted-loop header without allowing an earlier forward branch to move i
 | `stream_base` | `dynamic` | — | Canonical byte origin of this fragment in the final code stream. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L782)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L788)
 
 <a id="function-function-mlc-asm-and-r32-imm-function-and-r32-imm-asm-reg-name-imm-mlc-asm-ml-1221207828"></a>
 ### and_r32_imm
@@ -1388,7 +1404,7 @@ Encode or manage and r32 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1982)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1988)
 
 <a id="function-function-mlc-asm-and-r32-r32-function-and-r32-r32-asm-dst-src-mlc-asm-ml-458899852"></a>
 ### and_r32_r32
@@ -1406,7 +1422,7 @@ Encode or manage and r32 r32 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2065)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2071)
 
 <a id="function-function-mlc-asm-and-r64-imm-function-and-r64-imm-asm-reg-name-imm-mlc-asm-ml-292145406"></a>
 ### and_r64_imm
@@ -1424,7 +1440,7 @@ Encode or manage and r64 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1897)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1903)
 
 <a id="function-function-mlc-asm-and-r64-imm8-function-and-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-221705171"></a>
 ### and_r64_imm8
@@ -1444,7 +1460,7 @@ Encode or manage and r64 imm8 in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1941)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1947)
 
 <a id="function-function-mlc-asm-and-r64-r64-function-and-r64-r64-asm-dst-src-mlc-asm-ml-1545923012"></a>
 ### and_r64_r64
@@ -1462,7 +1478,7 @@ Encode or manage and r64 r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2060)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2066)
 
 <a id="function-function-mlc-asm-and-r8-imm8-function-and-r8-imm8-asm-reg8-imm-mlc-asm-ml-852967172"></a>
 ### and_r8_imm8
@@ -1480,7 +1496,7 @@ Encode or manage and r8 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2652)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2658)
 
 <a id="function-function-mlc-asm-and-r8-r8-function-and-r8-r8-asm-dst-src-mlc-asm-ml-1341814340"></a>
 ### and_r8_r8
@@ -1498,7 +1514,7 @@ Encode or manage and r8 r8 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2080)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2086)
 
 <a id="function-function-mlc-asm-and-rax-imm8-function-and-rax-imm8-asm-imm-mlc-asm-ml-363316942"></a>
 ### and_rax_imm8
@@ -1515,7 +1531,7 @@ Encode or manage and rax imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2226)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2232)
 
 - [mlc.asm.AsmBuilder](Type-mlc-asm-asmbuilder-436910800.md) — struct
 - [mlc.asm.AsmLabel](Type-mlc-asm-asmlabel-1991674317.md) — struct
@@ -1536,7 +1552,25 @@ Encode or manage bsf r32 r32 in the native x64 assembler.
 | `src32` | `dynamic` | — | Value supplied for `src32`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2764)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2770)
+
+<a id="function-function-mlc-asm-bsf-r64-r64-function-bsf-r64-r64-asm-dst-src-mlc-asm-ml-972401228"></a>
+### bsf_r64_r64
+
+```ml
+function bsf_r64_r64(asm, dst, src)
+```
+
+Scan a nonzero 64-bit operand; available on every x86-64 CPU.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `asm` | `dynamic` | — | Assembler receiving the instruction. |
+| `dst` | `dynamic` | — | Destination 64-bit register. |
+| `src` | `dynamic` | — | Nonzero source 64-bit register. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2808)
 
 <a id="function-function-mlc-asm-bsr-r32-r32-function-bsr-r32-r32-asm-dst32-src32-mlc-asm-ml-869848634"></a>
 ### bsr_r32_r32
@@ -1554,7 +1588,25 @@ Encode or manage bsr r32 r32 in the native x64 assembler.
 | `src32` | `dynamic` | — | Value supplied for `src32`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2783)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2789)
+
+<a id="function-function-mlc-asm-bsr-r64-r64-function-bsr-r64-r64-asm-dst-src-mlc-asm-ml-109314676"></a>
+### bsr_r64_r64
+
+```ml
+function bsr_r64_r64(asm, dst, src)
+```
+
+Scan a nonzero 64-bit operand; available on every x86-64 CPU.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `asm` | `dynamic` | — | Assembler receiving the instruction. |
+| `dst` | `dynamic` | — | Destination 64-bit register. |
+| `src` | `dynamic` | — | Nonzero source 64-bit register. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2823)
 
 <a id="function-function-mlc-asm-bt-r64-r64-function-bt-r64-r64-asm-value-index-mlc-asm-ml-1825960186"></a>
 ### bt_r64_r64
@@ -1572,7 +1624,7 @@ Read a register bit (index modulo 64) into CF without modifying it.
 | `index` | `dynamic` | — | Register containing the bit index, reduced modulo 64. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3333)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3439)
 
 <a id="function-function-mlc-asm-bts-r64-r64-function-bts-r64-r64-asm-dst-index-mlc-asm-ml-792663558"></a>
 ### bts_r64_r64
@@ -1590,7 +1642,7 @@ Set a register bit (index modulo 64); CF receives the previous bit value.
 | `index` | `dynamic` | — | Register containing the bit index, reduced modulo 64. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3319)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3425)
 
 <a id="function-function-mlc-asm-call-function-call-asm-label-mlc-asm-ml-332714073"></a>
 ### call
@@ -1607,7 +1659,7 @@ Encode or manage call in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1474)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1480)
 
 <a id="function-function-mlc-asm-call-membase-disp-function-call-membase-disp-asm-base-disp-mlc-asm-ml-677240064"></a>
 ### call_membase_disp
@@ -1625,7 +1677,7 @@ Encode or manage call membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1500)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1506)
 
 <a id="function-function-mlc-asm-call-rax-function-call-rax-asm-mlc-asm-ml-1240620053"></a>
 ### call_rax
@@ -1641,7 +1693,7 @@ Encode or manage call rax in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1489)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1495)
 
 <a id="function-function-mlc-asm-call-rip-qword-function-call-rip-qword-asm-label-mlc-asm-ml-1481692961"></a>
 ### call_rip_qword
@@ -1658,7 +1710,7 @@ Encode or manage call rip qword in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1514)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1520)
 
 <a id="function-function-mlc-asm-clear-calls-function-clear-calls-asm-mlc-asm-ml-319950115"></a>
 ### clear_calls
@@ -1709,7 +1761,7 @@ Encode or manage cmp membase disp imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2729)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2735)
 
 <a id="function-function-mlc-asm-cmp-r32-imm-function-cmp-r32-imm-asm-reg-name-imm-mlc-asm-ml-45694778"></a>
 ### cmp_r32_imm
@@ -1727,7 +1779,7 @@ Encode or manage cmp r32 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1997)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2003)
 
 <a id="function-function-mlc-asm-cmp-r32-imm32-function-cmp-r32-imm32-asm-reg-name-imm-mlc-asm-ml-1636248900"></a>
 ### cmp_r32_imm32
@@ -1745,7 +1797,7 @@ Encode or manage cmp r32 imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2007)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2013)
 
 <a id="function-function-mlc-asm-cmp-r32-r32-function-cmp-r32-r32-asm-left-right-mlc-asm-ml-211470546"></a>
 ### cmp_r32_r32
@@ -1763,7 +1815,7 @@ Encode or manage cmp r32 r32 in the native x64 assembler.
 | `right` | `dynamic` | — | Right input value. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2096)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2102)
 
 <a id="function-function-mlc-asm-cmp-r64-imm-function-cmp-r64-imm-asm-reg-name-imm-mlc-asm-ml-1783015044"></a>
 ### cmp_r64_imm
@@ -1781,7 +1833,7 @@ Encode or manage cmp r64 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1912)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1918)
 
 <a id="function-function-mlc-asm-cmp-r64-imm32-function-cmp-r64-imm32-asm-reg-name-imm-mlc-asm-ml-1486450838"></a>
 ### cmp_r64_imm32
@@ -1799,7 +1851,7 @@ Encode or manage cmp r64 imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2012)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2018)
 
 <a id="function-function-mlc-asm-cmp-r64-imm8-function-cmp-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-1127591647"></a>
 ### cmp_r64_imm8
@@ -1819,7 +1871,7 @@ Encode or manage cmp r64 imm8 in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1964)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1970)
 
 <a id="function-function-mlc-asm-cmp-r64-r64-function-cmp-r64-r64-asm-left-right-mlc-asm-ml-502250"></a>
 ### cmp_r64_r64
@@ -1837,7 +1889,7 @@ Encode or manage cmp r64 r64 in the native x64 assembler.
 | `right` | `dynamic` | — | Right input value. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2091)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2097)
 
 <a id="function-function-mlc-asm-cmp-r8-imm8-function-cmp-r8-imm8-asm-reg8-imm-mlc-asm-ml-921352058"></a>
 ### cmp_r8_imm8
@@ -1855,7 +1907,7 @@ Encode or manage cmp r8 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2678)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2684)
 
 <a id="function-function-mlc-asm-cmp-r8-membase-disp-function-cmp-r8-membase-disp-asm-reg8-base-disp-mlc-asm-ml-1368943660"></a>
 ### cmp_r8_membase_disp
@@ -1874,7 +1926,7 @@ Encode or manage cmp r8 membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2709)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2715)
 
 <a id="function-function-mlc-asm-cmp-rax-imm32-function-cmp-rax-imm32-asm-imm-mlc-asm-ml-819904964"></a>
 ### cmp_rax_imm32
@@ -1891,7 +1943,7 @@ Encode or manage cmp rax imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2325)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2331)
 
 <a id="function-function-mlc-asm-cmp-rax-imm8-function-cmp-rax-imm8-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-1064240996"></a>
 ### cmp_rax_imm8
@@ -1910,7 +1962,7 @@ Encode or manage cmp rax imm8 in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2318)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2324)
 
 <a id="function-function-mlc-asm-cmp-rax-r10-function-cmp-rax-r10-asm-mlc-asm-ml-478965601"></a>
 ### cmp_rax_r10
@@ -1926,7 +1978,7 @@ Encode or manage cmp rax r10 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2310)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2316)
 
 <a id="function-function-mlc-asm-cpuid-function-cpuid-asm-mlc-asm-ml-960815007"></a>
 ### cpuid
@@ -1942,7 +1994,7 @@ Encode or manage cpuid in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3399)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3505)
 
 <a id="function-function-mlc-asm-cqo-function-cqo-asm-mlc-asm-ml-246911879"></a>
 ### cqo
@@ -1958,7 +2010,7 @@ Encode or manage cqo in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3285)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3391)
 
 <a id="function-function-mlc-asm-crc32-r32-membase-disp8-function-crc32-r32-membase-disp8-asm-dst32-base-disp-mlc-asm-ml-719330366"></a>
 ### crc32_r32_membase_disp8
@@ -1977,7 +2029,7 @@ Encode or manage crc32 r32 membase disp8 in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2822)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2928)
 
 <a id="function-function-mlc-asm-crc32-r64-membase-disp-function-crc32-r64-membase-disp-asm-dst64-base-disp-mlc-asm-ml-1760457167"></a>
 ### crc32_r64_membase_disp
@@ -1996,7 +2048,7 @@ Emit SSE4.2 CRC32 r64, qword [base+disp]. Callers must dispatch on CPUID.SSE4.2;
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2803)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2909)
 
 <a id="function-function-mlc-asm-cvtsd2ss-xmm-xmm-function-cvtsd2ss-xmm-xmm-asm-dst-src-mlc-asm-ml-302972442"></a>
 ### cvtsd2ss_xmm_xmm
@@ -2014,7 +2066,7 @@ Encode or manage cvtsd2ss xmm xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3721)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3827)
 
 <a id="function-function-mlc-asm-cvtsi2sd-xmm-r64-function-cvtsi2sd-xmm-r64-asm-dst-xmm-src-reg-mlc-asm-ml-1035364584"></a>
 ### cvtsi2sd_xmm_r64
@@ -2032,7 +2084,7 @@ Encode or manage cvtsi2sd xmm r64 in the native x64 assembler.
 | `src_reg` | `dynamic` | — | Value supplied for `src_reg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3536)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3642)
 
 <a id="function-function-mlc-asm-cvtss2sd-xmm-xmm-function-cvtss2sd-xmm-xmm-asm-dst-src-mlc-asm-ml-977744022"></a>
 ### cvtss2sd_xmm_xmm
@@ -2050,7 +2102,7 @@ Encode or manage cvtss2sd xmm xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3737)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3843)
 
 <a id="function-function-mlc-asm-cvttsd2si-r64-xmm-function-cvttsd2si-r64-xmm-asm-dst-reg-src-xmm-mlc-asm-ml-1942516160"></a>
 ### cvttsd2si_r64_xmm
@@ -2068,7 +2120,7 @@ Encode or manage cvttsd2si r64 xmm in the native x64 assembler.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3552)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3658)
 
 <a id="function-function-mlc-asm-dec-membase-disp-qword-function-dec-membase-disp-qword-asm-base-disp-mlc-asm-ml-1642462268"></a>
 ### dec_membase_disp_qword
@@ -2086,7 +2138,7 @@ Encode or manage dec membase disp qword in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2903)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3009)
 
 <a id="function-function-mlc-asm-dec-r32-function-dec-r32-asm-reg-name-mlc-asm-ml-1829827573"></a>
 ### dec_r32
@@ -2103,7 +2155,7 @@ Encode or manage dec r32 in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2876)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2982)
 
 <a id="function-function-mlc-asm-dec-r64-function-dec-r64-asm-reg-name-mlc-asm-ml-342211095"></a>
 ### dec_r64
@@ -2120,7 +2172,7 @@ Encode or manage dec r64 in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2852)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2958)
 
 <a id="function-function-mlc-asm-disable-listing-function-disable-listing-asm-mlc-asm-ml-1312507739"></a>
 ### disable_listing
@@ -2136,7 +2188,7 @@ Encode or manage disable listing in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3876)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3982)
 
 <a id="function-function-mlc-asm-div-r64-function-div-r64-asm-reg-name-mlc-asm-ml-806295681"></a>
 ### div_r64
@@ -2153,7 +2205,7 @@ Encode or manage div r64 in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3306)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3412)
 
 <a id="function-function-mlc-asm-divsd-xmm-xmm-function-divsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-788105124"></a>
 ### divsd_xmm_xmm
@@ -2171,7 +2223,7 @@ Encode or manage divsd xmm xmm in the native x64 assembler.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3465)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3571)
 
 <a id="function-function-mlc-asm-emit-function-emit-asm-b-mlc-asm-ml-892766301"></a>
 ### emit
@@ -2188,7 +2240,7 @@ Encode or manage emit in the native x64 assembler.
 | `b` | `dynamic` | — | Second input value. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1088)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1094)
 
 <a id="function-function-mlc-asm-emit32-function-emit32-asm-x-mlc-asm-ml-875885211"></a>
 ### emit32
@@ -2205,7 +2257,7 @@ Encode or manage emit32 in the native x64 assembler.
 | `x` | `dynamic` | — | Value supplied for `x`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1102)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1108)
 
 <a id="function-function-mlc-asm-emit64-function-emit64-asm-x-mlc-asm-ml-1942395999"></a>
 ### emit64
@@ -2222,7 +2274,7 @@ Encode or manage emit64 in the native x64 assembler.
 | `x` | `dynamic` | — | Value supplied for `x`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1109)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1115)
 
 <a id="function-function-mlc-asm-emit8-function-emit8-asm-x-mlc-asm-ml-1396847481"></a>
 ### emit8
@@ -2239,7 +2291,7 @@ Encode or manage emit8 in the native x64 assembler.
 | `x` | `dynamic` | — | Value supplied for `x`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1095)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1101)
 
 <a id="function-function-mlc-asm-emit-placeholder-function-emit-placeholder-asm-text-mlc-asm-ml-1552718002"></a>
 ### emit_placeholder
@@ -2256,7 +2308,7 @@ Encode or manage emit placeholder in the native x64 assembler.
 | `text` | `dynamic` | — | Text to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3958)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4064)
 
 <a id="function-function-mlc-asm-enable-listing-function-enable-listing-asm-path-show-addr-show-bytes-show-text-mlc-asm-ml-429631043"></a>
 ### enable_listing
@@ -2276,7 +2328,7 @@ Encode or manage enable listing in the native x64 assembler.
 | `show_text` | `dynamic` | — | Value supplied for `show_text`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3870)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3976)
 
 - [mlc.asm.EncMem](Type-mlc-asm-encmem-428679303.md) — struct
 <a id="function-function-mlc-asm-finalize-function-finalize-asm-mlc-asm-ml-1223055845"></a>
@@ -2293,7 +2345,7 @@ Encode or manage finalize in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1272)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1278)
 
 <a id="function-function-mlc-asm-get-calls-function-get-calls-asm-mlc-asm-ml-1257997533"></a>
 ### get_calls
@@ -2373,7 +2425,7 @@ Encode or manage gpr in the native x64 assembler.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3882)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3988)
 
 - [mlc.asm.GPR](Type-mlc-asm-gpr-1509225273.md) — struct
 <a id="function-function-mlc-asm-idiv-r64-function-idiv-r64-asm-reg-name-mlc-asm-ml-772090109"></a>
@@ -2391,7 +2443,7 @@ Encode or manage idiv r64 in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3294)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3400)
 
 <a id="function-function-mlc-asm-imul-r64-r64-function-imul-r64-r64-asm-dst-src-mlc-asm-ml-107696754"></a>
 ### imul_r64_r64
@@ -2409,7 +2461,7 @@ Encode or manage imul r64 r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3250)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3356)
 
 <a id="function-function-mlc-asm-imul-r64-r64-imm-function-imul-r64-r64-imm-asm-dst-src-imm-mlc-asm-ml-2034570803"></a>
 ### imul_r64_r64_imm
@@ -2428,7 +2480,7 @@ Encode or manage imul r64 r64 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3266)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3372)
 
 <a id="function-function-mlc-asm-inc-membase-disp-qword-function-inc-membase-disp-qword-asm-base-disp-mlc-asm-ml-2113439912"></a>
 ### inc_membase_disp_qword
@@ -2446,7 +2498,7 @@ Encode or manage inc membase disp qword in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2889)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2995)
 
 <a id="function-function-mlc-asm-inc-r32-function-inc-r32-asm-reg-name-mlc-asm-ml-1991958713"></a>
 ### inc_r32
@@ -2463,7 +2515,7 @@ Encode or manage inc r32 in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2864)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2970)
 
 <a id="function-function-mlc-asm-inc-r64-function-inc-r64-asm-reg-name-mlc-asm-ml-1857234975"></a>
 ### inc_r64
@@ -2480,7 +2532,7 @@ Encode or manage inc r64 in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2840)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2946)
 
 <a id="function-function-mlc-asm-ja-function-ja-asm-label-mlc-asm-ml-1629144245"></a>
 ### ja
@@ -2497,7 +2549,7 @@ Encode or manage ja in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1465)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1471)
 
 <a id="function-function-mlc-asm-jae-function-jae-asm-label-mlc-asm-ml-103205741"></a>
 ### jae
@@ -2514,7 +2566,7 @@ Encode or manage jae in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1469)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1475)
 
 <a id="function-function-mlc-asm-jb-function-jb-asm-label-mlc-asm-ml-328316909"></a>
 ### jb
@@ -2531,7 +2583,7 @@ Encode or manage jb in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1457)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1463)
 
 <a id="function-function-mlc-asm-jbe-function-jbe-asm-label-mlc-asm-ml-180839243"></a>
 ### jbe
@@ -2548,7 +2600,7 @@ Encode or manage jbe in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1461)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1467)
 
 <a id="function-function-mlc-asm-jcc-function-jcc-asm-cc-label-mlc-asm-ml-225047267"></a>
 ### jcc
@@ -2566,7 +2618,7 @@ Encode or manage jcc in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1375)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1381)
 
 <a id="function-function-mlc-asm-je-function-je-asm-label-mlc-asm-ml-604694101"></a>
 ### je
@@ -2583,7 +2635,7 @@ Encode or manage je in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1425)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1431)
 
 <a id="function-function-mlc-asm-jg-function-jg-asm-label-mlc-asm-ml-783503489"></a>
 ### jg
@@ -2600,7 +2652,7 @@ Encode or manage jg in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1449)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1455)
 
 <a id="function-function-mlc-asm-jge-function-jge-asm-label-mlc-asm-ml-761932241"></a>
 ### jge
@@ -2617,7 +2669,7 @@ Encode or manage jge in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1453)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1459)
 
 <a id="function-function-mlc-asm-jl-function-jl-asm-label-mlc-asm-ml-481496257"></a>
 ### jl
@@ -2634,7 +2686,7 @@ Encode or manage jl in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1441)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1447)
 
 <a id="function-function-mlc-asm-jle-function-jle-asm-label-mlc-asm-ml-257641171"></a>
 ### jle
@@ -2651,7 +2703,7 @@ Encode or manage jle in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1445)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1451)
 
 <a id="function-function-mlc-asm-jmp-function-jmp-asm-label-mlc-asm-ml-1247247907"></a>
 ### jmp
@@ -2668,7 +2720,7 @@ Encode or manage jmp in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1319)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1325)
 
 <a id="function-function-mlc-asm-jmp-r64-function-jmp-r64-asm-reg-mlc-asm-ml-1944190845"></a>
 ### jmp_r64
@@ -2685,7 +2737,7 @@ Encode or manage jmp r64 in the native x64 assembler.
 | `reg` | `dynamic` | — | Value supplied for `reg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1362)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1368)
 
 <a id="function-function-mlc-asm-jne-function-jne-asm-label-mlc-asm-ml-532552035"></a>
 ### jne
@@ -2702,7 +2754,7 @@ Encode or manage jne in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1433)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1439)
 
 <a id="function-function-mlc-asm-jnz-function-jnz-asm-label-mlc-asm-ml-1967950889"></a>
 ### jnz
@@ -2719,7 +2771,7 @@ Encode or manage jnz in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1437)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1443)
 
 <a id="function-function-mlc-asm-jz-function-jz-asm-label-mlc-asm-ml-201224317"></a>
 ### jz
@@ -2736,7 +2788,7 @@ Encode or manage jz in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1429)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1435)
 
 <a id="function-function-mlc-asm-lea-r11-rip-function-lea-r11-rip-asm-label-mlc-asm-ml-1655740875"></a>
 ### lea_r11_rip
@@ -2753,7 +2805,7 @@ Encode or manage lea r11 rip in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1585)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1591)
 
 <a id="function-function-mlc-asm-lea-r64-mem-bis-function-lea-r64-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-26051556"></a>
 ### lea_r64_mem_bis
@@ -2774,7 +2826,7 @@ Encode or manage lea r64 mem bis in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3196)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3302)
 
 <a id="function-function-mlc-asm-lea-r64-membase-disp-function-lea-r64-membase-disp-asm-dst-base-disp-mlc-asm-ml-613633253"></a>
 ### lea_r64_membase_disp
@@ -2793,7 +2845,7 @@ Encode or manage lea r64 membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2587)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2593)
 
 <a id="function-function-mlc-asm-lea-r64-rip-function-lea-r64-rip-asm-dst-label-mlc-asm-ml-859437180"></a>
 ### lea_r64_rip
@@ -2811,7 +2863,7 @@ Encode or manage lea r64 rip in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1540)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1546)
 
 <a id="function-function-mlc-asm-lea-r8-rip-function-lea-r8-rip-asm-label-mlc-asm-ml-524136109"></a>
 ### lea_r8_rip
@@ -2828,7 +2880,7 @@ Encode or manage lea r8 rip in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1571)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1577)
 
 <a id="function-function-mlc-asm-lea-r9-rip-function-lea-r9-rip-asm-label-mlc-asm-ml-1511291985"></a>
 ### lea_r9_rip
@@ -2845,7 +2897,7 @@ Encode or manage lea r9 rip in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1578)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1584)
 
 <a id="function-function-mlc-asm-lea-rax-rip-function-lea-rax-rip-asm-as-struct-label-as-string-returns-struct-mlc-asm-ml-1441810659"></a>
 ### lea_rax_rip
@@ -2864,7 +2916,7 @@ Encode or manage lea rax rip in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1557)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1563)
 
 <a id="function-function-mlc-asm-lea-rdx-rip-function-lea-rdx-rip-asm-label-mlc-asm-ml-2075327575"></a>
 ### lea_rdx_rip
@@ -2881,7 +2933,7 @@ Encode or manage lea rdx rip in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1564)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1570)
 
 <a id="function-function-mlc-asm-leave-function-leave-asm-mlc-asm-ml-1220138275"></a>
 ### leave
@@ -2897,7 +2949,7 @@ Encode or manage leave in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1532)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1538)
 
 <a id="function-function-mlc-asm-lock-cmpxchg-membase-disp-r32-function-lock-cmpxchg-membase-disp-r32-asm-base-disp-src-mlc-asm-ml-2099308470"></a>
 ### lock_cmpxchg_membase_disp_r32
@@ -2916,7 +2968,7 @@ Encode or manage lock cmpxchg membase disp r32 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2470)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2476)
 
 <a id="function-function-mlc-asm-lock-cmpxchg-membase-disp-r64-function-lock-cmpxchg-membase-disp-r64-asm-base-disp-src-mlc-asm-ml-1265994932"></a>
 ### lock_cmpxchg_membase_disp_r64
@@ -2935,7 +2987,7 @@ Encode or manage lock cmpxchg membase disp r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2490)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2496)
 
 <a id="function-function-mlc-asm-mark-function-mark-asm-name-mlc-asm-ml-1003268770"></a>
 ### mark
@@ -2952,7 +3004,7 @@ Mark a control-flow boundary after bounded local branch relaxation.
 | `name` | `dynamic` | — | Control-flow label to publish after any permitted relaxation. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1227)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1233)
 
 <a id="function-function-mlc-asm-materialize-function-materialize-asm-mlc-asm-ml-1305979579"></a>
 ### materialize
@@ -2968,7 +3020,7 @@ Encode or manage materialize in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L814)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L820)
 
 <a id="function-function-mlc-asm-materialize-and-fold-local-patches-function-materialize-and-fold-local-patches-asm-mlc-asm-ml-1626421277"></a>
 ### materialize_and_fold_local_patches
@@ -3001,7 +3053,7 @@ Encode or manage mov eax rip dword in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2937)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3043)
 
 <a id="function-function-mlc-asm-mov-gs-qword-28-rax-function-mov-gs-qword-28-rax-asm-mlc-asm-ml-61670697"></a>
 ### mov_gs_qword_28_rax
@@ -3017,7 +3069,7 @@ Encode or manage mov gs qword 28 rax in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1139)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1145)
 
 <a id="function-function-mlc-asm-mov-mem-bis-r32-function-mov-mem-bis-r32-asm-base-index-reg-scale-disp-src-mlc-asm-ml-1479592515"></a>
 ### mov_mem_bis_r32
@@ -3038,7 +3090,7 @@ Encode or manage mov mem bis r32 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3175)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3281)
 
 <a id="function-function-mlc-asm-mov-mem-bis-r64-function-mov-mem-bis-r64-asm-base-index-reg-scale-disp-src-mlc-asm-ml-1183844457"></a>
 ### mov_mem_bis_r64
@@ -3059,7 +3111,7 @@ Encode or manage mov mem bis r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3133)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3239)
 
 <a id="function-function-mlc-asm-mov-membase-disp-imm32-function-mov-membase-disp-imm32-asm-base-disp-imm-qword-mlc-asm-ml-1249385460"></a>
 ### mov_membase_disp_imm32
@@ -3079,7 +3131,7 @@ Encode or manage mov membase disp imm32 in the native x64 assembler.
 | `qword` | `dynamic` | — | Value supplied for `qword`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2553)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2559)
 
 <a id="function-function-mlc-asm-mov-membase-disp-imm8-function-mov-membase-disp-imm8-asm-base-disp-imm-mlc-asm-ml-1208277533"></a>
 ### mov_membase_disp_imm8
@@ -3098,7 +3150,7 @@ Encode or manage mov membase disp imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2571)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2577)
 
 <a id="function-function-mlc-asm-mov-membase-disp-r32-function-mov-membase-disp-r32-asm-base-disp-src-mlc-asm-ml-685623958"></a>
 ### mov_membase_disp_r32
@@ -3117,7 +3169,7 @@ Encode or manage mov membase disp r32 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2452)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2458)
 
 <a id="function-function-mlc-asm-mov-membase-disp-r64-function-mov-membase-disp-r64-asm-base-disp-src-mlc-asm-ml-458693250"></a>
 ### mov_membase_disp_r64
@@ -3136,7 +3188,7 @@ Encode or manage mov membase disp r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2416)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2422)
 
 <a id="function-function-mlc-asm-mov-membase-disp-r8-function-mov-membase-disp-r8-asm-base-disp-src-mlc-asm-ml-1028143956"></a>
 ### mov_membase_disp_r8
@@ -3155,7 +3207,7 @@ Encode or manage mov membase disp r8 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2532)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2538)
 
 <a id="function-function-mlc-asm-mov-qword-ptr-rsp20-rax-zero-function-mov-qword-ptr-rsp20-rax-zero-asm-mlc-asm-ml-367685549"></a>
 ### mov_qword_ptr_rsp20_rax_zero
@@ -3171,7 +3223,7 @@ Encode or manage mov qword ptr rsp20 rax zero in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2928)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3034)
 
 <a id="function-function-mlc-asm-mov-r10-gs-qword-28-function-mov-r10-gs-qword-28-asm-mlc-asm-ml-1215678217"></a>
 ### mov_r10_gs_qword_28
@@ -3187,7 +3239,7 @@ Encode or manage mov r10 gs qword 28 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1131)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1137)
 
 <a id="function-function-mlc-asm-mov-r10-rax-function-mov-r10-rax-asm-mlc-asm-ml-1449439221"></a>
 ### mov_r10_rax
@@ -3203,7 +3255,7 @@ Encode or manage mov r10 rax in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2198)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2204)
 
 <a id="function-function-mlc-asm-mov-r11-gs-qword-28-function-mov-r11-gs-qword-28-asm-mlc-asm-ml-1509164471"></a>
 ### mov_r11_gs_qword_28
@@ -3219,7 +3271,7 @@ Encode or manage mov r11 gs qword 28 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1123)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1129)
 
 <a id="function-function-mlc-asm-mov-r11-rax-function-mov-r11-rax-asm-mlc-asm-ml-1397694019"></a>
 ### mov_r11_rax
@@ -3235,7 +3287,7 @@ Encode or manage mov r11 rax in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2201)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2207)
 
 <a id="function-function-mlc-asm-mov-r32-imm32-function-mov-r32-imm32-asm-dst-imm-mlc-asm-ml-169497319"></a>
 ### mov_r32_imm32
@@ -3253,7 +3305,7 @@ Encode or manage mov r32 imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1707)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1713)
 
 <a id="function-function-mlc-asm-mov-r32-mem-bis-function-mov-r32-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-1049579638"></a>
 ### mov_r32_mem_bis
@@ -3274,7 +3326,7 @@ Encode or manage mov r32 mem bis in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3154)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3260)
 
 <a id="function-function-mlc-asm-mov-r32-membase-disp-function-mov-r32-membase-disp-asm-dst-base-disp-mlc-asm-ml-1325186121"></a>
 ### mov_r32_membase_disp
@@ -3293,7 +3345,7 @@ Encode or manage mov r32 membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2434)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2440)
 
 <a id="function-function-mlc-asm-mov-r32-r32-function-mov-r32-r32-asm-dst-src-mlc-asm-ml-1598840574"></a>
 ### mov_r32_r32
@@ -3311,7 +3363,7 @@ Encode or manage mov r32 r32 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1807)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1813)
 
 <a id="function-function-mlc-asm-mov-r64-imm64-function-mov-r64-imm64-asm-dst-imm-mlc-asm-ml-1310864951"></a>
 ### mov_r64_imm64
@@ -3329,7 +3381,7 @@ Encode or manage mov r64 imm64 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1678)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1684)
 
 <a id="function-function-mlc-asm-mov-r64-mem-bis-function-mov-r64-mem-bis-asm-dst-base-index-reg-scale-disp-mlc-asm-ml-142204508"></a>
 ### mov_r64_mem_bis
@@ -3350,7 +3402,7 @@ Encode or manage mov r64 mem bis in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3112)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3218)
 
 <a id="function-function-mlc-asm-mov-r64-membase-disp-function-mov-r64-membase-disp-asm-dst-base-disp-mlc-asm-ml-1782241665"></a>
 ### mov_r64_membase_disp
@@ -3369,7 +3421,7 @@ Encode or manage mov r64 membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2398)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2404)
 
 <a id="function-function-mlc-asm-mov-r64-r64-function-mov-r64-r64-asm-dst-src-mlc-asm-ml-148248406"></a>
 ### mov_r64_r64
@@ -3387,7 +3439,7 @@ Encode or manage mov r64 r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1792)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1798)
 
 <a id="function-function-mlc-asm-mov-r64-tagged-int-function-mov-r64-tagged-int-asm-dst-value-mlc-asm-ml-1688631105"></a>
 ### mov_r64_tagged_int
@@ -3405,7 +3457,7 @@ Encode or manage mov r64 tagged int in the native x64 assembler.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1730)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1736)
 
 <a id="function-function-mlc-asm-mov-r64-u64-hi-lo-exact-function-mov-r64-u64-hi-lo-exact-asm-dst-hi32-lo32-mlc-asm-ml-1052138660"></a>
 ### mov_r64_u64_hi_lo_exact
@@ -3424,7 +3476,7 @@ Encode or manage mov r64 u64 hi lo exact in the native x64 assembler.
 | `lo32` | `dynamic` | — | Value supplied for `lo32`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1755)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1761)
 
 <a id="function-function-mlc-asm-mov-r8-membase-disp-function-mov-r8-membase-disp-asm-dst-base-disp-mlc-asm-ml-738477459"></a>
 ### mov_r8_membase_disp
@@ -3443,7 +3495,7 @@ Encode or manage mov r8 membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2512)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2518)
 
 <a id="function-function-mlc-asm-mov-r8-r8-function-mov-r8-r8-asm-dst-src-mlc-asm-ml-414949710"></a>
 ### mov_r8_r8
@@ -3461,7 +3513,7 @@ Encode or manage mov r8 r8 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1822)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1828)
 
 <a id="function-function-mlc-asm-mov-r8d-edx-function-mov-r8d-edx-asm-mlc-asm-ml-1968024003"></a>
 ### mov_r8d_edx
@@ -3477,7 +3529,7 @@ Encode or manage mov r8d edx in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2922)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3028)
 
 <a id="function-function-mlc-asm-mov-r8d-imm32-function-mov-r8d-imm32-asm-imm-mlc-asm-ml-740310858"></a>
 ### mov_r8d_imm32
@@ -3494,7 +3546,7 @@ Encode or manage mov r8d imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1784)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1790)
 
 <a id="function-function-mlc-asm-mov-r9d-imm32-function-mov-r9d-imm32-asm-imm-mlc-asm-ml-1767898340"></a>
 ### mov_r9d_imm32
@@ -3511,7 +3563,7 @@ Encode or manage mov r9d imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2916)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3022)
 
 <a id="function-function-mlc-asm-mov-rax-gs-qword-28-function-mov-rax-gs-qword-28-asm-mlc-asm-ml-142508073"></a>
 ### mov_rax_gs_qword_28
@@ -3527,7 +3579,7 @@ Encode or manage mov rax gs qword 28 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1115)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1121)
 
 <a id="function-function-mlc-asm-mov-rax-imm64-function-mov-rax-imm64-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-1640675460"></a>
 ### mov_rax_imm64
@@ -3546,7 +3598,7 @@ Encode or manage mov rax imm64 in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1722)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1728)
 
 <a id="function-function-mlc-asm-mov-rax-r10-function-mov-rax-r10-asm-mlc-asm-ml-1093562805"></a>
 ### mov_rax_r10
@@ -3562,7 +3614,7 @@ Encode or manage mov rax r10 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2204)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2210)
 
 <a id="function-function-mlc-asm-mov-rax-r11-function-mov-rax-r11-asm-mlc-asm-ml-1630066275"></a>
 ### mov_rax_r11
@@ -3578,7 +3630,7 @@ Encode or manage mov rax r11 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2207)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2213)
 
 <a id="function-function-mlc-asm-mov-rax-rip-qword-function-mov-rax-rip-qword-asm-label-mlc-asm-ml-1876247681"></a>
 ### mov_rax_rip_qword
@@ -3595,7 +3647,7 @@ Encode or manage mov rax rip qword in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2961)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3067)
 
 <a id="function-function-mlc-asm-mov-rax-rsp-disp32-function-mov-rax-rsp-disp32-asm-as-struct-disp-as-int-returns-struct-mlc-asm-ml-1973125325"></a>
 ### mov_rax_rsp_disp32
@@ -3614,7 +3666,7 @@ Encode or manage mov rax rsp disp32 in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2618)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2624)
 
 <a id="function-function-mlc-asm-mov-rax-rsp-disp8-function-mov-rax-rsp-disp8-asm-disp-mlc-asm-ml-49401983"></a>
 ### mov_rax_rsp_disp8
@@ -3631,7 +3683,7 @@ Encode or manage mov rax rsp disp8 in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2603)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2609)
 
 <a id="function-function-mlc-asm-mov-rax-tagged-int-function-mov-rax-tagged-int-asm-as-struct-value-as-int-returns-struct-mlc-asm-ml-1077351336"></a>
 ### mov_rax_tagged_int
@@ -3650,7 +3702,7 @@ Encode or manage mov rax tagged int in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1746)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1752)
 
 <a id="function-function-mlc-asm-mov-rax-u64-hi-lo-exact-function-mov-rax-u64-hi-lo-exact-asm-hi32-lo32-mlc-asm-ml-695477375"></a>
 ### mov_rax_u64_hi_lo_exact
@@ -3668,7 +3720,7 @@ Encode or manage mov rax u64 hi lo exact in the native x64 assembler.
 | `lo32` | `dynamic` | — | Value supplied for `lo32`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1769)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1775)
 
 <a id="function-function-mlc-asm-mov-rbp-rsp-function-mov-rbp-rsp-asm-mlc-asm-ml-1836418983"></a>
 ### mov_rbp_rsp
@@ -3684,7 +3736,7 @@ Encode or manage mov rbp rsp in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1670)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1676)
 
 <a id="function-function-mlc-asm-mov-rbx-rax-function-mov-rbx-rax-asm-mlc-asm-ml-1330816591"></a>
 ### mov_rbx_rax
@@ -3700,7 +3752,7 @@ Encode or manage mov rbx rax in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2189)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2195)
 
 <a id="function-function-mlc-asm-mov-rcx-imm32-function-mov-rcx-imm32-asm-as-struct-imm-as-int-returns-struct-mlc-asm-ml-414152510"></a>
 ### mov_rcx_imm32
@@ -3719,7 +3771,7 @@ Encode or manage mov rcx imm32 in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1777)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1783)
 
 <a id="function-function-mlc-asm-mov-rcx-rbx-function-mov-rcx-rbx-asm-mlc-asm-ml-1629593247"></a>
 ### mov_rcx_rbx
@@ -3735,7 +3787,7 @@ Encode or manage mov rcx rbx in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2192)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2198)
 
 <a id="function-function-mlc-asm-mov-rdx-rax-function-mov-rdx-rax-asm-mlc-asm-ml-1191991607"></a>
 ### mov_rdx_rax
@@ -3751,7 +3803,7 @@ Encode or manage mov rdx rax in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2195)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2201)
 
 <a id="function-function-mlc-asm-mov-rdx-rip-qword-function-mov-rdx-rip-qword-asm-label-mlc-asm-ml-141231447"></a>
 ### mov_rdx_rip_qword
@@ -3768,7 +3820,7 @@ Encode or manage mov rdx rip qword in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2982)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3088)
 
 <a id="function-function-mlc-asm-mov-rip-dword-eax-function-mov-rip-dword-eax-asm-label-mlc-asm-ml-641073653"></a>
 ### mov_rip_dword_eax
@@ -3785,7 +3837,7 @@ Encode or manage mov rip dword eax in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2949)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3055)
 
 <a id="function-function-mlc-asm-mov-rip-qword-r11-function-mov-rip-qword-r11-asm-label-mlc-asm-ml-457063355"></a>
 ### mov_rip_qword_r11
@@ -3802,7 +3854,7 @@ Encode or manage mov rip qword r11 in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3045)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3151)
 
 <a id="function-function-mlc-asm-mov-rip-qword-r8-function-mov-rip-qword-r8-asm-label-mlc-asm-ml-381099973"></a>
 ### mov_rip_qword_r8
@@ -3819,7 +3871,7 @@ Encode or manage mov rip qword r8 in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3066)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3172)
 
 <a id="function-function-mlc-asm-mov-rip-qword-r9-function-mov-rip-qword-r9-asm-label-mlc-asm-ml-1250695393"></a>
 ### mov_rip_qword_r9
@@ -3836,7 +3888,7 @@ Encode or manage mov rip qword r9 in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3087)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3193)
 
 <a id="function-function-mlc-asm-mov-rip-qword-rax-function-mov-rip-qword-rax-asm-label-mlc-asm-ml-52223953"></a>
 ### mov_rip_qword_rax
@@ -3853,7 +3905,7 @@ Encode or manage mov rip qword rax in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3003)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3109)
 
 <a id="function-function-mlc-asm-mov-rip-qword-rdx-function-mov-rip-qword-rdx-asm-label-mlc-asm-ml-148857199"></a>
 ### mov_rip_qword_rdx
@@ -3870,7 +3922,7 @@ Encode or manage mov rip qword rdx in the native x64 assembler.
 | `label` | `dynamic` | — | Value supplied for `label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3024)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3130)
 
 <a id="function-function-mlc-asm-mov-rsp-disp32-rax-function-mov-rsp-disp32-rax-asm-as-struct-disp-as-int-returns-struct-mlc-asm-ml-1597720757"></a>
 ### mov_rsp_disp32_rax
@@ -3889,7 +3941,7 @@ Encode or manage mov rsp disp32 rax in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2626)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2632)
 
 <a id="function-function-mlc-asm-mov-rsp-disp8-rax-function-mov-rsp-disp8-rax-asm-disp-mlc-asm-ml-1247760079"></a>
 ### mov_rsp_disp8_rax
@@ -3906,7 +3958,7 @@ Encode or manage mov rsp disp8 rax in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2610)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2616)
 
 <a id="function-function-mlc-asm-movapd-xmm-xmm-function-movapd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-979594844"></a>
 ### movapd_xmm_xmm
@@ -3924,7 +3976,7 @@ Encode or manage movapd xmm xmm in the native x64 assembler.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3491)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3597)
 
 <a id="function-function-mlc-asm-movd-r32-xmm-function-movd-r32-xmm-asm-dst-src-mlc-asm-ml-1735264306"></a>
 ### movd_r32_xmm
@@ -3942,7 +3994,7 @@ Encode or manage movd r32 xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3619)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3725)
 
 <a id="function-function-mlc-asm-movdqu-membase-disp-xmm-function-movdqu-membase-disp-xmm-asm-base-disp-src-mlc-asm-ml-560316024"></a>
 ### movdqu_membase_disp_xmm
@@ -3961,7 +4013,7 @@ Encode or manage movdqu membase disp xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3655)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3761)
 
 <a id="function-function-mlc-asm-movdqu-xmm-membase-disp-function-movdqu-xmm-membase-disp-asm-dst-base-disp-mlc-asm-ml-1044452691"></a>
 ### movdqu_xmm_membase_disp
@@ -3980,7 +4032,7 @@ Encode or manage movdqu xmm membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3637)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3743)
 
 <a id="function-function-mlc-asm-movq-r64-xmm-function-movq-r64-xmm-asm-dst-reg-src-xmm-mlc-asm-ml-1852506596"></a>
 ### movq_r64_xmm
@@ -3998,7 +4050,7 @@ Restore one tagged 64-bit value from the low qword of an XMM register.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3603)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3709)
 
 <a id="function-function-mlc-asm-movq-xmm-r64-function-movq-xmm-r64-asm-dst-xmm-src-reg-mlc-asm-ml-360973076"></a>
 ### movq_xmm_r64
@@ -4016,7 +4068,7 @@ Move one tagged 64-bit value into the low qword of an XMM register.
 | `src_reg` | `dynamic` | — | Value supplied for `src_reg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3587)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3693)
 
 <a id="function-function-mlc-asm-movsd-membase-disp-xmm-function-movsd-membase-disp-xmm-asm-base-disp-src-xmm-mlc-asm-ml-1171982343"></a>
 ### movsd_membase_disp_xmm
@@ -4035,7 +4087,7 @@ Encode or manage movsd membase disp xmm in the native x64 assembler.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3519)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3625)
 
 <a id="function-function-mlc-asm-movsd-xmm-membase-disp-function-movsd-xmm-membase-disp-asm-dst-xmm-base-disp-mlc-asm-ml-536705176"></a>
 ### movsd_xmm_membase_disp
@@ -4054,7 +4106,7 @@ Encode or manage movsd xmm membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3501)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3607)
 
 <a id="function-function-mlc-asm-movsd-xmm-xmm-function-movsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-510813534"></a>
 ### movsd_xmm_xmm
@@ -4072,7 +4124,7 @@ Encode or manage movsd xmm xmm in the native x64 assembler.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3433)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3539)
 
 <a id="function-function-mlc-asm-movzx-eax-al-function-movzx-eax-al-asm-as-struct-returns-struct-mlc-asm-ml-1256030034"></a>
 ### movzx_eax_al
@@ -4090,7 +4142,7 @@ Encode or manage movzx eax al in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2183)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2189)
 
 <a id="function-function-mlc-asm-movzx-r32-membase-disp-function-movzx-r32-membase-disp-asm-dst32-base-disp-mlc-asm-ml-1997771456"></a>
 ### movzx_r32_membase_disp
@@ -4109,7 +4161,7 @@ Encode or manage movzx r32 membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2745)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2751)
 
 <a id="function-function-mlc-asm-movzx-r32-r8-function-movzx-r32-r8-asm-dst-src8-mlc-asm-ml-1686395618"></a>
 ### movzx_r32_r8
@@ -4127,7 +4179,7 @@ Encode or manage movzx r32 r8 in the native x64 assembler.
 | `src8` | `dynamic` | — | Value supplied for `src8`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2168)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2174)
 
 <a id="function-function-mlc-asm-mul-r64-function-mul-r64-asm-reg-name-mlc-asm-ml-1218474035"></a>
 ### mul_r64
@@ -4144,7 +4196,7 @@ Multiply unsigned RAX by reg_name, returning the full product in RDX:RAX.
 | `reg_name` | `dynamic` | — | Source register; RAX and RDX are overwritten. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3346)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3452)
 
 <a id="function-function-mlc-asm-mulsd-xmm-xmm-function-mulsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-1083944914"></a>
 ### mulsd_xmm_xmm
@@ -4162,7 +4214,7 @@ Encode or manage mulsd xmm xmm in the native x64 assembler.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3457)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3563)
 
 <a id="function-function-mlc-asm-neg-r64-function-neg-r64-asm-reg-name-mlc-asm-ml-2043155571"></a>
 ### neg_r64
@@ -4179,7 +4231,7 @@ Encode or manage neg r64 in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2293)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2299)
 
 <a id="function-function-mlc-asm-neg-rax-function-neg-rax-asm-mlc-asm-ml-1373429613"></a>
 ### neg_rax
@@ -4195,7 +4247,7 @@ Encode or manage neg rax in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2304)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2310)
 
 <a id="function-function-mlc-asm-newasmbuilder-function-newasmbuilder-mlc-asm-ml-1431619198"></a>
 ### newAsmBuilder
@@ -4235,7 +4287,7 @@ Encode or manage nop in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1312)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1318)
 
 <a id="function-function-mlc-asm-or-r32-imm-function-or-r32-imm-asm-reg-name-imm-mlc-asm-ml-2119945822"></a>
 ### or_r32_imm
@@ -4253,7 +4305,7 @@ Encode or manage or r32 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1987)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1993)
 
 <a id="function-function-mlc-asm-or-r32-r32-function-or-r32-r32-asm-dst-src-mlc-asm-ml-524216550"></a>
 ### or_r32_r32
@@ -4271,7 +4323,7 @@ Encode or manage or r32 r32 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2075)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2081)
 
 <a id="function-function-mlc-asm-or-r64-imm-function-or-r64-imm-asm-reg-name-imm-mlc-asm-ml-482312102"></a>
 ### or_r64_imm
@@ -4289,7 +4341,7 @@ Encode or manage or r64 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1902)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1908)
 
 <a id="function-function-mlc-asm-or-r64-imm8-function-or-r64-imm8-asm-as-struct-reg-name-as-string-imm-as-int-returns-struct-mlc-asm-ml-1883212291"></a>
 ### or_r64_imm8
@@ -4309,7 +4361,7 @@ Encode or manage or r64 imm8 in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1949)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1955)
 
 <a id="function-function-mlc-asm-or-r64-r64-function-or-r64-r64-asm-dst-src-mlc-asm-ml-1307837550"></a>
 ### or_r64_r64
@@ -4327,7 +4379,7 @@ Encode or manage or r64 r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2070)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2076)
 
 <a id="function-function-mlc-asm-or-r8-imm8-function-or-r8-imm8-asm-reg8-imm-mlc-asm-ml-306939044"></a>
 ### or_r8_imm8
@@ -4345,7 +4397,7 @@ Encode or manage or r8 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2657)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2663)
 
 <a id="function-function-mlc-asm-or-r8-r8-function-or-r8-r8-asm-dst-src-mlc-asm-ml-1924097734"></a>
 ### or_r8_r8
@@ -4363,7 +4415,7 @@ Encode or manage or r8 r8 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2085)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2091)
 
 <a id="function-function-mlc-asm-or-rax-imm8-function-or-rax-imm8-asm-imm-mlc-asm-ml-1120167116"></a>
 ### or_rax_imm8
@@ -4380,7 +4432,44 @@ Encode or manage or rax imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2230)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2236)
+
+<a id="function-function-mlc-asm-pand-xmm-xmm-function-pand-xmm-xmm-asm-dst-src-mlc-asm-ml-467700434"></a>
+### pand_xmm_xmm
+
+```ml
+function pand_xmm_xmm(asm, dst, src)
+```
+
+Bitwise AND two SSE2 vectors.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `asm` | `dynamic` | — | Assembler receiving the instruction. |
+| `dst` | `dynamic` | — | XMM destination and first source. |
+| `src` | `dynamic` | — | XMM second source. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2858)
+
+<a id="function-function-mlc-asm-pclmulqdq-xmm-xmm-imm8-function-pclmulqdq-xmm-xmm-imm8-asm-dst-src-imm-mlc-asm-ml-723981587"></a>
+### pclmulqdq_xmm_xmm_imm8
+
+```ml
+function pclmulqdq_xmm_xmm_imm8(asm, dst, src, imm)
+```
+
+Carry-less multiply selected qwords; requires CPUID.PCLMULQDQ.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `asm` | `dynamic` | — | Assembler receiving the instruction. |
+| `dst` | `dynamic` | — | XMM destination and first source. |
+| `src` | `dynamic` | — | XMM second source. |
+| `imm` | `dynamic` | — | Qword selector (bits 0 and 4), an unsigned byte. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2839)
 
 <a id="function-function-mlc-asm-pcmpeqb-xmm-xmm-function-pcmpeqb-xmm-xmm-asm-dst-src-mlc-asm-ml-2108371974"></a>
 ### pcmpeqb_xmm_xmm
@@ -4398,7 +4487,7 @@ Encode or manage pcmpeqb xmm xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3680)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3786)
 
 <a id="function-function-mlc-asm-pcmpeqw-xmm-xmm-function-pcmpeqw-xmm-xmm-asm-dst-src-mlc-asm-ml-1576300584"></a>
 ### pcmpeqw_xmm_xmm
@@ -4416,7 +4505,7 @@ Encode or manage pcmpeqw xmm xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3688)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3794)
 
 <a id="function-function-mlc-asm-pmovmskb-r32-xmm-function-pmovmskb-r32-xmm-asm-dst32-src-mlc-asm-ml-619996841"></a>
 ### pmovmskb_r32_xmm
@@ -4434,7 +4523,7 @@ Encode or manage pmovmskb r32 xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3696)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3802)
 
 <a id="function-function-mlc-asm-pop-r12-function-pop-r12-asm-mlc-asm-ml-1042614159"></a>
 ### pop_r12
@@ -4450,7 +4539,7 @@ Encode or manage pop r12 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1642)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1648)
 
 <a id="function-function-mlc-asm-pop-r13-function-pop-r13-asm-mlc-asm-ml-1838337293"></a>
 ### pop_r13
@@ -4466,7 +4555,7 @@ Encode or manage pop r13 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1648)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1654)
 
 <a id="function-function-mlc-asm-pop-r14-function-pop-r14-asm-mlc-asm-ml-358460295"></a>
 ### pop_r14
@@ -4482,7 +4571,7 @@ Encode or manage pop r14 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1654)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1660)
 
 <a id="function-function-mlc-asm-pop-r15-function-pop-r15-asm-mlc-asm-ml-2094100481"></a>
 ### pop_r15
@@ -4498,7 +4587,7 @@ Encode or manage pop r15 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1660)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1666)
 
 <a id="function-function-mlc-asm-pop-rbp-function-pop-rbp-asm-mlc-asm-ml-422139573"></a>
 ### pop_rbp
@@ -4514,7 +4603,7 @@ Encode or manage pop rbp in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1666)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1672)
 
 <a id="function-function-mlc-asm-pop-rbx-function-pop-rbx-asm-mlc-asm-ml-1671558325"></a>
 ### pop_rbx
@@ -4530,7 +4619,7 @@ Encode or manage pop rbx in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1636)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1642)
 
 <a id="function-function-mlc-asm-pop-reg-function-pop-reg-asm-reg-mlc-asm-ml-1393436341"></a>
 ### pop_reg
@@ -4547,7 +4636,7 @@ Encode or manage pop reg in the native x64 assembler.
 | `reg` | `dynamic` | — | Value supplied for `reg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1608)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1614)
 
 <a id="function-function-mlc-asm-pos-function-pos-asm-as-struct-returns-int-mlc-asm-ml-1706267734"></a>
 ### pos
@@ -4565,7 +4654,43 @@ Encode or manage pos in the native x64 assembler.
 
 **Returns:** The resulting `int` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L884)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L890)
+
+<a id="function-function-mlc-asm-pslldq-xmm-imm8-function-pslldq-xmm-imm8-asm-dst-imm-mlc-asm-ml-518220479"></a>
+### pslldq_xmm_imm8
+
+```ml
+function pslldq_xmm_imm8(asm, dst, imm)
+```
+
+Shift an SSE2 vector by bytes with zero fill, not individual lanes.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `asm` | `dynamic` | — | Assembler receiving the instruction. |
+| `dst` | `dynamic` | — | XMM register to shift. |
+| `imm` | `dynamic` | — | Unsigned byte count (16 or more clears the vector). |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2891)
+
+<a id="function-function-mlc-asm-psrldq-xmm-imm8-function-psrldq-xmm-imm8-asm-dst-imm-mlc-asm-ml-464795607"></a>
+### psrldq_xmm_imm8
+
+```ml
+function psrldq_xmm_imm8(asm, dst, imm)
+```
+
+Shift an SSE2 vector by bytes with zero fill, not individual lanes.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `asm` | `dynamic` | — | Assembler receiving the instruction. |
+| `dst` | `dynamic` | — | XMM register to shift. |
+| `imm` | `dynamic` | — | Unsigned byte count (16 or more clears the vector). |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2874)
 
 <a id="function-function-mlc-asm-punpcklqdq-xmm-xmm-function-punpcklqdq-xmm-xmm-asm-dst-src-mlc-asm-ml-1607809610"></a>
 ### punpcklqdq_xmm_xmm
@@ -4583,7 +4708,7 @@ Encode or manage punpcklqdq xmm xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3713)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3819)
 
 <a id="function-function-mlc-asm-push-r12-function-push-r12-asm-mlc-asm-ml-46261877"></a>
 ### push_r12
@@ -4599,7 +4724,7 @@ Updates push r12.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1639)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1645)
 
 <a id="function-function-mlc-asm-push-r13-function-push-r13-asm-mlc-asm-ml-633460721"></a>
 ### push_r13
@@ -4615,7 +4740,7 @@ Updates push r13.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1645)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1651)
 
 <a id="function-function-mlc-asm-push-r14-function-push-r14-asm-mlc-asm-ml-482627021"></a>
 ### push_r14
@@ -4631,7 +4756,7 @@ Updates push r14.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1651)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1657)
 
 <a id="function-function-mlc-asm-push-r15-function-push-r15-asm-mlc-asm-ml-705463233"></a>
 ### push_r15
@@ -4647,7 +4772,7 @@ Updates push r15.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1657)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1663)
 
 <a id="function-function-mlc-asm-push-rbp-function-push-rbp-asm-mlc-asm-ml-1777877629"></a>
 ### push_rbp
@@ -4663,7 +4788,7 @@ Updates push rbp.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1663)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1669)
 
 <a id="function-function-mlc-asm-push-rbx-function-push-rbx-asm-mlc-asm-ml-659445613"></a>
 ### push_rbx
@@ -4679,7 +4804,7 @@ Updates push rbx.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1633)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1639)
 
 <a id="function-function-mlc-asm-push-reg-function-push-reg-asm-reg-mlc-asm-ml-717522433"></a>
 ### push_reg
@@ -4696,7 +4821,7 @@ Updates push reg.
 | `reg` | `dynamic` | — | Value supplied for `reg`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1592)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1598)
 
 <a id="function-function-mlc-asm-pxor-xmm-xmm-function-pxor-xmm-xmm-asm-dst-src-mlc-asm-ml-699906910"></a>
 ### pxor_xmm_xmm
@@ -4714,7 +4839,7 @@ Encode or manage pxor xmm xmm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3672)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3778)
 
 <a id="function-function-mlc-asm-rep-movsb-function-rep-movsb-asm-mlc-asm-ml-1261806823"></a>
 ### rep_movsb
@@ -4730,7 +4855,7 @@ Encode or manage rep movsb in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3357)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3463)
 
 <a id="function-function-mlc-asm-rep-movsq-function-rep-movsq-asm-mlc-asm-ml-1056503325"></a>
 ### rep_movsq
@@ -4746,7 +4871,7 @@ Encode or manage rep movsq in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3365)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3471)
 
 <a id="function-function-mlc-asm-rep-stosb-function-rep-stosb-asm-mlc-asm-ml-1069603535"></a>
 ### rep_stosb
@@ -4762,7 +4887,7 @@ Encode or manage rep stosb in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3374)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3480)
 
 <a id="function-function-mlc-asm-rep-stosq-function-rep-stosq-asm-mlc-asm-ml-2133024377"></a>
 ### rep_stosq
@@ -4778,7 +4903,7 @@ Encode or manage rep stosq in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3382)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3488)
 
 <a id="function-function-mlc-asm-repe-cmpsb-function-repe-cmpsb-asm-mlc-asm-ml-1180550533"></a>
 ### repe_cmpsb
@@ -4794,7 +4919,7 @@ Encode or manage repe cmpsb in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3391)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3497)
 
 <a id="function-function-mlc-asm-resolve-all-defined-patches-function-resolve-all-defined-patches-asm-mlc-asm-ml-714751327"></a>
 ### resolve_all_defined_patches
@@ -4842,7 +4967,7 @@ Encode or manage ret in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1526)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1532)
 
 <a id="function-function-mlc-asm-roundsd-xmm-xmm-imm8-function-roundsd-xmm-xmm-imm8-asm-dst-xmm-src-xmm-imm8-mlc-asm-ml-583451099"></a>
 ### roundsd_xmm_xmm_imm8
@@ -4861,7 +4986,7 @@ Encode or manage roundsd xmm xmm imm8 in the native x64 assembler.
 | `imm8` | `dynamic` | — | Value supplied for `imm8`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3569)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3675)
 
 <a id="function-function-mlc-asm-sar-r32-imm8-function-sar-r32-imm8-asm-reg-name-imm-mlc-asm-ml-847216226"></a>
 ### sar_r32_imm8
@@ -4879,7 +5004,7 @@ Encode or manage sar r32 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2274)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2280)
 
 <a id="function-function-mlc-asm-sar-r64-cl-function-sar-r64-cl-asm-reg-name-mlc-asm-ml-938518801"></a>
 ### sar_r64_cl
@@ -4896,7 +5021,7 @@ Encode or manage sar r64 cl in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3237)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3343)
 
 <a id="function-function-mlc-asm-sar-r64-imm8-function-sar-r64-imm8-asm-reg-name-imm-mlc-asm-ml-998880162"></a>
 ### sar_r64_imm8
@@ -4914,7 +5039,7 @@ Encode or manage sar r64 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2264)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2270)
 
 <a id="function-function-mlc-asm-sar-rax-imm8-function-sar-rax-imm8-asm-imm-mlc-asm-ml-1716300758"></a>
 ### sar_rax_imm8
@@ -4931,7 +5056,7 @@ Encode or manage sar rax imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2284)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2290)
 
 <a id="function-function-mlc-asm-setcc-al-function-setcc-al-asm-as-struct-cc-as-string-returns-struct-mlc-asm-ml-492450819"></a>
 ### setcc_al
@@ -4950,7 +5075,7 @@ Updates setcc al.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2160)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2166)
 
 <a id="function-function-mlc-asm-setcc-r8-function-setcc-r8-asm-cc-dst8-mlc-asm-ml-1154957978"></a>
 ### setcc_r8
@@ -4968,7 +5093,7 @@ Updates setcc r8.
 | `dst8` | `dynamic` | — | Value supplied for `dst8`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2127)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2133)
 
 <a id="function-function-mlc-asm-shl-r32-imm8-function-shl-r32-imm8-asm-reg-name-imm-mlc-asm-ml-647376018"></a>
 ### shl_r32_imm8
@@ -4986,7 +5111,7 @@ Encode or manage shl r32 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2269)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2275)
 
 <a id="function-function-mlc-asm-shl-r64-cl-function-shl-r64-cl-asm-reg-name-mlc-asm-ml-114711749"></a>
 ### shl_r64_cl
@@ -5003,7 +5128,7 @@ Encode or manage shl r64 cl in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3213)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3319)
 
 <a id="function-function-mlc-asm-shl-r64-imm8-function-shl-r64-imm8-asm-reg-name-imm-mlc-asm-ml-1909873058"></a>
 ### shl_r64_imm8
@@ -5021,7 +5146,7 @@ Encode or manage shl r64 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2254)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2260)
 
 <a id="function-function-mlc-asm-shl-rax-imm8-function-shl-rax-imm8-asm-imm-mlc-asm-ml-417650282"></a>
 ### shl_rax_imm8
@@ -5038,7 +5163,7 @@ Encode or manage shl rax imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2288)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2294)
 
 <a id="function-function-mlc-asm-shr-r32-imm8-function-shr-r32-imm8-asm-reg-name-imm-mlc-asm-ml-753174902"></a>
 ### shr_r32_imm8
@@ -5056,7 +5181,7 @@ Encode or manage shr r32 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2279)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2285)
 
 <a id="function-function-mlc-asm-shr-r64-cl-function-shr-r64-cl-asm-reg-name-mlc-asm-ml-2076990297"></a>
 ### shr_r64_cl
@@ -5073,7 +5198,7 @@ Encode or manage shr r64 cl in the native x64 assembler.
 | `reg_name` | `dynamic` | — | Value supplied for `reg_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3225)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3331)
 
 <a id="function-function-mlc-asm-shr-r64-imm8-function-shr-r64-imm8-asm-reg-name-imm-mlc-asm-ml-2146344306"></a>
 ### shr_r64_imm8
@@ -5091,7 +5216,7 @@ Encode or manage shr r64 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2259)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2265)
 
 <a id="function-function-mlc-asm-sub-r32-imm-function-sub-r32-imm-asm-reg-name-imm-mlc-asm-ml-523102558"></a>
 ### sub_r32_imm
@@ -5109,7 +5234,7 @@ Encode or manage sub r32 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1977)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1983)
 
 <a id="function-function-mlc-asm-sub-r32-r32-function-sub-r32-r32-asm-dst-src-mlc-asm-ml-1020021374"></a>
 ### sub_r32_r32
@@ -5127,7 +5252,7 @@ Encode or manage sub r32 r32 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2045)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2051)
 
 <a id="function-function-mlc-asm-sub-r64-imm-function-sub-r64-imm-asm-reg-name-imm-mlc-asm-ml-488582696"></a>
 ### sub_r64_imm
@@ -5145,7 +5270,7 @@ Encode or manage sub r64 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1892)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1898)
 
 <a id="function-function-mlc-asm-sub-r64-imm8-function-sub-r64-imm8-asm-reg-name-imm-mlc-asm-ml-2039558970"></a>
 ### sub_r64_imm8
@@ -5163,7 +5288,7 @@ Encode or manage sub r64 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1933)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1939)
 
 <a id="function-function-mlc-asm-sub-r64-r64-function-sub-r64-r64-asm-dst-src-mlc-asm-ml-1393772758"></a>
 ### sub_r64_r64
@@ -5181,7 +5306,7 @@ Encode or manage sub r64 r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2035)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2041)
 
 <a id="function-function-mlc-asm-sub-r8-imm8-function-sub-r8-imm8-asm-reg8-imm-mlc-asm-ml-2002575582"></a>
 ### sub_r8_imm8
@@ -5199,7 +5324,7 @@ Encode or manage sub r8 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2672)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2678)
 
 <a id="function-function-mlc-asm-sub-rax-imm8-function-sub-rax-imm8-asm-imm-mlc-asm-ml-1877733982"></a>
 ### sub_rax_imm8
@@ -5216,7 +5341,7 @@ Encode or manage sub rax imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2222)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2228)
 
 <a id="function-function-mlc-asm-sub-rax-r11-function-sub-rax-r11-asm-mlc-asm-ml-2138846559"></a>
 ### sub_rax_r11
@@ -5232,7 +5357,7 @@ Encode or manage sub rax r11 in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2214)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2220)
 
 <a id="function-function-mlc-asm-sub-rsp-imm32-function-sub-rsp-imm32-asm-imm-mlc-asm-ml-1228510736"></a>
 ### sub_rsp_imm32
@@ -5249,7 +5374,7 @@ Encode or manage sub rsp imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2382)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2388)
 
 <a id="function-function-mlc-asm-sub-rsp-imm8-function-sub-rsp-imm8-asm-imm-mlc-asm-ml-542282190"></a>
 ### sub_rsp_imm8
@@ -5266,7 +5391,7 @@ Encode or manage sub rsp imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2366)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2372)
 
 <a id="function-function-mlc-asm-subsd-xmm-xmm-function-subsd-xmm-xmm-asm-dst-xmm-src-xmm-mlc-asm-ml-1553390274"></a>
 ### subsd_xmm_xmm
@@ -5284,7 +5409,7 @@ Encode or manage subsd xmm xmm in the native x64 assembler.
 | `src_xmm` | `dynamic` | — | Value supplied for `src_xmm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3449)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3555)
 
 <a id="function-function-mlc-asm-test-r32-r32-function-test-r32-r32-asm-left-right-mlc-asm-ml-1179640542"></a>
 ### test_r32_r32
@@ -5302,7 +5427,7 @@ Encode or manage test r32 r32 in the native x64 assembler.
 | `right` | `dynamic` | — | Right input value. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2106)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2112)
 
 <a id="function-function-mlc-asm-test-r64-imm32-function-test-r64-imm32-asm-reg-name-imm-mlc-asm-ml-1887492770"></a>
 ### test_r64_imm32
@@ -5320,7 +5445,7 @@ Encode or manage test r64 imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2689)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2695)
 
 <a id="function-function-mlc-asm-test-r64-r64-function-test-r64-r64-asm-left-right-mlc-asm-ml-1283886030"></a>
 ### test_r64_r64
@@ -5338,7 +5463,7 @@ Encode or manage test r64 r64 in the native x64 assembler.
 | `right` | `dynamic` | — | Right input value. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2101)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2107)
 
 <a id="function-function-mlc-asm-test-r8-r8-function-test-r8-r8-asm-left-right-mlc-asm-ml-1004369990"></a>
 ### test_r8_r8
@@ -5356,7 +5481,7 @@ Encode or manage test r8 r8 in the native x64 assembler.
 | `right` | `dynamic` | — | Right input value. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2112)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2118)
 
 <a id="function-function-mlc-asm-test-rax-imm32-function-test-rax-imm32-asm-imm-mlc-asm-ml-616207034"></a>
 ### test_rax_imm32
@@ -5373,7 +5498,7 @@ Encode or manage test rax imm32 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2332)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2338)
 
 <a id="function-function-mlc-asm-ucomisd-xmm-xmm-function-ucomisd-xmm-xmm-asm-as-struct-left-xmm-as-string-right-xmm-as-string-returns-struct-mlc-asm-ml-1513138393"></a>
 ### ucomisd_xmm_xmm
@@ -5393,7 +5518,7 @@ Encode or manage ucomisd xmm xmm in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3474)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3580)
 
 <a id="function-function-mlc-asm-vmovdqu-membase-disp-ymm-function-vmovdqu-membase-disp-ymm-asm-base-disp-src-mlc-asm-ml-1709641806"></a>
 ### vmovdqu_membase_disp_ymm
@@ -5412,7 +5537,7 @@ Encode or manage vmovdqu membase disp ymm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3770)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3876)
 
 <a id="function-function-mlc-asm-vmovdqu-ymm-membase-disp-function-vmovdqu-ymm-membase-disp-asm-dst-base-disp-mlc-asm-ml-1163881377"></a>
 ### vmovdqu_ymm_membase_disp
@@ -5431,7 +5556,7 @@ Encode or manage vmovdqu ymm membase disp in the native x64 assembler.
 | `disp` | `dynamic` | — | Value supplied for `disp`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3754)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3860)
 
 <a id="function-function-mlc-asm-vpcmpeqb-ymm-ymm-ymm-function-vpcmpeqb-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-144417041"></a>
 ### vpcmpeqb_ymm_ymm_ymm
@@ -5450,7 +5575,7 @@ Encode or manage vpcmpeqb ymm ymm ymm in the native x64 assembler.
 | `src2` | `dynamic` | — | Value supplied for `src2`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3786)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3892)
 
 <a id="function-function-mlc-asm-vpcmpeqw-ymm-ymm-ymm-function-vpcmpeqw-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-191103173"></a>
 ### vpcmpeqw_ymm_ymm_ymm
@@ -5469,7 +5594,7 @@ Encode or manage vpcmpeqw ymm ymm ymm in the native x64 assembler.
 | `src2` | `dynamic` | — | Value supplied for `src2`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3802)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3908)
 
 <a id="function-function-mlc-asm-vpmovmskb-r32-ymm-function-vpmovmskb-r32-ymm-asm-dst32-src-mlc-asm-ml-643392095"></a>
 ### vpmovmskb_r32_ymm
@@ -5487,7 +5612,7 @@ Encode or manage vpmovmskb r32 ymm in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3817)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3923)
 
 <a id="function-function-mlc-asm-vpxor-ymm-ymm-ymm-function-vpxor-ymm-ymm-ymm-asm-dst-src1-src2-mlc-asm-ml-173507307"></a>
 ### vpxor_ymm_ymm_ymm
@@ -5506,7 +5631,7 @@ Encode or manage vpxor ymm ymm ymm in the native x64 assembler.
 | `src2` | `dynamic` | — | Value supplied for `src2`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3833)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3939)
 
 <a id="function-function-mlc-asm-vzeroupper-function-vzeroupper-asm-mlc-asm-ml-1059775613"></a>
 ### vzeroupper
@@ -5522,7 +5647,7 @@ Encode or manage vzeroupper in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3846)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3952)
 
 <a id="function-function-mlc-asm-write-listing-function-write-listing-asm-path-mlc-asm-ml-1316893246"></a>
 ### write_listing
@@ -5539,7 +5664,7 @@ Updates write listing.
 | `path` | `dynamic` | — | Path to operate on. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3951)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L4057)
 
 <a id="function-function-mlc-asm-xgetbv-function-xgetbv-asm-mlc-asm-ml-2016278405"></a>
 ### xgetbv
@@ -5555,7 +5680,7 @@ Encode or manage xgetbv in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3407)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3513)
 
 <a id="function-function-mlc-asm-xor-eax-eax-function-xor-eax-eax-asm-mlc-asm-ml-1366683683"></a>
 ### xor_eax_eax
@@ -5571,7 +5696,7 @@ Encode or manage xor eax eax in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2345)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2351)
 
 <a id="function-function-mlc-asm-xor-ecx-ecx-function-xor-ecx-ecx-asm-mlc-asm-ml-1641165587"></a>
 ### xor_ecx_ecx
@@ -5587,7 +5712,7 @@ Encode or manage xor ecx ecx in the native x64 assembler.
 | `asm` | `dynamic` | — | Value supplied for `asm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2339)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2345)
 
 <a id="function-function-mlc-asm-xor-r32-imm-function-xor-r32-imm-asm-reg-name-imm-mlc-asm-ml-264693208"></a>
 ### xor_r32_imm
@@ -5605,7 +5730,7 @@ Encode or manage xor r32 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1992)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1998)
 
 <a id="function-function-mlc-asm-xor-r32-r32-function-xor-r32-r32-asm-dst-src-mlc-asm-ml-166464732"></a>
 ### xor_r32_r32
@@ -5623,7 +5748,7 @@ Encode or manage xor r32 r32 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2055)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2061)
 
 <a id="function-function-mlc-asm-xor-r64-imm-function-xor-r64-imm-asm-reg-name-imm-mlc-asm-ml-753519682"></a>
 ### xor_r64_imm
@@ -5641,7 +5766,7 @@ Encode or manage xor r64 imm in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1907)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1913)
 
 <a id="function-function-mlc-asm-xor-r64-imm8-function-xor-r64-imm8-asm-reg-name-imm-mlc-asm-ml-246689566"></a>
 ### xor_r64_imm8
@@ -5659,7 +5784,7 @@ Encode or manage xor r64 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1956)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L1962)
 
 <a id="function-function-mlc-asm-xor-r64-r64-function-xor-r64-r64-asm-dst-src-mlc-asm-ml-2140562780"></a>
 ### xor_r64_r64
@@ -5677,7 +5802,7 @@ Encode or manage xor r64 r64 in the native x64 assembler.
 | `src` | `dynamic` | — | Value supplied for `src`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2050)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2056)
 
 <a id="function-function-mlc-asm-xor-r8-imm8-function-xor-r8-imm8-asm-reg8-imm-mlc-asm-ml-1404167300"></a>
 ### xor_r8_imm8
@@ -5695,7 +5820,7 @@ Encode or manage xor r8 imm8 in the native x64 assembler.
 | `imm` | `dynamic` | — | Value supplied for `imm`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2662)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L2668)
 
 <a id="function-function-mlc-asm-xorpd-xmm-xmm-function-xorpd-xmm-xmm-asm-as-struct-dst-xmm-as-string-src-xmm-as-string-returns-struct-mlc-asm-ml-681801965"></a>
 ### xorpd_xmm_xmm
@@ -5715,4 +5840,4 @@ Encode or manage xorpd xmm xmm in the native x64 assembler.
 
 **Returns:** The resulting `struct` value.
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3483)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/asm.ml#L3589)

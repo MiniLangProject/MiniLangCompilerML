@@ -400,12 +400,39 @@ function main(args)
     print "FAIL: asm_opcodes_golden.json has no vectors field"
     return 4
   end if
-  if s.contains(txt, "\"count\": 233") == false then
-    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 233-vector set"
+  if s.contains(txt, "\"count\": 239") == false then
+    print "FAIL: asm_opcodes_golden.json does not contain the synchronized 239-vector set"
     return 5
   end if
 
   failures = 0
+
+  b = a.newAsmBuilder()
+  b = a.bsf_r64_r64(b, "rax", "rcx")
+  failures = failures + checkOpcode("BSF64 low", b, "480fbcc1")
+  b = a.newAsmBuilder()
+  b = a.bsf_r64_r64(b, "r9", "r10")
+  failures = failures + checkOpcode("BSF64 high", b, "4d0fbcca")
+  b = a.newAsmBuilder()
+  b = a.bsr_r64_r64(b, "rdx", "rax")
+  failures = failures + checkOpcode("BSR64 low", b, "480fbdd0")
+  b = a.newAsmBuilder()
+  b = a.bsr_r64_r64(b, "r15", "r8")
+  failures = failures + checkOpcode("BSR64 high", b, "4d0fbdf8")
+  b = a.newAsmBuilder()
+  b = a.pclmulqdq_xmm_xmm_imm8(b, "xmm0", "xmm3", 16)
+  failures = failures + checkOpcode("PCLMUL low", b, "660f3a44c310")
+  b = a.newAsmBuilder()
+  b = a.pclmulqdq_xmm_xmm_imm8(b, "xmm9", "xmm14", 1)
+  failures = failures + checkOpcode("PCLMUL high", b, "66450f3a44ce01")
+  b = a.newAsmBuilder()
+  b = a.pand_xmm_xmm(b, "xmm9", "xmm14")
+  b = a.psrldq_xmm_imm8(b, "xmm9", 8)
+  b = a.pslldq_xmm_imm8(b, "xmm9", 4)
+  failures = failures + checkOpcode("SSE2 reduction", b, "66450fdbce66410f73d90866410f73f904")
+  if typeof(try(a.bsf_r64_r64(a.newAsmBuilder(), "eax", "rcx"))) != "error" then failures = failures + 1 end if
+  if typeof(try(a.bsr_r64_r64(a.newAsmBuilder(), "rax", "ecx"))) != "error" then failures = failures + 1 end if
+  if typeof(try(a.pclmulqdq_xmm_xmm_imm8(a.newAsmBuilder(), "xmm0", "xmm1", 256))) != "error" then failures = failures + 1 end if
 
   // Check RIP-relative addressing independently of generated golden vectors.
   b = a.newAsmBuilder()

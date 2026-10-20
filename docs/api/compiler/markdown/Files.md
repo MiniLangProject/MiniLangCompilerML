@@ -5,7 +5,7 @@
 | File | Package | Reachable | Symbols |
 | --- | --- | --- | ---: |
 | [mlc/__init__.ml](File-mlc-init-ml-1795718751.md) | `mlc.__init__` | no | 1 |
-| [mlc/asm.ml](File-mlc-asm-ml-1368648960.md) | `mlc.asm` | yes | 368 |
+| [mlc/asm.ml](File-mlc-asm-ml-1368648960.md) | `mlc.asm` | yes | 375 |
 | [mlc/codegen/__init__.ml](File-mlc-codegen-init-ml-1019260381.md) | `mlc.codegen.__init__` | no | 1 |
 | [mlc/codegen/codegen.ml](File-mlc-codegen-codegen-ml-1154886880.md) | `mlc.codegen.codegen` | yes | 40 |
 | [mlc/codegen/codegen_builtins_alloc.ml](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md) | `mlc.codegen.codegen_builtins_alloc` | yes | 35 |

@@ -18,7 +18,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', required=True, type=Path)
     parser.add_argument('--platform', required=True, choices=['windows-x64', 'linux-x64'])
-    parser.add_argument('--version', default='1.2.21')
+    parser.add_argument('--version', default='1.2.22')
     parser.add_argument('--third-party', action='append', default=[], type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -53,7 +53,7 @@ def main() -> int:
         runtime_directory.mkdir(parents=True)
         bridge = runtime_directory / bridge_name
         shutil.copy2(bridge_source, bridge)
-        for filename in ['LICENSE', 'README-BINARY.md', 'CHANGELOG.md', f'RELEASE_NOTES_{args.version}.md']:
+        for filename in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README-BINARY.md', 'CHANGELOG.md', f'RELEASE_NOTES_{args.version}.md']:
             shutil.copy2(root / filename, package / filename)
         (package / 'docs').mkdir()
         shutil.copy2(root / 'docs' / 'EXECUTABLE_PACKING.md', package / 'docs' / 'EXECUTABLE_PACKING.md')

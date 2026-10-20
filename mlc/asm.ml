@@ -477,6 +477,12 @@ function _is_r32_name(name as string) returns bool
   return name == "eax" or name == "ecx" or name == "edx" or name == "ebx" or name == "esp" or name == "ebp" or name == "esi" or name == "edi" or name == "r8d" or name == "r9d" or name == "r10d" or name == "r11d" or name == "r12d" or name == "r13d" or name == "r14d" or name == "r15d"
 end function
 
+/// Recognize full-width GPRs without accepting their byte/dword aliases.
+/// @internal
+function _is_r64_name(name as string) returns bool
+  return _rid_any(name) >= 0 and not _is_r8_name(name) and not _is_r32_name(name)
+end function
+
 /// Reports whether is force rex 8.
 /// @internal
 function _is_force_rex_8(name as string) returns bool
@@ -2792,6 +2798,106 @@ function bsr_r32_r32(asm, dst32, src32)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0xBD)
   asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+/// Scan a nonzero 64-bit operand; available on every x86-64 CPU.
+/// @param asm Assembler receiving the instruction.
+/// @param dst Destination 64-bit register.
+/// @param src Nonzero source 64-bit register.
+function bsf_r64_r64(asm, dst, src)
+  if _is_r64_name(dst) == false or _is_r64_name(src) == false then return error(1, "bsf_r64_r64 requires (r64, r64)") end if
+  d = _rid_any(dst)
+  s = _rid_any(src)
+  asm = _emit_rex(asm, 1, d >> 3, 0, s >> 3, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xBC)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+/// Scan a nonzero 64-bit operand; available on every x86-64 CPU.
+/// @param asm Assembler receiving the instruction.
+/// @param dst Destination 64-bit register.
+/// @param src Nonzero source 64-bit register.
+function bsr_r64_r64(asm, dst, src)
+  if _is_r64_name(dst) == false or _is_r64_name(src) == false then return error(1, "bsr_r64_r64 requires (r64, r64)") end if
+  d = _rid_any(dst)
+  s = _rid_any(src)
+  asm = _emit_rex(asm, 1, d >> 3, 0, s >> 3, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xBD)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+/// Carry-less multiply selected qwords; requires CPUID.PCLMULQDQ.
+/// @param asm Assembler receiving the instruction.
+/// @param dst XMM destination and first source.
+/// @param src XMM second source.
+/// @param imm Qword selector (bits 0 and 4), an unsigned byte.
+function pclmulqdq_xmm_xmm_imm8(asm, dst, src, imm)
+  if imm < 0 or imm > 255 then return error(1, "PCLMULQDQ selector must fit imm8") end if
+  d = _xmm_id(dst)
+  s = _xmm_id(src)
+  if d < 0 or s < 0 then return error(1, "PCLMULQDQ requires XMM registers") end if
+  asm = _emit8(asm, 0x66)
+  asm = _emit_rex(asm, 0, d >> 3, 0, s >> 3, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x3A)
+  asm = _emit8(asm, 0x44)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  asm = _emit8(asm, imm)
+  return asm
+end function
+
+/// Bitwise AND two SSE2 vectors.
+/// @param asm Assembler receiving the instruction.
+/// @param dst XMM destination and first source.
+/// @param src XMM second source.
+function pand_xmm_xmm(asm, dst, src)
+  d = _xmm_id(dst)
+  s = _xmm_id(src)
+  if d < 0 or s < 0 then return error(1, "PAND requires XMM registers") end if
+  asm = _emit8(asm, 0x66)
+  asm = _emit_rex(asm, 0, d >> 3, 0, s >> 3, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0xDB)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
+
+/// Shift an SSE2 vector by bytes with zero fill, not individual lanes.
+/// @param asm Assembler receiving the instruction.
+/// @param dst XMM register to shift.
+/// @param imm Unsigned byte count (16 or more clears the vector).
+function psrldq_xmm_imm8(asm, dst, imm)
+  if imm < 0 or imm > 255 then return error(1, "psrldq count must fit imm8") end if
+  d = _xmm_id(dst)
+  if d < 0 then return error(1, "psrldq requires an XMM register") end if
+  asm = _emit8(asm, 0x66)
+  asm = _emit_rex(asm, 0, 0, 0, d >> 3, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x73)
+  asm = _emit_modrm(asm, 3, 3, d & 7)
+  asm = _emit8(asm, imm)
+  return asm
+end function
+
+/// Shift an SSE2 vector by bytes with zero fill, not individual lanes.
+/// @param asm Assembler receiving the instruction.
+/// @param dst XMM register to shift.
+/// @param imm Unsigned byte count (16 or more clears the vector).
+function pslldq_xmm_imm8(asm, dst, imm)
+  if imm < 0 or imm > 255 then return error(1, "pslldq count must fit imm8") end if
+  d = _xmm_id(dst)
+  if d < 0 then return error(1, "pslldq requires an XMM register") end if
+  asm = _emit8(asm, 0x66)
+  asm = _emit_rex(asm, 0, 0, 0, d >> 3, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, 0x73)
+  asm = _emit_modrm(asm, 3, 7, d & 7)
+  asm = _emit8(asm, imm)
   return asm
 end function
 
