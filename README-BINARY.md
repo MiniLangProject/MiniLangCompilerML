@@ -1,23 +1,23 @@
 # Binary compiler packages
 
-Release 1.2.22 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.2.23 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, third-party notices, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
 either compiler distribution.
 
-## Release 1.2.22 checksums
+## Release 1.2.23 checksums
 
-The download archives are `MiniLangCompilerML-1.2.22-windows-x64.zip` and
-`MiniLangCompilerML-1.2.22-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.22).
+The download archives are `MiniLangCompilerML-1.2.23-windows-x64.zip` and
+`MiniLangCompilerML-1.2.23-linux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.23).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 56,744,960 | `830D54239616CD5EC4975413492981FFCD6688E53A5341EA45075DB07D5D79FE` |
-| Linux `mlc` | 56,758,992 | `FDBCD5BAA4AEF7C36EDD602E1AA35EEFD3587DFBC7193EAEC444A74D629DC7E1` |
+| Windows `mlc.exe` | 56,742,912 | `8B99430A8262EDB60CCBC9D8FAC322F444D5EBA0AAC5A7965A656852E019F3EF` |
+| Linux `mlc` | 56,758,992 | `F61488A7B453571C48DDA6FCB5A451AE89D443ACBADF105990866DEBE5E9AE53` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -43,7 +43,7 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.2.22 compiler-source revision and executable hash.
+The manifest identifies the 1.2.23 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
@@ -60,7 +60,7 @@ startup/memory trade-offs and signing constraints.
 
 ## Native media runtime
 
-Release 1.2.22 packages include the native-media
+Release 1.2.23 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 

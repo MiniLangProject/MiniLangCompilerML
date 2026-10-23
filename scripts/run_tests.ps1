@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.2.22"
+  $expected = "MiniLang Compiler 1.2.23"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -284,6 +284,48 @@ function Test-LinuxRuntimeBlobLayout {
   }
 }
 
+function Test-OrderedComparisonJoins {
+  # A runtime-only test cannot detect a semantically equivalent near jump.
+  # Check all suppressed error joins in the actual PE without needing Python.
+  param([string]$Image, [string]$Labels)
+  if (!(Test-Path -LiteralPath $Image) -or !(Test-Path -LiteralPath $Labels)) { return $false }
+  $code = [IO.File]::ReadAllBytes($Image)
+  $text = [IO.File]::ReadAllText($Labels)
+  $pe = [BitConverter]::ToInt32($code, 0x3c)
+  $sectionCount = [BitConverter]::ToUInt16($code, $pe + 6)
+  $section = $pe + 24 + [BitConverter]::ToUInt16($code, $pe + 20)
+  $rawBase = -1
+  $rawSize = 0
+  $textRva = 0
+  for ($i = 0; $i -lt $sectionCount; $i++) {
+    $header = $section + 40 * $i
+    if ([Text.Encoding]::ASCII.GetString($code, $header, 8).Trim([char]0) -eq '.text') {
+      $rawBase = [BitConverter]::ToInt32($code, $header + 20)
+      $rawSize = [BitConverter]::ToInt32($code, $header + 16)
+      $textRva = [BitConverter]::ToInt32($code, $header + 12)
+    }
+  }
+  if ($rawBase -lt 0) { return $false }
+  $names = @('lessCaught', 'greaterCaught', 'lessEqualCaught', 'greaterEqualCaught',
+             'lessArgument', 'greaterArgument', 'lessEqualArgument', 'greaterEqualArgument',
+             'adjacentComparisons')
+  foreach ($name in $names) {
+    $block = [regex]::Match($text, '(?ms)^\[label\] fn_user_' + $name + ' .*?(?=^\[label\] fn_user_|\z)').Value
+    $joins = [regex]::Matches($block, '(?m)^\[label\] cmp_nvoid_\d+ (\d+)')
+    $expected = if ($name -eq 'adjacentComparisons') { 4 } else { 1 }
+    if ($joins.Count -ne $expected) { return $false }
+    foreach ($join in $joins) {
+      # Label dumps contain RVAs, not raw section-relative byte offsets.
+      $rva = [int]$join.Groups[1].Value
+      $offset = $rva - $textRva
+      if ($offset -lt 2 -or $offset + 29 -gt $rawSize) { return $false }
+      if ($code[$rawBase + $offset - 2] -ne 0xEB -or $code[$rawBase + $offset - 1] -ne 29) { return $false }
+      if ($block -notmatch ('(?m)^\[label\] bin_done_\d+ ' + ($rva + 29) + '(?:\r?\n|\z)')) { return $false }
+    }
+  }
+  return $true
+}
+
 function Remove-TestArtifacts {
   if ($KeepArtifacts) { return }
 
@@ -418,6 +460,7 @@ try {
 
     $linuxCases = @(
       [pscustomobject]@{ Name = "Linux optimizer safety"; Source = "optimizer_safety.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux dynamic ordered comparisons"; Source = "ordered_comparison.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux packing format"; Source = "packing_format.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
       [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
@@ -788,13 +831,22 @@ try {
   }
 
   $listingSrc = Join-Path $Root "tests\native_raw_value_smoke.ml"
-  foreach ($fixture in @("type_flow_context", "type_flow_rebinding", "gui_input")) {
+  foreach ($fixture in @("type_flow_context", "type_flow_rebinding", "gui_input", "ordered_comparison")) {
     $fixtureExe = Join-Path $script:ResolvedArtifactsDir ($fixture + ".exe")
     $fixtureArgs = @((Join-Path $Root ("tests\" + $fixture + ".ml")), $fixtureExe, "-I", $Root)
     if ($fixture -eq "gui_input") { $fixtureArgs += @("--subsystem", "windows") }
+    $orderedLabels = Join-Path $script:ResolvedArtifactsDir "ordered_comparison.labels"
+    if ($fixture -eq "ordered_comparison") { $fixtureArgs += @("--no-object-pipeline", "--dump-labels", $orderedLabels) }
     $results += Invoke-NativeStep ("compile " + $fixture) $Compiler ($fixtureArgs + $effectiveCompilerArgs)
     if ($results[-1].ExitCode -eq 0) {
       $results += Invoke-NativeStep ("run " + $fixture) $fixtureExe @()
+      if ($fixture -eq "ordered_comparison") {
+        $joinsOk = Test-OrderedComparisonJoins $fixtureExe $orderedLabels
+        $results += [pscustomobject]@{ Name = "ordered comparison rel8 joins"; ExitCode = $(if ($joinsOk) { 0 } else { 1 }); Seconds = 0.0 }
+        $joinsLabel = if ($joinsOk) { "[PASS]" } else { "[FAIL]" }
+        Write-Host ($joinsLabel + " ordered comparison rel8 joins")
+        Write-LogLine ($joinsLabel + " ordered comparison rel8 joins")
+      }
     }
   }
   $listingExe = Join-Path $script:ResolvedArtifactsDir "asm_listing_smoke.exe"

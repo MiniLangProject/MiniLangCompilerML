@@ -241,6 +241,57 @@ function checkForwardRelaxation()
   return failures
 end function
 
+/// Mirror the ordered-error fallthrough, rel8 boundary and adjacent join tests.
+function checkAdjacentErrorJoins()
+  failures = 0
+  for each prefix in [0, 65531]
+    for each size in [29, 126, 127, 128]
+      b = a.emit(a.newAsmBuilder(), bytes(prefix, 144))
+      b = a.jmp(b, "done")
+      b = a.mark(b, "non_numeric")
+      b = a.mov_r32_imm32(b, "ecx", 1200)
+      b = a.lea_rdx_rip(b, "payload")
+      b = a.call(b, "make_error")
+      b = a.emit(b, bytes(size - 17, 144))
+      // Do not emit a redundant JMP done: preserve the earlier candidate.
+      b = a.mark(b, "done")
+      b = a.nop(b)
+      b = a.jmp(b, "following")
+      b = a.mark(b, "neighbor")
+      b = a.nop(b)
+      b = a.mark(b, "following")
+      b = a.mark(b, "make_error")
+      b = a.ret(b)
+      b = a.mark(b, "payload")
+      b = a.emit(b, bytes(8))
+      code = a.finalize(b)
+      width = 2
+      opcode = 0xEB
+      if size > 127 then width = 5; opcode = 0xE9 end if
+      body = prefix + width
+      done = body + size
+      labels = a.get_labels(b)
+      if code[prefix] != opcode or a._label_pos(labels, "non_numeric") != body or a._label_pos(labels, "done") != done then
+        print "FAIL: ordered error branch width"
+        failures += 1
+      end if
+      if hex(slice(code, done + 1, 3)) != "eb0190" or a._label_pos(labels, "neighbor") != done + 3 then
+        print "FAIL: adjacent ordered error join"
+        failures += 1
+      end if
+      for each fixup in [[8, 12, "payload"], [13, 17, "make_error"]]
+        pos = body + fixup[0]
+        disp = code[pos] | (code[pos + 1] << 8) | (code[pos + 2] << 16) | (code[pos + 3] << 24)
+        if disp != a._label_pos(labels, fixup[2]) - body - fixup[1] then
+          print "FAIL: ordered error RIP/call relocation"
+          failures += 1
+        end if
+      end for
+    end for
+  end for
+  return failures
+end function
+
 function checkCallAndHelperTracking()
   failures = 0
 
@@ -600,6 +651,7 @@ function main(args)
   failures = failures + checkAssemblerMaterializedReuse()
   failures = failures + checkCallAndHelperTracking()
   failures = failures + checkForwardRelaxation()
+  failures = failures + checkAdjacentErrorJoins()
   for prefix = 0 to 31
     b = a.newAsmBuilder()
     b = a.emit(b, bytes(prefix, 144))

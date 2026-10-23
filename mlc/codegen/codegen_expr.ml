@@ -4303,8 +4303,10 @@ function _emit_expr_bin(state, expr)
     state = core.emit_dbg_line(state, expr)
     state = _emit_make_error_const(state, c.ERR_VOID_OP, "Cannot apply '" + op + "' to non-numeric values")
     state = _emit_auto_errprop(state)
-    state.asm = a.jmp(state.asm, l_done)
 
+    // Match the reference fallthrough. A redundant JMP here replaces the
+    // earlier void-error skip as the assembler's sole forward candidate;
+    // removing that redundant tail later cannot recover the earlier candidate.
     state.asm = a.mark(state.asm, l_done)
     if tmp_bin_ok then state = core.free_expr_temps(state, 16) end if
     return state
