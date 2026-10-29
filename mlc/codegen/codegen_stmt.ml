@@ -30,6 +30,7 @@ import mlc.codegen.codegen_expr as exprmod
 import mlc.codegen.codegen_core as core
 import mlc.codegen.codegen_memory as mem
 import mlc.codegen.codegen_threads as th
+import mlc.incremental as incremental
 
 // Explicit native-GC calls inside the self-hosted compiler need a process root
 // for the large codegen graph.  The generated liveness map is intentionally
@@ -9313,6 +9314,7 @@ end function
 /// @param state Value supplied for `state`.
 /// @param program Value supplied for `program`.
 function prepare_program_for_objects(state, program)
+  incremental.prepare(program)
   // Imported modules are part of program, so this closed-program scan safely
   // removes TLS/GC polling and heap synchronization when Thread is unreachable.
   state.native_threads_possible = _stmts_use_native_threads(program) or mem._heap_cfg_get_bool(state, "gc_concurrent", false)
@@ -9586,6 +9588,16 @@ function prepare_program_for_objects(state, program)
   if t.arr_vec_is(state.global_slots) then state.global_slots = t.arr_vec_finish(state.global_slots) end if
   if t.arr_vec_is(state.globals) then state.globals = t.arr_vec_finish(state.globals) end if
   state = _rebuild_module_function_entry_index(state)
+  if incremental.enabled() then
+    contracts = t.arr_chunk_new(128)
+    for each rec in state.user_functions
+      fn = rec[1]
+      inline_source = ""
+      if exprmod._function_wants_inline(fn) then inline_source = incremental.sourceIdentity(t.ast_filename(fn)) end if
+      contracts = t.arr_chunk_push(contracts, [rec[0], exprmod._variadic_param_stack_safe(fn), inline_source])
+    end for
+    incremental.seal(state, t.arr_chunk_finish(contracts))
+  end if
   return [state, module_init_recs, max_call_args_main]
 end function
 
@@ -10020,7 +10032,13 @@ function emit_module_function_entries(state, entries, start_index, count, analys
     end if
     if typeof(fn_node) == "struct" then
       emit_node = _clone_function_node_for_emit(fn_node)
-      state = emit_user_function(state, emit_node, scratch)
+      transaction = incremental.begin(state, emit_node, _fn_codegen_name(state, emit_node))
+      if typeof(transaction) == "array" and typeof(transaction[3]) == "array" then
+        state = incremental.replay(state, transaction)
+      else
+        state = emit_user_function(state, emit_node, scratch)
+        state = incremental.finish(state, transaction)
+      end if
     end if
     i = i + 1
   end while

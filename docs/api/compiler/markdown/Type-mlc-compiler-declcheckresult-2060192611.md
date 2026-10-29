@@ -12,7 +12,7 @@ struct DeclCheckResult
 Represents decl check result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L200)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L201)
 
 ## Members
 
@@ -26,7 +26,7 @@ diagnostics
 Diagnostics associated with `DeclCheckResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L202)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L203)
 
 <a id="field-field-mlc-compiler-declcheckresult-failed-failed-mlc-compiler-ml-1408261296"></a>
 ### failed
@@ -38,4 +38,4 @@ failed
 Failed associated with `DeclCheckResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L204)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L205)

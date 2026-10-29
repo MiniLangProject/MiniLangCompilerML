@@ -12,7 +12,7 @@ struct MloPatch
 Represents mlo patch.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L278)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L279)
 
 ## Members
 
@@ -26,7 +26,7 @@ kind
 Kind associated with `MloPatch`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L284)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L285)
 
 <a id="field-field-mlc-compiler-mlopatch-offset-offset-mlc-compiler-ml-411789049"></a>
 ### offset
@@ -38,7 +38,7 @@ offset
 Offset associated with `MloPatch`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L280)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L281)
 
 <a id="field-field-mlc-compiler-mlopatch-target-target-mlc-compiler-ml-1657136773"></a>
 ### target
@@ -50,4 +50,4 @@ target
 Target associated with `MloPatch`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L282)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L283)

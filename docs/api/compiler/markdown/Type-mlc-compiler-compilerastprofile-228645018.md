@@ -12,7 +12,7 @@ struct CompilerAstProfile
 AST telemetry is opt-in so normal builds do not pay for a second tree walk.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L234)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L235)
 
 ## Members
 
@@ -26,7 +26,7 @@ counts
 Counts associated with `CompilerAstProfile`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L236)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L237)
 
 <a id="field-field-mlc-compiler-compilerastprofile-max-depth-max-depth-mlc-compiler-ml-541788727"></a>
 ### max_depth
@@ -38,7 +38,7 @@ max_depth
 Max depth associated with `CompilerAstProfile`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L240)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L241)
 
 <a id="field-field-mlc-compiler-compilerastprofile-total-total-mlc-compiler-ml-1948636755"></a>
 ### total
@@ -50,4 +50,4 @@ total
 Total associated with `CompilerAstProfile`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L238)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L239)

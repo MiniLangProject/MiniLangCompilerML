@@ -12,7 +12,7 @@ struct MloLayoutScan
 Metadata-only first-pass record. Section payloads are copied into their final combined buffers in a separate pass and never retained per object.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L330)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L331)
 
 ## Members
 
@@ -26,7 +26,7 @@ bss_size
 Bss size associated with `MloLayoutScan`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L340)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L341)
 
 <a id="field-field-mlc-compiler-mlolayoutscan-data-size-data-size-mlc-compiler-ml-72621802"></a>
 ### data_size
@@ -38,7 +38,7 @@ data_size
 Data size associated with `MloLayoutScan`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L338)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L339)
 
 <a id="field-field-mlc-compiler-mlolayoutscan-entry-label-entry-label-mlc-compiler-ml-1798476962"></a>
 ### entry_label
@@ -50,7 +50,7 @@ entry_label
 Entry label associated with `MloLayoutScan`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L332)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L333)
 
 <a id="field-field-mlc-compiler-mlolayoutscan-imports-imports-mlc-compiler-ml-305141758"></a>
 ### imports
@@ -62,7 +62,7 @@ imports
 Imports associated with `MloLayoutScan`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L346)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L347)
 
 <a id="field-field-mlc-compiler-mlolayoutscan-private-label-count-private-label-count-mlc-compiler-ml-1092361862"></a>
 ### private_label_count
@@ -74,7 +74,7 @@ private_label_count
 Private label count associated with `MloLayoutScan`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L344)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L345)
 
 <a id="field-field-mlc-compiler-mlolayoutscan-public-label-count-public-label-count-mlc-compiler-ml-70004798"></a>
 ### public_label_count
@@ -86,7 +86,7 @@ public_label_count
 Public label count associated with `MloLayoutScan`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L342)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L343)
 
 <a id="field-field-mlc-compiler-mlolayoutscan-rdata-size-rdata-size-mlc-compiler-ml-1253173538"></a>
 ### rdata_size
@@ -98,7 +98,7 @@ rdata_size
 Rdata size associated with `MloLayoutScan`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L336)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L337)
 
 <a id="field-field-mlc-compiler-mlolayoutscan-text-size-text-size-mlc-compiler-ml-1135333442"></a>
 ### text_size
@@ -110,4 +110,4 @@ text_size
 Text size associated with `MloLayoutScan`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L334)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L335)

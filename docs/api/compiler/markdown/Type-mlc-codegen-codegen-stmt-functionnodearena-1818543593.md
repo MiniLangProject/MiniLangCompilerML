@@ -12,7 +12,7 @@ struct FunctionNodeArena
 Typed arena for the immutable function-definition roots consumed by object emission. The integer cursor is the NodeId; parallel byte/name/node columns avoid allocating one two-element descriptor array per function.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L45)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L46)
 
 ## Members
 
@@ -26,7 +26,7 @@ count
 Count associated with `FunctionNodeArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L53)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L54)
 
 <a id="field-field-mlc-codegen-codegen-stmt-functionnodearena-kinds-kinds-mlc-codegen-codegen-stmt-ml-1352787081"></a>
 ### kinds
@@ -38,7 +38,7 @@ kinds
 Kinds associated with `FunctionNodeArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L47)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L48)
 
 <a id="field-field-mlc-codegen-codegen-stmt-functionnodearena-names-names-mlc-codegen-codegen-stmt-ml-1351476469"></a>
 ### names
@@ -50,7 +50,7 @@ names
 Names associated with `FunctionNodeArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L49)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L50)
 
 <a id="field-field-mlc-codegen-codegen-stmt-functionnodearena-nodes-nodes-mlc-codegen-codegen-stmt-ml-1827194389"></a>
 ### nodes
@@ -62,4 +62,4 @@ nodes
 Nodes associated with `FunctionNodeArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L51)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L52)

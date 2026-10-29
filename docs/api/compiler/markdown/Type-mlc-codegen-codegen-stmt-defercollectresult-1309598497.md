@@ -12,7 +12,7 @@ struct DeferCollectResult
 Represents defer collect result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L817)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L818)
 
 ## Members
 
@@ -26,7 +26,7 @@ builder
 Builder associated with `DeferCollectResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L821)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L822)
 
 <a id="field-field-mlc-codegen-codegen-stmt-defercollectresult-count-count-mlc-codegen-codegen-stmt-ml-1051602405"></a>
 ### count
@@ -38,7 +38,7 @@ count
 Count associated with `DeferCollectResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L823)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L824)
 
 <a id="field-field-mlc-codegen-codegen-stmt-defercollectresult-state-state-mlc-codegen-codegen-stmt-ml-1305723005"></a>
 ### state
@@ -50,4 +50,4 @@ state
 State associated with `DeferCollectResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L819)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L820)

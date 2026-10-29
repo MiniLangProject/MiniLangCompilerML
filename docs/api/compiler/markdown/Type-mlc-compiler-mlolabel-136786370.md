@@ -12,7 +12,7 @@ struct MloLabel
 Serializable object-pipeline records consumed by the fresh linker process.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L270)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L271)
 
 ## Members
 
@@ -26,7 +26,7 @@ name
 Name associated with `MloLabel`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L272)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L273)
 
 <a id="field-field-mlc-compiler-mlolabel-offset-offset-mlc-compiler-ml-991767689"></a>
 ### offset
@@ -38,4 +38,4 @@ offset
 Offset associated with `MloLabel`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L274)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L275)

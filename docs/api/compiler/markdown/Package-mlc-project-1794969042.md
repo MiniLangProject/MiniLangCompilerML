@@ -10,6 +10,7 @@
 
 - [`mlc.project._abspath`](File-mlc-project-ml-1332928426.md#function-function-mlc-project-abspath-function-abspath-path-mlc-project-ml-1572840265) — function
 - [`mlc.project._append_unique_path`](File-mlc-project-ml-1332928426.md#function-function-mlc-project-append-unique-path-function-append-unique-path-paths-path-mlc-project-ml-91913875) — function
+- [`mlc.project._atomic_cache_replace`](File-mlc-project-ml-1332928426.md#function-function-mlc-project-atomic-cache-replace-function-atomic-cache-replace-source-path-destination-path-mlc-project-ml-377815657) — function
 - [`mlc.project._atomic_replace`](File-mlc-project-ml-1332928426.md#function-function-mlc-project-atomic-replace-function-atomic-replace-source-path-destination-path-mlc-project-ml-2036966507) — function
 - [`mlc.project._cache_artifact_path`](File-mlc-project-ml-1332928426.md#function-function-mlc-project-cache-artifact-path-function-cache-artifact-path-pb-digest-mlc-project-ml-423707984) — function
 - [`mlc.project._canon_linux`](File-mlc-project-ml-1332928426.md#function-function-mlc-project-canon-linux-function-canon-linux-path-mlc-project-ml-1761756277) — function

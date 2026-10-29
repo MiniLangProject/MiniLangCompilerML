@@ -30,7 +30,7 @@ Build or query buf append in native data sections.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L604)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L606)
 
 <a id="function-function-mlc-data-buf-ensure-function-buf-ensure-db-need-mlc-data-ml-1065897560"></a>
 ### _buf_ensure
@@ -47,7 +47,7 @@ Build or query buf ensure in native data sections.
 | `need` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L581)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L583)
 
 <a id="function-function-mlc-data-buf-used-function-buf-used-db-mlc-data-ml-1527058378"></a>
 ### _buf_used
@@ -63,7 +63,35 @@ Build or query buf used in native data sections.
 | `db` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L567)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L569)
+
+<a id="global-global-mlc-data-cache-journal-cache-journal-mlc-data-ml-870994834"></a>
+### _cache_journal
+
+```ml
+_cache_journal
+```
+
+Optional function-cache write journal. It contains data, never builder pointers.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L956)
+
+<a id="function-function-mlc-data-cache-note-function-cache-note-record-mlc-data-ml-1136317791"></a>
+### _cache_note
+
+```ml
+function _cache_note(record)
+```
+
+Record a section-map mutation only while incremental emission is active.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `record` | `dynamic` | — | Primitive label, alias or constant-pool mutation. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L975)
 
 <a id="function-function-mlc-data-data-upsert-label-function-data-upsert-label-db-name-offset-mlc-data-ml-1632477370"></a>
 ### _data_upsert_label
@@ -148,7 +176,7 @@ Build or query float to f64le in native data sections.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L784)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L788)
 
 <a id="function-function-mlc-data-rdata-intern-raw-function-rdata-intern-raw-rb-name-raw-mlc-data-ml-860567281"></a>
 ### _rdata_intern_raw
@@ -166,7 +194,7 @@ Build or query rdata intern raw in native data sections.
 | `raw` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L712)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L714)
 
 <a id="function-function-mlc-data-rdata-upsert-label-function-rdata-upsert-label-rb-name-offset-length-mlc-data-ml-1319191444"></a>
 ### _rdata_upsert_label
@@ -185,7 +213,7 @@ Build or query rdata upsert label in native data sections.
 | `length` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L548)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L549)
 
 <a id="function-function-mlc-data-upsert-data-label-function-upsert-data-label-labels-name-offset-mlc-data-ml-2030093549"></a>
 ### _upsert_data_label
@@ -239,7 +267,7 @@ Build or query bss pad align in native data sections.
 | `align` | `dynamic` | — | Value supplied for `align`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L674)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L676)
 
 <a id="function-function-mlc-data-bss-reserve-function-bss-reserve-bb-name-size-align-mlc-data-ml-887598105"></a>
 ### bss_reserve
@@ -258,9 +286,33 @@ Build or query bss reserve in native data sections.
 | `align` | `dynamic` | — | Value supplied for `align`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L688)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L690)
 
 - [mlc.data.BssBuilder](Type-mlc-data-bssbuilder-146145698.md) — struct
+<a id="function-function-mlc-data-cache-begin-function-cache-begin-mlc-data-ml-695935396"></a>
+### cache_begin
+
+```ml
+function cache_begin()
+```
+
+Begin recording label and constant-pool mutations for one function.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L959)
+
+<a id="function-function-mlc-data-cache-end-function-cache-end-mlc-data-ml-443545044"></a>
+### cache_end
+
+```ml
+function cache_end()
+```
+
+Stop recording before replay or serialization.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L965)
+
 <a id="function-function-mlc-data-data-add-abs64-patch-function-data-add-abs64-patch-db-offset-target-mlc-data-ml-1447675864"></a>
 ### data_add_abs64_patch
 
@@ -277,7 +329,7 @@ Build or query data add abs64 patch in native data sections.
 | `target` | `dynamic` | — | Value supplied for `target`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L652)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L654)
 
 <a id="function-function-mlc-data-data-add-bytes-function-data-add-bytes-db-name-b-mlc-data-ml-415684585"></a>
 ### data_add_bytes
@@ -295,7 +347,7 @@ Build or query data add bytes in native data sections.
 | `b` | `dynamic` | — | Second input value. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L641)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L643)
 
 <a id="function-function-mlc-data-data-add-u32-function-data-add-u32-db-name-value-mlc-data-ml-291177912"></a>
 ### data_add_u32
@@ -313,7 +365,7 @@ Build or query data add u32 in native data sections.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L619)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L621)
 
 <a id="function-function-mlc-data-data-add-u64-function-data-add-u64-db-name-value-mlc-data-ml-569087744"></a>
 ### data_add_u64
@@ -331,7 +383,7 @@ Build or query data add u64 in native data sections.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L630)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L632)
 
 <a id="function-function-mlc-data-data-clear-labels-function-data-clear-labels-db-mlc-data-ml-1216296822"></a>
 ### data_clear_labels
@@ -363,7 +415,7 @@ Build or query data clear patches in native data sections.
 | `db` | `dynamic` | — | Value supplied for `db`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L375)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L376)
 
 <a id="function-function-mlc-data-data-get-labels-function-data-get-labels-db-mlc-data-ml-566606188"></a>
 ### data_get_labels
@@ -412,7 +464,7 @@ Build or query data get patches in native data sections.
 | `db` | `dynamic` | — | Value supplied for `db`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L325)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L326)
 
 <a id="function-function-mlc-data-data-get-patches-after-function-data-get-patches-after-db-start-index-mlc-data-ml-176177417"></a>
 ### data_get_patches_after
@@ -429,7 +481,7 @@ Build or query data get patches after in native data sections.
 | `start_index` | `dynamic` | — | Value supplied for `start_index`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L344)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L345)
 
 <a id="function-function-mlc-data-data-has-label-function-data-has-label-db-as-struct-name-as-string-returns-bool-mlc-data-ml-1847281964"></a>
 ### data_has_label
@@ -498,7 +550,7 @@ Build or query data pad align in native data sections.
 | `align` | `dynamic` | — | Value supplied for `align`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L661)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L663)
 
 <a id="function-function-mlc-data-data-patch-count-function-data-patch-count-db-mlc-data-ml-1095699350"></a>
 ### data_patch_count
@@ -514,7 +566,7 @@ Build or query data patch count in native data sections.
 | `db` | `dynamic` | — | Value supplied for `db`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L334)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L335)
 
 <a id="function-function-mlc-data-data-set-labels-function-data-set-labels-db-labels-mlc-data-ml-1702903773"></a>
 ### data_set_labels
@@ -548,7 +600,7 @@ Build or query data set patches in native data sections.
 | `patches` | `dynamic` | — | Value supplied for `patches`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L362)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L363)
 
 - [mlc.data.DataBuilder](Type-mlc-data-databuilder-1524220800.md) — struct
 - [mlc.data.DataLabel](Type-mlc-data-datalabel-1280347453.md) — struct
@@ -564,7 +616,7 @@ function newBssBuilder()
 Create an empty zero-initialized-data builder.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L314)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L315)
 
 <a id="function-function-mlc-data-newdatabuilder-function-newdatabuilder-mlc-data-ml-1281909056"></a>
 ### newDataBuilder
@@ -588,7 +640,7 @@ function newRDataBuilder()
 Create an empty read-only-data builder and its constant pools.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L319)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L320)
 
 - [mlc.data.PoolEntry](Type-mlc-data-poolentry-400419453.md) — struct
 <a id="function-function-mlc-data-rdata-add-abs64-patch-function-rdata-add-abs64-patch-rb-offset-target-mlc-data-ml-1320401438"></a>
@@ -607,7 +659,7 @@ Build or query rdata add abs64 patch in native data sections.
 | `target` | `dynamic` | — | Value supplied for `target`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L776)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L780)
 
 <a id="function-function-mlc-data-rdata-add-bytes-function-rdata-add-bytes-rb-name-raw-mlc-data-ml-2106952383"></a>
 ### rdata_add_bytes
@@ -625,7 +677,7 @@ Build or query rdata add bytes in native data sections.
 | `raw` | `dynamic` | — | Value supplied for `raw`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L755)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L759)
 
 <a id="function-function-mlc-data-rdata-add-bytes-unique-function-rdata-add-bytes-unique-rb-name-raw-mlc-data-ml-2040410875"></a>
 ### rdata_add_bytes_unique
@@ -643,7 +695,7 @@ Build or query rdata add bytes unique in native data sections.
 | `raw` | `dynamic` | — | Value supplied for `raw`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L763)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L767)
 
 <a id="function-function-mlc-data-rdata-add-obj-float-function-rdata-add-obj-float-rb-name-value-mlc-data-ml-609974008"></a>
 ### rdata_add_obj_float
@@ -661,7 +713,7 @@ Build or query rdata add obj float in native data sections.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L923)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L931)
 
 <a id="function-function-mlc-data-rdata-add-obj-string-function-rdata-add-obj-string-rb-name-text-mlc-data-ml-745948924"></a>
 ### rdata_add_obj_string
@@ -679,7 +731,7 @@ Build or query rdata add obj string in native data sections.
 | `text` | `dynamic` | — | Text to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L867)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L871)
 
 <a id="function-function-mlc-data-rdata-add-obj-string-unique-function-rdata-add-obj-string-unique-rb-name-text-mlc-data-ml-550307040"></a>
 ### rdata_add_obj_string_unique
@@ -697,7 +749,7 @@ Build or query rdata add obj string unique in native data sections.
 | `text` | `dynamic` | — | Text to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L895)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L901)
 
 <a id="function-function-mlc-data-rdata-add-str-function-rdata-add-str-rb-name-text-mlc-data-ml-46031888"></a>
 ### rdata_add_str
@@ -715,7 +767,7 @@ Build or query rdata add str in native data sections.
 | `text` | `dynamic` | — | Text to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L734)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L738)
 
 <a id="function-function-mlc-data-rdata-add-str-nl-function-rdata-add-str-nl-rb-name-text-add-newline-mlc-data-ml-1983537838"></a>
 ### rdata_add_str_nl
@@ -734,7 +786,7 @@ Build or query rdata add str nl in native data sections.
 | `add_newline` | `dynamic` | — | Value supplied for `add_newline`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L743)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L747)
 
 <a id="function-function-mlc-data-rdata-clear-labels-function-rdata-clear-labels-rb-mlc-data-ml-1305272588"></a>
 ### rdata_clear_labels
@@ -750,7 +802,7 @@ Build or query rdata clear labels in native data sections.
 | `rb` | `dynamic` | — | Value supplied for `rb`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L542)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L543)
 
 <a id="function-function-mlc-data-rdata-clear-patches-function-rdata-clear-patches-rb-mlc-data-ml-1556851698"></a>
 ### rdata_clear_patches
@@ -766,7 +818,7 @@ Build or query rdata clear patches in native data sections.
 | `rb` | `dynamic` | — | Value supplied for `rb`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L431)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L432)
 
 <a id="function-function-mlc-data-rdata-get-labels-function-rdata-get-labels-rb-mlc-data-ml-14203796"></a>
 ### rdata_get_labels
@@ -782,7 +834,7 @@ Build or query rdata get labels in native data sections.
 | `rb` | `dynamic` | — | Value supplied for `rb`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L437)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L438)
 
 <a id="function-function-mlc-data-rdata-get-labels-after-function-rdata-get-labels-after-rb-start-index-mlc-data-ml-343597091"></a>
 ### rdata_get_labels_after
@@ -799,7 +851,7 @@ Build or query rdata get labels after in native data sections.
 | `start_index` | `dynamic` | — | Value supplied for `start_index`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L447)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L448)
 
 <a id="function-function-mlc-data-rdata-get-patches-function-rdata-get-patches-rb-mlc-data-ml-277419204"></a>
 ### rdata_get_patches
@@ -815,7 +867,7 @@ Build or query rdata get patches in native data sections.
 | `rb` | `dynamic` | — | Value supplied for `rb`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L381)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L382)
 
 <a id="function-function-mlc-data-rdata-get-patches-after-function-rdata-get-patches-after-rb-start-index-mlc-data-ml-475352069"></a>
 ### rdata_get_patches_after
@@ -832,7 +884,7 @@ Build or query rdata get patches after in native data sections.
 | `start_index` | `dynamic` | — | Value supplied for `start_index`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L400)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L401)
 
 <a id="function-function-mlc-data-rdata-has-label-function-rdata-has-label-rb-name-mlc-data-ml-1579051377"></a>
 ### rdata_has_label
@@ -849,7 +901,7 @@ Build or query rdata has label in native data sections.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L506)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L507)
 
 <a id="function-function-mlc-data-rdata-label-count-function-rdata-label-count-rb-mlc-data-ml-779307070"></a>
 ### rdata_label_count
@@ -865,7 +917,7 @@ Build or query rdata label count in native data sections.
 | `rb` | `dynamic` | — | Value supplied for `rb`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L473)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L474)
 
 <a id="function-function-mlc-data-rdata-label-length-function-rdata-label-length-rb-name-mlc-data-ml-1681488389"></a>
 ### rdata_label_length
@@ -882,7 +934,7 @@ Build or query rdata label length in native data sections.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L513)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L514)
 
 <a id="function-function-mlc-data-rdata-label-record-function-rdata-label-record-rb-name-mlc-data-ml-1938418297"></a>
 ### rdata_label_record
@@ -899,7 +951,7 @@ Build or query rdata label record in native data sections.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L483)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L484)
 
 <a id="function-function-mlc-data-rdata-pad-align-function-rdata-pad-align-rb-align-mlc-data-ml-814922757"></a>
 ### rdata_pad_align
@@ -916,7 +968,7 @@ Build or query rdata pad align in native data sections.
 | `align` | `dynamic` | — | Value supplied for `align`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L701)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L703)
 
 <a id="function-function-mlc-data-rdata-patch-count-function-rdata-patch-count-rb-mlc-data-ml-186349378"></a>
 ### rdata_patch_count
@@ -932,7 +984,7 @@ Build or query rdata patch count in native data sections.
 | `rb` | `dynamic` | — | Value supplied for `rb`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L390)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L391)
 
 <a id="function-function-mlc-data-rdata-resolve-alias-function-rdata-resolve-alias-rb-name-mlc-data-ml-1358680033"></a>
 ### rdata_resolve_alias
@@ -949,7 +1001,7 @@ Build or query rdata resolve alias in native data sections.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L465)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L466)
 
 <a id="function-function-mlc-data-rdata-set-labels-function-rdata-set-labels-rb-labels-mlc-data-ml-1865594797"></a>
 ### rdata_set_labels
@@ -966,7 +1018,7 @@ Build or query rdata set labels in native data sections.
 | `labels` | `dynamic` | — | Value supplied for `labels`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L522)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L523)
 
 <a id="function-function-mlc-data-rdata-set-patches-function-rdata-set-patches-rb-patches-mlc-data-ml-1982356328"></a>
 ### rdata_set_patches
@@ -983,7 +1035,7 @@ Build or query rdata set patches in native data sections.
 | `patches` | `dynamic` | — | Value supplied for `patches`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L418)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L419)
 
 <a id="function-function-mlc-data-rdata-used-function-rdata-used-rb-mlc-data-ml-813016988"></a>
 ### rdata_used
@@ -999,6 +1051,6 @@ Build or query rdata used in native data sections.
 | `rb` | `dynamic` | — | Value supplied for `rb`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L575)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/data.ml#L577)
 
 - [mlc.data.RDataBuilder](Type-mlc-data-rdatabuilder-1547105200.md) — struct

@@ -5,6 +5,7 @@ assets/minidoc.js
 dependencies.html
 diagnostics.html
 file-mlc-asm-ml-1368648960.html
+file-mlc-cache-codec-ml-1019638308.html
 file-mlc-codegen-codegen-builtins-alloc-ml-1763349803.html
 file-mlc-codegen-codegen-concurrent-gc-ml-1336222633.html
 file-mlc-codegen-codegen-core-ml-528695596.html
@@ -24,6 +25,8 @@ file-mlc-data-ml-557434521.html
 file-mlc-elf-ml-1082822254.html
 file-mlc-errors-ml-1747911852.html
 file-mlc-frontend-ml-1929241497.html
+file-mlc-incremental-ast-ml-368481696.html
+file-mlc-incremental-ml-857733037.html
 file-mlc-init-ml-1795718751.html
 file-mlc-linux-runtime-ml-1485387394.html
 file-mlc-minilang-parser-ml-1485036712.html
@@ -39,6 +42,7 @@ index.html
 metrics.html
 package-global-1952375359.html
 package-mlc-asm-1639159108.html
+package-mlc-cache-codec-1414213508.html
 package-mlc-codegen-codegen-123168249.html
 package-mlc-codegen-codegen-builtins-alloc-457082396.html
 package-mlc-codegen-codegen-concurrent-gc-197838730.html
@@ -58,6 +62,8 @@ package-mlc-data-1782371337.html
 package-mlc-elf-485226986.html
 package-mlc-errors-1767385834.html
 package-mlc-frontend-839095705.html
+package-mlc-incremental-1536089303.html
+package-mlc-incremental-ast-980390788.html
 package-mlc-init-2041447551.html
 package-mlc-linux-runtime-1318353858.html
 package-mlc-minilang-parser-1725130264.html
@@ -74,6 +80,8 @@ type-mlc-asm-asmlabel-1991674317.html
 type-mlc-asm-asmpatch-681509561.html
 type-mlc-asm-encmem-428679303.html
 type-mlc-asm-gpr-1509225273.html
+type-mlc-cache-codec-reader-723462689.html
+type-mlc-cache-codec-writer-1105957265.html
 type-mlc-codegen-codegen-codegen-1040250862.html
 type-mlc-codegen-codegen-core-cgstate-564277748.html
 type-mlc-codegen-codegen-core-exprvaluetemp-797235005.html
@@ -127,6 +135,7 @@ type-mlc-errors-compileerror-1561902893.html
 type-mlc-errors-diagnostic-936437267.html
 type-mlc-errors-multicompileerror-1671925724.html
 type-mlc-frontend-frontendparseresult-671687677.html
+type-mlc-incremental-cache-1516575215.html
 type-mlc-linux-runtime-dynamicimport-249578260.html
 type-mlc-linux-runtime-dynamicimportsresult-1949239652.html
 type-mlc-linux-runtime-runtimelabel-1770338598.html

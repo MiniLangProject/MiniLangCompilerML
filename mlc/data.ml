@@ -296,6 +296,7 @@ end function
 /// @internal
 function _data_upsert_label(db, name, offset)
   if typeof(db) != "struct" or typeof(name) != "string" or name == "" then return db end if
+  if typeof(_cache_journal) == "struct" then _cache_note([0, name, offset]) end if
   if typeof(db.labels) != "struct" or typeof(db.label_index) != "struct" then
     db = data_set_labels(db, data_get_labels(db))
   end if
@@ -547,6 +548,7 @@ end function
 /// @internal
 function _rdata_upsert_label(rb, name, offset, length)
   if typeof(rb) != "struct" or typeof(name) != "string" or name == "" then return rb end if
+  if typeof(_cache_journal) == "struct" then _cache_note([1, name, offset, length]) end if
   if typeof(rb.labels) != "struct" or typeof(rb.label_index) != "struct" then
     rb = rdata_set_labels(rb, rdata_get_labels(rb))
   end if
@@ -715,6 +717,7 @@ function _rdata_intern_raw(rb, name, raw)
     pe = hit
     if typeof(rb.alias_index) != "struct" then rb.alias_index = t.fastmap_new(1024) end if
     rb.alias_index = t.fastmap_set(rb.alias_index, name, pe.label)
+    if typeof(_cache_journal) == "struct" then _cache_note([5, name, pe.label]) end if
     rb = _rdata_upsert_label(rb, name, pe.offset, pe.length)
     return rb
   end if
@@ -723,6 +726,7 @@ function _rdata_intern_raw(rb, name, raw)
   rb = _buf_append(rb, raw)
   rec = PoolEntry(raw, off, len(raw), name)
   rb.pool_raw = t.fastmap_set(rb.pool_raw, raw, rec)
+  if typeof(_cache_journal) == "struct" then _cache_note([2, raw, off, len(raw), name]) end if
   rb = _rdata_upsert_label(rb, name, off, len(raw))
   return rb
 end function
@@ -871,6 +875,7 @@ function rdata_add_obj_string(rb, name, text)
   if typeof(hit) == "struct" then
     if typeof(rb.alias_index) != "struct" then rb.alias_index = t.fastmap_new(1024) end if
     rb.alias_index = t.fastmap_set(rb.alias_index, name, hit.label)
+    if typeof(_cache_journal) == "struct" then _cache_note([5, name, hit.label]) end if
     rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
@@ -885,6 +890,7 @@ function rdata_add_obj_string(rb, name, text)
 
   rb = _rdata_upsert_label(rb, name, off, ln)
   rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln, name))
+  if typeof(_cache_journal) == "struct" then _cache_note([3, payload, off, ln, name]) end if
   return rb
 end function
 
@@ -899,6 +905,7 @@ function rdata_add_obj_string_unique(rb, name, text)
   if typeof(hit) == "struct" then
     if typeof(rb.alias_index) != "struct" then rb.alias_index = t.fastmap_new(1024) end if
     rb.alias_index = t.fastmap_set(rb.alias_index, name, hit.label)
+    if typeof(_cache_journal) == "struct" then _cache_note([5, name, hit.label]) end if
     rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
@@ -913,6 +920,7 @@ function rdata_add_obj_string_unique(rb, name, text)
 
   rb = _rdata_upsert_label(rb, name, off, ln)
   rb.pool_obj_string = t.fastmap_set(rb.pool_obj_string, payload, PoolEntry(payload, off, ln, name))
+  if typeof(_cache_journal) == "struct" then _cache_note([3, payload, off, ln, name]) end if
   return rb
 end function
 
@@ -927,6 +935,7 @@ function rdata_add_obj_float(rb, name, value)
   if typeof(hit) == "struct" then
     if typeof(rb.alias_index) != "struct" then rb.alias_index = t.fastmap_new(1024) end if
     rb.alias_index = t.fastmap_set(rb.alias_index, name, hit.label)
+    if typeof(_cache_journal) == "struct" then _cache_note([5, name, hit.label]) end if
     rb = _rdata_upsert_label(rb, name, hit.offset, hit.length)
     return rb
   end if
@@ -940,5 +949,30 @@ function rdata_add_obj_float(rb, name, value)
 
   rb = _rdata_upsert_label(rb, name, off, ln)
   rb.pool_obj_float = t.fastmap_set(rb.pool_obj_float, packed, PoolEntry(packed, off, ln, name))
+  if typeof(_cache_journal) == "struct" then _cache_note([4, packed, off, ln, name]) end if
   return rb
+end function
+/// Optional function-cache write journal. It contains data, never builder pointers.
+_cache_journal = void
+
+/// Begin recording label and constant-pool mutations for one function.
+function cache_begin()
+  global _cache_journal
+  _cache_journal = t.arr_chunk_new(64)
+end function
+
+/// Stop recording before replay or serialization.
+function cache_end()
+  global _cache_journal
+  result = []
+  if typeof(_cache_journal) == "struct" then result = t.arr_chunk_finish(_cache_journal) end if
+  _cache_journal = void
+  return result
+end function
+
+/// Record a section-map mutation only while incremental emission is active.
+/// @param record Primitive label, alias or constant-pool mutation.
+function _cache_note(record)
+  global _cache_journal
+  if typeof(_cache_journal) == "struct" then _cache_journal = t.arr_chunk_push(_cache_journal, record) end if
 end function

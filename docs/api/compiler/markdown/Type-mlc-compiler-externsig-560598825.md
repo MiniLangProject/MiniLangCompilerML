@@ -12,7 +12,7 @@ struct ExternSig
 Represents extern sig.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L254)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L255)
 
 ## Members
 
@@ -26,7 +26,7 @@ dll
 Dll associated with `ExternSig`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L260)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L261)
 
 <a id="field-field-mlc-compiler-externsig-name-name-mlc-compiler-ml-446822238"></a>
 ### name
@@ -38,7 +38,7 @@ name
 Name associated with `ExternSig`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L258)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L259)
 
 <a id="field-field-mlc-compiler-externsig-params-params-mlc-compiler-ml-1292884036"></a>
 ### params
@@ -50,7 +50,7 @@ params
 Params associated with `ExternSig`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L264)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L265)
 
 <a id="field-field-mlc-compiler-externsig-qname-qname-mlc-compiler-ml-1431566180"></a>
 ### qname
@@ -62,7 +62,7 @@ qname
 Qname associated with `ExternSig`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L256)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L257)
 
 <a id="field-field-mlc-compiler-externsig-ret-ty-ret-ty-mlc-compiler-ml-1483512206"></a>
 ### ret_ty
@@ -74,7 +74,7 @@ ret_ty
 Ret ty associated with `ExternSig`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L266)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L267)
 
 <a id="field-field-mlc-compiler-externsig-symbol-name-symbol-name-mlc-compiler-ml-128814208"></a>
 ### symbol_name
@@ -86,4 +86,4 @@ symbol_name
 Symbol name associated with `ExternSig`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L262)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L263)

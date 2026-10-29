@@ -20,6 +20,7 @@ limitations under the License.
 package mlc.frontend
 import std.fs as fs
 import mlc.minilang_parser as parser
+import mlc.incremental as incremental
 import mlc.tools as t
 
 /// Source text, parsed program and normalized diagnostics returned together.
@@ -218,6 +219,7 @@ function parse_program(path)
   if typeof(r) == "error" then
     return r
   end if
+  incremental.recordSource(path, r)
   code = normalize_code_for_tokenizer(r)
   source_for_tokens = parser.preprocess_compile_directives(code, path)
   if typeof(source_for_tokens) == "struct" and typeof(try(source_for_tokens.message)) == "string" then
@@ -246,6 +248,7 @@ function parse_program_keepgoing(path, max_errors)
   if typeof(r) == "error" then
     return r
   end if
+  incremental.recordSource(path, r)
   code = normalize_code_for_tokenizer(r)
   source_for_tokens = parser.preprocess_compile_directives(code, path)
   if typeof(source_for_tokens) == "struct" and typeof(try(source_for_tokens.message)) == "string" then

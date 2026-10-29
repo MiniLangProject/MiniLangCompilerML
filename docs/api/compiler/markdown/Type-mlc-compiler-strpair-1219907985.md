@@ -12,7 +12,7 @@ struct StrPair
 Represents str pair.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L160)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L161)
 
 ## Members
 
@@ -26,7 +26,7 @@ key
 Key associated with `StrPair`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L162)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L163)
 
 <a id="field-field-mlc-compiler-strpair-value-value-mlc-compiler-ml-1004164856"></a>
 ### value
@@ -38,4 +38,4 @@ value
 Value associated with `StrPair`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L164)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L165)

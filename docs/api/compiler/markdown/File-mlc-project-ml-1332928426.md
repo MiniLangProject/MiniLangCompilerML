@@ -54,6 +54,23 @@ Updates append unique path.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L510)
 
+<a id="function-function-mlc-project-atomic-cache-replace-function-atomic-cache-replace-source-path-destination-path-mlc-project-ml-377815657"></a>
+### _atomic_cache_replace
+
+```ml
+function _atomic_cache_replace(source_path, destination_path)
+```
+
+Atomically publish a disposable fragment without a per-function disk flush. A crash may lose this cache entry; its checksum makes recovery a normal miss.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `source_path` | `dynamic` | — | Completed temporary file in the cache directory. |
+| `destination_path` | `dynamic` | — | Persistent slot to replace atomically. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L922)
+
 <a id="function-function-mlc-project-atomic-replace-function-atomic-replace-source-path-destination-path-mlc-project-ml-2036966507"></a>
 ### _atomic_replace
 
@@ -653,7 +670,7 @@ Create the parent directory required by a configured output path.
 | `output_path` | `dynamic` | — | Value supplied for `output_path`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L1019)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L1031)
 
 <a id="function-function-mlc-project-expandargs-function-expandargs-args-mlc-project-ml-1114332615"></a>
 ### expandArgs
@@ -797,7 +814,7 @@ Updates store.
 | `output_path` | `dynamic` | — | Value supplied for `output_path`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L922)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L934)
 
 <a id="function-function-mlc-project-storeobjects-function-storeobjects-pb-digest-source-dir-mlc-project-ml-833177017"></a>
 ### storeObjects
@@ -815,4 +832,4 @@ Populate the flat per-fingerprint object directory and publish its state marker 
 | `source_dir` | `dynamic` | — | Value supplied for `source_dir`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L960)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L972)

@@ -915,6 +915,18 @@ function _atomic_replace(source_path, destination_path)
   return error(1, "failed to atomically publish cache file")
 end function
 
+/// Atomically publish a disposable fragment without a per-function disk flush.
+/// A crash may lose this cache entry; its checksum makes recovery a normal miss.
+/// @param source_path Completed temporary file in the cache directory.
+/// @param destination_path Persistent slot to replace atomically.
+function _atomic_cache_replace(source_path, destination_path)
+#if TARGET_OS == "windows"
+  return MoveFileExW(source_path, destination_path, 1)
+#else
+  return _project_rename(source_path, destination_path) == 0
+#endif
+end function
+
 /// Updates store.
 /// @param pb Value supplied for `pb`.
 /// @param digest Value supplied for `digest`.

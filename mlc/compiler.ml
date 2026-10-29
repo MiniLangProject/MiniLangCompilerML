@@ -34,11 +34,12 @@ import mlc.data as d
 import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
 import mlc.packing as packing
+import mlc.incremental as incremental
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.2.23"
+const COMPILER_VERSION = "1.2.24"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.23"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.24"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
@@ -458,6 +459,7 @@ function _usage()
   print "Usage:"
   print "  mlc_win64.exe <input.ml> <output.exe> [compiler options]"
   print "  mlc_win64.exe --project <minilang.toml> [compiler options]"
+  print "  --incremental-cache DIR   reuse validated native function fragments"
   print "  mlc_win64.exe <ignored> <output.exe> --link-obj-dir <tmp-dir> [compiler options]"
   print "  mlc_win64.exe -version | --version"
   print "Extra self-hosted checks:"
@@ -8235,6 +8237,38 @@ function run_cli(args)
   end if
   subsystem = ss[1]
 
+  // Project builds opt in automatically. Direct builds can use the same
+  // persistent function cache without introducing a manifest first.
+  incremental_dir = _get_flag_value(args, "--incremental-cache")
+  if _has_flag(args, "--incremental-cache") and incremental_dir == "" then
+    print "CompileOptionError: --incremental-cache expects a directory"
+    return 2
+  end if
+  if typeof(project_build) == "struct" then
+    if project_build.incremental then
+      incremental_dir = project_build.cache_dir
+    else
+      incremental_dir = ""
+      args = args + ["--no-incremental"]
+    end if
+  end if
+  if _asm_listing_enabled or _dump_labels_path != "" or self_enabled or _has_flag(args, "--link-obj-dir") or _has_flag(args, "--no-incremental") then incremental_dir = "" end if
+  if incremental_dir != "" then
+    incremental_dir = _path_abspath(incremental_dir)
+    // Child emitters receive expanded arguments, not the parent manifest.
+    if _get_flag_value(args, "--incremental-cache") == "" then args = args + ["--incremental-cache", incremental_dir] end if
+  end if
+  incremental_defines = []
+  for ai = 0 to len(args) - 1
+    option = args[ai]
+    if option == "-D" or option == "--define" then
+      incremental_defines = incremental_defines + [args[ai + 1]]
+    else if _startsWith(option, "-D") or _startsWith(option, "--define=") then
+      incremental_defines = incremental_defines + [option]
+    end if
+  end for
+  incremental.configure(incremental_dir, [_compile_target, runtime_config, call_profile, trace_calls, subsystem, include_dirs, incremental_defines])
+
   if typeof(project_build) == "struct" and project_build.incremental then
     project_cache_enabled = _asm_listing_enabled == false and _dump_labels_path == "" and self_enabled == false and _has_flag(args, "--link-obj-dir") == false and pack_options.mode == ""
     if project_cache_enabled then
@@ -8276,6 +8310,12 @@ function run_cli(args)
       compile_rc = _emit_obj_dir_in_fresh_process(args)
       emitted_obj_dir = _tmp_obj_dir(out_path)
       if compile_rc == 0 and project_cache_enabled then
+        if project.fingerprint(project_build, inp, include_dirs) != project_digest then
+          print "[incremental] inputs changed during compilation; artifact cache not published"
+          project_cache_enabled = false
+        end if
+      end if
+      if compile_rc == 0 and project_cache_enabled then
         object_cache_store = project.storeObjects(project_build, project_digest, emitted_obj_dir)
         if typeof(object_cache_store) == "error" then
           print "ProjectError: cannot update incremental object cache"
@@ -8294,12 +8334,19 @@ function run_cli(args)
     if typeof(packed_result) == "error" then print "PackError: " + packed_result.message + "; unpacked compiler output retained"; return 2 end if
   end if
   if compile_rc == 0 and project_cache_enabled then
+    if project.fingerprint(project_build, inp, include_dirs) != project_digest then
+      print "[incremental] inputs changed during compilation; artifact cache not published"
+      project_cache_enabled = false
+    end if
+  end if
+  if compile_rc == 0 and project_cache_enabled then
     cache_store = project.store(project_build, project_digest, out_path)
     if typeof(cache_store) == "error" then
       print "ProjectError: cannot update incremental cache"
       return 2
     end if
   end if
+  incremental.report()
   _compiler_profile_finish()
   return compile_rc
 end function

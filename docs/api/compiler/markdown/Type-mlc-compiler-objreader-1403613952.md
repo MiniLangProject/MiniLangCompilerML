@@ -12,7 +12,7 @@ struct ObjReader
 Represents obj reader.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L378)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L379)
 
 ## Members
 
@@ -26,7 +26,7 @@ buf
 Buf associated with `ObjReader`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L380)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L381)
 
 <a id="field-field-mlc-compiler-objreader-pos-pos-mlc-compiler-ml-1211965377"></a>
 ### pos
@@ -38,7 +38,7 @@ pos
 Pos associated with `ObjReader`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L382)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L383)
 
 <a id="field-field-mlc-compiler-objreader-u32-result-u32-result-mlc-compiler-ml-1377210641"></a>
 ### u32_result
@@ -50,4 +50,4 @@ u32_result
 U32 result associated with `ObjReader`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L384)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L385)

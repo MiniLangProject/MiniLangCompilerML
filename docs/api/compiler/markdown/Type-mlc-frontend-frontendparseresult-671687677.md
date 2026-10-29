@@ -12,7 +12,7 @@ struct FrontendParseResult
 Source text, parsed program and normalized diagnostics returned together.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L26)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L27)
 
 ## Members
 
@@ -26,7 +26,7 @@ errors
 Errors associated with `FrontendParseResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L32)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L33)
 
 <a id="field-field-mlc-frontend-frontendparseresult-program-program-mlc-frontend-ml-1125831967"></a>
 ### program
@@ -38,7 +38,7 @@ program
 Program associated with `FrontendParseResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L30)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L31)
 
 <a id="field-field-mlc-frontend-frontendparseresult-source-source-mlc-frontend-ml-1956983361"></a>
 ### source
@@ -50,4 +50,4 @@ source
 Source associated with `FrontendParseResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L28)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L29)

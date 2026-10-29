@@ -6,15 +6,15 @@ These MiniLang source files are reachable through imports but are outside the co
 
 | Direct project imports | Package | Source file |
 | ---: | --- | --- |
-| 2 | `std.checksum.crc32` | `std/checksum/crc32.ml` |
-| 1 | `std.checksum.crc32c` | `std/checksum/crc32c.ml` |
+| 4 | `std.checksum.crc32` | `std/checksum/crc32.ml` |
+| 3 | `std.checksum.crc32c` | `std/checksum/crc32c.ml` |
 | 0 | `std.fmt` | `std/fmt.ml` |
-| 5 | `std.fs` | `std/fs.ml` |
+| 6 | `std.fs` | `std/fs.ml` |
 | 1 | `std.io.file` | `std/io/file.ml` |
 | 0 | `std.path` | `std/path.ml` |
 | 0 | `std.platform` | `std/platform.ml` |
-| 3 | `std.process` | `std/process.ml` |
+| 4 | `std.process` | `std/process.ml` |
 | 1 | `std.sort` | `std/sort.ml` |
-| 9 | `std.string` | `std/string.ml` |
+| 10 | `std.string` | `std/string.ml` |
 | 2 | `std.string_builder` | `std/string_builder.ml` |
 | 1 | `std.time` | `std/time.ml` |

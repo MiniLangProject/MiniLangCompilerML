@@ -12,7 +12,7 @@ struct LoadProgramResult
 Represents load program result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L208)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L209)
 
 ## Members
 
@@ -26,7 +26,7 @@ aliases
 Aliases associated with `LoadProgramResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L216)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L217)
 
 <a id="field-field-mlc-compiler-loadprogramresult-diagnostics-diagnostics-mlc-compiler-ml-1875660354"></a>
 ### diagnostics
@@ -38,7 +38,7 @@ diagnostics
 Diagnostics associated with `LoadProgramResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L210)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L211)
 
 <a id="field-field-mlc-compiler-loadprogramresult-parsed-modules-parsed-modules-mlc-compiler-ml-134726464"></a>
 ### parsed_modules
@@ -50,7 +50,7 @@ parsed_modules
 Parsed modules associated with `LoadProgramResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L222)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L223)
 
 <a id="field-field-mlc-compiler-loadprogramresult-program-program-mlc-compiler-ml-913825290"></a>
 ### program
@@ -62,7 +62,7 @@ program
 Program associated with `LoadProgramResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L214)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L215)
 
 <a id="field-field-mlc-compiler-loadprogramresult-source-source-mlc-compiler-ml-360360924"></a>
 ### source
@@ -74,7 +74,7 @@ source
 Source associated with `LoadProgramResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L212)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L213)
 
 <a id="field-field-mlc-compiler-loadprogramresult-sources-sources-mlc-compiler-ml-1480335474"></a>
 ### sources
@@ -86,7 +86,7 @@ sources
 Sources associated with `LoadProgramResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L218)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L219)
 
 <a id="field-field-mlc-compiler-loadprogramresult-visited-visited-mlc-compiler-ml-2031788130"></a>
 ### visited
@@ -98,4 +98,4 @@ visited
 Visited associated with `LoadProgramResult`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L220)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L221)

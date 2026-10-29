@@ -1,23 +1,23 @@
 # Binary compiler packages
 
-Release 1.2.23 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.2.24 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, third-party notices, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
 either compiler distribution.
 
-## Release 1.2.23 checksums
+## Release 1.2.24 checksums
 
-The download archives are `MiniLangCompilerML-1.2.23-windows-x64.zip` and
-`MiniLangCompilerML-1.2.23-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.23).
+The download archives are `MiniLangCompilerML-1.2.24-windows-x64.zip` and
+`MiniLangCompilerML-1.2.24-linux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.2.24).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 56,742,912 | `8B99430A8262EDB60CCBC9D8FAC322F444D5EBA0AAC5A7965A656852E019F3EF` |
-| Linux `mlc` | 56,758,992 | `F61488A7B453571C48DDA6FCB5A451AE89D443ACBADF105990866DEBE5E9AE53` |
+| Windows `mlc.exe` | 57,805,824 | `2F8C660872C5052A808E0C21A4936F04FA7FF1B4B0787343CAB5A508CD1A5027` |
+| Linux `mlc` | 57,820,288 | `512D1B5DA682BD93DF605A0FDBE7595EC5DE34B1106D9F2AD0AB0FA868D55DA8` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -43,13 +43,25 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.2.23 compiler-source revision and executable hash.
+The manifest identifies the 1.2.24 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
 The accelerated IEEE CRC32 helper includes Intel ISA-L-derived code. Include
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) with distributions of generated
 programs using that helper.
+
+## Incremental builds
+
+Add `--incremental-cache build/compiler-cache` to direct compiler invocations
+to reuse compatible native functions after source edits. Project manifests
+enable this automatically unless `incremental = false` is selected.
+Use `--no-incremental` to bypass all cache reads and writes for one build.
+
+The frontend and linker still run after edits; declaration, inline or layout
+changes can require additional functions to be rebuilt. Cache population has
+a time and memory cost. See the [included guide](docs/INCREMENTAL_BUILDS.md)
+and [evaluation](docs/reports/INCREMENTAL_BUILDS_2026-10-29.md).
 
 ## Optional executable packing
 
@@ -60,7 +72,7 @@ startup/memory trade-offs and signing constraints.
 
 ## Native media runtime
 
-Release 1.2.23 packages include the native-media
+Release 1.2.24 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 

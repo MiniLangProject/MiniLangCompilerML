@@ -3,6 +3,7 @@ assets/graph-imports.svg
 Dependencies.md
 Diagnostics.md
 File-mlc-asm-ml-1368648960.md
+File-mlc-cache-codec-ml-1019638308.md
 File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md
 File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md
 File-mlc-codegen-codegen-core-ml-528695596.md
@@ -22,6 +23,8 @@ File-mlc-data-ml-557434521.md
 File-mlc-elf-ml-1082822254.md
 File-mlc-errors-ml-1747911852.md
 File-mlc-frontend-ml-1929241497.md
+File-mlc-incremental-ast-ml-368481696.md
+File-mlc-incremental-ml-857733037.md
 File-mlc-init-ml-1795718751.md
 File-mlc-linux-runtime-ml-1485387394.md
 File-mlc-minilang-parser-ml-1485036712.md
@@ -36,6 +39,7 @@ Graph-Imports.md
 Metrics.md
 Package-global-1952375359.md
 Package-mlc-asm-1639159108.md
+Package-mlc-cache-codec-1414213508.md
 Package-mlc-codegen-codegen-123168249.md
 Package-mlc-codegen-codegen-builtins-alloc-457082396.md
 Package-mlc-codegen-codegen-concurrent-gc-197838730.md
@@ -55,6 +59,8 @@ Package-mlc-data-1782371337.md
 Package-mlc-elf-485226986.md
 Package-mlc-errors-1767385834.md
 Package-mlc-frontend-839095705.md
+Package-mlc-incremental-1536089303.md
+Package-mlc-incremental-ast-980390788.md
 Package-mlc-init-2041447551.md
 Package-mlc-linux-runtime-1318353858.md
 Package-mlc-minilang-parser-1725130264.md
@@ -71,6 +77,8 @@ Type-mlc-asm-asmlabel-1991674317.md
 Type-mlc-asm-asmpatch-681509561.md
 Type-mlc-asm-encmem-428679303.md
 Type-mlc-asm-gpr-1509225273.md
+Type-mlc-cache-codec-reader-723462689.md
+Type-mlc-cache-codec-writer-1105957265.md
 Type-mlc-codegen-codegen-codegen-1040250862.md
 Type-mlc-codegen-codegen-core-cgstate-564277748.md
 Type-mlc-codegen-codegen-core-exprvaluetemp-797235005.md
@@ -124,6 +132,7 @@ Type-mlc-errors-compileerror-1561902893.md
 Type-mlc-errors-diagnostic-936437267.md
 Type-mlc-errors-multicompileerror-1671925724.md
 Type-mlc-frontend-frontendparseresult-671687677.md
+Type-mlc-incremental-cache-1516575215.md
 Type-mlc-linux-runtime-dynamicimport-249578260.md
 Type-mlc-linux-runtime-dynamicimportsresult-1949239652.md
 Type-mlc-linux-runtime-runtimelabel-1770338598.md
