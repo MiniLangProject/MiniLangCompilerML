@@ -60,7 +60,7 @@ def run_measured(path, case):
 CASES = ("struct-local", "many-registers", "register-dependent", "struct-projection", "dynamic-index", "local-register", "inline-literal", "cold-errors",
          "division", "division-constants", "division-wide", "local-cse",
          "integer-format", "integer-format-small", "repeat", "repeat-one", "concat-empty", "join-one",
-         "concat-control", "concat-small-control", "repeat-two-control",
+         "concat-control", "concat-small-control", "concat-three", "region-cse", "byte-loop", "repeat-two-control",
          "repeat-two-multi-control", "join-control")
 PATTERN = re.compile(r"(\S+) ms=([0-9.eE+-]+) bytes=(\d+) checksum=(-?\d+)")
 

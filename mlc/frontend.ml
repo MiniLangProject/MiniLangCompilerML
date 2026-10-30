@@ -225,7 +225,19 @@ function parse_program(path)
   if typeof(source_for_tokens) == "struct" and typeof(try(source_for_tokens.message)) == "string" then
     return FrontendParseResult(code, [], [_normalize_frontend_error(source_for_tokens, path)])
   end if
-  prog = parser.parse_program(source_for_tokens, path)
+  prog = void
+  if incremental.enabled() then
+    tokens = parser.token_cache_import(incremental.loadTokens(source_for_tokens))
+    if typeof(tokens) != "struct" then
+      tokens = parser.tokenize(source_for_tokens)
+      if typeof(tokens) == "struct" and typeof(try(tokens.message)) != "string" then
+        incremental.storeTokens(source_for_tokens, parser.token_cache_export(tokens))
+      end if
+    end if
+    prog = parser.parse_program_tokens(source_for_tokens, path, tokens)
+  else
+    prog = parser.parse_program(source_for_tokens, path)
+  end if
   if typeof(prog) == "struct" and typeof(prog.message) == "string" then
     return FrontendParseResult(code,[], [_normalize_frontend_error(prog, path)])
   end if

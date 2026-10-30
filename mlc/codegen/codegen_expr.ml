@@ -3432,6 +3432,121 @@ function _emit_known_float_binop(state, expr)
   return [state, true]
 end function
 
+/// Keep a fused concat limited to side-effect-free leaves. A guard miss uses
+/// the ordinary two calls, including their exact conversion/error behavior.
+/// @internal
+function _concat_three_leaf_is_pure(state, expr)
+  if t.ast_kind(expr) == "Str" then return true end if
+  if t.ast_kind(expr) != "Var" or state.in_function == false then return false end if
+  b = scope.cg_resolve_binding(state, _coerce_name(t.ast_name(expr)))
+  if typeof(b) != "struct" then return false end if
+  if b.kind != "local" and b.kind != "param" then return false end if
+  if b.boxed then return false end if
+  if typeof(b.capture_index) == "int" and b.capture_index >= 0 then return false end if
+  return true
+end function
+
+/// @internal
+function _pgo_inline_budget(state, name)
+  cfg = state.heap_config
+  if typeof(cfg) != "array" then return 4096 end if
+  for each entry in cfg
+    if typeof(entry) != "array" or len(entry) < 2 or entry[0] != "pgo_calls" then continue end if
+    counts = entry[1]
+    if typeof(counts) != "array" then return 4096 end if
+    for each rec in counts
+      if typeof(rec) == "array" and len(rec) >= 2 and rec[0] == name and typeof(rec[1]) == "int" and rec[1] >= 1000 then return 32768 end if
+    end for
+    return 1024
+  end for
+  return 4096
+end function
+
+/// @internal
+function _emit_concat_three_strings(state, operands)
+  base = core.alloc_expr_temps(state, 32)
+  lid = _next_lid(state)
+  slow = "concat_three_slow_" + lid
+  done = "concat_three_done_" + lid
+  for i = 0 to 2
+    state = cg_emit_expr(state, operands[i])
+    state.asm = a.mov_rsp_disp32_rax(state.asm, base + i * 8)
+  end for
+
+  state.asm = a.xor_r32_r32(state.asm, "r10d", "r10d")
+  for i = 0 to 2
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + i * 8)
+    state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+    state.asm = a.and_r64_imm(state.asm, "rax", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "rax", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", slow)
+    state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_STRING)
+    state.asm = a.jcc(state.asm, "ne", slow)
+    state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 4)
+    state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+    state.asm = a.jcc(state.asm, "e", slow)
+    state.asm = a.add_r32_r32(state.asm, "r10d", "eax")
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", 1073741823)
+    state.asm = a.jcc(state.asm, "a", slow)
+  end for
+
+  state.asm = a.mov_r32_r32(state.asm, "ecx", "r10d")
+  state.asm = a.add_r32_imm(state.asm, "ecx", 9)
+  state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.mov_rsp_disp32_rax(state.asm, base + 24)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 0, c.OBJ_STRING, false)
+  state.asm = a.xor_r32_r32(state.asm, "r10d", "r10d")
+  for i = 0 to 2
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + i * 8)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+    state.asm = a.add_r32_r32(state.asm, "r10d", "edx")
+  end for
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base + 24)
+  state.asm = a.mov_membase_disp_r32(state.asm, "rax", 4, "r10d")
+
+  for i = 0 to 2
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + 24)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
+    if i >= 1 then
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base)
+      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 4)
+      state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+    end if
+    if i >= 2 then
+      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + 8)
+      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 4)
+      state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+    end if
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + i * 8)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r11", 8)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "r11", 4)
+    state.asm = a.call(state.asm, "fn_copy_bytes")
+  end for
+
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + 24)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
+  state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r11", 8)
+  state.asm = a.add_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.mov_membase_disp_imm8(state.asm, "rax", 0, 0)
+  state.asm = a.mov_rax_r11(state.asm)
+  state.asm = a.jmp(state.asm, done)
+
+  state.asm = a.mark(state.asm, slow)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base + 8)
+  state.asm = a.call(state.asm, "fn_add_string")
+  state = _emit_auto_errprop(state)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, base + 24)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base + 24)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base + 16)
+  state.asm = a.call(state.asm, "fn_add_string")
+  state = _emit_auto_errprop(state)
+  state.asm = a.mark(state.asm, done)
+  state = core.free_expr_temps(state, 32)
+  return state
+end function
+
 /// Lower a statically string-starting left `+` spine iteratively.
 /// This preserves left-to-right semantics while avoiding deep compiler
 /// recursion and repeated dynamic add dispatch for serializer-style chains.
@@ -3454,6 +3569,14 @@ function _try_emit_left_string_concat_chain(state, expr)
     ri = ri - 1
     current2 = t.ast_left(current2)
   end while
+
+  if count == 2 then
+    operands = [current2, rights[0], rights[1]]
+    if _concat_three_leaf_is_pure(state, operands[0]) and _concat_three_leaf_is_pure(state, operands[1]) and _concat_three_leaf_is_pure(state, operands[2]) then
+      state = _emit_concat_three_strings(state, operands)
+      return [state, true]
+    end if
+  end if
 
   accumulator = core.alloc_expr_temps(state, 8)
   state = cg_emit_expr(state, current2)
@@ -5146,7 +5269,7 @@ function _emit_expr_call(state, expr)
           known_inline_used = t.fastmap_get(state._inline_emitted_bytes, known_method_dyn, 0)
           if typeof(known_inline_used) != "int" then known_inline_used = 0 end if
         end if
-        if known_inline_used < 4096 and _function_wants_inline(known_def_dyn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(known_def_dyn) then
+        if known_inline_used < _pgo_inline_budget(state, known_method_dyn) and _function_wants_inline(known_def_dyn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(known_def_dyn) then
           // Only the inliner needs a synthetic receiver-plus-arguments array;
           // the common direct-call path emits from the original AST arrays.
           known_args_b = t.arr_chunk_new(total_dyn)
@@ -7855,7 +7978,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     inline_used_bytes = t.fastmap_get(state._inline_emitted_bytes, inline_name, 0)
     if typeof(inline_used_bytes) != "int" then inline_used_bytes = 0 end if
   end if
-  if inline_used_bytes < 4096 and t.fastmap_get(state.mutable_user_functions, inline_name, 0) == 0 and typeof(inline_fn) == "struct" and _function_wants_inline(inline_fn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(inline_fn) then
+  if inline_used_bytes < _pgo_inline_budget(state, inline_name) and t.fastmap_get(state.mutable_user_functions, inline_name, 0) == 0 and typeof(inline_fn) == "struct" and _function_wants_inline(inline_fn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(inline_fn) then
     inline_binding = scope.cg_resolve_binding(state, inline_name)
     if typeof(inline_binding) != "struct" or inline_binding.kind == "global" then
       state = _emit_inline_call(state, inline_name, call_args)
@@ -10296,6 +10419,15 @@ function _emit_inline_call(state, callee, args)
       state = cg_emit_expr(state, args[ai])
       state.asm = a.mov_rsp_disp32_rax(state.asm, param_base + ai * 8)
     end for
+  end if
+  if state.call_profile then
+    profile_name = _coerce_name(try(fn._ml_codegen_name))
+    if profile_name == "" then profile_name = callee end if
+    profile_idx = _named_int_get(state.callprof_index, profile_name, -1)
+    if profile_idx >= 0 then
+      state.asm = a.lea_r11_rip(state.asm, "callprof_counts")
+      state.asm = a.inc_membase_disp_qword(state.asm, "r11", profile_idx * 8)
+    end if
   end if
   inline_body_start = a.pos(state.asm)
 

@@ -1,0 +1,53 @@
+{
+  "version": "1.2.25",
+  "compilerBuilds": [
+    {
+      "file": "python-windows.exe",
+      "bytes": 58286080,
+      "sha256": "e9791b0558b9b0f97833e2ba29e5889c2a35f09d17a25d3a17ce92c4fa3d1768"
+    },
+    {
+      "file": "native-windows.exe",
+      "bytes": 58286080,
+      "sha256": "e9791b0558b9b0f97833e2ba29e5889c2a35f09d17a25d3a17ce92c4fa3d1768"
+    },
+    {
+      "file": "python-linux",
+      "bytes": 58299600,
+      "sha256": "c8922597b48f056d14bc78555ec1626f82a9a6446391b518fdc2907a891df4bb"
+    },
+    {
+      "file": "linux-self",
+      "bytes": 58299600,
+      "sha256": "c8922597b48f056d14bc78555ec1626f82a9a6446391b518fdc2907a891df4bb"
+    }
+  ],
+  "fixtureImages": [
+    {
+      "target": "windows-x64",
+      "host": "python-windows",
+      "sha256": "9f4887113b69a1270ab14803eae936bada505a2aa71828d90aaf1f12049d0538"
+    },
+    {
+      "target": "windows-x64",
+      "host": "native-windows",
+      "sha256": "9f4887113b69a1270ab14803eae936bada505a2aa71828d90aaf1f12049d0538"
+    },
+    {
+      "target": "linux-x64",
+      "host": "python-windows",
+      "sha256": "716f299dc34942d90f0fdc6de7b42ce99aec92d079ccf3bde147214e58aec0be"
+    },
+    {
+      "target": "linux-x64",
+      "host": "native-windows",
+      "sha256": "716f299dc34942d90f0fdc6de7b42ce99aec92d079ccf3bde147214e58aec0be"
+    },
+    {
+      "target": "linux-x64",
+      "host": "linux-self",
+      "sha256": "716f299dc34942d90f0fdc6de7b42ce99aec92d079ccf3bde147214e58aec0be"
+    }
+  ],
+  "pgoLinuxFixtureSha256": "4901ee649e7392384d2063737671cdcc6084add6bb882dfd150b85fff7893c38"
+}

@@ -37,9 +37,9 @@ import mlc.packing as packing
 import mlc.incremental as incremental
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.2.24"
+const COMPILER_VERSION = "1.2.25"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.24"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.2.25"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
@@ -472,6 +472,7 @@ function _usage()
   print "  --profile-compiler-ast  also print AST arena and node-kind telemetry"
   print "Listings:"
   print "  --asm [--asm-out <path>] [--asm-cols addr,opcodes,code]"
+  print "  --pgo-profile <file>  use callStats() output for inline budgets"
   print "  --pack [--upx <path>]    Pack output; MINILANG_UPX also selects the tool"
   print "  --pack-exe INPUT OUTPUT --upx PATH    Pack an existing trusted image"
   print "  --unpack-exe INPUT OUTPUT --upx PATH  Restore exact original bytes"
@@ -2465,6 +2466,40 @@ function _cfg_get_int(cfg, key, defaultv)
     end if
   end for
   return defaultv
+end function
+
+/// Read the textual callStats() profile. Counts saturate at the hot threshold.
+/// @internal
+function _read_pgo_calls(path)
+  source = fs.readAllText(path)
+  if typeof(source) == "error" then return source end if
+  rows = s.split(source, "\n")
+  records = []
+  for each row in rows
+    if s.startsWith(row, "[call-profile] name=") == false then continue end if
+    fields = s.split(row, " ")
+    name = ""
+    count = -1
+    for each field in fields
+      if s.startsWith(field, "name=") then name = s.substr(field, 5, len(field) - 5) end if
+      if s.startsWith(field, "calls=") then
+        digits = s.substr(field, 6, len(field) - 6)
+        count = 0
+        saw = false
+        if len(digits) > 0 then
+          for di = 0 to len(digits) - 1
+            digit = s.indexOf("0123456789", digits[di], 0)
+            if digit < 0 or digit > 9 then break end if
+            saw = true
+            if count < 1000 then count = count * 10 + digit end if
+          end for
+        end if
+        if saw == false then count = -1 end if
+      end if
+    end for
+    if name != "" and count >= 0 then records = records + [[name, count]] end if
+  end for
+  return records
 end function
 
 /// Perform the collect runtime config compiler phase.
@@ -8227,6 +8262,23 @@ function run_cli(args)
   end if
 
   runtime_config = _collect_runtime_config(args)
+  pgo_path = _get_flag_value(args, "--pgo-profile")
+  if _has_flag(args, "--pgo-profile") and pgo_path == "" then
+    print "CompileOptionError: --pgo-profile expects a file"
+    return 2
+  end if
+  if pgo_path != "" then
+    pgo_calls = _read_pgo_calls(pgo_path)
+    if typeof(pgo_calls) == "error" then
+      print "CompileOptionError: cannot read PGO profile: " + pgo_calls.message
+      return 2
+    end if
+    if len(pgo_calls) == 0 then
+      print "CompileOptionError: PGO profile contains no [call-profile] records"
+      return 2
+    end if
+    runtime_config = _cfg_set(runtime_config, "pgo_calls", pgo_calls)
+  end if
   gc_set_limit(_compiler_gc_limit_from_config(runtime_config))
   call_profile = _has_flag(args, "--profile-calls")
   trace_calls = _has_flag(args, "--trace-calls")
@@ -8270,7 +8322,7 @@ function run_cli(args)
   incremental.configure(incremental_dir, [_compile_target, runtime_config, call_profile, trace_calls, subsystem, include_dirs, incremental_defines])
 
   if typeof(project_build) == "struct" and project_build.incremental then
-    project_cache_enabled = _asm_listing_enabled == false and _dump_labels_path == "" and self_enabled == false and _has_flag(args, "--link-obj-dir") == false and pack_options.mode == ""
+    project_cache_enabled = _asm_listing_enabled == false and _dump_labels_path == "" and self_enabled == false and _has_flag(args, "--link-obj-dir") == false and pack_options.mode == "" and pgo_path == ""
     if project_cache_enabled then
       project_digest = project.fingerprint(project_build, inp, include_dirs)
       if typeof(project_digest) == "error" then

@@ -57,6 +57,42 @@ function enabled()
   return typeof(_cache) == "struct"
 end function
 
+/// Load a source- and compiler-specific packed token arena, if present.
+function loadTokens(source)
+  if enabled() == false then return void end if
+  key = codec.key([_cache.options, "tokens-ml-v1", source])
+  if key == "" then return void end if
+  path = project._join(_cache.directory, key + ".mtok")
+  if fs.isFile(path) == false then return void end if
+  size = try(fs.fileSize(path))
+  if typeof(size) != "int" or size > 67108864 then return void end if
+  raw = try(fs.readAllBytes(path))
+  envelope = codec.decodeRecord(raw)
+  if typeof(envelope) != "array" or len(envelope) != 3 then return void end if
+  if envelope[0] != key or typeof(envelope[2]) != "bytes" then return void end if
+  if envelope[1] != codec.identity(envelope[2]) then return void end if
+  return codec.decodeRecord(envelope[2])
+end function
+
+/// Publish only primitive token columns; never deserialize executable ASTs.
+function storeTokens(source, record)
+  if enabled() == false then return end if
+  key = codec.key([_cache.options, "tokens-ml-v1", source])
+  if key == "" then return end if
+  payload = codec.encode(record)
+  if typeof(payload) != "bytes" or len(payload) > 65000000 then return end if
+  path = project._join(_cache.directory, key + ".mtok")
+  envelope = codec.encode([key, codec.identity(payload), payload])
+  if typeof(envelope) != "bytes" then return end if
+  temporary = path + "." + process.id() + ".tmp"
+  written = try(fs.writeAllBytes(temporary, envelope))
+  if typeof(written) != "error" then
+    if project._atomic_cache_replace(temporary, path) == false then ignored = try(fs.delete(temporary)) end if
+  else
+    ignored = try(fs.delete(temporary))
+  end if
+end function
+
 /// Capture declarations before the frontend releases or mutates function bodies.
 /// @param program Combined current AST before function bodies are released.
 function prepare(program)

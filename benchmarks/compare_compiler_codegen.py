@@ -15,6 +15,7 @@ from pathlib import Path
 import platform
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -34,10 +35,22 @@ def main():
     parser.add_argument('source', type=Path)
     parser.add_argument('--include', type=Path, required=True)
     parser.add_argument('--runs', type=int, default=3)
+    parser.add_argument('--cache-before', type=Path, help='separate incremental cache for the before compiler')
+    parser.add_argument('--cache-after', type=Path, help='separate incremental cache for the after compiler')
+    parser.add_argument('--cpu', type=int, help='pin this runner and child compilers to a logical CPU')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if os.name != 'nt' or args.runs < 3:
         parser.error('Windows and at least three measured runs are required')
+    if args.cpu is not None:
+        if args.cpu < 0 or args.cpu >= ctypes.sizeof(ctypes.c_size_t) * 8:
+            parser.error('CPU index is outside the current Windows processor group')
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel.SetProcessAffinityMask.argtypes = [wintypes.HANDLE, ctypes.c_size_t]
+        kernel.SetProcessAffinityMask.restype = wintypes.BOOL
+        if not kernel.SetProcessAffinityMask(kernel.GetCurrentProcess(), 1 << args.cpu):
+            raise ctypes.WinError(ctypes.get_last_error())
     query = ctypes.WinDLL('psapi', use_last_error=True).GetProcessMemoryInfo
     query.argtypes = [wintypes.HANDLE, ctypes.POINTER(MemoryCounters), wintypes.DWORD]
     query.restype = wintypes.BOOL
@@ -48,8 +61,14 @@ def main():
         # One warm-up per compiler, followed by alternating measured runs.
         for run in range(-1, args.runs):
             for name in (('before', 'after') if run % 2 == 0 else ('after', 'before')):
-                command = [str(compilers[name]), str(args.source.resolve()), str(target),
+                compiler_command = ([sys.executable, str(compilers[name])]
+                                    if compilers[name].suffix.lower() == '.py'
+                                    else [str(compilers[name])])
+                command = [*compiler_command, str(args.source.resolve()), str(target),
                            '-I', str(args.include.resolve()), '--no-object-pipeline']
+                cache = args.cache_before if name == 'before' else args.cache_after
+                if cache is not None:
+                    command.extend(['--incremental-cache', str(cache.resolve())])
                 start = time.perf_counter()
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 try:

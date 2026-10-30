@@ -617,6 +617,19 @@ function inline _foreach_body(st)
   return 0
 end function
 
+/// Collect dependencies for straight-line integer value numbering.
+/// @internal
+function _region_int_deps(expr, names, depth)
+  if depth > 3 then return names end if
+  kind = t.ast_kind(expr)
+  if kind == "Var" then return _arr_add_unique(names, _coerce_name(t.ast_name(expr))) end if
+  if kind == "Bin" then
+    names = _region_int_deps(t.ast_left(expr), names, depth + 1)
+    names = _region_int_deps(t.ast_right(expr), names, depth + 1)
+  end if
+  return names
+end function
+
 /// Lower emit stmt list statement behavior to native x64.
 /// @internal
 function _emit_stmt_list(state, stmt_seq_emit)
@@ -624,9 +637,41 @@ function _emit_stmt_list(state, stmt_seq_emit)
   if typeof(emit_items) != "array" or len(emit_items) <= 0 then return state end if
   emit_count = len(emit_items)
   emit_idx = 0
+  region = []
   while emit_idx < emit_count
     st = emit_items[emit_idx]
-    state = cg_emit_stmt(state, st)
+    candidate = state.in_function and t.ast_kind(st) == "Assign" and state.operator_overloads_present == false and t.ast_kind(try(st.expr)) == "Bin"
+    if candidate and typeof(try(st.declared_type)) == "string" and st.declared_type != "" then candidate = false end if
+    if candidate then candidate = exprmod._opt_same_local_int_expr(state, st.expr, st.expr, 0) end if
+    if candidate then
+      original = st.expr
+      name = _coerce_name(st.name)
+      deps = _region_int_deps(original, [], 0)
+      source = ""
+      if len(region) > 0 then
+        for ri = len(region) - 1 to 0
+          if exprmod._opt_same_local_int_expr(state, original, region[ri][0], 0) then source = region[ri][1]; break end if
+        end for
+      end if
+      if source != "" then
+        st.expr = ml.Var("Var", source, t.ast_pos(original), t.ast_filename(original))
+      end if
+      state = cg_emit_stmt(state, st)
+      st.expr = original
+      next_region = []
+      for each entry in region
+        if entry[1] != name and _arr_has(entry[2], name) == false then next_region = next_region + [entry] end if
+      end for
+      region = next_region
+      binding = scope.cg_resolve_binding(state, name)
+      if _arr_has(deps, name) == false and typeof(binding) == "struct" and (binding.kind == "local" or binding.kind == "param") and binding.boxed == false then
+        region = region + [[original, name, deps]]
+        if len(region) > 16 then region = slice(region, 1, len(region)) end if
+      end if
+    else
+      state = cg_emit_stmt(state, st)
+      region = []
+    end if
     emit_idx = emit_idx + 1
     if typeof(st) == "struct" then
       if st.node_kind == "Return" or st.node_kind == "Break" or st.node_kind == "Continue" then
@@ -2422,6 +2467,51 @@ function _emit_execution_stmt(state, stmt, k)
   return state
 end function
 
+/// Emit one loop-body version with its normal safepoint and induction update.
+/// @internal
+function _emit_for_loop_version(state, stmt, qv, loop_index_binding, targets, top, cont, finish, end_name, step_name, const_bounds, const_end, const_step)
+  state.asm = a.mark(state.asm, top)
+  saved_fast_stack = state.loop_index_fast_stack
+  state.loop_index_fast_stack = saved_fast_stack + [[try(loop_index_binding.id), targets]]
+  state = scope.cg_scope_enter(state)
+  state = _emit_stmt_list(state, stmt.body)
+  state = scope.cg_scope_leave(state, true)
+  state.loop_index_fast_stack = saved_fast_stack
+
+  state.asm = a.mark(state.asm, cont)
+  state = th.emit_gc_safepoint_poll(state)
+  state = th.emit_thread_cancellation_poll(state)
+  state = scope.emit_load_var_scoped(state, qv)
+  if const_bounds then
+    if const_end >= -268435456 and const_end <= 268435455 then
+      state.asm = a.cmp_r64_imm(state.asm, "rax", t.enc_int(const_end))
+    else
+      state.asm = a.mov_r64_tagged_int(state.asm, "r10", const_end)
+      state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+    end if
+  else
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state = scope.emit_load_var_scoped(state, end_name)
+    state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+  end if
+  state.asm = a.jcc(state.asm, "e", finish)
+
+  state = scope.emit_load_var_scoped(state, qv)
+  if const_step == 1 then
+    state.asm = a.add_rax_imm8(state.asm, 8)
+  else if const_step == -1 then
+    state.asm = a.sub_rax_imm8(state.asm, 8)
+  else
+    state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    state = scope.emit_load_var_scoped(state, step_name)
+    state.asm = a.add_r64_r64(state.asm, "rax", "r10")
+    state.asm = a.sub_rax_imm8(state.asm, 1)
+  end if
+  state = scope.emit_store_var_scoped(state, qv, stmt)
+  state.asm = a.jmp(state.asm, top)
+  return state
+end function
+
 /// Emit numeric and collection `for` loops, including their optimized fast paths.
 /// @internal
 function _emit_for_stmt(state, stmt)
@@ -2532,51 +2622,27 @@ function _emit_for_stmt(state, stmt)
       state.asm = a.mark(state.asm, l_step_done_f)
     end if
 
-    // Stabilize the measured ELF hot-loop layout. PE keeps its existing policy:
-    // the same padding regressed that layout. Backedges skip entry-only padding.
-    if state.is_linux_target then state.asm = a.align_loop(state.asm, _heap_cfg_get_int(state, "cg_object_text_base", 0)) end if
-    state.asm = a.mark(state.asm, l_top_f)
-    saved_loop_fast_stack = state.loop_index_fast_stack
-    state.loop_index_fast_stack = saved_loop_fast_stack + [[try(loop_index_binding.id), hoist_targets]]
-    state = scope.cg_scope_enter(state)
-    state = _emit_stmt_list(state, stmt.body)
-    state = scope.cg_scope_leave(state, true)
-    state.loop_index_fast_stack = saved_loop_fast_stack
-
-    state.asm = a.mark(state.asm, l_cont_f)
-    state = th.emit_gc_safepoint_poll(state)
-    state = th.emit_thread_cancellation_poll(state)
-    state = scope.emit_load_var_scoped(state, qv)
-    if const_bounds_f then
-      if const_end_f >= -268435456 and const_end_f <= 268435455 then
-        encoded_end_f = t.enc_int(const_end_f)
-        state.asm = a.cmp_r64_imm(state.asm, "rax", encoded_end_f)
-      else
-        state.asm = a.mov_r64_tagged_int(state.asm, "r10", const_end_f)
-        state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
-      end if
-    else
-      state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+    versioned = const_bounds_f == false and len(index_hoists) == 1 and index_hoists[0][2] == "bytes" and index_hoists[0][3] == false and len(stmt.body) <= 8
+    l_slow_top_f = "for_slow_top_" + lid_f
+    l_slow_cont_f = "for_slow_cont_" + lid_f
+    if versioned then
       state = scope.emit_load_var_scoped(state, end_name_f)
-      state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+      state.asm = a.cmp_r64_imm(state.asm, "rax", t.enc_int(0))
+      state.asm = a.jcc(state.asm, "l", l_slow_top_f)
     end if
-    state.asm = a.jcc(state.asm, "e", l_end_f)
 
-    state = scope.emit_load_var_scoped(state, qv)
-    if const_step_f == 1 then
-      state.asm = a.add_rax_imm8(state.asm, 8)
+    // The positive-length version can omit per-index bounds checks. Empty
+    // buffers retain the ordinary descending 0..-1 loop and its error path.
+    if state.is_linux_target then state.asm = a.align_loop(state.asm, _heap_cfg_get_int(state, "cg_object_text_base", 0)) end if
+    if versioned then
+      fast_targets = [[hoist_targets[0][0], hoist_targets[0][1], hoist_targets[0][2], true]]
+      state = _emit_for_loop_version(state, stmt, qv, loop_index_binding, fast_targets, l_top_f, l_cont_f, l_end_f, end_name_f, step_name_f, const_bounds_f, const_end_f, const_step_f)
+      state = _breakstack_pop(state)
+      state.break_stack = state.break_stack + [_breakctx_make("loop", l_end_f, l_slow_cont_f, depth_for_outer, depth_for_loop)]
+      state = _emit_for_loop_version(state, stmt, qv, loop_index_binding, hoist_targets, l_slow_top_f, l_slow_cont_f, l_end_f, end_name_f, step_name_f, const_bounds_f, const_end_f, const_step_f)
     else
-      if const_step_f == -1 then
-        state.asm = a.sub_rax_imm8(state.asm, 8)
-      else
-        state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
-        state = scope.emit_load_var_scoped(state, step_name_f)
-        state.asm = a.add_r64_r64(state.asm, "rax", "r10")
-        state.asm = a.sub_rax_imm8(state.asm, 1)
-      end if
+      state = _emit_for_loop_version(state, stmt, qv, loop_index_binding, hoist_targets, l_top_f, l_cont_f, l_end_f, end_name_f, step_name_f, const_bounds_f, const_end_f, const_step_f)
     end if
-    state = scope.emit_store_var_scoped(state, qv, stmt)
-    state.asm = a.jmp(state.asm, l_top_f)
 
     state.asm = a.mark(state.asm, l_end_f)
     if len(hoist_targets) > 0 then state = core.free_expr_temps(state, len(hoist_targets) * 8) end if

@@ -36,12 +36,21 @@ function arithmetic(n as int) returns int
   return sum
 end function
 
+function sumBuffer(buffer as bytes) returns int
+  total = 0
+  for i = 0 to len(buffer) - 1
+    total += buffer[i] + buffer[i] + buffer[i] + buffer[i]
+  end for
+  return total
+end function
+
 function main(args)
   mode = "division"
   if len(args) > 0 then mode = args[0] end if
   source = stringRepeat("abcd", 1024)
   singleton = [source]
   small = stringRepeat("a", 1)
+  concatBase = "abc"
   pieces = ["a", "b", "c"]
   numbers = array(512, 1)
   timer = bytes(16)
@@ -107,6 +116,20 @@ function main(args)
       checksum += (x + 3) * (x + 3)
     end for
   end if
+  if mode == "region-cse" then
+    for i = 0 to 2999999
+      x = i & 1023
+      left = (x * 17) + (x * 31)
+      right = (x * 17) + (x * 31)
+      checksum += left * right
+    end for
+  end if
+  if mode == "byte-loop" then
+    buffer = bytes(256, 7)
+    for i = 0 to 4999
+      checksum += sumBuffer(buffer)
+    end for
+  end if
   if mode == "division-wide" then
     seed = 20260930
     for i = 0 to 5999999
@@ -160,6 +183,12 @@ function main(args)
   if mode == "concat-small-control" then
     for i = 0 to 999999
       s = small + "b"
+      checksum += len(s)
+    end for
+  end if
+  if mode == "concat-three" then
+    for i = 0 to 199999
+      s = concatBase + "x" + "y"
       checksum += len(s)
     end for
   end if

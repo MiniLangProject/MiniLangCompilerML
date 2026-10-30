@@ -1618,6 +1618,31 @@ function tokenize(code)
   return token_chunks
 end function
 
+/// Export packed lexer columns without retaining spare arena capacity.
+function token_cache_export(tokens)
+  if typeof(tokens) != "struct" or typeof(try(tokens.count)) != "int" then return void end if
+  count = tokens.count
+  return [slice(tokens.kinds, 0, count), slice(tokens.value_ids, 0, count * 4),
+    slice(tokens.positions, 0, count * 4), t.arr_vec_finish(tokens.texts), count]
+end function
+
+/// Rebuild a bounded, data-only lexer arena from a validated cache record.
+function token_cache_import(record)
+  if typeof(record) != "array" or len(record) != 5 then return void end if
+  count = record[4]
+  if typeof(count) != "int" or count <= 0 or count > 4000000 then return void end if
+  if typeof(record[0]) != "bytes" or len(record[0]) != count then return void end if
+  if typeof(record[1]) != "bytes" or len(record[1]) != count * 4 then return void end if
+  if typeof(record[2]) != "bytes" or len(record[2]) != count * 4 then return void end if
+  if typeof(record[3]) != "array" then return void end if
+  texts = t.arr_vec_new(len(record[3]) + 1)
+  for each item in record[3]
+    if typeof(item) != "string" then return void end if
+    texts = t.arr_vec_push(texts, item)
+  end for
+  return TokenArena(record[0], record[1], record[2], texts, t.fastmap_new(8), count, count)
+end function
+
 /// Parse or represent repeat in the MiniLang front end.
 /// @internal
 function _repeat(text, n)
@@ -4389,7 +4414,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.2.24")
+    CompileValue("MINILANG_VERSION", "1.2.25")
   ]
 end function
 
@@ -6033,6 +6058,11 @@ end function
 /// @param filename Value supplied for `filename`.
 function parse_program(source, filename)
   toks = tokenize(source)
+  return parse_program_tokens(source, filename, toks)
+end function
+
+/// Parse caller-supplied tokens, used by the persistent lexer cache.
+function parse_program_tokens(source, filename, toks)
   if typeof(toks) == "struct" and typeof(try(toks.message)) == "string" then
     toks.filename = filename
     return toks
