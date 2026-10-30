@@ -97,7 +97,37 @@ end function
 /// @param program Combined current AST before function bodies are released.
 function prepare(program)
   if enabled() == false then return end if
+  files = t.fastmap_items(_cache.files)
+  key = codec.key([_cache.options, "interface-ml-v1", files])
+  path = project._join(_cache.directory, key + ".mif")
+  if key != "" and fs.isFile(path) then
+    size = try(fs.fileSize(path))
+    if typeof(size) == "int" and size > 0 and size <= 4096 then
+      envelope = codec.decodeRecord(try(fs.readAllBytes(path)))
+      if typeof(envelope) == "array" and len(envelope) == 3 and envelope[0] == key and typeof(envelope[2]) == "bytes" then
+        if envelope[1] == codec.identity(envelope[2]) then
+          record = codec.decodeRecord(envelope[2])
+          if typeof(record) == "array" and len(record) == 1 and typeof(record[0]) == "string" and record[0] != "" then
+            _cache.declarations = record[0]
+            return
+          end if
+        end if
+      end if
+    end if
+  end if
   _cache.declarations = ast.interfaceKey(program)
+  if key == "" or _cache.declarations == "" then return end if
+  payload = codec.encode([_cache.declarations])
+  if typeof(payload) != "bytes" or len(payload) > 2048 then return end if
+  envelope = codec.encode([key, codec.identity(payload), payload])
+  if typeof(envelope) != "bytes" or len(envelope) > 4096 then return end if
+  temporary = path + "." + process.id() + ".tmp"
+  written = try(fs.writeAllBytes(temporary, envelope))
+  if typeof(written) != "error" then
+    if project._atomic_cache_replace(temporary, path) == false then ignored = try(fs.delete(temporary)) end if
+  else
+    ignored = try(fs.delete(temporary))
+  end if
 end function
 
 /// Include body-derived whole-program facts in every reuse decision.

@@ -2622,7 +2622,7 @@ function _emit_for_stmt(state, stmt)
       state.asm = a.mark(state.asm, l_step_done_f)
     end if
 
-    versioned = const_bounds_f == false and len(index_hoists) == 1 and index_hoists[0][2] == "bytes" and index_hoists[0][3] == false and len(stmt.body) <= 8
+    versioned = const_bounds_f == false and len(index_hoists) == 1 and (index_hoists[0][2] == "array" or index_hoists[0][2] == "bytes") and index_hoists[0][3] == false and len(stmt.body) <= 8
     l_slow_top_f = "for_slow_top_" + lid_f
     l_slow_cont_f = "for_slow_cont_" + lid_f
     if versioned then
@@ -2632,7 +2632,7 @@ function _emit_for_stmt(state, stmt)
     end if
 
     // The positive-length version can omit per-index bounds checks. Empty
-    // buffers retain the ordinary descending 0..-1 loop and its error path.
+    // arrays or buffers retain the ordinary descending 0..-1 loop and its error path.
     if state.is_linux_target then state.asm = a.align_loop(state.asm, _heap_cfg_get_int(state, "cg_object_text_base", 0)) end if
     if versioned then
       fast_targets = [[hoist_targets[0][0], hoist_targets[0][1], hoist_targets[0][2], true]]

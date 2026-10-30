@@ -1952,9 +1952,7 @@ function byte_pages_append(bp, src)
     take = 65536 - off
     left = len(src) - s
     if left < take then take = left end if
-    for j = 0 to take - 1
-      pg[off + j] = src[s + j]
-    end for
+    _copy_native_bytes(nativeBytesPtr(pg) + off, nativeBytesPtr(src) + s, take)
     b = _bp_chunk_set(b, ci, pg)
     d = d + take
     s = s + take

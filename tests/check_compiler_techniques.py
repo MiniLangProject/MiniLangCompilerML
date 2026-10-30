@@ -39,7 +39,7 @@ def main() -> None:
             ('ml-mlo', ml, ['--object-pipeline'])):
             image = work / f'{name}.exe'
             run([*compiler, str(source), str(image), '-I', str(root), *flags], root)
-            assert run([str(image)], root).splitlines() == ['abc', 'ac', 'a42c', '336', '28', '1300']
+            assert run([str(image)], root).splitlines() == ['abc', 'ac', 'a42c', '336', '28', '1300', '12', '4', '1300']
             outputs.append(image)
         assert len({digest(path) for path in outputs}) == 1, 'default byte parity'
 
@@ -50,6 +50,13 @@ def main() -> None:
                 run([*compiler, str(source), str(image), '-I', str(root),
                      '--incremental-cache', str(cache)], root)
                 assert digest(image) == digest(outputs[0]), 'incremental byte parity'
+            interface_files = list(cache.rglob('*.mif'))
+            assert len(interface_files) == 1, 'interface cache record written'
+            interface_files[0].write_bytes(b'damaged interface record')
+            recovered = work / f'{name}-interface-recovered.exe'
+            run([*compiler, str(source), str(recovered), '-I', str(root),
+                 '--incremental-cache', str(cache)], root)
+            assert digest(recovered) == digest(outputs[0]), 'corrupt interface cache fallback'
 
         # Exercise the lexer cache itself: the Python side uses it only for
         # larger sources, while the small fixture above covers function reuse.

@@ -254,6 +254,20 @@ For full self-build timings, keep diagnostic probing disabled. The Windows
 build script now requires `-BootstrapProbe` to opt into that instrumentation;
 Linux builds already omit it by default.
 
+The declaration-fingerprint cache can be measured with function fragments
+already warm:
+
+```powershell
+python benchmarks/measure_interface_cache.py build/mlc_win64.exe tools/mlfmt.ml --include . --cache build/interface-cache-measure --runs 7 --output build/interface-cache-measure.json
+```
+
+The runner alternates a cached interface record with a recomputed one and
+checks executable byte identity. `loop_array.ml` exercises the versioned
+dynamic-array index path; compare binaries from two compiler revisions with
+`compare_executable_startup.py`. Its timings include process startup.
+The [30 October evaluation](../docs/reports/COMPILER_OPTIMIZATION_EXPERIMENTS_2026-10-30.md)
+records the measured gains and compile-time tradeoffs.
+
 ## Windows background collector
 
 Compile `concurrent_gc_pauses.ml` with the preserved baseline compiler, the
