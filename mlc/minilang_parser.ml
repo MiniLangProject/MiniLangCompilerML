@@ -6344,7 +6344,7 @@ function _lang_receiver_get(pairs, name)
   end for
   return ""
 end function
-
+/// @internal
 function _lang_receiver_type(name)
   return _lang_receiver_get(_language_current_receiver_types, name)
 end function

@@ -2414,7 +2414,7 @@ function _oop_arr_has(items, wanted)
   end for
   return false
 end function
-
+/// @internal
 function _emit_expr_is_type(state, expr)
   ty_raw = _coerce_name(expr.type_name)
   neg = false
@@ -5584,7 +5584,7 @@ function _emit_method_candidate_search(state, candidates, first, last, fid, fail
   end if
   return state
 end function
-
+/// @internal
 function _emit_expr_call(state, expr)
   // Keep callsite line current so runtime-created errors carry correct origin.
   state = core.emit_dbg_line(state, expr)
