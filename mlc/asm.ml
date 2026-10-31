@@ -831,10 +831,9 @@ function _emit32(asm, x)
   off = dst & 0xFFFF
   if off <= 0xFFFC then
     ch = _chunk_get(asm, ci)
-    ch[off] = x & 0xFF
-    ch[off + 1] = (x >> 8) & 0xFF
-    ch[off + 2] = (x >> 16) & 0xFF
-    ch[off + 3] = (x >> 24) & 0xFF
+    asm unsafe x64(inout ch as bytes, in off as int, in x as int)
+      mov dword [ch.data + off], x
+    end asm
     asm = _chunk_set(asm, ci, ch)
     asm.size = need
     asm.buf_valid = false
