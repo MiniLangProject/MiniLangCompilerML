@@ -11,8 +11,8 @@
 | [mlc/codegen/codegen.ml](File-mlc-codegen-codegen-ml-1154886880.md) | `mlc.codegen.codegen` | yes | 40 |
 | [mlc/codegen/codegen_builtins_alloc.ml](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md) | `mlc.codegen.codegen_builtins_alloc` | yes | 35 |
 | [mlc/codegen/codegen_concurrent_gc.ml](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md) | `mlc.codegen.codegen_concurrent_gc` | yes | 18 |
-| [mlc/codegen/codegen_core.ml](File-mlc-codegen-codegen-core-ml-528695596.md) | `mlc.codegen.codegen_core` | yes | 224 |
-| [mlc/codegen/codegen_expr.ml](File-mlc-codegen-codegen-expr-ml-59843844.md) | `mlc.codegen.codegen_expr` | yes | 179 |
+| [mlc/codegen/codegen_core.ml](File-mlc-codegen-codegen-core-ml-528695596.md) | `mlc.codegen.codegen_core` | yes | 232 |
+| [mlc/codegen/codegen_expr.ml](File-mlc-codegen-codegen-expr-ml-59843844.md) | `mlc.codegen.codegen_expr` | yes | 181 |
 | [mlc/codegen/codegen_memory.ml](File-mlc-codegen-codegen-memory-ml-2136639668.md) | `mlc.codegen.codegen_memory` | yes | 63 |
 | [mlc/codegen/codegen_opt.ml](File-mlc-codegen-codegen-opt-ml-1574478370.md) | `mlc.codegen.codegen_opt` | yes | 11 |
 | [mlc/codegen/codegen_runtime.ml](File-mlc-codegen-codegen-runtime-ml-1845689217.md) | `mlc.codegen.codegen_runtime` | yes | 62 |
@@ -29,7 +29,7 @@
 | [mlc/incremental.ml](File-mlc-incremental-ml-857733037.md) | `mlc.incremental` | yes | 37 |
 | [mlc/incremental_ast.ml](File-mlc-incremental-ast-ml-368481696.md) | `mlc.incremental_ast` | yes | 3 |
 | [mlc/linux_runtime.ml](File-mlc-linux-runtime-ml-1485387394.md) | `mlc.linux_runtime` | yes | 30 |
-| [mlc/minilang_parser.ml](File-mlc-minilang-parser-ml-1485036712.md) | `mlc.minilang_parser` | yes | 620 |
+| [mlc/minilang_parser.ml](File-mlc-minilang-parser-ml-1485036712.md) | `mlc.minilang_parser` | yes | 664 |
 | [mlc/packing.ml](File-mlc-packing-ml-1689146092.md) | `mlc.packing` | yes | 22 |
 | [mlc/pe.ml](File-mlc-pe-ml-319201864.md) | `mlc.pe` | yes | 52 |
 | [mlc/project.ml](File-mlc-project-ml-1332928426.md) | `mlc.project` | yes | 65 |

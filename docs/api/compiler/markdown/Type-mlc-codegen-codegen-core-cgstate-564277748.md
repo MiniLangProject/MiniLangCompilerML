@@ -184,6 +184,16 @@ Module init status labels associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L264)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-abstract-classes-abstract-classes-mlc-codegen-codegen-core-ml-1888202573"></a>
+### abstract_classes
+
+```ml
+abstract_classes
+```
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L291)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-analysis-mode-analysis-mode-mlc-codegen-codegen-core-ml-1892412971"></a>
 ### analysis_mode
 
@@ -375,6 +385,40 @@ Callprof name labels associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L160)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-class-ancestors-class-ancestors-mlc-codegen-codegen-core-ml-1131106703"></a>
+### class_ancestors
+
+```ml
+class_ancestors
+```
+
+Qualified class name to ancestor names.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L286)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-class-bases-class-bases-mlc-codegen-codegen-core-ml-514017107"></a>
+### class_bases
+
+```ml
+class_bases
+```
+
+Qualified class name to direct base class.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L284)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-class-constructor-arities-class-constructor-arities-mlc-codegen-codegen-core-ml-1682779607"></a>
+### class_constructor_arities
+
+```ml
+class_constructor_arities
+```
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L293)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-current-env-root-off-current-env-root-off-mlc-codegen-codegen-core-ml-848647703"></a>
 ### current_env_root_off
@@ -952,6 +996,30 @@ Inline only functions associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L248)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-interface-implementers-interface-implementers-mlc-codegen-codegen-core-ml-1997267129"></a>
+### interface_implementers
+
+```ml
+interface_implementers
+```
+
+Qualified interface name to implementing struct/class names.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L288)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-interface-names-interface-names-mlc-codegen-codegen-core-ml-336076171"></a>
+### interface_names
+
+```ml
+interface_names
+```
+
+Declared interface names, including interfaces with no implementers.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L290)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-is-linux-target-is-linux-target-mlc-codegen-codegen-core-ml-966497423"></a>
 ### is_linux_target
 
@@ -1048,6 +1116,16 @@ Mem probe associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L54)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-method-candidates-method-candidates-mlc-codegen-codegen-core-ml-1047193299"></a>
+### method_candidates
+
+```ml
+method_candidates
+```
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L294)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-mutable-user-functions-mutable-user-functions-mlc-codegen-codegen-core-ml-1597689279"></a>
 ### mutable_user_functions
 
@@ -1095,6 +1173,16 @@ Whether the program declares any user-defined operators.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L274)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-polymorphic-classes-polymorphic-classes-mlc-codegen-codegen-core-ml-243090299"></a>
+### polymorphic_classes
+
+```ml
+polymorphic_classes
+```
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L292)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-pruned-inline-functions-pruned-inline-functions-mlc-codegen-codegen-core-ml-1773356663"></a>
 ### pruned_inline_functions

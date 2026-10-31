@@ -12,7 +12,7 @@ struct EnumDef
 Represents enum def.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L849)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L870)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `EnumDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L861)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L882)
 
 <a id="field-field-mlc-minilang-parser-enumdef-pos-pos-mlc-minilang-parser-ml-1377982149"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `EnumDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L859)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L880)
 
 <a id="field-field-mlc-minilang-parser-enumdef-name-name-mlc-minilang-parser-ml-154290949"></a>
 ### name
@@ -50,7 +50,7 @@ name
 Name associated with `EnumDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L853)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L874)
 
 <a id="field-field-mlc-minilang-parser-enumdef-node-kind-node-kind-mlc-minilang-parser-ml-1366633967"></a>
 ### node_kind
@@ -62,7 +62,7 @@ node_kind
 Node kind associated with `EnumDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L851)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L872)
 
 <a id="field-field-mlc-minilang-parser-enumdef-values-values-mlc-minilang-parser-ml-1568080095"></a>
 ### values
@@ -74,7 +74,7 @@ values
 Values associated with `EnumDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L857)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L878)
 
 <a id="field-field-mlc-minilang-parser-enumdef-variants-variants-mlc-minilang-parser-ml-715458151"></a>
 ### variants
@@ -86,4 +86,4 @@ variants
 Variants associated with `EnumDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L855)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L876)

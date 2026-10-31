@@ -40,7 +40,7 @@ Lower all function entries statement behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8809)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8830)
 
 <a id="function-function-mlc-codegen-codegen-stmt-analysis-builtin-has-function-analysis-builtin-has-name-mlc-codegen-codegen-stmt-ml-1384222596"></a>
 ### _analysis_builtin_has
@@ -393,7 +393,7 @@ Lower binding global label statement behavior to native x64.
 | `qname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8511)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8532)
 
 <a id="function-function-mlc-codegen-codegen-stmt-breakctx-break-depth-inline-function-breakctx-break-depth-ctx-fallback-mlc-codegen-codegen-stmt-ml-978797753"></a>
 ### _breakctx_break_depth
@@ -545,7 +545,7 @@ Creates build module init recs.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9244)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9292)
 
 <a id="function-function-mlc-codegen-codegen-stmt-builtin-code-label-for-name-function-builtin-code-label-for-name-state-name-mlc-codegen-codegen-stmt-ml-1336912939"></a>
 ### _builtin_code_label_for_name
@@ -562,7 +562,7 @@ Lower builtin code label for name statement behavior to native x64.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9028)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9049)
 
 <a id="function-function-mlc-codegen-codegen-stmt-builtin-specs-function-builtin-specs-mlc-codegen-codegen-stmt-ml-930177065"></a>
 ### _builtin_specs
@@ -574,7 +574,7 @@ function _builtin_specs()
 Lower builtin specs statement behavior to native x64.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8626)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8647)
 
 <a id="function-function-mlc-codegen-codegen-stmt-check-expr-semantics-function-check-expr-semantics-state-ex-fn-arities-mlc-codegen-codegen-stmt-ml-1495781577"></a>
 ### _check_expr_semantics
@@ -592,7 +592,7 @@ Lower check expr semantics statement behavior to native x64.
 | `fn_arities` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8202)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8223)
 
 <a id="function-function-mlc-codegen-codegen-stmt-check-program-semantics-function-check-program-semantics-state-program-mlc-codegen-codegen-stmt-ml-2131531284"></a>
 ### _check_program_semantics
@@ -609,7 +609,7 @@ Lower check program semantics statement behavior to native x64.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8500)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8521)
 
 <a id="function-function-mlc-codegen-codegen-stmt-check-stmt-semantics-function-check-stmt-semantics-state-st-fn-arities-mlc-codegen-codegen-stmt-ml-1490398137"></a>
 ### _check_stmt_semantics
@@ -627,7 +627,7 @@ Lower check stmt semantics statement behavior to native x64.
 | `fn_arities` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8292)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8313)
 
 <a id="function-function-mlc-codegen-codegen-stmt-chunked-len-function-chunked-len-chunks-tail-mlc-codegen-codegen-stmt-ml-363434457"></a>
 ### _chunked_len
@@ -660,7 +660,7 @@ Releases or resets clear program function state.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8962)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8983)
 
 <a id="function-function-mlc-codegen-codegen-stmt-clone-function-node-for-emit-function-clone-function-node-for-emit-fn-node-mlc-codegen-codegen-stmt-ml-2006114718"></a>
 ### _clone_function_node_for_emit
@@ -1124,7 +1124,7 @@ Lower declare object top level global bindings statement behavior to native x64.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8553)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8574)
 
 <a id="function-function-mlc-codegen-codegen-stmt-declare-top-level-global-bindings-function-declare-top-level-global-bindings-state-program-mlc-codegen-codegen-stmt-ml-1166872260"></a>
 ### _declare_top_level_global_bindings
@@ -1141,7 +1141,7 @@ Lower declare top level global bindings statement behavior to native x64.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8531)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8552)
 
 <a id="function-function-mlc-codegen-codegen-stmt-defer-capture-node-function-defer-capture-node-stmt-off-mlc-codegen-codegen-stmt-ml-1024801718"></a>
 ### _defer_capture_node
@@ -1408,7 +1408,7 @@ Lower emit program functions all statement behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8912)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8933)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-program-module-inits-all-function-emit-program-module-inits-all-state-module-init-recs-mlc-codegen-codegen-stmt-ml-863515727"></a>
 ### _emit_program_module_inits_all
@@ -1425,7 +1425,7 @@ Lower emit program module inits all statement behavior to native x64.
 | `module_init_recs` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8898)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8919)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-program-via-objects-function-emit-program-via-objects-state-program-mlc-codegen-codegen-stmt-ml-981202462"></a>
 ### _emit_program_via_objects
@@ -1442,7 +1442,7 @@ Lower emit program via objects statement behavior to native x64.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8975)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8996)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-static-callable-objects-function-emit-static-callable-objects-state-mlc-codegen-codegen-stmt-ml-1628342340"></a>
 ### _emit_static_callable_objects
@@ -1458,7 +1458,7 @@ Lower emit static callable objects statement behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9068)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9089)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-static-global-slot-initializers-from-globals-function-emit-static-global-slot-initializers-from-globals-state-mlc-codegen-codegen-stmt-ml-1041849202"></a>
 ### _emit_static_global_slot_initializers_from_globals
@@ -1474,7 +1474,7 @@ Lower emit static global slot initializers from globals statement behavior to na
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9044)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9065)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-stmt-list-function-emit-stmt-list-state-stmt-seq-emit-mlc-codegen-codegen-stmt-ml-909361712"></a>
 ### _emit_stmt_list
@@ -1566,7 +1566,7 @@ Lower ensure global binding label statement behavior to native x64.
 | `decl_node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8521)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8542)
 
 <a id="function-function-mlc-codegen-codegen-stmt-eval-constexpr-function-eval-constexpr-state-ex-env-mlc-codegen-codegen-stmt-ml-1797563284"></a>
 ### _eval_constexpr
@@ -1617,7 +1617,7 @@ Lower expr uses native threads statement behavior to native x64.
 | `ex` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9290)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9338)
 
 <a id="function-function-mlc-codegen-codegen-stmt-expr-uses-this-function-expr-uses-this-ex-mlc-codegen-codegen-stmt-ml-81408054"></a>
 ### _expr_uses_this
@@ -1755,7 +1755,7 @@ Lower fn arity map statement behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8164)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8185)
 
 <a id="function-function-mlc-codegen-codegen-stmt-fn-codegen-key-inline-function-fn-codegen-key-fn-node-mlc-codegen-codegen-stmt-ml-448184147"></a>
 ### _fn_codegen_key
@@ -2529,7 +2529,7 @@ Lower inline statement behavior to native x64.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10925)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11094)
 
 <a id="function-function-mlc-codegen-codegen-stmt-maybe-phase-gc-function-maybe-phase-gc-state-tag-min-bytes-mlc-codegen-codegen-stmt-ml-69525466"></a>
 ### _maybe_phase_gc
@@ -2580,7 +2580,7 @@ Lower member chain name statement behavior to native x64.
 | `ex` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8186)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8207)
 
 <a id="function-function-mlc-codegen-codegen-stmt-member-qname-function-member-qname-ex-mlc-codegen-codegen-stmt-ml-1970389606"></a>
 ### _member_qname
@@ -2613,7 +2613,7 @@ Lower module file eq statement behavior to native x64.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9821)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9990)
 
 <a id="global-global-mlc-codegen-codegen-stmt-module-function-entry-index-module-function-entry-index-mlc-codegen-codegen-stmt-ml-151888231"></a>
 ### _module_function_entry_index
@@ -2643,7 +2643,7 @@ Lower module function entry index add statement behavior to native x64.
 | `entry` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9999)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10168)
 
 <a id="function-function-mlc-codegen-codegen-stmt-name-set-add-function-name-set-add-setv-value-mlc-codegen-codegen-stmt-ml-811645358"></a>
 ### _name_set_add
@@ -3038,7 +3038,7 @@ Lower precompute top level const bindings statement behavior to native x64.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8580)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8601)
 
 <a id="function-function-mlc-codegen-codegen-stmt-pref-is-method-prefix-function-pref-is-method-prefix-state-pref-mlc-codegen-codegen-stmt-ml-80599409"></a>
 ### _pref_is_method_prefix
@@ -3104,7 +3104,7 @@ Lower program main name statement behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8884)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8905)
 
 <a id="function-function-mlc-codegen-codegen-stmt-promotion-scan-stmts-function-promotion-scan-stmts-hot-names-stmts-loop-depth-mlc-codegen-codegen-stmt-ml-61457264"></a>
 ### _promotion_scan_stmts
@@ -3187,7 +3187,7 @@ Lower rebuild lookup indexes statement behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8778)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8799)
 
 <a id="function-function-mlc-codegen-codegen-stmt-rebuild-module-function-entry-index-function-rebuild-module-function-entry-index-state-mlc-codegen-codegen-stmt-ml-616471402"></a>
 ### _rebuild_module_function_entry_index
@@ -3203,7 +3203,7 @@ Lower rebuild module function entry index statement behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10011)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10180)
 
 <a id="function-function-mlc-codegen-codegen-stmt-region-int-deps-function-region-int-deps-expr-names-depth-mlc-codegen-codegen-stmt-ml-2102610499"></a>
 ### _region_int_deps
@@ -3238,7 +3238,7 @@ Lower reindex aliases statement behavior to native x64.
 | `cap_hint` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8752)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8773)
 
 <a id="function-function-mlc-codegen-codegen-stmt-reindex-extern-sigs-function-reindex-extern-sigs-arr-cap-hint-mlc-codegen-codegen-stmt-ml-1092584560"></a>
 ### _reindex_extern_sigs
@@ -3255,7 +3255,7 @@ Lower reindex extern sigs statement behavior to native x64.
 | `cap_hint` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8736)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8757)
 
 <a id="function-function-mlc-codegen-codegen-stmt-reindex-named-array-function-reindex-named-array-arr-cap-hint-mlc-codegen-codegen-stmt-ml-40034076"></a>
 ### _reindex_named_array
@@ -3272,7 +3272,7 @@ Lower reindex named array statement behavior to native x64.
 | `cap_hint` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8682)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8703)
 
 <a id="function-function-mlc-codegen-codegen-stmt-reindex-named-int-function-reindex-named-int-arr-cap-hint-mlc-codegen-codegen-stmt-ml-941787576"></a>
 ### _reindex_named_int
@@ -3289,7 +3289,7 @@ Lower reindex named int statement behavior to native x64.
 | `cap_hint` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8708)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8729)
 
 <a id="function-function-mlc-codegen-codegen-stmt-release-analysis-map-function-release-analysis-map-value-initial-cap-retained-cap-mlc-codegen-codegen-stmt-ml-1105537908"></a>
 ### _release_analysis_map
@@ -3653,7 +3653,7 @@ Lower static obj label for global name statement behavior to native x64.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9012)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9033)
 
 <a id="function-function-mlc-codegen-codegen-stmt-stmt-uses-this-function-stmt-uses-this-st-mlc-codegen-codegen-stmt-ml-1130920190"></a>
 ### _stmt_uses_this
@@ -3685,7 +3685,7 @@ Lower stmts use native threads statement behavior to native x64.
 | `stmts` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9332)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9380)
 
 <a id="function-function-mlc-codegen-codegen-stmt-string-gt-function-string-gt-a-b-mlc-codegen-codegen-stmt-ml-363027788"></a>
 ### _string_gt
@@ -3754,7 +3754,7 @@ Lower struct methods any has statement behavior to native x64.
 | `mname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10908)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11077)
 
 <a id="function-function-mlc-codegen-codegen-stmt-synchronized-block-has-crossing-exit-function-synchronized-block-has-crossing-exit-stmts-break-depth-loop-depth-mlc-codegen-codegen-stmt-ml-1495297325"></a>
 ### _synchronized_block_has_crossing_exit
@@ -4133,7 +4133,7 @@ Updates add.
 | `value` | `dynamic` | — | Value to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10804)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10973)
 
 <a id="function-function-mlc-codegen-codegen-stmt-all-function-entries-function-all-function-entries-state-mlc-codegen-codegen-stmt-ml-1219167550"></a>
 ### all_function_entries
@@ -4149,7 +4149,7 @@ Expose the canonical monolithic function order to the object writer. The .mlo pi
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8878)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8899)
 
 <a id="function-function-mlc-codegen-codegen-stmt-analyze-block-function-analyze-block-state-stmts-mlc-codegen-codegen-stmt-ml-1663709957"></a>
 ### analyze_block
@@ -4166,7 +4166,7 @@ Lower analyze block statement behavior to native x64.
 | `stmts` | `dynamic` | — | Value supplied for `stmts`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10874)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11043)
 
 <a id="function-function-mlc-codegen-codegen-stmt-analyze-expr-function-analyze-expr-state-ex-mlc-codegen-codegen-stmt-ml-2070285797"></a>
 ### analyze_expr
@@ -4183,7 +4183,7 @@ Lower analyze expr statement behavior to native x64.
 | `ex` | `dynamic` | — | Value supplied for `ex`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10835)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11004)
 
 <a id="function-function-mlc-codegen-codegen-stmt-analyze-read-var-function-analyze-read-var-state-name-mlc-codegen-codegen-stmt-ml-1275782887"></a>
 ### analyze_read_var
@@ -4200,7 +4200,7 @@ Lower analyze read var statement behavior to native x64.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10816)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10985)
 
 <a id="function-function-mlc-codegen-codegen-stmt-analyze-write-var-function-analyze-write-var-state-name-mlc-codegen-codegen-stmt-ml-1115907147"></a>
 ### analyze_write_var
@@ -4217,7 +4217,7 @@ Lower analyze write var statement behavior to native x64.
 | `name` | `dynamic` | — | Name of the requested item. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10823)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10992)
 
 <a id="function-function-mlc-codegen-codegen-stmt-cg-emit-stmt-function-cg-emit-stmt-state-stmt-mlc-codegen-codegen-stmt-ml-328079108"></a>
 ### cg_emit_stmt
@@ -4254,7 +4254,7 @@ Lower emit entry object statement behavior to native x64.
 | `main_name` | `dynamic` | — | Value supplied for `main_name`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9683)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9852)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-module-function-entries-function-emit-module-function-entries-state-entries-start-index-count-analysis-scratch-mlc-codegen-codegen-stmt-ml-1569217191"></a>
 ### emit_module_function_entries
@@ -4274,7 +4274,7 @@ Lower emit module function entries statement behavior to native x64.
 | `analysis_scratch` | `dynamic` | — | Value supplied for `analysis_scratch`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10082)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10251)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-module-functions-function-emit-module-functions-state-module-file-mlc-codegen-codegen-stmt-ml-678832221"></a>
 ### emit_module_functions
@@ -4291,7 +4291,7 @@ Lower emit module functions statement behavior to native x64.
 | `module_file` | `dynamic` | — | Value supplied for `module_file`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10125)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10294)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-module-init-object-function-emit-module-init-object-state-module-rec-mlc-codegen-codegen-stmt-ml-2076069695"></a>
 ### emit_module_init_object
@@ -4308,7 +4308,7 @@ Lower emit module init object statement behavior to native x64.
 | `module_rec` | `dynamic` | — | Value supplied for `module_rec`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9831)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10000)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-program-function-emit-program-state-program-mlc-codegen-codegen-stmt-ml-1271724548"></a>
 ### emit_program
@@ -4325,7 +4325,7 @@ Lower emit program statement behavior to native x64.
 | `program` | `dynamic` | — | Value supplied for `program`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9006)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9027)
 
 <a id="function-function-mlc-codegen-codegen-stmt-emit-stmt-function-emit-stmt-state-st-mlc-codegen-codegen-stmt-ml-1005594799"></a>
 ### emit_stmt
@@ -4360,7 +4360,7 @@ Lower emit user function statement behavior to native x64.
 | `analysis_scratch` | `dynamic` | — | Value supplied for `analysis_scratch`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10134)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10303)
 
 <a id="function-function-mlc-codegen-codegen-stmt-expr-function-expr-state-ex-mlc-codegen-codegen-stmt-ml-841964937"></a>
 ### expr
@@ -4377,7 +4377,7 @@ Lower expr statement behavior to native x64.
 | `ex` | `dynamic` | — | Value supplied for `ex`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10889)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11058)
 
 <a id="function-function-mlc-codegen-codegen-stmt-expr-reads-function-expr-reads-ex-mlc-codegen-codegen-stmt-ml-1421336922"></a>
 ### expr_reads
@@ -4393,7 +4393,7 @@ Lower expr reads statement behavior to native x64.
 | `ex` | `dynamic` | — | Value supplied for `ex`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10895)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11064)
 
 <a id="function-function-mlc-codegen-codegen-stmt-function-entry-count-function-function-entry-count-entries-mlc-codegen-codegen-stmt-ml-216196625"></a>
 ### function_entry_count
@@ -4409,7 +4409,7 @@ Lower function entry count statement behavior to native x64.
 | `entries` | `dynamic` | — | Value supplied for `entries`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8843)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8864)
 
 <a id="function-function-mlc-codegen-codegen-stmt-function-entry-name-function-function-entry-name-entries-node-id-mlc-codegen-codegen-stmt-ml-915095903"></a>
 ### function_entry_name
@@ -4426,7 +4426,7 @@ Lower function entry name statement behavior to native x64.
 | `node_id` | `dynamic` | — | Value supplied for `node_id`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8852)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8873)
 
 <a id="function-function-mlc-codegen-codegen-stmt-function-entry-node-function-function-entry-node-entries-node-id-mlc-codegen-codegen-stmt-ml-1036856429"></a>
 ### function_entry_node
@@ -4443,7 +4443,7 @@ Lower function entry node statement behavior to native x64.
 | `node_id` | `dynamic` | — | Value supplied for `node_id`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8868)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L8889)
 
 - [mlc.codegen.codegen_stmt.FunctionNodeArena](Type-mlc-codegen-codegen-stmt-functionnodearena-1818543593.md) — struct
 <a id="function-function-mlc-codegen-codegen-stmt-max-calls-expr-function-max-calls-expr-state-ex-mlc-codegen-codegen-stmt-ml-426733429"></a>
@@ -4461,7 +4461,7 @@ Lower max calls expr statement behavior to native x64.
 | `ex` | `dynamic` | — | Value supplied for `ex`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10933)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11102)
 
 <a id="function-function-mlc-codegen-codegen-stmt-max-calls-stmts-function-max-calls-stmts-state-stmts-mlc-codegen-codegen-stmt-ml-1628904277"></a>
 ### max_calls_stmts
@@ -4478,7 +4478,7 @@ Lower max calls stmts statement behavior to native x64.
 | `stmts` | `dynamic` | — | Value supplied for `stmts`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10994)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11163)
 
 <a id="function-function-mlc-codegen-codegen-stmt-module-function-entries-function-module-function-entries-state-module-file-mlc-codegen-codegen-stmt-ml-148202013"></a>
 ### module_function_entries
@@ -4495,7 +4495,7 @@ Lower module function entries statement behavior to native x64.
 | `module_file` | `dynamic` | — | Value supplied for `module_file`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10044)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10213)
 
 <a id="function-function-mlc-codegen-codegen-stmt-note-reads-function-note-reads-state-names-mlc-codegen-codegen-stmt-ml-1767882344"></a>
 ### note_reads
@@ -4512,7 +4512,7 @@ Lower note reads statement behavior to native x64.
 | `names` | `dynamic` | — | Value supplied for `names`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L10902)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11071)
 
 <a id="function-function-mlc-codegen-codegen-stmt-prepare-program-for-objects-function-prepare-program-for-objects-state-program-mlc-codegen-codegen-stmt-ml-1341937234"></a>
 ### prepare_program_for_objects
@@ -4529,7 +4529,7 @@ Lower prepare program for objects statement behavior to native x64.
 | `program` | `dynamic` | — | Value supplied for `program`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9390)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L9438)
 
 <a id="function-function-mlc-codegen-codegen-stmt-release-emitted-function-entries-function-release-emitted-function-entries-state-entries-start-index-count-mlc-codegen-codegen-stmt-ml-233935854"></a>
 ### release_emitted_function_entries
@@ -4565,4 +4565,4 @@ Lower stmt list statement behavior to native x64.
 | `stmts` | `dynamic` | — | Value supplied for `stmts`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11126)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L11295)
