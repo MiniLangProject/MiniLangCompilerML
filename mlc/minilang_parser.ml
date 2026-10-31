@@ -243,6 +243,22 @@ struct TypeGuard
   _filename,
 end struct
 
+/// Typed symbolic inline x64 assembly expression.
+struct AsmExpr
+  node_kind,
+  args,
+  names,
+  types,
+  optional,
+  modes,
+  result_type,
+  result_optional,
+  instructions,
+  unsafe,
+  _pos,
+  _filename,
+end struct
+
 /// Lazy void coalescing (`left ?? right`).
 struct Coalesce
   /// Node kind associated with `Coalesce`.
@@ -2172,6 +2188,10 @@ end function
 function _parse_primary()
   tok = _peek()
 
+  if _tok_kind_id(tok) == TK_IDENT and _tok_value(tok) == "asm" and (_tok_value(_peek2()) == "x64" or _tok_value(_peek2()) == "unsafe") then
+    return _parse_asm_expr()
+  end if
+
   if _tok_kind_id(tok) == TK_LPAREN then
     sp = _tok_pos(tok)
     _advance()
@@ -2285,6 +2305,86 @@ function _parse_primary()
   end if
 
   _set_error("Unexpected expression: " + _tok_desc(tok), _tok_pos(tok))
+end function
+
+/// Parse a typed symbolic inline x64 block.
+/// @internal
+function _parse_asm_expr()
+  start = _tok_pos(_expect_value(TK_IDENT, "asm"))
+  if _has_error() then return end if
+  unsafe = false
+  if _tok_value(_peek()) == "unsafe" then _advance() unsafe = true end if
+  arch = _expect_kind(TK_IDENT)
+  if _has_error() then return end if
+  if _tok_value(arch) != "x64" then _set_error("Inline asm currently supports x64 only", _tok_pos(arch)) return end if
+  _expect_kind(TK_LPAREN)
+  if _has_error() then return end if
+  args = []
+  names = []
+  types = []
+  optional = []
+  modes = []
+  _skip_newlines()
+  if _match_kind(TK_RPAREN) == false then
+    while true
+      mode = _advance()
+      if _tok_value(mode) != "in" and _tok_value(mode) != "inout" then
+        _set_error("asm operand expects 'in' or 'inout'", _tok_pos(mode))
+        return
+      end if
+      name_tok = _expect_kind(TK_IDENT)
+      if _has_error() then return end if
+      name = _tok_value(name_tok)
+      if name == "result" or _contains(names, name) then _set_error("duplicate or reserved asm operand name", _tok_pos(name_tok)) return end if
+      _expect_value(TK_KW, "as")
+      if _has_error() then return end if
+      tref = _parse_type_ref()
+      if _has_error() then return end if
+      args = args + [t.ast_leaf_new("Var", name, _tok_pos(name_tok), _filename)]
+      names = names + [name]
+      types = types + [tref[0]]
+      optional = optional + [tref[1]]
+      modes = modes + [_tok_value(mode)]
+      _skip_newlines()
+      if _match_kind(TK_RPAREN) then break end if
+      _expect_kind(TK_COMMA)
+      if _has_error() then return end if
+      _skip_newlines()
+    end while
+  end if
+  result_type = "void"
+  result_optional = false
+  if _match_value(TK_KW, "returns") then
+    tref = _parse_type_ref()
+    if _has_error() then return end if
+    result_type = tref[0]
+    result_optional = tref[1]
+  end if
+  if _tok_kind_id(_peek()) != TK_NL then _set_error("asm header must end with a newline", _tok_pos(_peek())) return end if
+  _skip_newlines()
+  instructions = []
+  while _tok_kind_id(_peek()) != TK_KW or _tok_value(_peek()) != "end"
+    if _tok_kind_id(_peek()) == TK_EOF then _set_error("asm block is missing 'end asm'", start) return end if
+    op = _expect_kind(TK_IDENT)
+    if _has_error() then return end if
+    operands = []
+    while _tok_kind_id(_peek()) != TK_NL and _tok_kind_id(_peek()) != TK_EOF
+      parts = ""
+      while _tok_kind_id(_peek()) != TK_COMMA and _tok_kind_id(_peek()) != TK_NL and _tok_kind_id(_peek()) != TK_EOF
+        parts = parts + _tok_value(_advance())
+      end while
+      if parts == "" then _set_error("empty asm operand", _tok_pos(_peek())) return end if
+      operands = operands + [parts]
+      if _match_kind(TK_COMMA) == false then break end if
+    end while
+    if len(operands) > 2 then _set_error("asm instructions support at most two operands", _tok_pos(op)) return end if
+    instructions = instructions + [[_tok_value(op), operands]]
+    _skip_newlines()
+  end while
+  _expect_value(TK_KW, "end")
+  _expect_value(TK_IDENT, "asm")
+  if _has_error() then return end if
+  return AsmExpr("AsmExpr", args, names, types, optional, modes, result_type, result_optional, instructions, unsafe, start, _filename)
 end function
 
 /// Returns parse type ref.
@@ -3068,6 +3168,12 @@ function _parse_stmt()
   start_pos = _tok_pos(t)
   kind = _tok_kind_id(t)
   value = _tok_value(t)
+
+  if kind == TK_IDENT and value == "asm" and (_tok_value(_peek2()) == "x64" or _tok_value(_peek2()) == "unsafe") then
+    expr = _parse_asm_expr()
+    if _has_error() then return end if
+    return ExprStmt("ExprStmt", expr, start_pos, _filename)
+  end if
 
   if kind == TK_KW and value == "package" then
     return _parse_stmt_package(start_pos, t)
@@ -5082,6 +5188,16 @@ function _lang_lower_expr(expr, prelude)
   global _language_needs_await, _language_needs_select, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file
   if t.ast_is_node(expr) == false then return [expr, prelude] end if
   kind = t.ast_kind(expr)
+  if kind == "AsmExpr" then
+    if typeof(expr.args) == "array" and len(expr.args) > 0 then
+      for i = 0 to len(expr.args) - 1
+        lowered = _lang_lower_expr(expr.args[i], prelude)
+        expr.args[i] = lowered[0]
+        prelude = lowered[1]
+      end for
+    end if
+    return [expr, prelude]
+  end if
   if kind == "Lambda" then
     name = _lang_fresh("lambda")
     body = _lang_lower_block(expr.body, 1)

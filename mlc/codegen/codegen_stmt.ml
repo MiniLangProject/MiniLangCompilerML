@@ -6287,6 +6287,14 @@ function _closure_expr_reads(ex, used)
     return used
   end if
 
+  if k == "AsmExpr" then
+    args = try(ex.args)
+    if typeof(args) == "array" and len(args) > 0 then
+      for i = 0 to len(args) - 1 used = _closure_expr_reads(args[i], used) end for
+    end if
+    return used
+  end if
+
   if k == "Coalesce" then
     used = _closure_expr_reads(try(ex.left), used)
     used = _closure_expr_reads(try(ex.right), used)

@@ -80,6 +80,18 @@ function writeNode(w, node, headers_only)
     codec.write(w, node.optional)
     return w
   end if
+  if kind == "AsmExpr" then
+    write(w, node.args, headers_only)
+    codec.write(w, node.names)
+    codec.write(w, node.types)
+    codec.write(w, node.optional)
+    codec.write(w, node.modes)
+    codec.write(w, node.result_type)
+    codec.write(w, node.result_optional)
+    codec.write(w, node.instructions)
+    codec.write(w, node.unsafe)
+    return w
+  end if
   if kind == "Coalesce" then
     write(w, node.left, headers_only)
     write(w, node.right, headers_only)

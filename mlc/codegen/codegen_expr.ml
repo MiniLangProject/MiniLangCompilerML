@@ -1611,6 +1611,7 @@ function cg_emit_expr(state, expr)
   if k == "Coalesce" then return _emit_expr_coalesce(state, expr) end if
   if k == "SafeMember" then return _emit_expr_safe_member(state, expr) end if
   if k == "TypeGuard" then return _emit_expr_type_guard(state, expr) end if
+  if k == "AsmExpr" then return _emit_expr_inline_asm(state, expr) end if
 
   // Constant folding must precede the node-kind dispatch. Keeping it after the
   // known expression cases made it unreachable for every foldable AST node
@@ -1670,6 +1671,265 @@ function cg_emit_expr(state, expr)
   end if
 
   return _emit_expr_unsupported(state, expr, k)
+end function
+
+/// Report an inline-asm contract error without leaving a partial result.
+/// @internal
+function _ia_error(state, message)
+  state.diagnostics = state.diagnostics + [message]
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  return state
+end function
+
+/// Classify the machine representation of a typed operand.
+/// @internal
+function _ia_kind(ty, optional)
+  if optional then return "value" end if
+  low = s.toLowerAscii(ty)
+  if low == "int" or low == "bool" or low == "float" then return low end if
+  return "value"
+end function
+
+/// Return [index, type, optional, mode] for a symbolic asm operand.
+/// @internal
+function _ia_sym(expr, name)
+  if name == "result" and s.toLowerAscii(expr.result_type) != "void" then
+    return [len(expr.names), expr.result_type, expr.result_optional, "out"]
+  end if
+  if typeof(expr.names) == "array" and len(expr.names) > 0 then
+    for i = 0 to len(expr.names) - 1
+      if expr.names[i] == name then return [i, expr.types[i], expr.optional[i], expr.modes[i]] end if
+    end for
+  end if
+  return [-1, "", false, ""]
+end function
+
+/// Parse an immediate only when the entire operand is an integer literal.
+/// @internal
+function _ia_imm(text)
+  if typeof(text) != "string" or text == "" then return [false, 0] end if
+  sign = 1
+  raw = text
+  if s.startsWith(raw, "-") then sign = -1 raw = s.substr(raw, 1, len(raw) - 1) end if
+  if raw == "" or s.contains(raw, ".") then return [false, 0] end if
+  value = ml._parse_int_literal(raw)
+  if typeof(value) != "int" then return [false, 0] end if
+  return [true, sign * value]
+end function
+
+/// Decode byte[buffer.data+index] in unsafe assembly.
+/// @internal
+function _ia_byte_store(text)
+  if s.startsWith(text, "byte[") == false or s.endsWith(text, "]") == false then return [] end if
+  inner = s.substr(text, 5, len(text) - 6)
+  parts = s.split(inner, ".data+")
+  if len(parts) != 2 or parts[0] == "" or parts[1] == "" then return [] end if
+  return parts
+end function
+
+/// Load a symbolic integer/value operand into a scratch GPR.
+/// @internal
+function _ia_load_gpr(state, expr, base, name, reg)
+  imm = _ia_imm(name)
+  if imm[0] then
+    state.asm = a.mov_r64_imm64(state.asm, reg, imm[1])
+  else
+    sym = _ia_sym(expr, name)
+    state.asm = a.mov_r64_membase_disp(state.asm, reg, "rsp", base + (len(expr.names) + sym[0]) * 8)
+  end if
+  return state
+end function
+
+/// Store a symbolic output from a scratch GPR.
+/// @internal
+function _ia_store_gpr(state, expr, base, name, reg)
+  sym = _ia_sym(expr, name)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base + (len(expr.names) + sym[0]) * 8, reg)
+  return state
+end function
+
+/// Convert a scratch slot back into a MiniLang value in RAX.
+/// @internal
+function _ia_emit_value(state, ty, optional, off)
+  kind = _ia_kind(ty, optional)
+  if kind == "float" then
+    state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", off)
+    state = core.emit_force_xmm0_to_float_value(state)
+    return state
+  end if
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", off)
+  if kind == "int" then
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+  else if kind == "bool" then
+    state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+    state.asm = a.setcc_al(state.asm, "ne")
+    state.asm = a.movzx_r32_r8(state.asm, "eax", "al")
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+  end if
+  return state
+end function
+
+/// Lower a typed symbolic x64 block into the shared native instruction emitter.
+/// @internal
+function _emit_expr_inline_asm(state, expr)
+  names = expr.names
+  n = len(names)
+  if n > 24 or n != len(expr.types) or n != len(expr.modes) or n != len(expr.optional) then
+    return _ia_error(state, "invalid asm operand declarations")
+  end if
+  if s.toLowerAscii(expr.result_type) == "void" and expr.result_optional then return _ia_error(state, "asm cannot return void?") end if
+  result_written = s.toLowerAscii(expr.result_type) == "void"
+  for each instruction in expr.instructions
+    if typeof(instruction) != "array" or len(instruction) != 2 then return _ia_error(state, "invalid asm instruction") end if
+    op = instruction[0]
+    operands = instruction[1]
+    if typeof(operands) != "array" or len(operands) != 2 then return _ia_error(state, "asm instructions require two operands") end if
+    dst = operands[0]
+    src = operands[1]
+    if (src == "result" or (dst == "result" and (op == "test" or op == "cmp"))) and result_written == false then
+      return _ia_error(state, "asm reads 'result' before assigning it")
+    end if
+    memparts = []
+    if op == "mov" then memparts = _ia_byte_store(dst) end if
+    if len(memparts) == 2 then
+      buf = _ia_sym(expr, memparts[0])
+      idx = _ia_sym(expr, memparts[1])
+      val = _ia_sym(expr, src)
+      if expr.unsafe == false then return _ia_error(state, "byte memory stores require 'asm unsafe x64'") end if
+      if buf[1] != "bytes" or buf[3] != "inout" or _ia_kind(idx[1], idx[2]) != "int" or _ia_kind(val[1], val[2]) != "int" then
+        return _ia_error(state, "byte store requires inout bytes, int index and int value")
+      end if
+      continue
+    end if
+    if op != "mov" and op != "test" and op != "cmp" and op != "cmovz" and op != "cmovnz" and op != "bsf" and op != "add" and op != "sub" and op != "xor" and op != "and" and op != "or" and op != "shl" and op != "shr" and op != "sar" and op != "movsd" and op != "addsd" and op != "subsd" and op != "mulsd" and op != "divsd" then
+      return _ia_error(state, "unsupported inline asm instruction '" + op + "'")
+    end if
+    d = _ia_sym(expr, dst)
+    imm = _ia_imm(src)
+    sr = _ia_sym(expr, src)
+    if d[0] < 0 or sr[0] < 0 and imm[0] == false then return _ia_error(state, "unknown asm operand") end if
+    dk = _ia_kind(d[1], d[2])
+    sk = "int"
+    if imm[0] == false then sk = _ia_kind(sr[1], sr[2]) end if
+    if op != "test" and op != "cmp" then
+      if d[3] != "out" and d[3] != "inout" then return _ia_error(state, "asm destination is read-only") end if
+      if dst == "result" then
+        if op != "mov" and op != "movsd" and op != "bsf" and result_written == false then
+          return _ia_error(state, "asm reads 'result' before assigning it")
+        end if
+        result_written = true
+      end if
+    end if
+    if op == "movsd" or op == "addsd" or op == "subsd" or op == "mulsd" or op == "divsd" then
+      if dk != "float" or sk != "float" or imm[0] then return _ia_error(state, "asm float instruction requires float operands") end if
+    else if op == "mov" or op == "cmovz" or op == "cmovnz" then
+      if dk != sk or dk == "value" and (d[1] != sr[1] or d[2] != sr[2]) or imm[0] and dk != "int" then
+        return _ia_error(state, "asm move requires matching operand types")
+      end if
+    else if op == "shl" or op == "shr" or op == "sar" then
+      if dk != "int" or imm[0] == false or imm[1] < 0 or imm[1] > 63 then return _ia_error(state, "asm shift requires int and count 0..63") end if
+    else if (op == "test" or op == "cmp") and dk == "bool" and sk == "bool" then
+      // Boolean comparisons use normalized 0/1 machine values.
+    else if dk != "int" or sk != "int" then
+      return _ia_error(state, "asm integer instruction requires int operands")
+    end if
+  end for
+  if result_written == false then return _ia_error(state, "asm block must assign 'result'") end if
+
+  frame_size = (2 * n + 1) * 8
+  base = core.alloc_expr_temps(state, frame_size)
+  if n > 0 then
+    for i = 0 to n - 1
+    arg = expr.args[i]
+    ty = expr.types[i]
+    if s.toLowerAscii(ty) != "unknown" then arg = ml.TypeGuard("TypeGuard", arg, ty, expr.optional[i], t.ast_pos(expr), t.ast_filename(expr)) end if
+    state = cg_emit_expr(state, arg)
+    state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base + i * 8, "rax")
+    kind = _ia_kind(ty, expr.optional[i])
+    if kind == "int" then
+      state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+    else if kind == "bool" then
+      state.asm = a.shr_r64_imm8(state.asm, "rax", 3)
+    else if kind == "float" then
+      fail = "inline_asm_float_fail_" + _next_lid(state)
+      state = core.emit_to_double_xmm(state, 0, fail)
+      state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", base + (n + i) * 8, "xmm0")
+      state.asm = a.mark(state.asm, fail)
+      continue
+    end if
+    state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base + (n + i) * 8, "rax")
+    end for
+  end if
+
+  for each instruction in expr.instructions
+    op = instruction[0]
+    dst = instruction[1][0]
+    src = instruction[1][1]
+    memparts = []
+    if op == "mov" then memparts = _ia_byte_store(dst) end if
+    if len(memparts) == 2 then
+      buf = _ia_sym(expr, memparts[0])
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base + buf[0] * 8)
+      state = _ia_load_gpr(state, expr, base, memparts[1], "r11")
+      state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r10", "r11", 1, 8)
+      state = _ia_load_gpr(state, expr, base, src, "rax")
+      state.asm = a.mov_membase_disp_r8(state.asm, "r10", 0, "al")
+      continue
+    end if
+    d = _ia_sym(expr, dst)
+    sr = _ia_sym(expr, src)
+    if op == "movsd" or op == "addsd" or op == "subsd" or op == "mulsd" or op == "divsd" then
+      state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", base + (n + d[0]) * 8)
+      state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm1", "rsp", base + (n + sr[0]) * 8)
+      if op == "movsd" then state.asm = a.movsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+      if op == "addsd" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+      if op == "subsd" then state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+      if op == "mulsd" then state.asm = a.mulsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+      if op == "divsd" then state.asm = a.divsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+      state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", base + (n + d[0]) * 8, "xmm0")
+      continue
+    end if
+    state = _ia_load_gpr(state, expr, base, dst, "r10")
+    if op == "shl" or op == "shr" or op == "sar" then
+      imm = _ia_imm(src)
+      if op == "shl" then state.asm = a.shl_r64_imm8(state.asm, "r10", imm[1]) end if
+      if op == "shr" then state.asm = a.shr_r64_imm8(state.asm, "r10", imm[1]) end if
+      if op == "sar" then state.asm = a.sar_r64_imm8(state.asm, "r10", imm[1]) end if
+      state = _ia_store_gpr(state, expr, base, dst, "r10")
+      continue
+    end if
+    state = _ia_load_gpr(state, expr, base, src, "r11")
+    if op == "mov" then state.asm = a.mov_r64_r64(state.asm, "r10", "r11") end if
+    if op == "test" then state.asm = a.test_r64_r64(state.asm, "r10", "r11") end if
+    if op == "cmp" then state.asm = a.cmp_r64_r64(state.asm, "r10", "r11") end if
+    if op == "cmovz" then state.asm = a.cmovcc_r64_r64(state.asm, "e", "r10", "r11") end if
+    if op == "cmovnz" then state.asm = a.cmovcc_r64_r64(state.asm, "ne", "r10", "r11") end if
+    if op == "bsf" then state.asm = a.bsf_r64_r64(state.asm, "r10", "r11") end if
+    if op == "add" then state.asm = a.add_r64_r64(state.asm, "r10", "r11") end if
+    if op == "sub" then state.asm = a.sub_r64_r64(state.asm, "r10", "r11") end if
+    if op == "xor" then state.asm = a.xor_r64_r64(state.asm, "r10", "r11") end if
+    if op == "and" then state.asm = a.and_r64_r64(state.asm, "r10", "r11") end if
+    if op == "or" then state.asm = a.or_r64_r64(state.asm, "r10", "r11") end if
+    if op != "test" and op != "cmp" then state = _ia_store_gpr(state, expr, base, dst, "r10") end if
+  end for
+
+  if n > 0 then
+    for i = 0 to n - 1
+    if expr.modes[i] == "inout" then
+      state = _ia_emit_value(state, expr.types[i], expr.optional[i], base + (n + i) * 8)
+      state = core.emit_store_var(state, expr.names[i], expr)
+    end if
+    end for
+  end if
+  if s.toLowerAscii(expr.result_type) == "void" then
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  else
+    state = _ia_emit_value(state, expr.result_type, expr.result_optional, base + (2 * n) * 8)
+  end if
+  state = core.free_expr_temps(state, frame_size)
+  return state
 end function
 
 /// Lower emit expr coalesce expression behavior to native x64.
@@ -10169,6 +10429,13 @@ function _inline_collect_expr_stats(ex, stats)
   if t.ast_is_node(ex) == false then return 0 end if
   k = _coerce_name(t.ast_kind(ex))
   if k == "Num" or k == "Str" or k == "Bool" or k == "VoidLit" or k == "Var" then return 1 end if
+  if k == "AsmExpr" then
+    cost_asm = 8 + len(ex.instructions) * 4
+    if len(ex.args) > 0 then
+      for ai = 0 to len(ex.args) - 1 cost_asm = cost_asm + _inline_collect_expr_stats(ex.args[ai], stats) end for
+    end if
+    return cost_asm
+  end if
   if k == "ArrayLit" then
     cost = 4
     items = try(ex.items)

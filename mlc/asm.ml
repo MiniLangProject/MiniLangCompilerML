@@ -2105,6 +2105,23 @@ function cmp_r32_r32(asm, left, right) return _emit_bin_rr(asm, 0x3B, left, righ
 /// @param left Left input value.
 /// @param right Right input value.
 function test_r64_r64(asm, left, right) return _emit_bin_rr(asm, 0x85, left, right, 1) end function
+
+/// Emit a conditional move used by typed symbolic inline asm.
+function cmovcc_r64_r64(asm, cc, dst, src)
+  opcode = -1
+  if cc == "e" then opcode = 0x44 end if
+  if cc == "ne" then opcode = 0x45 end if
+  if opcode < 0 or _is_r64_name(dst) == false or _is_r64_name(src) == false then
+    return error(1, "unsupported cmovcc_r64_r64 operands")
+  end if
+  d = _rid_any(dst)
+  s = _rid_any(src)
+  asm = _emit_rex(asm, 1, d >> 3, 0, s >> 3, false)
+  asm = _emit8(asm, 0x0F)
+  asm = _emit8(asm, opcode)
+  asm = _emit_modrm(asm, 3, d & 7, s & 7)
+  return asm
+end function
 /// Encode or manage test r32 r32 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param left Left input value.
