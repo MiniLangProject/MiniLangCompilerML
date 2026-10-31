@@ -2340,8 +2340,8 @@ function _parse_asm_expr()
       if _has_error() then return end if
       tref = _parse_type_ref()
       if _has_error() then return end if
-      if _tok_value(mode) == "scratch" and (tref[0] != "int" or tref[1]) then
-        _set_error("asm scratch operands currently require int", _tok_pos(name_tok))
+      if _tok_value(mode) == "scratch" and (tref[0] != "int" and tref[0] != "bool" and tref[0] != "float" or tref[1]) then
+        _set_error("asm scratch operands require int, bool or float", _tok_pos(name_tok))
         return
       end if
       if _tok_value(mode) == "scratch" then

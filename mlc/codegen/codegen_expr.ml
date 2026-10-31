@@ -1727,24 +1727,54 @@ function _ia_byte_store(text)
   return parts
 end function
 
+function _ia_dword_memory(text)
+  if s.startsWith(text, "dword[") == false or s.endsWith(text, "]") == false then return [] end if
+  inner = s.substr(text, 6, len(text) - 7)
+  parts = s.split(inner, ".data+")
+  if len(parts) != 2 or parts[0] == "" or parts[1] == "" then return [] end if
+  return parts
+end function
+
+function _ia_pinned_reg(pinned, name)
+  for each item in pinned
+    if item[0] == name then return item[1] end if
+  end for
+  return ""
+end function
+
 /// Load a symbolic integer/value operand into a scratch GPR.
 /// @internal
-function _ia_load_gpr(state, expr, base, name, reg)
+function _ia_load_gpr(state, expr, base, name, reg, pinned)
   imm = _ia_imm(name)
   if imm[0] then
     state.asm = a.mov_r64_imm64(state.asm, reg, imm[1])
   else
-    sym = _ia_sym(expr, name)
-    state.asm = a.mov_r64_membase_disp(state.asm, reg, "rsp", base + (len(expr.names) + sym[0]) * 8)
+    cached = _ia_pinned_reg(pinned, name)
+    if cached != "" then
+      if cached != reg then state.asm = a.mov_r64_r64(state.asm, reg, cached) end if
+    else
+      sym = _ia_sym(expr, name)
+      state.asm = a.mov_r64_membase_disp(state.asm, reg, "rsp", base + (len(expr.names) + sym[0]) * 8)
+    end if
   end if
   return state
 end function
 
 /// Store a symbolic output from a scratch GPR.
 /// @internal
-function _ia_store_gpr(state, expr, base, name, reg)
+function _ia_store_gpr(state, expr, base, name, reg, pinned)
   sym = _ia_sym(expr, name)
+  cached = _ia_pinned_reg(pinned, name)
+  if cached != "" and cached != reg then state.asm = a.mov_r64_r64(state.asm, cached, reg) end if
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base + (len(expr.names) + sym[0]) * 8, reg)
+  return state
+end function
+
+function _ia_reload_pinned(state, expr, base, pinned)
+  for each item in pinned
+    sym = _ia_sym(expr, item[0])
+    state.asm = a.mov_r64_membase_disp(state.asm, item[1], "rsp", base + (len(expr.names) + sym[0]) * 8)
+  end for
   return state
 end function
 
@@ -1805,6 +1835,81 @@ function _ia_jump_cc(op)
   return s.substr(op, 1, len(op) - 1)
 end function
 
+function _ia_is_setcc(op)
+  if s.startsWith(op, "set") == false then return false end if
+  return _ia_is_jump("j" + s.substr(op, 3, len(op) - 3))
+end function
+
+function _ia_has_flow_state(states, pos, written)
+  for each item in states
+    if item[0] == pos and item[1] == written then return true end if
+  end for
+  return false
+end function
+
+/// Check that result is initialized on every reachable path through the block.
+/// @internal
+function _ia_result_flow_error(expr)
+  if s.toLowerAscii(expr.result_type) == "void" then return "" end if
+  pending = [[0, false]]
+  seen = []
+  cursor = 0
+  reached_exit = false
+  while cursor < len(pending)
+    item = pending[cursor]
+    cursor = cursor + 1
+    pos = item[0]
+    written = item[1]
+    if _ia_has_flow_state(seen, pos, written) then continue end if
+    seen = seen + [item]
+    if pos == len(expr.instructions) then
+      reached_exit = true
+      if written == false then return "asm must assign 'result' on every exit" end if
+      continue
+    end if
+    instruction = expr.instructions[pos]
+    op = instruction[0]
+    operands = instruction[1]
+    reads = false
+    writes = false
+    if _ia_is_setcc(op) then
+      writes = operands[0] == "result"
+    else if len(operands) == 2 then
+      dst = operands[0]
+      src = operands[1]
+      reads = src == "result"
+      mem = []
+      if op == "mov" then
+        mem = _ia_byte_store(dst)
+        if len(mem) == 0 then mem = _ia_dword_memory(dst) end if
+      end if
+      if len(mem) == 2 then
+        if mem[0] == "result" or mem[1] == "result" then reads = true end if
+      else
+        mem = []
+        if op == "movzx" then mem = _ia_byte_store(src) end if
+        if op == "mov" then mem = _ia_dword_memory(src) end if
+        if len(mem) == 2 then
+          if mem[0] == "result" or mem[1] == "result" then reads = true end if
+        else
+          if dst == "result" and op != "mov" and op != "movsd" and op != "bsf" and op != "popcnt" then reads = true end if
+        end if
+        if dst == "result" and op != "cmp" and op != "test" then writes = true end if
+      end if
+    end if
+    if reads and written == false then return "asm reads 'result' before assigning it" end if
+    if writes then written = true end if
+    if _ia_is_jump(op) then
+      pending = pending + [[_ia_label_index(expr, operands[0]), written]]
+      if op != "jmp" then pending = pending + [[pos + 1, written]] end if
+    else
+      pending = pending + [[pos + 1, written]]
+    end if
+  end while
+  if reached_exit == false then return "asm result has no reachable exit" end if
+  return ""
+end function
+
 /// Lower a typed symbolic x64 block into the shared native instruction emitter.
 /// @internal
 function _emit_expr_inline_asm(state, expr)
@@ -1823,7 +1928,6 @@ function _emit_expr_inline_asm(state, expr)
     end if
   end for
   backward_targets = []
-  result_written = s.toLowerAscii(expr.result_type) == "void"
   pos = 0
   for each instruction in expr.instructions
     pos = pos + 1
@@ -1831,7 +1935,6 @@ function _emit_expr_inline_asm(state, expr)
     op = instruction[0]
     operands = instruction[1]
     if op == "label" or _ia_is_jump(op) then
-      if result_written == false then return _ia_error(state, "asm must assign 'result' before control flow") end if
       if op != "label" then
         if len(operands) != 1 or _ia_has_text(labels, operands[0]) == false then return _ia_error(state, "asm jump requires a local label") end if
         if op != "jmp" and (pos <= 1 or (expr.instructions[pos - 2][0] != "cmp" and expr.instructions[pos - 2][0] != "test")) then
@@ -1843,12 +1946,20 @@ function _emit_expr_inline_asm(state, expr)
       end if
       continue
     end if
+    if _ia_is_setcc(op) then
+      if len(operands) != 1 then return _ia_error(state, "asm setcc requires one bool destination") end if
+      d = _ia_sym(expr, operands[0])
+      if _ia_kind(d[1], d[2]) != "bool" or (d[3] != "out" and d[3] != "inout" and d[3] != "scratch") then
+        return _ia_error(state, "asm setcc requires one bool destination")
+      end if
+      if pos <= 1 or (expr.instructions[pos - 2][0] != "cmp" and expr.instructions[pos - 2][0] != "test") then
+        return _ia_error(state, "asm setcc must immediately follow cmp or test")
+      end if
+      continue
+    end if
     if typeof(operands) != "array" or len(operands) != 2 then return _ia_error(state, "asm instructions require two operands") end if
     dst = operands[0]
     src = operands[1]
-    if (src == "result" or (dst == "result" and (op == "test" or op == "cmp"))) and result_written == false then
-      return _ia_error(state, "asm reads 'result' before assigning it")
-    end if
     memparts = []
     if op == "mov" then memparts = _ia_byte_store(dst) end if
     if len(memparts) == 2 then
@@ -1858,6 +1969,32 @@ function _emit_expr_inline_asm(state, expr)
       if expr.unsafe == false then return _ia_error(state, "byte memory stores require 'asm unsafe x64'") end if
       if buf[1] != "bytes" or buf[3] != "inout" or _ia_kind(idx[1], idx[2]) != "int" or _ia_kind(val[1], val[2]) != "int" then
         return _ia_error(state, "byte store requires inout bytes, int index and int value")
+      end if
+      continue
+    end if
+    dword_store = []
+    dword_load = []
+    if op == "mov" then
+      dword_store = _ia_dword_memory(dst)
+      dword_load = _ia_dword_memory(src)
+    end if
+    if len(dword_store) == 2 or len(dword_load) == 2 then
+      parts = dword_load
+      if len(dword_store) == 2 then parts = dword_store end if
+      buf = _ia_sym(expr, parts[0])
+      idx = _ia_sym(expr, parts[1])
+      if expr.unsafe == false then return _ia_error(state, "dword memory access requires 'asm unsafe x64'") end if
+      if buf[1] != "bytes" or buf[2] or _ia_kind(idx[1], idx[2]) != "int" then
+        return _ia_error(state, "dword access requires bytes buffer and int index")
+      end if
+      if len(dword_store) == 2 then
+        value = _ia_sym(expr, src)
+        if buf[3] != "inout" or _ia_kind(value[1], value[2]) != "int" then return _ia_error(state, "dword store requires inout bytes and int value") end if
+      else
+        d = _ia_sym(expr, dst)
+        if (d[3] != "out" and d[3] != "inout" and d[3] != "scratch") or _ia_kind(d[1], d[2]) != "int" then
+          return _ia_error(state, "dword load requires an int destination")
+        end if
       end if
       continue
     end if
@@ -1872,11 +2009,9 @@ function _emit_expr_inline_asm(state, expr)
       if _ia_kind(d[1], d[2]) != "int" or buf[1] != "bytes" or buf[2] or _ia_kind(idx[1], idx[2]) != "int" then
         return _ia_error(state, "byte load requires an int destination, bytes buffer and int index")
       end if
-      if loadparts[1] == "result" and result_written == false then return _ia_error(state, "asm reads 'result' before assigning it") end if
-      if dst == "result" then result_written = true end if
       continue
     end if
-    if op != "mov" and op != "test" and op != "cmp" and op != "cmovz" and op != "cmovnz" and op != "bsf" and op != "add" and op != "sub" and op != "xor" and op != "and" and op != "or" and op != "shl" and op != "shr" and op != "sar" and op != "movsd" and op != "addsd" and op != "subsd" and op != "mulsd" and op != "divsd" then
+    if op != "mov" and op != "test" and op != "cmp" and op != "cmovz" and op != "cmovnz" and op != "bsf" and op != "popcnt" and op != "add" and op != "sub" and op != "xor" and op != "and" and op != "or" and op != "imul" and op != "shl" and op != "shr" and op != "sar" and op != "rol" and op != "ror" and op != "movsd" and op != "addsd" and op != "subsd" and op != "mulsd" and op != "divsd" then
       return _ia_error(state, "unsupported inline asm instruction '" + op + "'")
     end if
     d = _ia_sym(expr, dst)
@@ -1888,12 +2023,6 @@ function _emit_expr_inline_asm(state, expr)
     if imm[0] == false then sk = _ia_kind(sr[1], sr[2]) end if
     if op != "test" and op != "cmp" then
       if d[3] != "out" and d[3] != "inout" and d[3] != "scratch" then return _ia_error(state, "asm destination is read-only") end if
-      if dst == "result" then
-        if op != "mov" and op != "movsd" and op != "bsf" and result_written == false then
-          return _ia_error(state, "asm reads 'result' before assigning it")
-        end if
-        result_written = true
-      end if
     end if
     if op == "movsd" or op == "addsd" or op == "subsd" or op == "mulsd" or op == "divsd" then
       if dk != "float" or sk != "float" or imm[0] then return _ia_error(state, "asm float instruction requires float operands") end if
@@ -1901,7 +2030,7 @@ function _emit_expr_inline_asm(state, expr)
       if dk != sk or dk == "value" and (d[1] != sr[1] or d[2] != sr[2]) or imm[0] and dk != "int" then
         return _ia_error(state, "asm move requires matching operand types")
       end if
-    else if op == "shl" or op == "shr" or op == "sar" then
+    else if op == "shl" or op == "shr" or op == "sar" or op == "rol" or op == "ror" then
       if dk != "int" or imm[0] == false or imm[1] < 0 or imm[1] > 63 then return _ia_error(state, "asm shift requires int and count 0..63") end if
     else if (op == "test" or op == "cmp") and dk == "bool" and sk == "bool" then
       // Boolean comparisons use normalized 0/1 machine values.
@@ -1909,14 +2038,28 @@ function _emit_expr_inline_asm(state, expr)
       return _ia_error(state, "asm integer instruction requires int operands")
     end if
   end for
-  if result_written == false then return _ia_error(state, "asm block must assign 'result'") end if
+  flow_error = _ia_result_flow_error(expr)
+  if flow_error != "" then return _ia_error(state, flow_error) end if
 
   frame_size = (2 * n + 1) * 8
   base = core.alloc_expr_temps(state, frame_size)
+  pinned = []
+  if _ia_kind(expr.result_type, expr.result_optional) == "int" then pinned = [["result", "r8"]] end if
+  for each wanted in ["scratch", "inout", "in"]
+    if n > 0 then
+      for i = 0 to n - 1
+        if len(pinned) < 2 and expr.modes[i] == wanted and _ia_kind(expr.types[i], expr.optional[i]) == "int" then
+          reg = "r8"
+          if len(pinned) == 1 then reg = "r9" end if
+          pinned = pinned + [[expr.names[i], reg]]
+        end if
+      end for
+    end if
+  end for
   if n > 0 then
     for i = 0 to n - 1
     if expr.modes[i] == "scratch" then
-      if expr.types[i] != "int" or expr.optional[i] then return _ia_error(state, "asm scratch operands currently require int") end if
+      if (expr.types[i] != "int" and expr.types[i] != "bool" and expr.types[i] != "float") or expr.optional[i] then return _ia_error(state, "asm scratch operands require int, bool or float") end if
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
       state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base + i * 8, "rax")
       state.asm = a.mov_rax_imm64(state.asm, 0)
@@ -1944,13 +2087,22 @@ function _emit_expr_inline_asm(state, expr)
     end for
   end if
 
+  if _ia_pinned_reg(pinned, "result") != "" then
+    state.asm = a.mov_r64_imm64(state.asm, "rax", 0)
+    state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base + (2 * n) * 8, "rax")
+  end if
+  state = _ia_reload_pinned(state, expr, base, pinned)
+
   label_prefix = ""
   if len(labels) > 0 then label_prefix = "inline_asm_" + _next_lid(state) + "_" end if
   for each instruction in expr.instructions
     op = instruction[0]
     if op == "label" then
       state.asm = a.mark(state.asm, label_prefix + instruction[1][0])
-      if _ia_has_text(backward_targets, instruction[1][0]) then state = th.emit_gc_safepoint_poll(state) end if
+      if _ia_has_text(backward_targets, instruction[1][0]) and state.native_threads_possible then
+        state = th.emit_gc_safepoint_poll(state)
+        state = _ia_reload_pinned(state, expr, base, pinned)
+      end if
       continue
     end if
     if _ia_is_jump(op) then
@@ -1961,6 +2113,13 @@ function _emit_expr_inline_asm(state, expr)
       end if
       continue
     end if
+    if _ia_is_setcc(op) then
+      cc = _ia_jump_cc("j" + s.substr(op, 3, len(op) - 3))
+      state.asm = a.mov_r64_imm64(state.asm, "r10", 0)
+      state.asm = a.setcc_r8(state.asm, cc, "r10b")
+      state = _ia_store_gpr(state, expr, base, instruction[1][0], "r10", pinned)
+      continue
+    end if
     dst = instruction[1][0]
     src = instruction[1][1]
     memparts = []
@@ -1968,10 +2127,32 @@ function _emit_expr_inline_asm(state, expr)
     if len(memparts) == 2 then
       buf = _ia_sym(expr, memparts[0])
       state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base + buf[0] * 8)
-      state = _ia_load_gpr(state, expr, base, memparts[1], "r11")
+      state = _ia_load_gpr(state, expr, base, memparts[1], "r11", pinned)
       state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r10", "r11", 1, 8)
-      state = _ia_load_gpr(state, expr, base, src, "rax")
+      state = _ia_load_gpr(state, expr, base, src, "rax", pinned)
       state.asm = a.mov_membase_disp_r8(state.asm, "r10", 0, "al")
+      continue
+    end if
+    dword_store = []
+    dword_load = []
+    if op == "mov" then
+      dword_store = _ia_dword_memory(dst)
+      dword_load = _ia_dword_memory(src)
+    end if
+    if len(dword_store) == 2 or len(dword_load) == 2 then
+      parts = dword_load
+      if len(dword_store) == 2 then parts = dword_store end if
+      buf = _ia_sym(expr, parts[0])
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base + buf[0] * 8)
+      state = _ia_load_gpr(state, expr, base, parts[1], "r11", pinned)
+      state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r10", "r11", 1, 8)
+      if len(dword_store) == 2 then
+        state = _ia_load_gpr(state, expr, base, src, "rax", pinned)
+        state.asm = a.mov_membase_disp_r32(state.asm, "r10", 0, "eax")
+      else
+        state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r10", 0)
+        state = _ia_store_gpr(state, expr, base, dst, "r10", pinned)
+      end if
       continue
     end if
     loadparts = []
@@ -1979,10 +2160,28 @@ function _emit_expr_inline_asm(state, expr)
     if len(loadparts) == 2 then
       buf = _ia_sym(expr, loadparts[0])
       state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base + buf[0] * 8)
-      state = _ia_load_gpr(state, expr, base, loadparts[1], "r11")
+      state = _ia_load_gpr(state, expr, base, loadparts[1], "r11", pinned)
       state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r10", "r11", 1, 8)
       state.asm = a.movzx_r32_membase_disp(state.asm, "r10d", "r10", 0)
-      state = _ia_store_gpr(state, expr, base, dst, "r10")
+      state = _ia_store_gpr(state, expr, base, dst, "r10", pinned)
+      continue
+    end if
+    if op == "popcnt" then
+      state = _ia_load_gpr(state, expr, base, src, "r11", pinned)
+      state.asm = a.mov_r64_imm64(state.asm, "r10", 0)
+      lid = _next_lid(state)
+      loop_label = "inline_asm_popcnt_" + lid
+      done_label = "inline_asm_popcnt_done_" + lid
+      state.asm = a.mark(state.asm, loop_label)
+      state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+      state.asm = a.jcc(state.asm, "e", done_label)
+      state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+      state.asm = a.sub_r64_imm8(state.asm, "rax", 1)
+      state.asm = a.and_r64_r64(state.asm, "r11", "rax")
+      state.asm = a.add_r64_imm8(state.asm, "r10", 1)
+      state.asm = a.jmp(state.asm, loop_label)
+      state.asm = a.mark(state.asm, done_label)
+      state = _ia_store_gpr(state, expr, base, dst, "r10", pinned)
       continue
     end if
     d = _ia_sym(expr, dst)
@@ -1998,28 +2197,31 @@ function _emit_expr_inline_asm(state, expr)
       state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", base + (n + d[0]) * 8, "xmm0")
       continue
     end if
-    state = _ia_load_gpr(state, expr, base, dst, "r10")
-    if op == "shl" or op == "shr" or op == "sar" then
+    state = _ia_load_gpr(state, expr, base, dst, "r10", pinned)
+    if op == "shl" or op == "shr" or op == "sar" or op == "rol" or op == "ror" then
       imm = _ia_imm(src)
       if op == "shl" then state.asm = a.shl_r64_imm8(state.asm, "r10", imm[1]) end if
       if op == "shr" then state.asm = a.shr_r64_imm8(state.asm, "r10", imm[1]) end if
       if op == "sar" then state.asm = a.sar_r64_imm8(state.asm, "r10", imm[1]) end if
-      state = _ia_store_gpr(state, expr, base, dst, "r10")
+      if op == "rol" then state.asm = a.rol_r64_imm8(state.asm, "r10", imm[1]) end if
+      if op == "ror" then state.asm = a.ror_r64_imm8(state.asm, "r10", imm[1]) end if
+      state = _ia_store_gpr(state, expr, base, dst, "r10", pinned)
       continue
     end if
-    state = _ia_load_gpr(state, expr, base, src, "r11")
+    state = _ia_load_gpr(state, expr, base, src, "r11", pinned)
     if op == "mov" then state.asm = a.mov_r64_r64(state.asm, "r10", "r11") end if
     if op == "test" then state.asm = a.test_r64_r64(state.asm, "r10", "r11") end if
     if op == "cmp" then state.asm = a.cmp_r64_r64(state.asm, "r10", "r11") end if
     if op == "cmovz" then state.asm = a.cmovcc_r64_r64(state.asm, "e", "r10", "r11") end if
     if op == "cmovnz" then state.asm = a.cmovcc_r64_r64(state.asm, "ne", "r10", "r11") end if
     if op == "bsf" then state.asm = a.bsf_r64_r64(state.asm, "r10", "r11") end if
+    if op == "imul" then state.asm = a.imul_r64_r64(state.asm, "r10", "r11") end if
     if op == "add" then state.asm = a.add_r64_r64(state.asm, "r10", "r11") end if
     if op == "sub" then state.asm = a.sub_r64_r64(state.asm, "r10", "r11") end if
     if op == "xor" then state.asm = a.xor_r64_r64(state.asm, "r10", "r11") end if
     if op == "and" then state.asm = a.and_r64_r64(state.asm, "r10", "r11") end if
     if op == "or" then state.asm = a.or_r64_r64(state.asm, "r10", "r11") end if
-    if op != "test" and op != "cmp" then state = _ia_store_gpr(state, expr, base, dst, "r10") end if
+    if op != "test" and op != "cmp" then state = _ia_store_gpr(state, expr, base, dst, "r10", pinned) end if
   end for
 
   if n > 0 then

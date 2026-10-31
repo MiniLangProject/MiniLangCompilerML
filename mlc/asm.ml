@@ -2275,6 +2275,10 @@ end function
 /// @param reg_name Value supplied for `reg_name`.
 /// @param imm Value supplied for `imm`.
 function shl_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 4, reg_name, imm, 1) end function
+
+function rol_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 0, reg_name, imm, 1) end function
+
+function ror_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 1, reg_name, imm, 1) end function
 /// Encode or manage shr r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.
 /// @param reg_name Value supplied for `reg_name`.
