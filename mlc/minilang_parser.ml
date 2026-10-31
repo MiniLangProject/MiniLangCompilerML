@@ -2365,8 +2365,11 @@ function _parse_asm_expr()
   instructions = []
   while _tok_kind_id(_peek()) != TK_KW or _tok_value(_peek()) != "end"
     if _tok_kind_id(_peek()) == TK_EOF then _set_error("asm block is missing 'end asm'", start) return end if
-    op = _expect_kind(TK_IDENT)
-    if _has_error() then return end if
+    op = _advance()
+    if _tok_kind_id(op) != TK_IDENT and _tok_kind_id(op) != TK_KW then
+      _set_error("Expected asm instruction", _tok_pos(op))
+      return
+    end if
     operands = []
     while _tok_kind_id(_peek()) != TK_NL and _tok_kind_id(_peek()) != TK_EOF
       parts = ""
