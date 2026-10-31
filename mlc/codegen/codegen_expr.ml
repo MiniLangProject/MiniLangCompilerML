@@ -1771,20 +1771,78 @@ function _ia_emit_value(state, ty, optional, off)
   return state
 end function
 
+/// Test membership in the small inline-assembly label lists.
+/// @internal
+function _ia_has_text(items, value)
+  for each item in items
+    if item == value then return true end if
+  end for
+  return false
+end function
+
+/// Return the instruction position of a block-local label.
+/// @internal
+function _ia_label_index(expr, name)
+  pos = 0
+  for each instruction in expr.instructions
+    if instruction[0] == "label" and len(instruction[1]) == 1 and instruction[1][0] == name then return pos end if
+    pos = pos + 1
+  end for
+  return -1
+end function
+
+/// Recognize supported block-local jumps.
+/// @internal
+function _ia_is_jump(op)
+  return op == "jmp" or op == "jz" or op == "je" or op == "jnz" or op == "jne" or op == "jl" or op == "jle" or op == "jg" or op == "jge" or op == "jb" or op == "jbe" or op == "ja" or op == "jae"
+end function
+
+/// Translate a conditional source jump to an assembler condition code.
+/// @internal
+function _ia_jump_cc(op)
+  if op == "jz" or op == "je" then return "e" end if
+  if op == "jnz" or op == "jne" then return "ne" end if
+  return s.substr(op, 1, len(op) - 1)
+end function
+
 /// Lower a typed symbolic x64 block into the shared native instruction emitter.
 /// @internal
 function _emit_expr_inline_asm(state, expr)
   names = expr.names
   n = len(names)
-  if n > 24 or n != len(expr.types) or n != len(expr.modes) or n != len(expr.optional) then
+  if n > 24 or n != len(expr.types) or n != len(expr.modes) or n != len(expr.optional) or n != len(expr.args) then
     return _ia_error(state, "invalid asm operand declarations")
   end if
   if s.toLowerAscii(expr.result_type) == "void" and expr.result_optional then return _ia_error(state, "asm cannot return void?") end if
-  result_written = s.toLowerAscii(expr.result_type) == "void"
+  labels = []
   for each instruction in expr.instructions
+    if instruction[0] == "label" then
+      if len(instruction[1]) != 1 or instruction[1][0] == "" then return _ia_error(state, "asm label expects one identifier") end if
+      if _ia_has_text(labels, instruction[1][0]) then return _ia_error(state, "duplicate asm label") end if
+      labels = labels + [instruction[1][0]]
+    end if
+  end for
+  backward_targets = []
+  result_written = s.toLowerAscii(expr.result_type) == "void"
+  pos = 0
+  for each instruction in expr.instructions
+    pos = pos + 1
     if typeof(instruction) != "array" or len(instruction) != 2 then return _ia_error(state, "invalid asm instruction") end if
     op = instruction[0]
     operands = instruction[1]
+    if op == "label" or _ia_is_jump(op) then
+      if result_written == false then return _ia_error(state, "asm must assign 'result' before control flow") end if
+      if op != "label" then
+        if len(operands) != 1 or _ia_has_text(labels, operands[0]) == false then return _ia_error(state, "asm jump requires a local label") end if
+        if op != "jmp" and (pos <= 1 or (expr.instructions[pos - 2][0] != "cmp" and expr.instructions[pos - 2][0] != "test")) then
+          return _ia_error(state, "conditional asm jump must immediately follow cmp or test")
+        end if
+        if _ia_label_index(expr, operands[0]) < pos and _ia_has_text(backward_targets, operands[0]) == false then
+          backward_targets = backward_targets + [operands[0]]
+        end if
+      end if
+      continue
+    end if
     if typeof(operands) != "array" or len(operands) != 2 then return _ia_error(state, "asm instructions require two operands") end if
     dst = operands[0]
     src = operands[1]
@@ -1803,6 +1861,21 @@ function _emit_expr_inline_asm(state, expr)
       end if
       continue
     end if
+    loadparts = []
+    if op == "movzx" then loadparts = _ia_byte_store(src) end if
+    if len(loadparts) == 2 then
+      d = _ia_sym(expr, dst)
+      buf = _ia_sym(expr, loadparts[0])
+      idx = _ia_sym(expr, loadparts[1])
+      if expr.unsafe == false then return _ia_error(state, "byte memory loads require 'asm unsafe x64'") end if
+      if d[3] != "out" and d[3] != "inout" and d[3] != "scratch" then return _ia_error(state, "asm destination is read-only") end if
+      if _ia_kind(d[1], d[2]) != "int" or buf[1] != "bytes" or buf[2] or _ia_kind(idx[1], idx[2]) != "int" then
+        return _ia_error(state, "byte load requires an int destination, bytes buffer and int index")
+      end if
+      if loadparts[1] == "result" and result_written == false then return _ia_error(state, "asm reads 'result' before assigning it") end if
+      if dst == "result" then result_written = true end if
+      continue
+    end if
     if op != "mov" and op != "test" and op != "cmp" and op != "cmovz" and op != "cmovnz" and op != "bsf" and op != "add" and op != "sub" and op != "xor" and op != "and" and op != "or" and op != "shl" and op != "shr" and op != "sar" and op != "movsd" and op != "addsd" and op != "subsd" and op != "mulsd" and op != "divsd" then
       return _ia_error(state, "unsupported inline asm instruction '" + op + "'")
     end if
@@ -1814,7 +1887,7 @@ function _emit_expr_inline_asm(state, expr)
     sk = "int"
     if imm[0] == false then sk = _ia_kind(sr[1], sr[2]) end if
     if op != "test" and op != "cmp" then
-      if d[3] != "out" and d[3] != "inout" then return _ia_error(state, "asm destination is read-only") end if
+      if d[3] != "out" and d[3] != "inout" and d[3] != "scratch" then return _ia_error(state, "asm destination is read-only") end if
       if dst == "result" then
         if op != "mov" and op != "movsd" and op != "bsf" and result_written == false then
           return _ia_error(state, "asm reads 'result' before assigning it")
@@ -1842,6 +1915,14 @@ function _emit_expr_inline_asm(state, expr)
   base = core.alloc_expr_temps(state, frame_size)
   if n > 0 then
     for i = 0 to n - 1
+    if expr.modes[i] == "scratch" then
+      if expr.types[i] != "int" or expr.optional[i] then return _ia_error(state, "asm scratch operands currently require int") end if
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base + i * 8, "rax")
+      state.asm = a.mov_rax_imm64(state.asm, 0)
+      state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base + (n + i) * 8, "rax")
+      continue
+    end if
     arg = expr.args[i]
     ty = expr.types[i]
     if s.toLowerAscii(ty) != "unknown" then arg = ml.TypeGuard("TypeGuard", arg, ty, expr.optional[i], t.ast_pos(expr), t.ast_filename(expr)) end if
@@ -1863,8 +1944,23 @@ function _emit_expr_inline_asm(state, expr)
     end for
   end if
 
+  label_prefix = ""
+  if len(labels) > 0 then label_prefix = "inline_asm_" + _next_lid(state) + "_" end if
   for each instruction in expr.instructions
     op = instruction[0]
+    if op == "label" then
+      state.asm = a.mark(state.asm, label_prefix + instruction[1][0])
+      if _ia_has_text(backward_targets, instruction[1][0]) then state = th.emit_gc_safepoint_poll(state) end if
+      continue
+    end if
+    if _ia_is_jump(op) then
+      if op == "jmp" then
+        state.asm = a.jmp(state.asm, label_prefix + instruction[1][0])
+      else
+        state.asm = a.jcc(state.asm, _ia_jump_cc(op), label_prefix + instruction[1][0])
+      end if
+      continue
+    end if
     dst = instruction[1][0]
     src = instruction[1][1]
     memparts = []
@@ -1876,6 +1972,17 @@ function _emit_expr_inline_asm(state, expr)
       state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r10", "r11", 1, 8)
       state = _ia_load_gpr(state, expr, base, src, "rax")
       state.asm = a.mov_membase_disp_r8(state.asm, "r10", 0, "al")
+      continue
+    end if
+    loadparts = []
+    if op == "movzx" then loadparts = _ia_byte_store(src) end if
+    if len(loadparts) == 2 then
+      buf = _ia_sym(expr, loadparts[0])
+      state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", base + buf[0] * 8)
+      state = _ia_load_gpr(state, expr, base, loadparts[1], "r11")
+      state.asm = a.lea_r64_mem_bis(state.asm, "r10", "r10", "r11", 1, 8)
+      state.asm = a.movzx_r32_membase_disp(state.asm, "r10d", "r10", 0)
+      state = _ia_store_gpr(state, expr, base, dst, "r10")
       continue
     end if
     d = _ia_sym(expr, dst)

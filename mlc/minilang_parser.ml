@@ -2328,8 +2328,8 @@ function _parse_asm_expr()
   if _match_kind(TK_RPAREN) == false then
     while true
       mode = _advance()
-      if _tok_value(mode) != "in" and _tok_value(mode) != "inout" then
-        _set_error("asm operand expects 'in' or 'inout'", _tok_pos(mode))
+      if _tok_value(mode) != "in" and _tok_value(mode) != "inout" and _tok_value(mode) != "scratch" then
+        _set_error("asm operand expects 'in', 'inout' or 'scratch'", _tok_pos(mode))
         return
       end if
       name_tok = _expect_kind(TK_IDENT)
@@ -2340,7 +2340,15 @@ function _parse_asm_expr()
       if _has_error() then return end if
       tref = _parse_type_ref()
       if _has_error() then return end if
-      args = args + [t.ast_leaf_new("Var", name, _tok_pos(name_tok), _filename)]
+      if _tok_value(mode) == "scratch" and (tref[0] != "int" or tref[1]) then
+        _set_error("asm scratch operands currently require int", _tok_pos(name_tok))
+        return
+      end if
+      if _tok_value(mode) == "scratch" then
+        args = args + [t.ast_leaf_new("Int", 0, _tok_pos(name_tok), _filename)]
+      else
+        args = args + [t.ast_leaf_new("Var", name, _tok_pos(name_tok), _filename)]
+      end if
       names = names + [name]
       types = types + [tref[0]]
       optional = optional + [tref[1]]
