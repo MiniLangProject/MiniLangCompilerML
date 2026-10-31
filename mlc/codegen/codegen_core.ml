@@ -280,6 +280,18 @@ struct CgState
   scalar_structs,
   /// Immutable whole-program proof of source-unreferenced function names.
   dead_functions,
+  /// Qualified class name to direct base class.
+  class_bases,
+  /// Qualified class name to ancestor names.
+  class_ancestors,
+  /// Qualified interface name to implementing struct/class names.
+  interface_implementers,
+  /// Declared interface names, including interfaces with no implementers.
+  interface_names,
+  abstract_classes,
+  polymorphic_classes,
+  class_constructor_arities,
+  method_candidates,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
@@ -721,7 +733,15 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   t.fastmap_new(64),
   void,
   [],
-  t.fastmap_new(64)
+  t.fastmap_new(64),
+  [],
+  [],
+  [],
+  [],
+  [],
+  t.fastmap_new(128),
+  [],
+  t.fastmap_new(128)
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)

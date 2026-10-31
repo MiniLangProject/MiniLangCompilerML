@@ -7884,6 +7884,25 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
       if pref != "" then sqn = pref + sbase end if
       st.name = sqn
 
+      if try(st.is_class) == true then
+        state.class_bases = _strpair_set(state.class_bases, sqn, _coerce_name(st.base))
+        if try(st.is_abstract) == true then state.abstract_classes = state.abstract_classes + [sqn] end if
+        if try(st.is_abstract) != true and typeof(try(st.constructor_min)) == "int" and st.constructor_min >= 0 then
+          state.class_constructor_arities = _named_array_set(state.class_constructor_arities, sqn, [st.constructor_min, st.constructor_max])
+        end if
+        ancestors = try(st._class_ancestors)
+        if typeof(ancestors) != "array" then ancestors = [] end if
+        state.class_ancestors = _named_array_set(state.class_ancestors, sqn, ancestors)
+      end if
+      if typeof(try(st.interfaces)) == "array" and len(st.interfaces) > 0 then
+        for ii = 0 to len(st.interfaces) - 1
+          iface = _coerce_name(st.interfaces[ii])
+          implementers = _named_array_get(state.interface_implementers, iface)
+          if typeof(implementers) != "array" then implementers = [] end if
+          state.interface_implementers = _named_array_set(state.interface_implementers, iface, implementers + [sqn])
+        end for
+      end if
+
       flds = st.fields
       if typeof(flds) != "array" then flds = [] end if
       vals = _named_array_get(state.struct_fields, sqn)
@@ -7946,6 +7965,8 @@ function _collect_program_decls(state, stmts, prefix, current_file, file_prefixe
             continue
           end if
           seen_mnames = _arr_add_unique(seen_mnames, mname)
+
+          if _arr_has(st.abstract_methods, mname) then continue end if
 
           is_static = false
           if typeof(mfn.is_static) == "bool" and mfn.is_static then is_static = true end if
@@ -9111,8 +9132,35 @@ function _emit_static_callable_objects(state)
       lid_obj = state.label_id
       state.label_id = state.label_id + 1
       obj_lbl = "obj_structtype_static_" + lid_obj
+      ctor_arity = _named_array_get(state.class_constructor_arities, sqn)
+      init_method = ""
+      if typeof(_named_array_get(state.class_ancestors, sqn)) == "array" and typeof(ctor_arity) != "array" then
+        init_method = _strpair_get(_named_array_get(state.struct_methods, sqn), "init")
+      end if
+      flags = 0
+      if _arr_has(state.abstract_classes, sqn) then flags = flags + 1 end if
+      if init_method != "" then flags = flags + 2 end if
+      if typeof(ctor_arity) == "array" then flags = flags + 4 end if
       state.rdata = d.rdata_pad_align(state.rdata, 8)
-      state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, t.u32(c.OBJ_STRUCTTYPE) + t.u32(len(flds)) + t.u32(sid) + t.u32(0))
+      obj_bytes = t.u32(c.OBJ_STRUCTTYPE) + t.u32(len(flds)) + t.u32(sid) + t.u32(flags)
+      if init_method != "" then obj_bytes = obj_bytes + t.u64(0) end if
+      if typeof(ctor_arity) == "array" then
+        obj_bytes = obj_bytes + t.u64(0) + t.u32(ctor_arity[0]) + t.u32(ctor_arity[1])
+        for arity = 0 to ctor_arity[1]
+          obj_bytes = obj_bytes + t.u64(0)
+        end for
+      end if
+      state.rdata = d.rdata_add_bytes_unique(state.rdata, obj_lbl, obj_bytes)
+      if init_method != "" then
+        obj_rec = d.rdata_label_record(state.rdata, obj_lbl)
+        state.rdata = d.rdata_add_abs64_patch(state.rdata, obj_rec.offset + 16, "fn_user_" + init_method)
+      end if
+      if typeof(ctor_arity) == "array" then
+        obj_rec = d.rdata_label_record(state.rdata, obj_lbl)
+        for arity = ctor_arity[0] to ctor_arity[1]
+          state.rdata = d.rdata_add_abs64_patch(state.rdata, obj_rec.offset + 32 + arity * 8, "fn_user___ml_ctor$" + sqn + "$" + arity)
+        end for
+      end if
       state.struct_static_obj_labels = _strpair_set(state.struct_static_obj_labels, sqn, obj_lbl)
     end for
   end if
@@ -9394,6 +9442,14 @@ function prepare_program_for_objects(state, program)
   state.native_threads_possible = _stmts_use_native_threads(program) or mem._heap_cfg_get_bool(state, "gc_concurrent", false)
   state.extern_structs = []
   state.value_enum_values = []
+  state.class_bases = []
+  state.class_ancestors = []
+  state.interface_implementers = []
+  state.interface_names = ml.language_interface_names()
+  state.abstract_classes = []
+  state.polymorphic_classes = t.fastmap_new(128)
+  state.class_constructor_arities = []
+  state.method_candidates = t.fastmap_new(128)
   state.user_functions = t.arr_vec_new(512)
   state.user_function_index = t.fastmap_new(256)
   state.function_codegen_name_map = t.fastmap_new(512)
@@ -9421,10 +9477,123 @@ function prepare_program_for_objects(state, program)
   decl_seen_nonpackage = res[3]
   next_sid = res[4]
   next_eid = res[5]
+  // Add inherited methods to each concrete receiver's dispatch map. Bodies
+  // remain owned by the class that declared them, including for super calls.
+  if typeof(state.class_ancestors) == "array" and len(state.class_ancestors) > 0 then
+    for ci = 0 to len(state.class_ancestors) - 1
+      class_entry = state.class_ancestors[ci]
+      class_name = class_entry[0]
+      ancestors = class_entry[1]
+      if typeof(ancestors) == "array" and len(ancestors) > 0 then
+        for pi = 0 to len(ancestors) - 1
+          state.polymorphic_classes = t.fastmap_set(state.polymorphic_classes, ancestors[pi], true)
+        end for
+      end if
+      inherited_map = []
+      if typeof(ancestors) == "array" and len(ancestors) > 0 then
+        for ai = len(ancestors) - 1 to 0
+          parent_map = _named_array_get(state.struct_methods, ancestors[ai])
+          if typeof(parent_map) == "struct" then parent_map = t.fastmap_items(parent_map) end if
+          if typeof(parent_map) != "array" then continue end if
+          if len(parent_map) > 0 then
+            for mi = 0 to len(parent_map) - 1
+              pair = parent_map[mi]
+              if typeof(pair) == "array" and len(pair) >= 2 then inherited_map = _strpair_set(inherited_map, pair[0], pair[1]) end if
+            end for
+          end if
+        end for
+      end if
+      own_map = _named_array_get(state.struct_methods, class_name)
+      if typeof(own_map) == "struct" then own_map = t.fastmap_items(own_map) end if
+      if typeof(own_map) == "array" and len(own_map) > 0 then
+        for mi = 0 to len(own_map) - 1
+          pair = own_map[mi]
+          if typeof(pair) == "array" and len(pair) >= 2 then inherited_map = _strpair_set(inherited_map, pair[0], pair[1]) end if
+        end for
+      end if
+      if typeof(inherited_map) == "array" and len(inherited_map) > 0 or typeof(inherited_map) == "struct" then
+        state.struct_methods = _named_array_set(state.struct_methods, class_name, inherited_map)
+      end if
+      inherited_static = []
+      if typeof(ancestors) == "array" and len(ancestors) > 0 then
+        for ai = len(ancestors) - 1 to 0
+          parent_static = _named_array_get(state.struct_static_methods, ancestors[ai])
+          if typeof(parent_static) == "struct" then parent_static = t.fastmap_items(parent_static) end if
+          if typeof(parent_static) != "array" or len(parent_static) <= 0 then continue end if
+          for mi = 0 to len(parent_static) - 1
+            pair = parent_static[mi]
+            if typeof(pair) == "array" and len(pair) >= 2 then inherited_static = _strpair_set(inherited_static, pair[0], pair[1]) end if
+          end for
+        end for
+      end if
+      own_static = _named_array_get(state.struct_static_methods, class_name)
+      if typeof(own_static) == "struct" then own_static = t.fastmap_items(own_static) end if
+      if typeof(own_static) == "array" and len(own_static) > 0 then
+        for mi = 0 to len(own_static) - 1
+          pair = own_static[mi]
+          if typeof(pair) == "array" and len(pair) >= 2 then inherited_static = _strpair_set(inherited_static, pair[0], pair[1]) end if
+        end for
+      end if
+      if typeof(inherited_static) == "array" and len(inherited_static) > 0 or typeof(inherited_static) == "struct" then
+        state.struct_static_methods = _named_array_set(state.struct_static_methods, class_name, inherited_static)
+      end if
+    end for
+  end if
   // Declaration collection is the only append-heavy phase for this table.
   // Freeze once so all established codegen consumers keep seeing arrays.
   state.user_functions = t.arr_vec_finish(state.user_functions)
   state = _rebuild_lookup_indexes(state)
+  state.method_candidates = t.fastmap_new(128)
+  if typeof(state.struct_methods) == "array" and len(state.struct_methods) > 0 then
+    for smi = 0 to len(state.struct_methods) - 1
+      entry = state.struct_methods[smi]
+      receiver_name = ""
+      method_map = void
+      if typeof(entry) == "struct" then
+        receiver_name = _coerce_name(entry.key)
+        method_map = entry.values
+      else if typeof(entry) == "array" and len(entry) >= 2 then
+        receiver_name = _coerce_name(entry[0])
+        method_map = entry[1]
+      end if
+      receiver_id = _named_int_get(state.struct_ids, receiver_name, -1)
+      if receiver_id < 0 then continue end if
+      if typeof(method_map) == "struct" then method_map = t.fastmap_items(method_map) end if
+      if typeof(method_map) != "array" or len(method_map) <= 0 then continue end if
+      for mi = 0 to len(method_map) - 1
+        pair = method_map[mi]
+        if typeof(pair) != "array" or len(pair) < 2 then continue end if
+        method_name = _coerce_name(pair[0])
+        function_name = _coerce_name(pair[1])
+        definition = _user_function_get_node(state, function_name)
+        if typeof(definition) != "struct" then continue end if
+        key = method_name + "$" + len(definition.params)
+        bucket = t.fastmap_get(state.method_candidates, key, void)
+        if t.arr_vec_is(bucket) == false then bucket = t.arr_vec_new(8) end if
+        bucket = t.arr_vec_push(bucket, [receiver_id, function_name])
+        state.method_candidates = t.fastmap_set(state.method_candidates, key, bucket)
+      end for
+    end for
+  end if
+  candidate_items = t.fastmap_items(state.method_candidates)
+  if typeof(candidate_items) == "array" and len(candidate_items) > 0 then
+    for ci = 0 to len(candidate_items) - 1
+      pair = candidate_items[ci]
+      sorted_candidates = t.arr_vec_finish(pair[1])
+      if len(sorted_candidates) > 1 then
+        for si = 1 to len(sorted_candidates) - 1
+          candidate = sorted_candidates[si]
+          sj = si - 1
+          while sj >= 0 and sorted_candidates[sj][0] > candidate[0]
+            sorted_candidates[sj + 1] = sorted_candidates[sj]
+            sj = sj - 1
+          end while
+          sorted_candidates[sj + 1] = candidate
+        end for
+      end if
+      state.method_candidates = t.fastmap_set(state.method_candidates, pair[0], sorted_candidates)
+    end for
+  end if
   state = _mem_probe(state, "decls_done")
 
   state.file_prefix_map = decl_file_prefixes

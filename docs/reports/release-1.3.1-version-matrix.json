@@ -1,0 +1,122 @@
+{
+  "version": "1.3.1",
+  "compilerBuilds": [
+    {
+      "file": "python-windows.exe",
+      "bytes": 65775616,
+      "sha256": "7f3679e55ec769f0b131e8b9ffdd9945757376d195f9c2cd5627d59ea727c5fd"
+    },
+    {
+      "file": "native-windows.exe",
+      "bytes": 65775616,
+      "sha256": "9c6677701ea6c434b9b42cc095b408667a23e61ee7d1eaa797ee3baca8499c98"
+    },
+    {
+      "file": "python-linux",
+      "bytes": 65796224,
+      "sha256": "f7d47bb71e2dc5143ae90e6ab928fe4735271d2af7ffb1f96a548107858e7f53"
+    },
+    {
+      "file": "native-linux",
+      "bytes": 65796224,
+      "sha256": "76313a76205daaaf1f7b67840b99d891b1120321198cf125a2ce804bfbdc5c55"
+    }
+  ],
+  "fixedPoint": {
+    "windows": true,
+    "linux": true
+  },
+  "fixtureImages": [
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_constructors.ml",
+      "python": {
+        "bytes": 113152,
+        "sha256": "c59161b536fd2c1966c48549291b95787a03023187502594f1bcc57fd4dde4de"
+      },
+      "selfHosted": {
+        "bytes": 114688,
+        "sha256": "e516c4a352f6b253b64878a9966f7bc0ca3982fe0ae9bca75f79c419a322b216"
+      },
+      "byteParity": false
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_dispatch.ml",
+      "python": {
+        "bytes": 105984,
+        "sha256": "a838fea6de384b837e2962478f3c0ebbe9c96b2b3631ba226dd88a90eceb6b86"
+      },
+      "selfHosted": {
+        "bytes": 100864,
+        "sha256": "736a8c39ef4c944d9ed2d6bcddc2cc09691b0f0311c11c6c4689cf71db2631e7"
+      },
+      "byteParity": false
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_interface_inheritance.ml",
+      "python": {
+        "bytes": 95744,
+        "sha256": "b4d2b323db8f3d5926eb53adfb5ca5723973d35b691de2fcc95e84cb981bd4bc"
+      },
+      "selfHosted": {
+        "bytes": 96256,
+        "sha256": "0af98e9b49dccc20e1f2b5b4523ac26a2dde2708c839ce2bfb91241249bde4fe"
+      },
+      "byteParity": false
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_features.ml",
+      "python": {
+        "bytes": 101888,
+        "sha256": "45f3d11ab85386a36b16b22d3534e52f7a3815e4324c7fcbacaaed284ee4beb7"
+      },
+      "selfHosted": {
+        "bytes": 99840,
+        "sha256": "a17baa8a23fb0d5b5f132135f3a8aec8980a89b1bb0fc6d2f50376bc88d7f94c"
+      },
+      "byteParity": false
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_constructors.ml",
+      "python": {
+        "bytes": 120784,
+        "sha256": "1db797c3d71a64927c0e04eea6f38e295fc38ffc31183dd1cd2d5ceaf1d0f3dc"
+      },
+      "selfHosted": {
+        "bytes": 120784,
+        "sha256": "7d8e5018166fd2e21d7133bb6f2f78b4b89b3fefcb1fffa68c274891edb8fff7"
+      },
+      "byteParity": false
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_dispatch.ml",
+      "python": {
+        "bytes": 112640,
+        "sha256": "a15968a9237970b16932ad65d1ed629441cbad5aa7071c70fad8a9a9d49f6595"
+      },
+      "selfHosted": {
+        "bytes": 108544,
+        "sha256": "f4b21215d9eb093f256175dedd505dbb5e5fc143234f689f42f784012d15caca"
+      },
+      "byteParity": false
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_interface_inheritance.ml",
+      "python": {
+        "bytes": 104352,
+        "sha256": "1e7a30d5c88b59807259c54c49df925ab742262f466ba519ef2be5d7ddac3234"
+      },
+      "selfHosted": {
+        "bytes": 104352,
+        "sha256": "9dd558ae5a46a6d06bee6541a54255a0729b1374bcfd8daa31b4fad8d44115d5"
+      },
+      "byteParity": false
+    }
+  ]
+}

@@ -2407,6 +2407,14 @@ end function
 
 /// Lower emit expr is type expression behavior to native x64.
 /// @internal
+function _oop_arr_has(items, wanted)
+  if typeof(items) != "array" or len(items) <= 0 then return false end if
+  for i = 0 to len(items) - 1
+    if items[i] == wanted then return true end if
+  end for
+  return false
+end function
+
 function _emit_expr_is_type(state, expr)
   ty_raw = _coerce_name(expr.type_name)
   neg = false
@@ -2455,8 +2463,48 @@ function _emit_expr_is_type(state, expr)
     end if
   end if
 
+  is_interface = false
+  if typeof(state.interface_names) == "array" then
+    if _oop_arr_has(state.interface_names, ty_q) then is_interface = true end if
+    if is_interface == false and _oop_arr_has(state.interface_names, ty_raw) then ty_q = ty_raw is_interface = true end if
+    if is_interface == false and len(state.interface_names) > 0 and not s.contains(ty_raw, ".") then
+      unique_iface = ""
+      for ii = 0 to len(state.interface_names) - 1
+        iface_name = state.interface_names[ii]
+        last_dot_iface = s.lastIndexOf(iface_name, ".")
+        simple_iface = iface_name
+        if typeof(last_dot_iface) == "int" and last_dot_iface >= 0 then simple_iface = s.substr(iface_name, last_dot_iface + 1, len(iface_name) - last_dot_iface - 1) end if
+        if simple_iface == ty_raw then
+          if unique_iface != "" then unique_iface = "" break end if
+          unique_iface = iface_name
+        end if
+      end for
+      if unique_iface != "" then ty_q = unique_iface is_interface = true end if
+    end if
+  end if
   sid = _state_struct_id_get(state, ty_q, 0)
-  if sid != 0 then
+  if sid != 0 or is_interface then
+    accepted_ids = []
+    if is_interface then
+      implementers = _named_array_get(state.interface_implementers, ty_q)
+      if typeof(implementers) == "array" and len(implementers) > 0 then
+        for ii = 0 to len(implementers) - 1
+          impl_id = _state_struct_id_get(state, implementers[ii], 0)
+          if impl_id != 0 then accepted_ids = accepted_ids + [impl_id] end if
+        end for
+      end if
+    else
+      accepted_ids = [sid]
+      if typeof(state.class_ancestors) == "array" and len(state.class_ancestors) > 0 then
+        for ci = 0 to len(state.class_ancestors) - 1
+          class_entry = state.class_ancestors[ci]
+          if typeof(class_entry) == "array" and len(class_entry) >= 2 and _oop_arr_has(class_entry[1], ty_q) then
+            child_id = _state_struct_id_get(state, class_entry[0], 0)
+            if child_id != 0 then accepted_ids = accepted_ids + [child_id] end if
+          end if
+        end for
+      end if
+    end if
     state = cg_emit_expr(state, expr.expr)
     fid_s = _next_lid(state)
     l_false_s = "is_s_false_" + fid_s
@@ -2484,8 +2532,12 @@ function _emit_expr_is_type(state, expr)
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
 
     state.asm = a.mark(state.asm, l_struct_sid_s)
-    state.asm = a.cmp_r32_imm(state.asm, "edx", sid)
-    state.asm = a.jcc(state.asm, "e", l_true_s)
+    if len(accepted_ids) > 0 then
+      for ai = 0 to len(accepted_ids) - 1
+        state.asm = a.cmp_r32_imm(state.asm, "edx", accepted_ids[ai])
+        state.asm = a.jcc(state.asm, "e", l_true_s)
+      end for
+    end if
     state.asm = a.jmp(state.asm, l_false_s)
 
     state.asm = a.mark(state.asm, l_true_s)
@@ -3230,6 +3282,7 @@ function _opt_project_temporary_struct(state, member)
   if t.ast_kind(callee) != "Var" then return void end if
   raw = _coerce_name(t.ast_name(callee))
   name = _qualify_identifier(state, raw)
+  if _method_map_get(_state_struct_methods_get(state, name), "init") != "" then return void end if
   binding = scope.cg_resolve_binding(state, raw)
   if typeof(binding) == "struct" and binding.kind != "global" then return void end if
   fields = _state_struct_fields_get(state, name)
@@ -5509,6 +5562,29 @@ end function
 
 /// Lower emit expr call expression behavior to native x64.
 /// @internal
+/// Emit a balanced receiver-ID search after the two-entry inline cache misses.
+/// @internal
+function _emit_method_candidate_search(state, candidates, first, last, fid, fail_label)
+  if first > last then
+    state.asm = a.jmp(state.asm, fail_label)
+    return state
+  end if
+  middle = (first + last) >> 1
+  sid = candidates[middle][0]
+  case_label = "mcall_case_" + fid + "_" + sid
+  state.asm = a.cmp_r32_imm(state.asm, "r10d", sid)
+  state.asm = a.jcc(state.asm, "e", case_label)
+  left_label = fail_label
+  if first < middle then left_label = "mcall_left_" + fid + "_" + sid end if
+  state.asm = a.jcc(state.asm, "l", left_label)
+  state = _emit_method_candidate_search(state, candidates, middle + 1, last, fid, fail_label)
+  if first < middle then
+    state.asm = a.mark(state.asm, left_label)
+    state = _emit_method_candidate_search(state, candidates, first, middle - 1, fid, fail_label)
+  end if
+  return state
+end function
+
 function _emit_expr_call(state, expr)
   // Keep callsite line current so runtime-created errors carry correct origin.
   state = core.emit_dbg_line(state, expr)
@@ -5565,10 +5641,33 @@ function _emit_expr_call(state, expr)
   // paths. The native ABI remains fixed; a variadic tail is one array value.
   has_named = false
   arg_names = try(expr.arg_names)
+  raw_class_constructor = false
+  if typeof(arg_names) == "array" and len(arg_names) > 0 and arg_names[0] == "__ml_raw_ctor" then
+    raw_class_constructor = true
+    arg_names = array(nargs, void)
+    expr.arg_names = arg_names
+  end if
   if typeof(arg_names) == "array" and len(arg_names) > 0 then
     for ni = 0 to len(arg_names) - 1
       if typeof(arg_names[ni]) == "string" then has_named = true break end if
     end for
+  end if
+  ctor_arity = _named_array_get(state.class_constructor_arities, callee)
+  if typeof(ctor_arity) == "array" and raw_class_constructor == false then
+    full_name = "__ml_ctor$" + callee + "$" + ctor_arity[1]
+    full_fn = _user_function_get(state, full_name)
+    if typeof(full_fn) != "struct" then
+      state.diagnostics = state.diagnostics + ["Missing constructor for class '" + callee + "'"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    normalized_ctor = _normalize_declared_call_args(expr, full_fn, 0)
+    if normalized_ctor.ok == false then
+      state.diagnostics = state.diagnostics + [normalized_ctor.message]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
+    return _emit_direct_user_call(state, full_name, normalized_ctor.args, len(normalized_ctor.args))
   end if
   direct_decl = _user_function_get(state, callee)
   if typeof(direct_decl) == "struct" and _is_instance_method_qname(state, callee) == false then
@@ -5842,7 +5941,8 @@ function _emit_expr_call(state, expr)
       if typeof(known_def_dyn) == "struct" and typeof(try(known_def_dyn.params)) == "array" then
         known_arity_dyn = len(known_def_dyn.params)
       end if
-      if known_arity_dyn == total_dyn then
+      polymorphic_known_dyn = t.fastmap_get(state.polymorphic_classes, known_qname_dyn, false) == true
+      if known_arity_dyn == total_dyn and not polymorphic_known_dyn then
         known_inline_used = 0
         if typeof(state._inline_emitted_bytes) == "struct" then
           known_inline_used = t.fastmap_get(state._inline_emitted_bytes, known_method_dyn, 0)
@@ -5892,40 +5992,8 @@ function _emit_expr_call(state, expr)
         return state
       end if
 
-      // Candidate storage is needed only when the concrete receiver was not
-      // proven and runtime method dispatch must be emitted.
-      cand_b = t.arr_chunk_new(16)
-      for smi = 0 to len(state.struct_methods) - 1
-        sm_it = state.struct_methods[smi]
-        sqn_dyn = ""
-        md_dyn = 0
-        if typeof(sm_it) == "struct" then
-          sqn_dyn = _coerce_name(sm_it.key)
-          md_dyn = sm_it.values
-        else
-          if typeof(sm_it) == "array" and len(sm_it) >= 2 then
-            sqn_dyn = _coerce_name(sm_it[0])
-            md_dyn = sm_it[1]
-          end if
-        end if
-        if sqn_dyn == "" then continue end if
-        if typeof(md_dyn) != "array" and typeof(md_dyn) != "struct" then continue end if
-        if typeof(md_dyn) == "array" and len(md_dyn) <= 0 then continue end if
-
-        fnq_dyn = _method_map_get(md_dyn, mname_dyn)
-        if fnq_dyn == "" then continue end if
-        fndef_dyn = _user_function_get(state, fnq_dyn)
-        if typeof(fndef_dyn) != "struct" then continue end if
-        exp_dyn = 0
-        if typeof(fndef_dyn.params) == "array" then exp_dyn = len(fndef_dyn.params) end if
-        if exp_dyn != total_dyn then continue end if
-
-        sid_dyn = _state_struct_id_get(state, sqn_dyn, -1)
-        if sid_dyn < 0 then continue end if
-        cand_b = t.arr_chunk_push(cand_b, [sid_dyn, fnq_dyn])
-      end for
-
-      cands_dyn = t.arr_chunk_finish(cand_b)
+      // Reuse the whole-program method/arity index at each dynamic callsite.
+      cands_dyn = t.fastmap_get(state.method_candidates, mname_dyn + "$" + total_dyn, [])
       if typeof(cands_dyn) == "array" and len(cands_dyn) > 0 then
         fid_dyn = _next_lid(state)
         l_fail_dyn = "mcall_fail_" + fid_dyn
@@ -6026,18 +6094,7 @@ function _emit_expr_call(state, expr)
         state.asm = a.jmp(state.asm, l_done_dyn)
 
         state.asm = a.mark(state.asm, l_ic_miss_dyn)
-        for ci_dyn = 0 to len(cands_dyn) - 1
-          c_dyn = cands_dyn[ci_dyn]
-          sid_dyn2 = -1
-          if typeof(c_dyn) == "array" and len(c_dyn) >= 2 then
-            if typeof(c_dyn[0]) == "int" then sid_dyn2 = c_dyn[0] end if
-          end if
-          if sid_dyn2 < 0 then continue end if
-          l_case_dyn = "mcall_case_" + fid_dyn + "_" + sid_dyn2
-          state.asm = a.cmp_r32_imm(state.asm, "r10d", sid_dyn2)
-          state.asm = a.jcc(state.asm, "e", l_case_dyn)
-        end for
-        state.asm = a.jmp(state.asm, l_fail_dyn)
+        state = _emit_method_candidate_search(state, cands_dyn, 0, len(cands_dyn) - 1, fid_dyn, l_fail_dyn)
 
         for ci_dyn2 = 0 to len(cands_dyn) - 1
           c_dyn2 = cands_dyn[ci_dyn2]
@@ -6230,7 +6287,7 @@ function _emit_expr_call(state, expr)
     if early_call[1] == true then return state end if
   end if
 
-  return _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime)
+  return _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime, raw_class_constructor)
 end function
 
 /// Lower emit expr call early builtins expression behavior to native x64.
@@ -8432,7 +8489,7 @@ end function
 
 /// Select constructor, direct-call, extern, or indirect-call lowering for a generic call.
 /// @internal
-function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime)
+function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime, raw_class_constructor)
   skip_call_args_eval = false
   direct_struct_constructor = false
   direct_user_global = false
@@ -8575,7 +8632,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
       scallee = raw_name
     end if
   end if
-  if sid != 0 then return _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs) end if
+  if sid != 0 then return _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs, raw_class_constructor) end if
   if direct_user_global and direct_user_name != "" then
     return _emit_direct_user_call(state, direct_user_name, call_args, nargs)
   end if
@@ -8587,7 +8644,12 @@ end function
 
 /// Emit a statically resolved struct construction while preserving field guards.
 /// @internal
-function _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs)
+function _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs, raw_class_constructor)
+    if _oop_arr_has(state.abstract_classes, scallee) and not raw_class_constructor then
+      state.diagnostics = state.diagnostics + ["Cannot instantiate abstract class '" + scallee + "'"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return state
+    end if
     expected = 0
     flds = _state_struct_fields_get(state, scallee)
     if typeof(flds) == "array" then expected = len(flds) end if
@@ -8657,6 +8719,16 @@ function _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs)
         state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_struct)
         state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + fi * 8, "rax")
       end for
+    end if
+    init_method = ""
+    if typeof(_named_array_get(state.class_ancestors, scallee)) == "array" and not raw_class_constructor then
+      init_method = _method_map_get(_state_struct_methods_get(state, scallee), "init")
+    end if
+    if init_method != "" then
+      state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base_struct)
+      state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+      state.asm = a.call(state.asm, "fn_user_" + init_method)
+      state = _emit_auto_errprop(state)
     end if
     state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base_struct)
     if base_struct_ok then state = core.free_expr_temps(state, 8) end if
@@ -9044,6 +9116,30 @@ function _emit_indirect_callable_call(state, cal, callee, raw_name, call_args, n
     state.asm = a.jmp(state.asm, l_done_nm)
 
     state.asm = a.mark(state.asm, l_stt_nm)
+    lid_class_nm = _next_lid(state)
+    l_stt_concrete_nm = "icall_stt_concrete_" + lid_class_nm
+    l_stt_fields_nm = "icall_stt_fields_" + lid_class_nm
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 12)
+    state.asm = a.and_r32_imm(state.asm, "r10d", 1)
+    state.asm = a.test_r32_r32(state.asm, "r10d", "r10d")
+    state.asm = a.jcc(state.asm, "e", l_stt_concrete_nm)
+    state = _emit_make_error_const(state, c.ERR_CALL_NOT_CALLABLE, "Cannot instantiate abstract class")
+    state.asm = a.jmp(state.asm, l_done_nm)
+    state.asm = a.mark(state.asm, l_stt_concrete_nm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 12)
+    state.asm = a.and_r32_imm(state.asm, "r10d", 4)
+    state.asm = a.test_r32_r32(state.asm, "r10d", "r10d")
+    state.asm = a.jcc(state.asm, "e", l_stt_fields_nm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 24)
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
+    state.asm = a.jcc(state.asm, "g", l_fail_nm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 28)
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
+    state.asm = a.jcc(state.asm, "l", l_fail_nm)
+    state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+    state.asm = a.call_membase_disp(state.asm, "r11", 32 + nargs * 8)
+    state.asm = a.jmp(state.asm, l_done_nm)
+    state.asm = a.mark(state.asm, l_stt_fields_nm)
     state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
     state.asm = a.cmp_r32_imm(state.asm, "r10d", nargs)
     state.asm = a.jcc(state.asm, "ne", l_fail_nm)
@@ -9089,6 +9185,19 @@ function _emit_indirect_callable_call(state, cal, callee, raw_name, call_args, n
         state.asm = a.mov_membase_disp_r64(state.asm, "rax", 8 + fi_nm * 8, "r10")
       end for
     end if
+    l_stt_no_init_nm = "icall_stt_no_init_" + lid_class_nm
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_nm)
+    state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 12)
+    state.asm = a.and_r32_imm(state.asm, "r10d", 2)
+    state.asm = a.test_r32_r32(state.asm, "r10d", "r10d")
+    state.asm = a.jcc(state.asm, "e", l_stt_no_init_nm)
+    state.asm = a.mov_membase_disp_r64(state.asm, "rsp", base_nm, "rax")
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+    state.asm = a.call_membase_disp(state.asm, "r11", 16)
+    state = _emit_auto_errprop(state)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base_nm)
+    state.asm = a.mark(state.asm, l_stt_no_init_nm)
     state.asm = a.jmp(state.asm, l_done_nm)
 
     state.asm = a.mark(state.asm, l_fail_nm)

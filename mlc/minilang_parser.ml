@@ -807,6 +807,25 @@ struct StructDef
   _pos,
   /// Filename associated with `StructDef`.
   _filename,
+  /// Parent class before and after inheritance resolution.
+  base,
+  /// Whether this declaration uses class semantics.
+  is_class,
+  /// Names explicitly marked override in this declaration.
+  override_methods,
+  /// Qualified ancestor class names, nearest first.
+  _class_ancestors,
+  is_abstract,
+  is_final,
+  field_visibility,
+  method_visibility,
+  abstract_methods,
+  final_methods,
+  field_owners,
+  method_hidden_names,
+  qualified_name,
+  constructor_min,
+  constructor_max,
 end struct
 
 /// Compile-time structural contract with no runtime representation.
@@ -821,6 +840,8 @@ struct InterfaceDef
   _pos,
   /// Filename associated with `InterfaceDef`.
   _filename,
+  /// Qualified interfaces inherited by this contract after resolution.
+  bases,
 end struct
 
 /// Compact parser results for rich parameter and call-argument lists.
@@ -936,7 +957,7 @@ _compile_target_format = "pe"
 _keywords =[
 "print", "if", "then", "else", "end", "while", "loop", "true", "false", "and", "or", "not",
 "function", "return", "global", "const", "for", "to", "each", "in", "break", "continue",
-"switch", "case", "default", "struct", "enum", "are", "namespace", "import", "as", "package",
+"switch", "case", "default", "struct", "class", "extends", "override", "abstract", "final", "private", "protected", "public", "enum", "are", "namespace", "import", "as", "package",
 "extern", "from", "returns", "symbol", "out", "static", "inline", "synchronized", "void", "is", "defer",
 "interface", "implements", "iterator", "yield", "async", "await", "operator", "div"
 ]
@@ -2944,7 +2965,7 @@ function _parse_namespace_def(start_pos)
       break
     end if
 
-    if _tok_kind_id(t) == TK_KW and(_tok_value(t) == "function" or _tok_value(t) == "struct" or _tok_value(t) == "interface" or _tok_value(t) == "enum" or _tok_value(t) == "namespace" or _tok_value(t) == "extern" or _tok_value(t) == "const") then
+    if _tok_kind_id(t) == TK_KW and(_tok_value(t) == "function" or _tok_value(t) == "struct" or _tok_value(t) == "class" or _tok_value(t) == "abstract" or _tok_value(t) == "final" or _tok_value(t) == "interface" or _tok_value(t) == "enum" or _tok_value(t) == "namespace" or _tok_value(t) == "extern" or _tok_value(t) == "const") then
       if _collect_errors then
         st = _parse_stmt_recover([], "namespace")
         if st != 0 then
@@ -3242,7 +3263,7 @@ function _parse_stmt()
     return _parse_stmt_extern(start_pos, t)
   end if
 
-  if kind == TK_KW and value == "struct" then
+  if kind == TK_KW and(value == "struct" or value == "class" or value == "abstract" or value == "final") then
     return _parse_stmt_struct(start_pos, t)
   end if
 
@@ -3573,7 +3594,7 @@ function _parse_stmt_extern(start_pos, t)
     end while
     _expect_end_of("struct")
     if _has_error() then return end if
-    return StructDef("StructDef", _tok_value(nm), _chunked_finish(fields_chunks, fields_tail), [], [], [], [], [], _chunked_finish(field_tys_chunks, field_tys_tail), start_pos, _filename)
+    return StructDef("StructDef", _tok_value(nm), _chunked_finish(fields_chunks, fields_tail), [], [], [], [], [], _chunked_finish(field_tys_chunks, field_tys_tail), start_pos, _filename, void, false, [], [], false, false, [], [], [], [], [], [], "", -1, -1)
   end if
 
   _expect_value(TK_KW, "function")
@@ -3629,6 +3650,17 @@ function _parse_stmt_interface(start_pos, tok)
   _advance()
   name_tok = _expect_kind(TK_IDENT)
   if _has_error() then return end if
+  bases = []
+  if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "extends" then
+    _advance()
+    while true
+      base_ref = _parse_type_ref()
+      if _has_error() then return end if
+      if base_ref[1] then _set_error("A base interface cannot be optional", _tok_pos(_peek())) return end if
+      bases = bases + [base_ref[0]]
+      if not _match_kind(TK_COMMA) then break end if
+    end while
+  end if
   _expect_block_nl()
   methods_chunks = []
   methods_tail = []
@@ -3666,7 +3698,7 @@ function _parse_stmt_interface(start_pos, tok)
   end while
   _expect_end_of("interface")
   if _has_error() then return end if
-  return InterfaceDef("InterfaceDef", _tok_value(name_tok), _chunked_finish(methods_chunks, methods_tail), start_pos, _filename)
+  return InterfaceDef("InterfaceDef", _tok_value(name_tok), _chunked_finish(methods_chunks, methods_tail), start_pos, _filename, bases)
 end function
 
 /// Returns parse stmt struct.
@@ -3675,9 +3707,29 @@ function _parse_stmt_struct(start_pos, t)
   /// Current func depth used by this routine.
   /// @internal
   global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  class_modifier = ""
+  if _tok_value(t) == "abstract" or _tok_value(t) == "final" then
+    class_modifier = _tok_value(_advance())
+    t = _peek()
+    if _tok_kind_id(t) != TK_KW or _tok_value(t) != "class" then
+      _set_error("'" + class_modifier + "' must precede a class", _tok_pos(t))
+      return
+    end if
+  end if
+  is_class = _tok_value(t) == "class"
+  end_kind = "struct"
+  if is_class then end_kind = "class" end if
   _advance()
   nm = _expect_kind(TK_IDENT)
   if _has_error() then return end if
+  base = void
+  if is_class and _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "extends" then
+    _advance()
+    base_ref = _parse_type_ref()
+    if _has_error() then return end if
+    if base_ref[1] then _set_error("A base class cannot be optional", _tok_pos(_peek())) return end if
+    base = base_ref[0]
+  end if
   interfaces = []
   if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "implements" then
     _advance()
@@ -3704,15 +3756,27 @@ function _parse_stmt_struct(start_pos, t)
   field_defaults_tail = []
   methods_chunks = []
   methods_tail = []
-  while not _is_end_of("struct")
+  override_methods = []
+  field_visibility = []
+  method_visibility = []
+  abstract_methods = []
+  final_methods = []
+  while not _is_end_of(end_kind)
     _skip_stmt_seps()
-    if _is_end_of("struct") then break end if
+    if _is_end_of(end_kind) then break end if
     if _tok_kind_id(_peek()) == TK_EOF then
       _set_error("struct ended unexpectedly (missing 'end struct'?)", _tok_pos(_peek()))
       return
     end if
 
+    visibility = "public"
+    if _tok_kind_id(_peek()) == TK_KW and (_tok_value(_peek()) == "private" or _tok_value(_peek()) == "protected" or _tok_value(_peek()) == "public") then
+      visibility = _tok_value(_advance())
+      if not is_class then _set_error("Visibility modifiers require a class", _tok_pos(_peek())) return end if
+    end if
+
     if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "operator" then
+      if visibility != "public" then _set_error("Operator methods must be public", _tok_pos(_peek())) return end if
       operator_pos = _tok_pos(_advance())
       operator_inline = false
       if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "inline" then
@@ -3812,10 +3876,23 @@ function _parse_stmt_struct(start_pos, t)
       continue
     end if
 
-    if _tok_kind_id(_peek()) == TK_KW and(_tok_value(_peek()) == "function" or _tok_value(_peek()) == "static") then
+    if _tok_kind_id(_peek()) == TK_KW and(_tok_value(_peek()) == "function" or _tok_value(_peek()) == "static" or _tok_value(_peek()) == "override" or _tok_value(_peek()) == "abstract" or _tok_value(_peek()) == "final") then
       mpos = _tok_pos(_peek())
       is_static = false
+      is_override = false
+      is_abstract_method = false
+      is_final_method = false
+      while _tok_kind_id(_peek()) == TK_KW and (_tok_value(_peek()) == "override" or _tok_value(_peek()) == "abstract" or _tok_value(_peek()) == "final")
+        modifier = _tok_value(_advance())
+        if not is_class then _set_error("'" + modifier + "' is only valid in a class", mpos) return end if
+        if modifier == "override" then is_override = true end if
+        if modifier == "abstract" then is_abstract_method = true end if
+        if modifier == "final" then is_final_method = true end if
+        _skip_newlines()
+      end while
+      if is_abstract_method and (is_final_method or is_override) then _set_error("An abstract method cannot be final or override", mpos) return end if
       if _tok_value(_peek()) == "static" then
+        if is_override or is_abstract_method then _set_error("A static method cannot be abstract or override an instance method", mpos) return end if
         is_static = true
         _advance()
         _skip_newlines()
@@ -3858,12 +3935,19 @@ function _parse_stmt_struct(start_pos, t)
         method_return_optional = mrt[1]
       end if
       _expect_block_nl()
-      _func_depth = _func_depth + 1
-      mb = _parse_block_until_end("function", mpos)
-      _func_depth = _func_depth - 1
-      if _has_error() then return end if
-      _expect_end_of("function")
-      if _has_error() then return end if
+      mb = []
+      if not is_abstract_method then
+        _func_depth = _func_depth + 1
+        mb = _parse_block_until_end("function", mpos)
+        _func_depth = _func_depth - 1
+        if _has_error() then return end if
+        _expect_end_of("function")
+        if _has_error() then return end if
+      end if
+      if is_override then override_methods = override_methods + [_tok_value(mn)] end if
+      if is_abstract_method then abstract_methods = abstract_methods + [_tok_value(mn)] end if
+      if is_final_method then final_methods = final_methods + [_tok_value(mn)] end if
+      method_visibility = method_visibility + [[_tok_value(mn), visibility]]
       appm = _chunked_push(methods_chunks, methods_tail, _new_function_node(_tok_value(mn), parsed.names, mb, is_static, is_inline, is_synchronized, parsed.types, parsed.optionals, parsed.defaults, parsed.variadic_index, method_return_type, method_return_optional, false, false, mpos, _filename), 16)
       methods_chunks = appm[0]
       methods_tail = appm[1]
@@ -3875,6 +3959,7 @@ function _parse_stmt_struct(start_pos, t)
     appf0 = _chunked_push(fields_chunks, fields_tail, _tok_value(f), 16)
     fields_chunks = appf0[0]
     fields_tail = appf0[1]
+    field_visibility = field_visibility + [visibility]
     fty = void
     foptional = false
     if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "as" then
@@ -3911,6 +3996,7 @@ function _parse_stmt_struct(start_pos, t)
       appf = _chunked_push(fields_chunks, fields_tail, _tok_value(fi), 16)
       fields_chunks = appf[0]
       fields_tail = appf[1]
+      field_visibility = field_visibility + [visibility]
       fty = void
       foptional = false
       if _tok_kind_id(_peek()) == TK_KW and _tok_value(_peek()) == "as" then
@@ -3939,7 +4025,7 @@ function _parse_stmt_struct(start_pos, t)
     _expect_block_nl()
   end while
 
-  _expect_end_of("struct")
+  _expect_end_of(end_kind)
   if _has_error() then return end if
   return StructDef(
     "StructDef",
@@ -3952,7 +4038,22 @@ function _parse_stmt_struct(start_pos, t)
     interfaces,
     [],
     start_pos,
-    _filename
+    _filename,
+    base,
+    is_class,
+    override_methods,
+    [],
+    class_modifier == "abstract",
+    class_modifier == "final",
+    field_visibility,
+    method_visibility,
+    abstract_methods,
+    final_methods,
+    [],
+    [],
+    "",
+    -1,
+    -1
   )
 end function
 
@@ -4535,7 +4636,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.3.0")
+    CompileValue("MINILANG_VERSION", "1.3.1")
   ]
 end function
 
@@ -5200,7 +5301,7 @@ end function
 function _lang_lower_expr(expr, prelude)
   /// Current language needs await used by this routine.
   /// @internal
-  global _language_needs_await, _language_needs_select, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file
+  global _language_needs_await, _language_needs_select, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file, _language_current_base, _language_current_class
   if t.ast_is_node(expr) == false then return [expr, prelude] end if
   kind = t.ast_kind(expr)
   if kind == "AsmExpr" then
@@ -5224,6 +5325,37 @@ function _lang_lower_expr(expr, prelude)
     return [_lang_var(name, expr), prelude]
   end if
   if kind == "Call" then
+    if t.ast_kind(expr.callee) == "Member" and t.ast_kind(try(expr.callee.target)) == "Var" and t.ast_name(expr.callee.target) == "super" then
+      owner = void
+      inherited = void
+      if typeof(_language_current_base) == "string" and _language_current_base != "" then
+        owner = _lang_class_find_method_owner(_language_current_base, expr.callee.name)
+        inherited = _lang_class_find_method(_language_current_base, expr.callee.name)
+      end if
+      if typeof(owner) != "string" or owner == "" then
+        _lang_fail("No inherited method '" + expr.callee.name + "' for 'super'")
+        return [expr, prelude]
+      end if
+      owner_item = _lang_find_struct_item(owner, "")
+      if typeof(owner_item) != "void" and _lang_class_method_visibility(owner_item[2], expr.callee.name) == "private" then
+        _lang_fail("Method '" + expr.callee.name + "' is private in the base class")
+        return [expr, prelude]
+      end if
+      normalized_super = _lang_normalize_super_args(expr, inherited)
+      if normalized_super[0] == false then
+        _lang_fail(normalized_super[2])
+        return [expr, prelude]
+      end if
+      // Match the Python frontend's generated call debug location. The
+      // surrounding return or expression statement retains the source line.
+      expr._filename = "__ml_generated__"
+      base_ref = Var("Var", owner, 0, "__ml_generated__")
+      super_name = expr.callee.name
+      if typeof(owner_item) != "void" then super_name = _lang_class_method_hidden(owner_item[2], super_name) end if
+      expr.callee = Member("Member", base_ref, super_name, 0, "__ml_generated__")
+      expr.args = [Var("Var", "this", 0, "__ml_generated__")] + normalized_super[1]
+      expr.arg_names = array(len(expr.args), void)
+    end if
     lowered = _lang_lower_expr(expr.callee, prelude)
     expr.callee = lowered[0]
     prelude = lowered[1]
@@ -5278,6 +5410,13 @@ function _lang_lower_expr(expr, prelude)
   if kind == "Member" or kind == "SafeMember" then
     lowered = _lang_lower_expr(expr.target, prelude)
     expr.target = lowered[0]
+    receiver_type = ""
+    if t.ast_kind(expr.target) == "Var" then receiver_type = _lang_receiver_type(t.ast_name(expr.target)) end if
+    if receiver_type != "" then
+      expr.name = _lang_access_typed_name(_language_current_class, receiver_type, expr.name)
+    else
+      expr.name = _lang_static_access_name(_language_current_class, _lang_member_qname(expr.target), expr.name)
+    end if
     return [expr, lowered[1]]
   end if
   if kind == "Index" then
@@ -5869,6 +6008,9 @@ end function
 /// Parse or represent lang lower stmt in the MiniLang front end.
 /// @internal
 function _lang_lower_stmt(st, function_depth)
+  /// Base class currently being lowered for super calls.
+  /// @internal
+  global _language_current_base, _language_current_class, _language_current_receiver_types
   kind = t.ast_kind(st)
   prelude = []
   if kind == "NamespaceDef" then
@@ -5893,9 +6035,15 @@ function _lang_lower_stmt(st, function_depth)
       return prelude + _lang_lower_async(st)
     end if
   else if kind == "StructDef" then
+    saved_base = _language_current_base
+    saved_class = _language_current_class
+    saved_receivers = _language_current_receiver_types
+    _language_current_base = st.base
+    _language_current_class = st.qualified_name
     if typeof(st.methods) == "array" and len(st.methods) > 0 then
       for i = 0 to len(st.methods) - 1
         method = _lang_apply_contracts(st.methods[i])
+        _language_current_receiver_types = _lang_method_receivers(method, st.qualified_name)
         if typeof(method.param_defaults) == "array" and len(method.param_defaults) > 0 then
           for j = 0 to len(method.param_defaults) - 1
             if typeof(method.param_defaults[j]) != "void" then
@@ -5912,6 +6060,9 @@ function _lang_lower_stmt(st, function_depth)
         st.methods[i] = method
       end for
     end if
+    _language_current_base = saved_base
+    _language_current_class = saved_class
+    _language_current_receiver_types = saved_receivers
   else if kind == "If" then
     lowered = _lang_lower_expr(st.cond, prelude)
     st.cond = lowered[0]
@@ -5979,6 +6130,10 @@ function _lang_lower_stmt(st, function_depth)
     st.default_body = _lang_lower_block(st.default_body, function_depth)
   else
     if kind == "SetMember" then
+      if t.ast_kind(st.obj) == "Var" then
+        receiver_type = _lang_receiver_type(t.ast_name(st.obj))
+        if receiver_type != "" then st.field = _lang_access_typed_name(_language_current_class, receiver_type, st.field) end if
+      end if
       lowered = _lang_lower_expr(st.obj, prelude)
       st.obj = lowered[0]
       prelude = lowered[1]
@@ -6025,6 +6180,22 @@ end function
 _language_interfaces = []
 /// Track language structs compiler state.
 _language_structs = []
+/// Names of classes whose inheritance has been resolved.
+_language_expanded_classes = []
+/// Base class for the method currently passing through expression lowering.
+_language_current_base = void
+_language_current_class = void
+_language_current_receiver_types = []
+
+/// Membership helper for declaration names.
+/// @internal
+function _lang_arr_has(items, wanted)
+  if typeof(items) != "array" or len(items) <= 0 then return false end if
+  for i = 0 to len(items) - 1
+    if items[i] == wanted then return true end if
+  end for
+  return false
+end function
 
 /// Parse or represent lang collect contracts in the MiniLang front end.
 /// @internal
@@ -6041,9 +6212,486 @@ function _lang_collect_contracts(body, prefix)
     else if kind == "InterfaceDef" then
       _language_interfaces = _language_interfaces + [[prefix + st.name, st]]
     else if kind == "StructDef" then
+      st.qualified_name = prefix + st.name
       _language_structs = _language_structs + [[prefix + st.name, prefix, st]]
     end if
   end for
+end function
+
+/// Find a class or struct declaration using the same namespace preference as interfaces.
+/// @internal
+function _lang_find_struct_item(raw_name, prefix)
+  local_name = prefix + raw_name
+  unique = void
+  if len(_language_structs) <= 0 then return void end if
+  for i = 0 to len(_language_structs) - 1
+    item = _language_structs[i]
+    if item[0] == local_name or item[0] == raw_name then return item end if
+    full = item[0]
+    last_dot = s.lastIndexOf(full, ".")
+    simple = full
+    if typeof(last_dot) == "int" and last_dot >= 0 then simple = s.substr(full, last_dot + 1, len(full) - last_dot - 1) end if
+    if simple == raw_name then
+      if typeof(unique) != "void" then return void end if
+      unique = item
+    end if
+  end for
+  return unique
+end function
+
+/// Find an effective method in a class hierarchy.
+/// @internal
+function _lang_class_find_method(qname, method_name)
+  item = _lang_find_struct_item(qname, "")
+  if typeof(item) == "void" then return void end if
+  st = item[2]
+  if typeof(st.methods) == "array" and len(st.methods) > 0 then
+    for i = 0 to len(st.methods) - 1
+      if st.methods[i].name == method_name then return st.methods[i] end if
+    end for
+  end if
+  if typeof(st.base) == "string" and st.base != "" then return _lang_class_find_method(st.base, method_name) end if
+  return void
+end function
+
+/// Return the class that originally declared an effective method.
+/// @internal
+function _lang_class_find_method_owner(qname, method_name)
+  item = _lang_find_struct_item(qname, "")
+  if typeof(item) == "void" then return void end if
+  st = item[2]
+  if typeof(st.methods) == "array" and len(st.methods) > 0 then
+    for i = 0 to len(st.methods) - 1
+      if st.methods[i].name == method_name then return item[0] end if
+    end for
+  end if
+  if typeof(st.base) == "string" and st.base != "" then return _lang_class_find_method_owner(st.base, method_name) end if
+  return void
+end function
+
+/// Lookup source visibility for a method declared by this class.
+/// @internal
+function _lang_class_method_visibility(st, name)
+  pairs = st.method_visibility
+  if typeof(pairs) == "array" and len(pairs) > 0 then
+    for i = 0 to len(pairs) - 1
+      if pairs[i][0] == name then return pairs[i][1] end if
+    end for
+  end if
+  return "public"
+end function
+
+/// Physical dispatch name used for a source method.
+/// @internal
+function _lang_class_method_hidden(st, name)
+  pairs = st.method_hidden_names
+  if typeof(pairs) == "array" and len(pairs) > 0 then
+    for i = 0 to len(pairs) - 1
+      if pairs[i][0] == name then return pairs[i][1] end if
+    end for
+  end if
+  return name
+end function
+
+/// Map member access from a class body to its hidden physical name.
+/// @internal
+function _lang_access_name(qname, raw)
+  if typeof(qname) != "string" or qname == "" then return raw end if
+  item = _lang_find_struct_item(qname, "")
+  if typeof(item) == "void" then return raw end if
+  st = item[2]
+  if typeof(st.fields) == "array" and len(st.fields) > 0 then
+    for i = 0 to len(st.fields) - 1
+      if st.fields[i] != raw then continue end if
+      vis = "public"
+      owner = qname
+      if i < len(st.field_visibility) then vis = st.field_visibility[i] end if
+      if i < len(st.field_owners) then owner = st.field_owners[i] end if
+      if vis == "private" and owner != qname then return raw end if
+      if vis != "public" then return "__ml_hidden$" + owner + "$" + raw end if
+      return raw
+    end for
+  end if
+  owner = _lang_class_find_method_owner(qname, raw)
+  if typeof(owner) != "string" or owner == "" then return raw end if
+  owner_item = _lang_find_struct_item(owner, "")
+  if typeof(owner_item) == "void" then return raw end if
+  vis = _lang_class_method_visibility(owner_item[2], raw)
+  if vis == "private" and owner != qname then return raw end if
+  return _lang_class_method_hidden(owner_item[2], raw)
+end function
+
+/// Resolve a source class name using the current namespace.
+/// @internal
+function _lang_resolve_class_type(raw, current)
+  if typeof(raw) != "string" or raw == "" then return "" end if
+  prefix = ""
+  if typeof(current) == "string" then
+    last_dot = s.lastIndexOf(current, ".")
+    if typeof(last_dot) == "int" and last_dot >= 0 then prefix = s.substr(current, 0, last_dot + 1) end if
+  end if
+  item = _lang_find_struct_item(raw, prefix)
+  if typeof(item) == "void" or item[2].is_class != true then return "" end if
+  return item[0]
+end function
+
+/// Lookup a statically known instance receiver in the current method.
+/// @internal
+function _lang_receiver_get(pairs, name)
+  if typeof(pairs) != "array" or len(pairs) <= 0 then return "" end if
+  for i = 0 to len(pairs) - 1
+    if pairs[i][0] == name then return pairs[i][1] end if
+  end for
+  return ""
+end function
+
+function _lang_receiver_type(name)
+  return _lang_receiver_get(_language_current_receiver_types, name)
+end function
+
+/// Record a receiver type without creating duplicate names.
+/// @internal
+function _lang_receiver_set(pairs, name, qname)
+  if len(pairs) > 0 then
+    for i = 0 to len(pairs) - 1
+      if pairs[i][0] == name then pairs[i] = [name, qname] return pairs end if
+    end for
+  end if
+  return pairs + [[name, qname]]
+end function
+
+/// Collect writes to method locals so aliases are accepted only when stable.
+/// @internal
+function _lang_method_writes(body)
+  writes = []
+  if typeof(body) != "array" or len(body) <= 0 then return writes end if
+  for i = 0 to len(body) - 1
+    st = body[i]
+    kind = t.ast_kind(st)
+    if kind == "FunctionDef" then continue end if
+    if kind == "Assign" then writes = writes + [[st.name, st.expr, st.declared_type]] end if
+    nested = try(st.body)
+    if typeof(nested) == "array" then writes = writes + _lang_method_writes(nested) end if
+    nested = try(st.then_body)
+    if typeof(nested) == "array" then writes = writes + _lang_method_writes(nested) end if
+    nested = try(st.else_body)
+    if typeof(nested) == "array" then writes = writes + _lang_method_writes(nested) end if
+    branches = try(st.elifs)
+    if typeof(branches) == "array" and len(branches) > 0 then
+      for bi = 0 to len(branches) - 1
+        writes = writes + _lang_method_writes(branches[bi][1])
+      end for
+    end if
+  end for
+  return writes
+end function
+
+/// Infer stable class references from method parameters and local aliases.
+/// @internal
+function _lang_method_receivers(method, current)
+  known = [["this", current]]
+  writes = _lang_method_writes(method.body)
+  if len(method.params) > 0 then
+    for pi = 0 to len(method.params) - 1
+      name = method.params[pi]
+      changed = false
+      if len(writes) > 0 then
+        for wi = 0 to len(writes) - 1
+          if writes[wi][0] == name then changed = true break end if
+        end for
+      end if
+      if changed then continue end if
+      declared = void
+      if pi < len(method.param_types) then declared = method.param_types[pi] end if
+      qname = _lang_resolve_class_type(declared, current)
+      if qname != "" then known = _lang_receiver_set(known, name, qname) end if
+    end for
+  end if
+  if len(writes) > 0 then
+    for pass = 0 to len(writes) - 1
+      for wi = 0 to len(writes) - 1
+        entry = writes[wi]
+        name = entry[0]
+        count = 0
+        for ci = 0 to len(writes) - 1
+          if writes[ci][0] == name then count = count + 1 end if
+        end for
+        if count != 1 then continue end if
+        qname = _lang_resolve_class_type(entry[2], current)
+        if qname == "" and t.ast_kind(entry[1]) == "Var" then qname = _lang_receiver_get(known, t.ast_name(entry[1])) end if
+        if qname == "" and t.ast_kind(entry[1]) == "Call" then qname = _lang_resolve_class_type(_lang_member_qname(entry[1].callee), current) end if
+        if qname != "" then known = _lang_receiver_set(known, name, qname) end if
+      end for
+    end for
+  end if
+  return known
+end function
+
+/// Resolve nonpublic access against the declaring class and its ancestors.
+/// @internal
+function _lang_access_typed_name(current, receiver, raw)
+  item = _lang_find_struct_item(receiver, "")
+  if typeof(item) == "void" then return raw end if
+  st = item[2]
+  owner = ""
+  owner_item = void
+  vis = "public"
+  if typeof(st.fields) == "array" and len(st.fields) > 0 then
+    for fi = 0 to len(st.fields) - 1
+      if st.fields[fi] != raw then continue end if
+      owner = receiver
+      if fi < len(st.field_owners) then owner = st.field_owners[fi] end if
+      if fi < len(st.field_visibility) then vis = st.field_visibility[fi] end if
+      break
+    end for
+  end if
+  method_member = false
+  if owner == "" then
+    owner = _lang_class_find_method_owner(receiver, raw)
+    if typeof(owner) != "string" or owner == "" then return raw end if
+    owner_item = _lang_find_struct_item(owner, "")
+    if typeof(owner_item) == "void" then return raw end if
+    vis = _lang_class_method_visibility(owner_item[2], raw)
+    method_member = true
+  end if
+  if vis == "private" and current != owner then
+    _lang_fail("Member '" + raw + "' is private in " + owner)
+    return raw
+  end if
+  if vis == "protected" and current != owner then
+    current_item = _lang_find_struct_item(current, "")
+    if typeof(current_item) == "void" or not _lang_arr_has(current_item[2]._class_ancestors, owner) then
+      _lang_fail("Member '" + raw + "' is protected in " + owner)
+      return raw
+    end if
+  end if
+  if method_member then return _lang_class_method_hidden(owner_item[2], raw) end if
+  if vis == "public" then return raw end if
+  return "__ml_hidden$" + owner + "$" + raw
+end function
+
+/// Read a qualified class name from a member chain.
+/// @internal
+function _lang_member_qname(expr)
+  kind = t.ast_kind(expr)
+  if kind == "Var" then return t.ast_name(expr) end if
+  if kind == "Member" then
+    prefix = _lang_member_qname(expr.target)
+    if typeof(prefix) == "string" and prefix != "" then return prefix + "." + expr.name end if
+  end if
+  return ""
+end function
+
+/// Resolve a private or protected static call made from its declaring class.
+/// @internal
+function _lang_static_access_name(qname, receiver, raw)
+  target = _lang_resolve_class_type(receiver, qname)
+  if target == "" then return raw end if
+  method = _lang_class_find_method(target, raw)
+  if typeof(method) == "void" or method.is_static != true then return raw end if
+  current = ""
+  if typeof(qname) == "string" then current = qname end if
+  return _lang_access_typed_name(current, target, raw)
+end function
+
+/// Normalize a super call against the inherited source signature.
+/// @internal
+function _lang_normalize_super_args(expr, method)
+  supplied = expr.args
+  if typeof(supplied) != "array" then supplied = [] end if
+  names = expr.arg_names
+  if typeof(names) != "array" then names = [] end if
+  params = method.params
+  defaults = method.param_defaults
+  variadic = method.variadic_index
+  if typeof(variadic) != "int" then variadic = -1 end if
+  fixed = len(params)
+  if variadic >= 0 then fixed = variadic end if
+  slots = array(fixed, void)
+  extras = []
+  next_pos = 0
+  if len(supplied) > 0 then
+    for i = 0 to len(supplied) - 1
+      name = void
+      if i < len(names) then name = names[i] end if
+      if typeof(name) != "string" then
+        while next_pos < fixed and typeof(slots[next_pos]) != "void"
+          next_pos = next_pos + 1
+        end while
+        if next_pos < fixed then
+          slots[next_pos] = supplied[i]
+          next_pos = next_pos + 1
+        else if variadic >= 0 then
+          extras = extras + [supplied[i]]
+        else
+          return [false, [], "Too many arguments for super." + method.name]
+        end if
+      else
+        index = -1
+        if len(params) > 0 then
+          for j = 0 to len(params) - 1
+            if params[j] == name then index = j break end if
+          end for
+        end if
+        if index < 0 then return [false, [], "Unknown named argument '" + name + "' for super." + method.name] end if
+        if index == variadic then return [false, [], "Variadic parameter '" + name + "' cannot be supplied by name"] end if
+        if typeof(slots[index]) != "void" then return [false, [], "Argument '" + name + "' was supplied more than once"] end if
+        slots[index] = supplied[i]
+      end if
+    end for
+  end if
+  if fixed > 0 then
+    for i = 0 to fixed - 1
+      if typeof(slots[i]) == "void" then
+        default_value = void
+        if typeof(defaults) == "array" and i < len(defaults) then default_value = defaults[i] end if
+        if typeof(default_value) == "void" then return [false, [], "Missing required argument '" + params[i] + "' for super." + method.name] end if
+        slots[i] = default_value
+      end if
+    end for
+  end if
+  if variadic >= 0 then slots = slots + [ArrayLit("ArrayLit", extras, false, 0, "__ml_generated__")] end if
+  return [true, slots, ""]
+end function
+
+/// Resolve a class before contracts are checked and ordinary structs are collected.
+/// @internal
+function _lang_expand_class(item, visiting)
+  /// Resolved class names for this compilation.
+  /// @internal
+  global _language_expanded_classes
+  qname = item[0]
+  st = item[2]
+  if _lang_arr_has(_language_expanded_classes, qname) then return "" end if
+  if _lang_arr_has(visiting, qname) then return "Cyclic class inheritance involving " + qname end if
+  if typeof(st.base) != "string" or st.base == "" then
+    if typeof(st.override_methods) == "array" and len(st.override_methods) > 0 then return "Method '" + st.override_methods[0] + "' has no base method to override" end if
+    st._class_ancestors = []
+    st.field_owners = array(len(st.fields), qname)
+    st.method_hidden_names = []
+    if typeof(st.methods) == "array" and len(st.methods) > 0 then
+      for mi = 0 to len(st.methods) - 1
+        raw = st.methods[mi].name
+        vis = _lang_class_method_visibility(st, raw)
+        hidden = raw
+        if vis != "public" then hidden = "__ml_hidden$" + qname + "$" + raw end if
+        st.method_hidden_names = st.method_hidden_names + [[raw, hidden]]
+      end for
+    end if
+    _language_expanded_classes = _language_expanded_classes + [qname]
+    return ""
+  end if
+  base_item = _lang_find_struct_item(st.base, item[1])
+  if typeof(base_item) == "void" then return "Unknown or ambiguous base class '" + st.base + "' for " + qname end if
+  base = base_item[2]
+  if base.is_class != true then return "'" + base_item[0] + "' is not a class" end if
+  if base.is_final == true then return "Cannot extend final class '" + base_item[0] + "'" end if
+  error_text = _lang_expand_class(base_item, visiting + [qname])
+  if error_text != "" then return error_text end if
+  st.base = base_item[0]
+  st._class_ancestors = [base_item[0]] + base._class_ancestors
+  if typeof(st.fields) == "array" and len(st.fields) > 0 then
+    for i = 0 to len(st.fields) - 1
+      if _lang_arr_has(base.fields, st.fields[i]) then return "Field '" + st.fields[i] + "' already exists in base class " + base_item[0] end if
+    end for
+  end if
+  if typeof(st.methods) == "array" and len(st.methods) > 0 then
+    for i = 0 to len(st.methods) - 1
+      method = st.methods[i]
+      inherited = _lang_class_find_method(base_item[0], method.name)
+      inherited_owner = _lang_class_find_method_owner(base_item[0], method.name)
+      overridden = _lang_arr_has(st.override_methods, method.name)
+      if typeof(inherited_owner) == "string" and inherited_owner != "" then
+        inherited_item = _lang_find_struct_item(inherited_owner, "")
+        if typeof(inherited_item) != "void" and _lang_class_method_visibility(inherited_item[2], method.name) == "private" then return "Cannot override private method '" + method.name + "'" end if
+        if typeof(inherited_item) != "void" and _lang_arr_has(inherited_item[2].final_methods, method.name) then return "Cannot override final method '" + method.name + "'" end if
+        if typeof(inherited_item) != "void" and _lang_class_method_visibility(st, method.name) != _lang_class_method_visibility(inherited_item[2], method.name) then return "Override of '" + method.name + "' must preserve visibility" end if
+      end if
+      if typeof(inherited) == "void" and overridden then return "Method '" + method.name + "' has no base method to override" end if
+      if typeof(inherited) != "void" and not overridden then return "Method '" + method.name + "' overrides a base method; add 'override'" end if
+      if typeof(inherited) != "void" and overridden then
+        if method.is_static or inherited.is_static or not _lang_interface_signature_matches(inherited, method) then return "Incompatible override of '" + method.name + "'" end if
+      end if
+    end for
+  end if
+  st.fields = base.fields + st.fields
+  st.field_owners = base.field_owners + array(len(st.fields) - len(base.fields), qname)
+  st.field_types = base.field_types + st.field_types
+  st.field_optional = base.field_optional + st.field_optional
+  st.field_defaults = base.field_defaults + st.field_defaults
+  st.field_visibility = base.field_visibility + st.field_visibility
+  st.interfaces = base.interfaces + st.interfaces
+  st.method_hidden_names = []
+  if typeof(st.methods) == "array" and len(st.methods) > 0 then
+    for mi = 0 to len(st.methods) - 1
+      raw = st.methods[mi].name
+      vis = _lang_class_method_visibility(st, raw)
+      hidden = raw
+      inherited_owner = _lang_class_find_method_owner(base_item[0], raw)
+      if typeof(inherited_owner) == "string" and inherited_owner != "" then
+        inherited_item = _lang_find_struct_item(inherited_owner, "")
+        if typeof(inherited_item) != "void" then hidden = _lang_class_method_hidden(inherited_item[2], raw) end if
+      else if vis != "public" then
+        hidden = "__ml_hidden$" + qname + "$" + raw
+      end if
+      st.method_hidden_names = st.method_hidden_names + [[raw, hidden]]
+    end for
+  end if
+  _language_expanded_classes = _language_expanded_classes + [qname]
+  return ""
+end function
+
+/// Resolve all class hierarchies before interface validation and codegen.
+/// @internal
+function _lang_expand_classes(program)
+  /// Collected declarations for this compilation.
+  /// @internal
+  global _language_interfaces, _language_structs, _language_expanded_classes
+  _language_interfaces = []
+  _language_structs = []
+  _language_expanded_classes = []
+  _lang_collect_contracts(program, "")
+  if len(_language_structs) <= 0 then return "" end if
+  for i = 0 to len(_language_structs) - 1
+    item = _language_structs[i]
+    if item[2].is_class == true then
+      error_text = _lang_expand_class(item, [])
+      if error_text != "" then return error_text end if
+    end if
+  end for
+  for i = 0 to len(_language_structs) - 1
+    item = _language_structs[i]
+    st = item[2]
+    if st.is_class != true then continue end if
+    if st.is_abstract == true and st.is_final == true then return "A class cannot be both abstract and final" end if
+    if typeof(st.methods) == "array" and len(st.methods) > 0 then
+      for mi = 0 to len(st.methods) - 1
+        method = st.methods[mi]
+        if _lang_arr_has(st.abstract_methods, method.name) and st.is_abstract != true then return "Abstract method '" + method.name + "' requires an abstract class" end if
+        if method.name == "init" then
+          if method.variadic_index >= 0 or (typeof(method.return_type) == "string" and method.return_type != "void") or _lang_arr_has(st.abstract_methods, "init") or _lang_class_method_visibility(st, "init") != "public" then
+            return "Class initializer init must be public, nonvariadic and return void"
+          end if
+        end if
+      end for
+    end if
+    if st.is_abstract == true then continue end if
+    hierarchy = [item[0]] + st._class_ancestors
+    if len(hierarchy) > 0 then
+      for hi = 0 to len(hierarchy) - 1
+        ancestor_item = _lang_find_struct_item(hierarchy[hi], "")
+        if typeof(ancestor_item) == "void" then continue end if
+        abstract_names = ancestor_item[2].abstract_methods
+        if typeof(abstract_names) != "array" or len(abstract_names) <= 0 then continue end if
+        for ai = 0 to len(abstract_names) - 1
+          owner = _lang_class_find_method_owner(item[0], abstract_names[ai])
+          owner_item = _lang_find_struct_item(owner, "")
+          if typeof(owner_item) != "void" and _lang_arr_has(owner_item[2].abstract_methods, abstract_names[ai]) then return "Class " + item[0] + " must implement abstract method '" + abstract_names[ai] + "'" end if
+        end for
+      end for
+    end if
+  end for
+  return ""
 end function
 
 /// Parse or represent lang find interface in the MiniLang front end.
@@ -6065,6 +6713,37 @@ function _lang_find_interface(raw_name, prefix)
     end if
   end for
   return unique
+end function
+
+/// Resolve an interface reference to its qualified declaration name.
+/// @internal
+function _lang_interface_qname(raw_name, prefix)
+  local_name = prefix + raw_name
+  unique = ""
+  if len(_language_interfaces) <= 0 then return "" end if
+  for i = 0 to len(_language_interfaces) - 1
+    full = _language_interfaces[i][0]
+    if full == local_name or full == raw_name then return full end if
+    simple = full
+    last_dot = s.lastIndexOf(full, ".")
+    if typeof(last_dot) == "int" and last_dot >= 0 then simple = s.substr(full, last_dot + 1, len(full) - last_dot - 1) end if
+    if simple == raw_name then
+      if unique != "" then return "" end if
+      unique = full
+    end if
+  end for
+  return unique
+end function
+
+/// Names retained for runtime interface type checks after declarations are lowered.
+function language_interface_names()
+  names = []
+  if len(_language_interfaces) > 0 then
+    for i = 0 to len(_language_interfaces) - 1
+      names = names + [_language_interfaces[i][0]]
+    end for
+  end if
+  return names
 end function
 
 /// Parse or represent lang interface signature matches in the MiniLang front end.
@@ -6091,15 +6770,87 @@ function _lang_interface_signature_matches(required, actual)
   return true
 end function
 
+/// Expand inherited interface requirements and reject cycles or conflicts.
+/// @internal
+function _lang_expand_interface(qname, path)
+  /// Interfaces already flattened in this compilation.
+  /// @internal
+  global _language_expanded_interfaces
+  if _lang_arr_has(_language_expanded_interfaces, qname) then return "" end if
+  if _lang_arr_has(path, qname) then return "Cyclic interface inheritance involving " + qname end if
+  iface = _lang_find_interface(qname, "")
+  if typeof(iface) == "void" then return "Unknown interface '" + qname + "'" end if
+  prefix = ""
+  last_dot = s.lastIndexOf(qname, ".")
+  if typeof(last_dot) == "int" and last_dot >= 0 then prefix = s.substr(qname, 0, last_dot + 1) end if
+  merged = []
+  ancestors = []
+  bases = iface.bases
+  if typeof(bases) == "array" and len(bases) > 0 then
+    for bi = 0 to len(bases) - 1
+      base_name = _lang_interface_qname(bases[bi], prefix)
+      if base_name == "" then return "Unknown or ambiguous interface '" + bases[bi] + "'" end if
+      error_text = _lang_expand_interface(base_name, path + [qname])
+      if error_text != "" then return error_text end if
+      base = _lang_find_interface(base_name, "")
+      ancestors = ancestors + [base_name] + base.bases
+      if len(base.methods) > 0 then
+        for mi = 0 to len(base.methods) - 1
+          method = base.methods[mi]
+          old = void
+          if len(merged) > 0 then
+            for oi = 0 to len(merged) - 1
+              if merged[oi].name == method.name then old = merged[oi] break end if
+            end for
+          end if
+          if typeof(old) != "void" and not _lang_interface_signature_matches(old, method) then return "Conflicting inherited interface method '" + method.name + "'" end if
+          if typeof(old) == "void" then merged = merged + [method] end if
+        end for
+      end if
+    end for
+  end if
+  if len(iface.methods) > 0 then
+    for mi = 0 to len(iface.methods) - 1
+      method = iface.methods[mi]
+      old = void
+      old_index = -1
+      if len(merged) > 0 then
+        for oi = 0 to len(merged) - 1
+          if merged[oi].name == method.name then old = merged[oi] old_index = oi break end if
+        end for
+      end if
+      if typeof(old) != "void" and not _lang_interface_signature_matches(old, method) then return "Interface method '" + method.name + "' conflicts with its base signature" end if
+      if old_index >= 0 then merged[old_index] = method else merged = merged + [method] end if
+    end for
+  end if
+  iface.methods = merged
+  unique_ancestors = []
+  if len(ancestors) > 0 then
+    for ai = 0 to len(ancestors) - 1
+      if not _lang_arr_has(unique_ancestors, ancestors[ai]) then unique_ancestors = unique_ancestors + [ancestors[ai]] end if
+    end for
+  end if
+  iface.bases = unique_ancestors
+  _language_expanded_interfaces = _language_expanded_interfaces + [qname]
+  return ""
+end function
+
 /// Parse or represent lang validate interfaces in the MiniLang front end.
 /// @internal
 function _lang_validate_interfaces(program)
   /// Current language interfaces used by this routine.
   /// @internal
-  global _language_interfaces, _language_structs
+  global _language_interfaces, _language_structs, _language_expanded_interfaces
   _language_interfaces = []
   _language_structs = []
+  _language_expanded_interfaces = []
   _lang_collect_contracts(program, "")
+  if len(_language_interfaces) > 0 then
+    for ii = 0 to len(_language_interfaces) - 1
+      error_text = _lang_expand_interface(_language_interfaces[ii][0], [])
+      if error_text != "" then return error_text end if
+    end for
+  end if
   if len(_language_structs) <= 0 then return "" end if
   for i = 0 to len(_language_structs) - 1
     item = _language_structs[i]
@@ -6107,27 +6858,168 @@ function _lang_validate_interfaces(program)
     prefix = item[1]
     st = item[2]
     if typeof(st.interfaces) != "array" or len(st.interfaces) <= 0 then continue end if
+    resolved_interfaces = []
     for j = 0 to len(st.interfaces) - 1
       raw_name = st.interfaces[j]
       iface = _lang_find_interface(raw_name, prefix)
       if typeof(iface) == "void" then return "Unknown interface '" + raw_name + "' implemented by " + struct_name end if
+      resolved_name = _lang_interface_qname(raw_name, prefix)
+      if not _lang_arr_has(resolved_interfaces, resolved_name) then resolved_interfaces = resolved_interfaces + [resolved_name] end if
+      if len(iface.bases) > 0 then
+        for abi = 0 to len(iface.bases) - 1
+          if not _lang_arr_has(resolved_interfaces, iface.bases[abi]) then resolved_interfaces = resolved_interfaces + [iface.bases[abi]] end if
+        end for
+      end if
       if len(iface.methods) <= 0 then continue end if
       for k = 0 to len(iface.methods) - 1
         required = iface.methods[k]
-        actual = void
-        if len(st.methods) > 0 then
-          for m = 0 to len(st.methods) - 1
-            if st.methods[m].name == required.name then actual = st.methods[m] break end if
-          end for
-        end if
+        actual = _lang_class_find_method(struct_name, required.name)
         if typeof(actual) == "void" then return "Struct " + struct_name + " does not implement " + raw_name + "." + required.name end if
+        actual_owner = _lang_class_find_method_owner(struct_name, required.name)
+        actual_item = _lang_find_struct_item(actual_owner, "")
+        if typeof(actual_item) != "void" and _lang_class_method_visibility(actual_item[2], required.name) != "public" then
+          return "Method " + struct_name + "." + actual.name + " has an incompatible interface signature"
+        end if
         if _lang_interface_signature_matches(required, actual) == false then
           return "Method " + struct_name + "." + actual.name + " has an incompatible interface signature"
         end if
       end for
     end for
+    st.interfaces = resolved_interfaces
   end for
   return ""
+end function
+
+/// Hide nonpublic class members after lexical access has been resolved.
+/// @internal
+function _lang_mangle_classes()
+  if len(_language_structs) <= 0 then return end if
+  for si = 0 to len(_language_structs) - 1
+    item = _language_structs[si]
+    st = item[2]
+    if st.is_class != true then continue end if
+    if typeof(st.fields) == "array" and len(st.fields) > 0 then
+      for fi = 0 to len(st.fields) - 1
+        vis = "public"
+        owner = item[0]
+        if fi < len(st.field_visibility) then vis = st.field_visibility[fi] end if
+        if fi < len(st.field_owners) then owner = st.field_owners[fi] end if
+        if vis != "public" then st.fields[fi] = "__ml_hidden$" + owner + "$" + st.fields[fi] end if
+      end for
+    end if
+    if typeof(st.methods) == "array" and len(st.methods) > 0 then
+      for mi = 0 to len(st.methods) - 1
+        st.methods[mi].name = _lang_class_method_hidden(st, st.methods[mi].name)
+      end for
+    end if
+    if typeof(st.abstract_methods) == "array" and len(st.abstract_methods) > 0 then
+      for ai = 0 to len(st.abstract_methods) - 1
+        st.abstract_methods[ai] = _lang_class_method_hidden(st, st.abstract_methods[ai])
+      end for
+    end if
+  end for
+end function
+
+/// Generate one constructor body and fixed-arity entry points for class values.
+/// @internal
+function _lang_make_class_factories()
+  generated = []
+  if len(_language_structs) <= 0 then return ["", generated] end if
+  for si = 0 to len(_language_structs) - 1
+    item = _language_structs[si]
+    st = item[2]
+    if st.is_class != true or st.is_abstract == true then continue end if
+    qname = item[0]
+    pos = t.ast_pos(st)
+    filename = t.ast_filename(st)
+    initializer = _lang_class_find_method(qname, "init")
+    params = []
+    types = []
+    optionals = []
+    defaults = []
+    if typeof(initializer) != "void" then
+      if initializer.variadic_index >= 0 then return ["Class initializer init cannot be variadic", []] end if
+      params = initializer.params
+      types = initializer.param_types
+      optionals = initializer.param_optional
+      defaults = initializer.param_defaults
+    else
+      if len(st.fields) > 0 then
+        for fi = 0 to len(st.fields) - 1
+          if st.field_visibility[fi] != "public" then continue end if
+          params = params + [st.fields[fi]]
+          types = types + [st.field_types[fi]]
+          optionals = optionals + [st.field_optional[fi]]
+          defaults = defaults + [st.field_defaults[fi]]
+        end for
+      end if
+    end if
+    maximum = len(params)
+    while len(defaults) < maximum
+      defaults = defaults + [void]
+    end while
+    minimum = 0
+    if maximum > 0 then
+      for pi = maximum - 1 to 0
+        if typeof(defaults[pi]) == "void" then minimum = pi + 1 break end if
+      end for
+    end if
+    st.constructor_min = minimum
+    st.constructor_max = maximum
+    field_values = []
+    if len(st.fields) > 0 then
+      for fi = 0 to len(st.fields) - 1
+        if typeof(initializer) == "void" and st.field_visibility[fi] == "public" then
+          field_values = field_values + [Var("Var", st.fields[fi], pos, filename)]
+        else
+          field_default = st.field_defaults[fi]
+          if typeof(field_default) == "void" then return ["Field '" + st.fields[fi] + "' needs a default for class construction", []] end if
+          field_values = field_values + [field_default]
+        end if
+      end for
+    end if
+    full_name = "__ml_ctor$" + qname + "$" + maximum
+    raw_call = Call("Call", Var("Var", qname, pos, filename), field_values, ["__ml_raw_ctor"], pos, filename)
+    body = [Assign("Assign", "__ml_instance", raw_call, void, false, pos, filename)]
+    if typeof(initializer) != "void" then
+      owner = _lang_class_find_method_owner(qname, "init")
+      init_args = [Var("Var", "__ml_instance", pos, filename)]
+      if maximum > 0 then
+        for pi = 0 to maximum - 1
+          init_args = init_args + [Var("Var", params[pi], pos, filename)]
+        end for
+      end if
+      init_call = Call("Call", Member("Member", Var("Var", owner, pos, filename), "init", pos, filename), init_args, array(len(init_args), void), pos, filename)
+      body = body + [ExprStmt("ExprStmt", init_call, pos, filename)]
+    end if
+    body = body + [Return("Return", Var("Var", "__ml_instance", pos, filename), pos, filename)]
+    full_fn = _new_function_node(full_name, params, body, false, false, false, types, optionals, defaults, -1, void, false, false, false, pos, filename)
+    generated = generated + [full_fn]
+    if minimum < maximum then
+      for arity = minimum to maximum - 1
+        name = "__ml_ctor$" + qname + "$" + arity
+        supplied = []
+        variant_params = []
+        variant_types = []
+        variant_optionals = []
+        if arity > 0 then
+          for pi = 0 to arity - 1
+            variant_params = variant_params + [params[pi]]
+            variant_types = variant_types + [types[pi]]
+            variant_optionals = variant_optionals + [optionals[pi]]
+            supplied = supplied + [Var("Var", params[pi], pos, filename)]
+          end for
+        end if
+        for pi = arity to maximum - 1
+          supplied = supplied + [defaults[pi]]
+        end for
+        forward = Call("Call", Var("Var", full_name, pos, filename), supplied, array(len(supplied), void), pos, filename)
+        variant_body = [Return("Return", forward, pos, filename)]
+        generated = generated + [_new_function_node(name, variant_params, variant_body, false, false, false, variant_types, variant_optionals, [], -1, void, false, false, false, pos, filename)]
+      end for
+    end if
+  end for
+  return ["", generated]
 end function
 
 /// Parse or represent lang remove interfaces in the MiniLang front end.
@@ -6149,7 +7041,7 @@ end function
 function prepare_language_features(program)
   /// Current language serial used by this routine.
   /// @internal
-  global _language_serial, _language_needs_await, _language_needs_select, _language_needs_async_pool, _language_async_pool_name, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file, _language_failure
+  global _language_serial, _language_needs_await, _language_needs_select, _language_needs_async_pool, _language_async_pool_name, _language_await_pos, _language_await_file, _language_select_pos, _language_select_file, _language_failure, _language_current_base, _language_current_class, _language_current_receiver_types
   _language_serial = 0
   _language_needs_await = false
   _language_needs_select = false
@@ -6159,10 +7051,18 @@ function prepare_language_features(program)
   _language_select_pos = 0
   _language_select_file = ""
   _language_failure = ""
+  _language_current_base = void
+  _language_current_class = void
+  _language_current_receiver_types = []
+  validation = _lang_expand_classes(program)
+  if validation != "" then return error(1600, validation) end if
   validation = _lang_validate_interfaces(program)
   if validation != "" then return error(1600, validation) end if
-  lowered = _lang_lower_block(program, 0)
+  factories = _lang_make_class_factories()
+  if factories[0] != "" then return error(1600, factories[0]) end if
+  lowered = _lang_lower_block(program + factories[1], 0)
   if _language_failure != "" then return error(1600, _language_failure) end if
+  _lang_mangle_classes()
   lowered = _lang_remove_interfaces(lowered)
   helpers = []
   if _language_needs_await then helpers = helpers + [_lang_await_helper()] end if

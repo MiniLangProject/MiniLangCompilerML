@@ -37,9 +37,9 @@ import mlc.packing as packing
 import mlc.incremental as incremental
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.3.0"
+const COMPILER_VERSION = "1.3.1"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.0"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.1"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
