@@ -5569,7 +5569,9 @@ function _emit_method_candidate_search(state, candidates, first, last, fid, fail
     state.asm = a.jmp(state.asm, fail_label)
     return state
   end if
-  middle = (first + last) >> 1
+  // Python's recursive slice search chooses the upper middle for even
+  // buckets. Match its branch layout so generated images remain identical.
+  middle = (first + last + 1) >> 1
   sid = candidates[middle][0]
   case_label = "mcall_case_" + fid + "_" + sid
   state.asm = a.cmp_r32_imm(state.asm, "r10d", sid)

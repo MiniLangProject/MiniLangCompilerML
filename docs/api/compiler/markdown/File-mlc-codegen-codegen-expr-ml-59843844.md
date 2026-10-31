@@ -38,7 +38,7 @@ Out parameters always carry an address, even when their pointee is double. Keep 
 | `abi_ty` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10022)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10024)
 
 <a id="function-function-mlc-codegen-codegen-expr-abi-ty-to-str-function-abi-ty-to-str-abi-ty-mlc-codegen-codegen-expr-ml-673719793"></a>
 ### _abi_ty_to_str
@@ -54,7 +54,7 @@ Compatibility wrappers (Python CodegenExpr parity).
 | `abi_ty` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9502)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9504)
 
 <a id="function-function-mlc-codegen-codegen-expr-alias-lookup-inline-function-alias-lookup-alias-map-key-mlc-codegen-codegen-expr-ml-837732516"></a>
 ### _alias_lookup
@@ -171,7 +171,7 @@ Lower call args have stack variadic expression behavior to native x64.
 | `args` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11026)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11028)
 
 <a id="function-function-mlc-codegen-codegen-expr-cg-expr-try-const-value-function-cg-expr-try-const-value-state-expr-preserve-unary-float-mlc-codegen-codegen-expr-ml-27667210"></a>
 ### _cg_expr_try_const_value
@@ -255,7 +255,7 @@ Reports whether contains nested fn.
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9971)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9973)
 
 <a id="function-function-mlc-codegen-codegen-expr-direct-user-call-enabled-function-direct-user-call-enabled-state-qname-mlc-codegen-codegen-expr-ml-954144962"></a>
 ### _direct_user_call_enabled
@@ -272,7 +272,7 @@ Lower direct user call enabled expression behavior to native x64.
 | `qname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8483)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8485)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-auto-errprop-function-emit-auto-errprop-state-mlc-codegen-codegen-expr-ml-1427208816"></a>
 ### _emit_auto_errprop
@@ -288,7 +288,7 @@ Lower emit auto errprop expression behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10054)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10056)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-auto-errprop-cold-block-function-emit-auto-errprop-cold-block-state-mlc-codegen-codegen-expr-ml-2016839500"></a>
 ### _emit_auto_errprop_cold_block
@@ -304,7 +304,7 @@ Lower emit auto errprop cold block expression behavior to native x64.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10103)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10105)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-call-args-eval-recursive-function-emit-call-args-eval-recursive-state-call-args-idx-nargs-base-off-mlc-codegen-codegen-expr-ml-103569979"></a>
 ### _emit_call_args_eval_recursive
@@ -324,7 +324,7 @@ Lower emit call args eval recursive expression behavior to native x64.
 | `base_off` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11326)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11328)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-concat-three-strings-function-emit-concat-three-strings-state-operands-mlc-codegen-codegen-expr-ml-423499654"></a>
 ### _emit_concat_three_strings
@@ -360,7 +360,7 @@ Emit a statically resolved struct construction while preserving field guards.
 | `raw_class_constructor` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8647)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8649)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-direct-user-call-function-emit-direct-user-call-state-direct-user-name-call-args-nargs-mlc-codegen-codegen-expr-ml-265201574"></a>
 ### _emit_direct_user_call
@@ -379,7 +379,7 @@ Emit an unguarded direct call selected by the explicit compiler fast-path option
 | `nargs` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8740)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8742)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-expr-array-lit-function-emit-expr-array-lit-state-expr-mlc-codegen-codegen-expr-ml-1916635897"></a>
 ### _emit_expr_array_lit
@@ -396,7 +396,7 @@ Lower emit expr array lit expression behavior to native x64.
 | `expr` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9396)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9398)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-expr-bin-function-emit-expr-bin-state-expr-mlc-codegen-codegen-expr-ml-1874814489"></a>
 ### _emit_expr_bin
@@ -445,7 +445,7 @@ function _emit_expr_call(state, expr)
 | `expr` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L5588)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L5590)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-expr-call-early-builtins-function-emit-expr-call-early-builtins-state-callee-raw-name-call-args-nargs-mlc-codegen-codegen-expr-ml-1199270435"></a>
 ### _emit_expr_call_early_builtins
@@ -465,7 +465,7 @@ Lower emit expr call early builtins expression behavior to native x64.
 | `nargs` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L6295)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L6297)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-expr-call-generic-function-emit-expr-call-generic-state-cal-callee-raw-name-call-args-nargs-member-runtime-raw-class-constructor-mlc-codegen-codegen-expr-ml-1900961708"></a>
 ### _emit_expr_call_generic
@@ -488,7 +488,7 @@ Select constructor, direct-call, extern, or indirect-call lowering for a generic
 | `raw_class_constructor` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8492)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8494)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-expr-coalesce-function-emit-expr-coalesce-state-expr-mlc-codegen-codegen-expr-ml-825042161"></a>
 ### _emit_expr_coalesce
@@ -691,7 +691,7 @@ Lower emit expr unsupported expression behavior to native x64.
 | `k` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9469)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9471)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-expr-var-function-emit-expr-var-state-expr-mlc-codegen-codegen-expr-ml-1466870729"></a>
 ### _emit_expr_var
@@ -745,7 +745,7 @@ Lower emit extern arg to native expression behavior to native x64.
 | `wbuf_label` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10115)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10117)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-extern-call-function-emit-extern-call-state-call-node-args-out-kind-out-name-pos-mlc-codegen-codegen-expr-ml-14918519"></a>
 ### _emit_extern_call
@@ -766,7 +766,7 @@ Marshal one MiniLang call frame to the declared native ABI. Managed roots remain
 | `pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10538)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10540)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-extern-out-from-stack-function-emit-extern-out-from-stack-state-abi-ty-stack-off-pos-mlc-codegen-codegen-expr-ml-1941186936"></a>
 ### _emit_extern_out_from_stack
@@ -785,7 +785,7 @@ Lower emit extern out from stack expression behavior to native x64.
 | `pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10485)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10487)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-extern-ret-from-native-function-emit-extern-ret-from-native-state-abi-ty-fail-label-pos-mlc-codegen-codegen-expr-ml-1961782407"></a>
 ### _emit_extern_ret_from_native
@@ -804,7 +804,7 @@ Lower emit extern ret from native expression behavior to native x64.
 | `pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10262)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10264)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-generic-call-builtin-cases-function-emit-generic-call-builtin-cases-state-callee-raw-name-call-args-nargs-call-args-base-mlc-codegen-codegen-expr-ml-88256487"></a>
 ### _emit_generic_call_builtin_cases
@@ -825,7 +825,7 @@ Lower emit generic call builtin cases expression behavior to native x64.
 | `call_args_base` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L7506)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L7508)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-indirect-callable-call-function-emit-indirect-callable-call-state-cal-callee-raw-name-call-args-nargs-call-args-base-skip-call-args-eval-mlc-codegen-codegen-expr-ml-1902005148"></a>
 ### _emit_indirect_callable_call
@@ -848,7 +848,7 @@ Emit the runtime-tag dispatch shared by first-class and member callables.
 | `skip_call_args_eval` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8829)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8831)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-inline-call-function-emit-inline-call-state-callee-args-mlc-codegen-codegen-expr-ml-2085079347"></a>
 ### _emit_inline_call
@@ -866,7 +866,7 @@ Lower emit inline call expression behavior to native x64.
 | `args` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11066)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11068)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-known-float-binop-function-emit-known-float-binop-state-expr-mlc-codegen-codegen-expr-ml-840624601"></a>
 ### _emit_known_float_binop
@@ -922,7 +922,7 @@ Lower emit make error const expression behavior to native x64.
 | `message` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10037)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10039)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-method-candidate-search-function-emit-method-candidate-search-state-candidates-first-last-fid-fail-label-mlc-codegen-codegen-expr-ml-110727952"></a>
 ### _emit_method_candidate_search
@@ -998,7 +998,7 @@ Lower emit native value helper call expression behavior to native x64.
 | `nargs` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8344)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8346)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-operator-overload-function-emit-operator-overload-state-op-symbol-operands-node-mlc-codegen-codegen-expr-ml-1607236390"></a>
 ### _emit_operator_overload
@@ -1073,7 +1073,7 @@ Lower expr has this expression behavior to native x64.
 | `ex` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9754)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9756)
 
 <a id="function-function-mlc-codegen-codegen-expr-expr-heap-cfg-bool-function-expr-heap-cfg-bool-state-key-defaultv-mlc-codegen-codegen-expr-ml-1543416824"></a>
 ### _expr_heap_cfg_bool
@@ -1091,7 +1091,7 @@ Lower expr heap cfg bool expression behavior to native x64.
 | `defaultv` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8469)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8471)
 
 <a id="function-function-mlc-codegen-codegen-expr-expr-to-qualname-function-expr-to-qualname-state-expr-mlc-codegen-codegen-expr-ml-757175447"></a>
 ### _expr_to_qualname
@@ -1125,7 +1125,7 @@ Lower extern dll base expression behavior to native x64.
 | `is_linux` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10014)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10016)
 
 <a id="function-function-mlc-codegen-codegen-expr-extern-iat-label-function-extern-iat-label-dll-sym-is-linux-mlc-codegen-codegen-expr-ml-590011265"></a>
 ### _extern_iat_label
@@ -1143,7 +1143,7 @@ Lower extern iat label expression behavior to native x64.
 | `is_linux` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10031)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10033)
 
 <a id="function-function-mlc-codegen-codegen-expr-extern-sig-get-function-extern-sig-get-state-qname-mlc-codegen-codegen-expr-ml-218103376"></a>
 ### _extern_sig_get
@@ -1209,7 +1209,7 @@ Lower fn uses this expression behavior to native x64.
 | `fn_node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9953)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9955)
 
 <a id="function-function-mlc-codegen-codegen-expr-function-wants-inline-function-function-wants-inline-fn-mlc-codegen-codegen-expr-ml-476633721"></a>
 ### _function_wants_inline
@@ -1225,7 +1225,7 @@ Lower function wants inline expression behavior to native x64.
 | `fn` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10993)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10995)
 
 <a id="function-function-mlc-codegen-codegen-expr-has-any-global-prefix-function-has-any-global-prefix-state-base-mlc-codegen-codegen-expr-ml-1707511383"></a>
 ### _has_any_global_prefix
@@ -1259,7 +1259,7 @@ Reports whether has global prefix.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9703)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9705)
 
 <a id="function-function-mlc-codegen-codegen-expr-ia-byte-store-function-ia-byte-store-text-mlc-codegen-codegen-expr-ml-1580041532"></a>
 ### _ia_byte_store
@@ -1587,7 +1587,7 @@ Lower inline call eligible expression behavior to native x64.
 | `fn` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11051)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11053)
 
 <a id="function-function-mlc-codegen-codegen-expr-inline-collect-expr-stats-function-inline-collect-expr-stats-ex-stats-mlc-codegen-codegen-expr-ml-986013263"></a>
 ### _inline_collect_expr_stats
@@ -1604,7 +1604,7 @@ Lower inline collect expr stats expression behavior to native x64.
 | `stats` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10856)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10858)
 
 <a id="function-function-mlc-codegen-codegen-expr-inline-collect-stmt-list-stats-function-inline-collect-stmt-list-stats-stmts-stats-mlc-codegen-codegen-expr-ml-2145714289"></a>
 ### _inline_collect_stmt_list_stats
@@ -1621,7 +1621,7 @@ Lower inline collect stmt list stats expression behavior to native x64.
 | `stats` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10900)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10902)
 
 <a id="function-function-mlc-codegen-codegen-expr-inline-collect-stmt-stats-function-inline-collect-stmt-stats-st-stats-mlc-codegen-codegen-expr-ml-217400541"></a>
 ### _inline_collect_stmt_stats
@@ -1638,7 +1638,7 @@ Lower inline collect stmt stats expression behavior to native x64.
 | `stats` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10911)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L10913)
 
 <a id="function-function-mlc-codegen-codegen-expr-inline-declared-type-fact-function-inline-declared-type-fact-state-raw-type-mlc-codegen-codegen-expr-ml-1670431225"></a>
 ### _inline_declared_type_fact
@@ -1655,7 +1655,7 @@ Lower inline declared type fact expression behavior to native x64.
 | `raw_type` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11037)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11039)
 
 <a id="function-function-mlc-codegen-codegen-expr-intflow-name-has-function-intflow-name-has-arr-name-mlc-codegen-codegen-expr-ml-326076909"></a>
 ### _intflow_name_has
@@ -1722,7 +1722,7 @@ Reports whether is instance method qname.
 | `qname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9713)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9715)
 
 <a id="function-function-mlc-codegen-codegen-expr-is-int-no-bool-inline-function-is-int-no-bool-v-mlc-codegen-codegen-expr-ml-1740716338"></a>
 ### _is_int_no_bool
@@ -1961,7 +1961,7 @@ Lower opt emit const value expression behavior to native x64.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11293)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11295)
 
 <a id="function-function-mlc-codegen-codegen-expr-opt-emit-known-index-function-opt-emit-known-index-state-expr-plan-mlc-codegen-codegen-expr-ml-370978738"></a>
 ### _opt_emit_known_index
@@ -2133,7 +2133,7 @@ Lower opt try const value expression behavior to native x64.
 | `ex` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11287)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11289)
 
 <a id="function-function-mlc-codegen-codegen-expr-opt-try-known-type-label-function-opt-try-known-type-label-state-expr-detailed-mlc-codegen-codegen-expr-ml-385000701"></a>
 ### _opt_try_known_type_label
@@ -2317,7 +2317,7 @@ Lower qname exists expression behavior to native x64.
 | `qname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9691)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9693)
 
 <a id="function-function-mlc-codegen-codegen-expr-qname-of-function-qname-of-state-ex-mlc-codegen-codegen-expr-ml-265331533"></a>
 ### _qname_of
@@ -2334,7 +2334,7 @@ Lower qname of expression behavior to native x64.
 | `ex` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9522)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9524)
 
 <a id="function-function-mlc-codegen-codegen-expr-qname-parts-function-qname-parts-state-ex-mlc-codegen-codegen-expr-ml-617631291"></a>
 ### _qname_parts
@@ -2351,7 +2351,7 @@ Lower qname parts expression behavior to native x64.
 | `ex` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9514)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9516)
 
 <a id="function-function-mlc-codegen-codegen-expr-qname-parts-any-function-qname-parts-any-expr-mlc-codegen-codegen-expr-ml-1463872372"></a>
 ### _qname_parts_any
@@ -2384,7 +2384,7 @@ Lower qname with prefixes expression behavior to native x64.
 | `qname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9651)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9653)
 
 <a id="function-function-mlc-codegen-codegen-expr-qualify-dotted-function-qualify-dotted-state-name-mlc-codegen-codegen-expr-ml-2130487099"></a>
 ### _qualify_dotted
@@ -2401,7 +2401,7 @@ Lower qualify dotted expression behavior to native x64.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9685)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9687)
 
 <a id="function-function-mlc-codegen-codegen-expr-qualify-identifier-function-qualify-identifier-state-name-mlc-codegen-codegen-expr-ml-1704406085"></a>
 ### _qualify_identifier
@@ -2630,7 +2630,7 @@ Lower stmt has this expression behavior to native x64.
 | `st` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9811)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L9813)
 
 <a id="function-function-mlc-codegen-codegen-expr-strpair-get-inline-function-strpair-get-arr-key-mlc-codegen-codegen-expr-ml-1442572622"></a>
 ### _strpair_get
@@ -2686,7 +2686,7 @@ Try the shortened extern-call form that supplies omitted trailing `out` argument
 | `nargs` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8789)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L8791)
 
 <a id="function-function-mlc-codegen-codegen-expr-try-emit-left-string-concat-chain-function-try-emit-left-string-concat-chain-state-expr-mlc-codegen-codegen-expr-ml-45654953"></a>
 ### _try_emit_left_string_concat_chain
@@ -2875,7 +2875,7 @@ Lower emit expr expression behavior to native x64.
 | `ex` | `dynamic` | — | Value supplied for `ex`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11346)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11348)
 
 <a id="function-function-mlc-codegen-codegen-expr-emit-extern-stubs-function-emit-extern-stubs-state-mlc-codegen-codegen-expr-ml-162750204"></a>
 ### emit_extern_stubs
@@ -2891,6 +2891,6 @@ Lower emit extern stubs expression behavior to native x64.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11352)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_expr.ml#L11354)
 
 - [mlc.codegen.codegen_expr.InlineStats](Type-mlc-codegen-codegen-expr-inlinestats-1176616483.md) — struct

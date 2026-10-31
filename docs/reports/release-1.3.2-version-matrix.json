@@ -1,0 +1,203 @@
+{
+  "version": "1.3.2",
+  "compilerBuilds": [
+    {
+      "file": "python-windows.exe",
+      "bytes": 65785856,
+      "sha256": "aa79b1d1dc3e18bd1ed4494573c2e4bb7a2c0888ef3b720de2c1fcf082afedd1"
+    },
+    {
+      "file": "native-windows.exe",
+      "bytes": 65785856,
+      "sha256": "aa79b1d1dc3e18bd1ed4494573c2e4bb7a2c0888ef3b720de2c1fcf082afedd1"
+    },
+    {
+      "file": "python-linux",
+      "bytes": 65804416,
+      "sha256": "3ef102f6e8e4980e06d3a1c5250b802aca4619ffdccb0d847f02e4265db7ba1d"
+    },
+    {
+      "file": "native-linux",
+      "bytes": 65804416,
+      "sha256": "3ef102f6e8e4980e06d3a1c5250b802aca4619ffdccb0d847f02e4265db7ba1d"
+    }
+  ],
+  "fixedPoint": {
+    "windows": true,
+    "linux": true
+  },
+  "oopBinaryParity": {
+    "targets": [
+      "windows-x64",
+      "linux-x64"
+    ],
+    "hosts": [
+      "python",
+      "windows-ml",
+      "linux-ml"
+    ],
+    "pipelines": [
+      "--no-object-pipeline",
+      "--object-pipeline"
+    ],
+    "fixtures": 11,
+    "images": 132,
+    "allByteIdentical": true
+  },
+  "fixtureImages": [
+    {
+      "target": "linux-x64",
+      "fixture": "language_class.ml",
+      "bytes": 116720,
+      "sha256": "f821e8253a5d678ec8dc8679432f6562e8aa4937391f9b3da1aeca0702ec1be4",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_access_alias.ml",
+      "bytes": 104320,
+      "sha256": "c7e89f55958f95d547602d0945613c30ec9eec6da6569cfd15dd5f9d40a917c9",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_constructors.ml",
+      "bytes": 116688,
+      "sha256": "023302f2b73f50a914adf6175617bdf71cdbdca86cc62bcc2dba8e5ef247ba3b",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_dispatch.ml",
+      "bytes": 108544,
+      "sha256": "fddcc8cbba6b295e4fb45cf4a06a83fa1f3c6413951ab65a628ab1380bcfe4f9",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_features.ml",
+      "bytes": 108448,
+      "sha256": "27bb3657f0049f38d654d2e96c95693af7086c10794a0ee0ae3e3acee9463d66",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_many_args.ml",
+      "bytes": 104288,
+      "sha256": "31f1dfd3bfbc810e33ba18e28ca2768ca0564390958284ec62809b03a5cf195b",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_named_super.ml",
+      "bytes": 100192,
+      "sha256": "8df003641c2a0ed2ee96a23046d08d3e018a66649fa00cd0b953bf1683050edb",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_qualified_static.ml",
+      "bytes": 91984,
+      "sha256": "b486a80d4eee40acb25030899a1843372b0b54bd9b362c3b1e44c51167f8187f",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_class_static_inheritance.ml",
+      "bytes": 92000,
+      "sha256": "006cffd0af7496fdf36e34dded8cee64de96534a2097c088e2756557837ae3b9",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_interface.ml",
+      "bytes": 91968,
+      "sha256": "b56ad05ed6b86b6d6c9357c6350acf1256fbb55755bee5263712a1fcf0324b4e",
+      "byteParity": true
+    },
+    {
+      "target": "linux-x64",
+      "fixture": "language_interface_inheritance.ml",
+      "bytes": 104352,
+      "sha256": "7849b26038e38e0957eea0aacaf001a9c6e8e526a71b27a040b5616ee905e4de",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class.ml",
+      "bytes": 108032,
+      "sha256": "68df3df74b65314c40452948a1910fa048612120ad0a1d41a5aaf54e5180e0fe",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_access_alias.ml",
+      "bytes": 95232,
+      "sha256": "154bc2d0dc0eac6375679e69aefdcd2228a7ea8a51282cd894bcab99faeafb92",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_constructors.ml",
+      "bytes": 111104,
+      "sha256": "40b5fa2f27ce38e33a02022701e064c9c041db5ba4e923e915a2d4b21fa75ef9",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_dispatch.ml",
+      "bytes": 100864,
+      "sha256": "31401aee91472fbccde4ba4ac3081de7f8ad14eb89fb07fe8fe754c3903027ca",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_features.ml",
+      "bytes": 99840,
+      "sha256": "587a0e2870df168734ec3382b0ba6881ecc7b3187b9130d426941c91b6601de8",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_many_args.ml",
+      "bytes": 98304,
+      "sha256": "77b9ebb688d5adbfca053e221fc9f22afa4ae48d776d34e979dd127c9058b6ac",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_named_super.ml",
+      "bytes": 91136,
+      "sha256": "de134df115609e8e158620042d731d80adae869d99e27dd20a32ab686adc6cb5",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_qualified_static.ml",
+      "bytes": 81920,
+      "sha256": "39470796093b0c6cfa08d47590af2634bb0b3f6a5a709e2855eb698b9817bc77",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_class_static_inheritance.ml",
+      "bytes": 86016,
+      "sha256": "218b504e5dfd1fce7aa838ae68a1be73fefc2b7b7266a51407fbda689ece736b",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_interface.ml",
+      "bytes": 83968,
+      "sha256": "c9be15bcca86ded243f61b63fc6aab15c26fc5045b91d0fbfedd47ee285a543f",
+      "byteParity": true
+    },
+    {
+      "target": "windows-x64",
+      "fixture": "language_interface_inheritance.ml",
+      "bytes": 95232,
+      "sha256": "524f81e1874f39aab96a8d39343e39428ad72b7ea58e71982c2c4fab418b73f8",
+      "byteParity": true
+    }
+  ]
+}

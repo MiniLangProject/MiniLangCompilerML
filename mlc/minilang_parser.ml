@@ -4636,7 +4636,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.3.1")
+    CompileValue("MINILANG_VERSION", "1.3.2")
   ]
 end function
 
@@ -6016,7 +6016,10 @@ function _lang_lower_stmt(st, function_depth)
   if kind == "NamespaceDef" then
     st.body = _lang_lower_block(st.body, function_depth)
   else if kind == "FunctionDef" then
-    st = _lang_apply_contracts(st)
+    // Source functions received parameter guards during parsing. The Python
+    // front end appends synthetic class factories after that pass, so their
+    // field and initializer guards are the only checks in either compiler.
+    if not s.startsWith(st.name, "__ml_ctor$") then st = _lang_apply_contracts(st) end if
     if typeof(st.param_defaults) == "array" and len(st.param_defaults) > 0 then
       for i = 0 to len(st.param_defaults) - 1
         if typeof(st.param_defaults[i]) != "void" then
@@ -6932,6 +6935,8 @@ function _lang_make_class_factories()
     qname = item[0]
     pos = t.ast_pos(st)
     filename = t.ast_filename(st)
+    internal_pos = 0
+    internal_filename = ""
     initializer = _lang_class_find_method(qname, "init")
     params = []
     types = []
@@ -6970,7 +6975,7 @@ function _lang_make_class_factories()
     if len(st.fields) > 0 then
       for fi = 0 to len(st.fields) - 1
         if typeof(initializer) == "void" and st.field_visibility[fi] == "public" then
-          field_values = field_values + [Var("Var", st.fields[fi], pos, filename)]
+          field_values = field_values + [Var("Var", st.fields[fi], internal_pos, internal_filename)]
         else
           field_default = st.field_defaults[fi]
           if typeof(field_default) == "void" then return ["Field '" + st.fields[fi] + "' needs a default for class construction", []] end if
@@ -6979,20 +6984,20 @@ function _lang_make_class_factories()
       end for
     end if
     full_name = "__ml_ctor$" + qname + "$" + maximum
-    raw_call = Call("Call", Var("Var", qname, pos, filename), field_values, ["__ml_raw_ctor"], pos, filename)
-    body = [Assign("Assign", "__ml_instance", raw_call, void, false, pos, filename)]
+    raw_call = Call("Call", Var("Var", qname, internal_pos, internal_filename), field_values, ["__ml_raw_ctor"], internal_pos, internal_filename)
+    body = [Assign("Assign", "__ml_instance", raw_call, void, false, internal_pos, internal_filename)]
     if typeof(initializer) != "void" then
       owner = _lang_class_find_method_owner(qname, "init")
-      init_args = [Var("Var", "__ml_instance", pos, filename)]
+      init_args = [Var("Var", "__ml_instance", internal_pos, internal_filename)]
       if maximum > 0 then
         for pi = 0 to maximum - 1
-          init_args = init_args + [Var("Var", params[pi], pos, filename)]
+          init_args = init_args + [Var("Var", params[pi], internal_pos, internal_filename)]
         end for
       end if
-      init_call = Call("Call", Member("Member", Var("Var", owner, pos, filename), "init", pos, filename), init_args, array(len(init_args), void), pos, filename)
-      body = body + [ExprStmt("ExprStmt", init_call, pos, filename)]
+      init_call = Call("Call", Member("Member", Var("Var", owner, internal_pos, internal_filename), "init", internal_pos, internal_filename), init_args, [], internal_pos, internal_filename)
+      body = body + [ExprStmt("ExprStmt", init_call, internal_pos, internal_filename)]
     end if
-    body = body + [Return("Return", Var("Var", "__ml_instance", pos, filename), pos, filename)]
+    body = body + [Return("Return", Var("Var", "__ml_instance", internal_pos, internal_filename), internal_pos, internal_filename)]
     full_fn = _new_function_node(full_name, params, body, false, false, false, types, optionals, defaults, -1, void, false, false, false, pos, filename)
     generated = generated + [full_fn]
     if minimum < maximum then
@@ -7007,14 +7012,14 @@ function _lang_make_class_factories()
             variant_params = variant_params + [params[pi]]
             variant_types = variant_types + [types[pi]]
             variant_optionals = variant_optionals + [optionals[pi]]
-            supplied = supplied + [Var("Var", params[pi], pos, filename)]
+            supplied = supplied + [Var("Var", params[pi], internal_pos, internal_filename)]
           end for
         end if
         for pi = arity to maximum - 1
           supplied = supplied + [defaults[pi]]
         end for
-        forward = Call("Call", Var("Var", full_name, pos, filename), supplied, array(len(supplied), void), pos, filename)
-        variant_body = [Return("Return", forward, pos, filename)]
+        forward = Call("Call", Var("Var", full_name, internal_pos, internal_filename), supplied, [], internal_pos, internal_filename)
+        variant_body = [Return("Return", forward, internal_pos, internal_filename)]
         generated = generated + [_new_function_node(name, variant_params, variant_body, false, false, false, variant_types, variant_optionals, [], -1, void, false, false, false, pos, filename)]
       end for
     end if

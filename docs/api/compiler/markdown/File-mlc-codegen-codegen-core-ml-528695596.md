@@ -105,7 +105,7 @@ Emit arr contains as shared native-codegen support.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1767)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1768)
 
 <a id="function-function-mlc-codegen-codegen-core-cold-block-frame-items-function-cold-block-frame-items-frame-mlc-codegen-codegen-core-ml-257496788"></a>
 ### _cold_block_frame_items
@@ -138,7 +138,7 @@ Emit collect pending helpers as shared native-codegen support.
 | `emitted_index` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2160)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2161)
 
 <a id="function-function-mlc-codegen-codegen-core-current-file-package-prefix-function-current-file-package-prefix-state-mlc-codegen-codegen-core-ml-405124012"></a>
 ### _current_file_package_prefix
@@ -187,7 +187,7 @@ Emit emit helper by label as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2110)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2111)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-helper-by-label-group0-function-emit-helper-by-label-group0-state-lbl-mlc-codegen-codegen-core-ml-601287338"></a>
 ### _emit_helper_by_label_group0
@@ -204,7 +204,7 @@ Emit emit helper by label group0 as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1932)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1933)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-helper-by-label-group1-function-emit-helper-by-label-group1-state-lbl-mlc-codegen-codegen-core-ml-1866673370"></a>
 ### _emit_helper_by_label_group1
@@ -221,7 +221,7 @@ Emit emit helper by label group1 as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1988)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1989)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-helper-by-label-group2-function-emit-helper-by-label-group2-state-lbl-mlc-codegen-codegen-core-ml-1090914018"></a>
 ### _emit_helper_by_label_group2
@@ -238,7 +238,7 @@ Emit emit helper by label group2 as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2004)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2005)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-helper-by-label-group3-function-emit-helper-by-label-group3-state-lbl-mlc-codegen-codegen-core-ml-831714354"></a>
 ### _emit_helper_by_label_group3
@@ -255,7 +255,7 @@ Emit emit helper by label group3 as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2020)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2021)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-helper-by-label-group4-function-emit-helper-by-label-group4-state-lbl-mlc-codegen-codegen-core-ml-1676083794"></a>
 ### _emit_helper_by_label_group4
@@ -272,7 +272,7 @@ Emit emit helper by label group4 as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2036)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2037)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-helper-by-label-group5-function-emit-helper-by-label-group5-state-lbl-mlc-codegen-codegen-core-ml-1758662258"></a>
 ### _emit_helper_by_label_group5
@@ -289,7 +289,7 @@ Emit emit helper by label group5 as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2052)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2053)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-helper-by-label-group6-function-emit-helper-by-label-group6-state-lbl-mlc-codegen-codegen-core-ml-1657138890"></a>
 ### _emit_helper_by_label_group6
@@ -306,7 +306,7 @@ Emit emit helper by label group6 as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2069)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2070)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-helper-by-label-other-function-emit-helper-by-label-other-state-lbl-mlc-codegen-codegen-core-ml-2101739024"></a>
 ### _emit_helper_by_label_other
@@ -323,7 +323,7 @@ Emit emit helper by label other as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2085)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2086)
 
 <a id="function-function-mlc-codegen-codegen-core-expr-temp-live-by-reg-get-function-expr-temp-live-by-reg-get-state-reg-mlc-codegen-codegen-core-ml-1843874942"></a>
 ### _expr_temp_live_by_reg_get
@@ -512,7 +512,7 @@ Emit helper rank as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2124)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2125)
 
 <a id="function-function-mlc-codegen-codegen-core-helper-supported-function-helper-supported-lbl-mlc-codegen-codegen-core-ml-877322769"></a>
 ### _helper_supported
@@ -528,7 +528,7 @@ Emit helper supported as shared native-codegen support.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1808)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1809)
 
 <a id="function-function-mlc-codegen-codegen-core-import-pair-gt-function-import-pair-gt-a-b-mlc-codegen-codegen-core-ml-1977412070"></a>
 ### _import_pair_gt
@@ -613,7 +613,7 @@ Reports whether is internal helper label.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1797)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1798)
 
 <a id="function-function-mlc-codegen-codegen-core-line-from-pos-function-line-from-pos-state-pos-filename-mlc-codegen-codegen-core-ml-282494713"></a>
 ### _line_from_pos
@@ -781,7 +781,7 @@ Emit starts with as shared native-codegen support.
 | `prefix` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1754)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1755)
 
 <a id="function-function-mlc-codegen-codegen-core-str-less-ascii-function-str-less-ascii-a-b-mlc-codegen-codegen-core-ml-181873084"></a>
 ### _str_less_ascii
@@ -798,7 +798,7 @@ Emit str less ascii as shared native-codegen support.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1777)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1778)
 
 <a id="function-function-mlc-codegen-codegen-core-sync-asm-before-call-live-function-sync-asm-before-call-live-state-mlc-codegen-codegen-core-ml-1220244748"></a>
 ### _sync_asm_before_call_live
@@ -1023,7 +1023,7 @@ Emit emit force xmm0 to float value as shared native-codegen support.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1579)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1580)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-jmp-if-false-rax-function-emit-jmp-if-false-rax-state-false-label-mlc-codegen-codegen-core-ml-1085469272"></a>
 ### emit_jmp_if_false_rax
@@ -1040,7 +1040,7 @@ Emit emit jmp if false rax as shared native-codegen support.
 | `false_label` | `dynamic` | — | Value supplied for `false_label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1657)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1658)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-load-var-function-emit-load-var-state-name-node-mlc-codegen-codegen-core-ml-1640032077"></a>
 ### emit_load_var
@@ -1058,7 +1058,7 @@ Emit emit load var as shared native-codegen support.
 | `node` | `dynamic` | — | Value supplied for `node`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1481)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1482)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-normalize-xmm0-to-value-function-emit-normalize-xmm0-to-value-state-mlc-codegen-codegen-core-ml-1541917136"></a>
 ### emit_normalize_xmm0_to_value
@@ -1074,7 +1074,7 @@ Emit emit normalize xmm0 to value as shared native-codegen support.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1545)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1546)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-store-var-function-emit-store-var-state-name-node-mlc-codegen-codegen-core-ml-681696745"></a>
 ### emit_store_var
@@ -1092,7 +1092,7 @@ Emit emit store var as shared native-codegen support.
 | `node` | `dynamic` | — | Value supplied for `node`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1489)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1490)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-struct-field-dispatch-function-emit-struct-field-dispatch-state-field-mlc-codegen-codegen-core-ml-821142380"></a>
 ### emit_struct_field_dispatch
@@ -1109,7 +1109,7 @@ Emit emit struct field dispatch as shared native-codegen support.
 | `field` | `dynamic` | — | Value supplied for `field`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1738)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1739)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-struct-field-index-dispatch-function-emit-struct-field-index-dispatch-state-field-mlc-codegen-codegen-core-ml-1713913244"></a>
 ### emit_struct_field_index_dispatch
@@ -1126,7 +1126,7 @@ Emit emit struct field index dispatch as shared native-codegen support.
 | `field` | `dynamic` | — | Value supplied for `field`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1731)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1732)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-to-double-xmm-function-emit-to-double-xmm-state-xmm-fail-label-mlc-codegen-codegen-core-ml-1685662773"></a>
 ### emit_to_double_xmm
@@ -1144,7 +1144,7 @@ Emit emit to double xmm as shared native-codegen support.
 | `fail_label` | `dynamic` | — | Value supplied for `fail_label`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1602)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1603)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-used-helpers-function-emit-used-helpers-state-mlc-codegen-codegen-core-ml-1846412650"></a>
 ### emit_used_helpers
@@ -1160,7 +1160,7 @@ Emit emit used helpers as shared native-codegen support.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2193)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L2194)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-writefile-function-emit-writefile-state-buf-label-length-mlc-codegen-codegen-core-ml-669236840"></a>
 ### emit_writefile
@@ -1178,7 +1178,7 @@ Emit emit writefile as shared native-codegen support.
 | `length` | `dynamic` | — | Number of elements or bytes to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1497)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1498)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-writefile-ptr-len-function-emit-writefile-ptr-len-state-mlc-codegen-codegen-core-ml-1259094248"></a>
 ### emit_writefile_ptr_len
@@ -1194,7 +1194,7 @@ Emit emit writefile ptr len as shared native-codegen support.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1505)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1506)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-writefile-ptr-len-stderr-function-emit-writefile-ptr-len-stderr-state-mlc-codegen-codegen-core-ml-1237776810"></a>
 ### emit_writefile_ptr_len_stderr
@@ -1210,7 +1210,7 @@ Emit emit writefile ptr len stderr as shared native-codegen support.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1516)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1517)
 
 <a id="function-function-mlc-codegen-codegen-core-emit-writefile-stderr-function-emit-writefile-stderr-state-buf-label-length-mlc-codegen-codegen-core-ml-754523848"></a>
 ### emit_writefile_stderr
@@ -1228,7 +1228,7 @@ Emit emit writefile stderr as shared native-codegen support.
 | `length` | `dynamic` | — | Number of elements or bytes to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1537)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1538)
 
 <a id="function-function-mlc-codegen-codegen-core-ensure-var-function-ensure-var-state-name-mlc-codegen-codegen-core-ml-264316497"></a>
 ### ensure_var
@@ -1484,4 +1484,4 @@ Releases or resets reset helper tracking.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1744)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L1745)

@@ -1440,6 +1440,7 @@ end function
 /// @param node Value supplied for `node`.
 function emit_dbg_line(state, node)
   if t.ast_is_node(node) and t.ast_filename(node) == "__ml_generated__" then return state end if
+  if t.ast_is_node(node) and t.ast_filename(node) == "" and t.ast_pos(node) == 0 then return state end if
   ln = 0
   if t.ast_is_node(node) and typeof(node) != "struct" then
     ln = _line_from_pos(state, t.ast_pos(node), t.ast_filename(node))
