@@ -1727,6 +1727,8 @@ function _ia_byte_store(text)
   return parts
 end function
 
+/// Parse a typed inline-assembly dword memory operand.
+/// @internal
 function _ia_dword_memory(text)
   if s.startsWith(text, "dword[") == false or s.endsWith(text, "]") == false then return [] end if
   inner = s.substr(text, 6, len(text) - 7)
@@ -1735,6 +1737,8 @@ function _ia_dword_memory(text)
   return parts
 end function
 
+/// Find the register pinned to an inline-assembly operand.
+/// @internal
 function _ia_pinned_reg(pinned, name)
   for each item in pinned
     if item[0] == name then return item[1] end if
@@ -1770,6 +1774,8 @@ function _ia_store_gpr(state, expr, base, name, reg, pinned)
   return state
 end function
 
+/// Reload pinned registers after a cooperative safepoint.
+/// @internal
 function _ia_reload_pinned(state, expr, base, pinned)
   for each item in pinned
     sym = _ia_sym(expr, item[0])
@@ -1835,11 +1841,15 @@ function _ia_jump_cc(op)
   return s.substr(op, 1, len(op) - 1)
 end function
 
+/// Recognize inline-assembly conditional set instructions.
+/// @internal
 function _ia_is_setcc(op)
   if s.startsWith(op, "set") == false then return false end if
   return _ia_is_jump("j" + s.substr(op, 3, len(op) - 3))
 end function
 
+/// Check whether assembly control-flow analysis has visited this state.
+/// @internal
 function _ia_has_flow_state(states, pos, written)
   for each item in states
     if item[0] == pos and item[1] == written then return true end if

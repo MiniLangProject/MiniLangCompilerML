@@ -12,7 +12,7 @@ struct Coalesce
 Lazy void coalescing (`left ?? right`).
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L247)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L263)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Coalesce`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L257)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L273)
 
 <a id="field-field-mlc-minilang-parser-coalesce-pos-pos-mlc-minilang-parser-ml-163600016"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Coalesce`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L255)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L271)
 
 <a id="field-field-mlc-minilang-parser-coalesce-left-left-mlc-minilang-parser-ml-868065364"></a>
 ### left
@@ -50,7 +50,7 @@ left
 Left associated with `Coalesce`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L251)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L267)
 
 <a id="field-field-mlc-minilang-parser-coalesce-node-kind-node-kind-mlc-minilang-parser-ml-1647261078"></a>
 ### node_kind
@@ -62,7 +62,7 @@ node_kind
 Node kind associated with `Coalesce`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L249)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L265)
 
 <a id="field-field-mlc-minilang-parser-coalesce-right-right-mlc-minilang-parser-ml-2123945166"></a>
 ### right
@@ -74,4 +74,4 @@ right
 Right associated with `Coalesce`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L253)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L269)

@@ -12,7 +12,7 @@ struct SafeMember
 Void-safe member access (`value?.member`).
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L305)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L321)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `SafeMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L315)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L331)
 
 <a id="field-field-mlc-minilang-parser-safemember-pos-pos-mlc-minilang-parser-ml-1467067808"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `SafeMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L313)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L329)
 
 <a id="field-field-mlc-minilang-parser-safemember-name-name-mlc-minilang-parser-ml-171882280"></a>
 ### name
@@ -50,7 +50,7 @@ name
 Name associated with `SafeMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L311)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L327)
 
 <a id="field-field-mlc-minilang-parser-safemember-node-kind-node-kind-mlc-minilang-parser-ml-11837286"></a>
 ### node_kind
@@ -62,7 +62,7 @@ node_kind
 Node kind associated with `SafeMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L307)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L323)
 
 <a id="field-field-mlc-minilang-parser-safemember-target-target-mlc-minilang-parser-ml-69036064"></a>
 ### target
@@ -74,4 +74,4 @@ target
 Target associated with `SafeMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L309)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L325)

@@ -12,7 +12,7 @@ struct Assign
 Represents assign.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L411)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L427)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Assign`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L425)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L441)
 
 <a id="field-field-mlc-minilang-parser-assign-pos-pos-mlc-minilang-parser-ml-1038759102"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Assign`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L423)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L439)
 
 <a id="field-field-mlc-minilang-parser-assign-declared-optional-declared-optional-mlc-minilang-parser-ml-669482300"></a>
 ### declared_optional
@@ -50,7 +50,7 @@ declared_optional
 Declared optional associated with `Assign`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L421)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L437)
 
 <a id="field-field-mlc-minilang-parser-assign-declared-type-declared-type-mlc-minilang-parser-ml-2064965532"></a>
 ### declared_type
@@ -62,7 +62,7 @@ declared_type
 Declared type associated with `Assign`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L419)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L435)
 
 <a id="field-field-mlc-minilang-parser-assign-expr-expr-mlc-minilang-parser-ml-829785418"></a>
 ### expr
@@ -74,7 +74,7 @@ expr
 Expr associated with `Assign`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L417)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L433)
 
 <a id="field-field-mlc-minilang-parser-assign-name-name-mlc-minilang-parser-ml-1412911294"></a>
 ### name
@@ -86,7 +86,7 @@ name
 Name associated with `Assign`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L415)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L431)
 
 <a id="field-field-mlc-minilang-parser-assign-node-kind-node-kind-mlc-minilang-parser-ml-1080459796"></a>
 ### node_kind
@@ -98,4 +98,4 @@ node_kind
 Node kind associated with `Assign`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L413)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L429)

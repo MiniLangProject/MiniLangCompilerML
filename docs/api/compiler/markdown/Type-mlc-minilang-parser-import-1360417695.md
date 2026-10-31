@@ -12,7 +12,7 @@ struct Import
 Statement/declaration AST shared by analysis and code generation.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L357)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L373)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Import`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L369)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L385)
 
 <a id="field-field-mlc-minilang-parser-import-pos-pos-mlc-minilang-parser-ml-796507930"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Import`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L367)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L383)
 
 <a id="field-field-mlc-minilang-parser-import-alias-alias-mlc-minilang-parser-ml-1368047364"></a>
 ### alias
@@ -50,7 +50,7 @@ alias
 Alias associated with `Import`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L363)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L379)
 
 <a id="field-field-mlc-minilang-parser-import-module-module-mlc-minilang-parser-ml-1261504512"></a>
 ### module
@@ -62,7 +62,7 @@ module
 Module associated with `Import`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L365)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L381)
 
 <a id="field-field-mlc-minilang-parser-import-node-kind-node-kind-mlc-minilang-parser-ml-435613312"></a>
 ### node_kind
@@ -74,7 +74,7 @@ node_kind
 Node kind associated with `Import`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L359)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L375)
 
 <a id="field-field-mlc-minilang-parser-import-path-path-mlc-minilang-parser-ml-1185623694"></a>
 ### path
@@ -86,4 +86,4 @@ path
 Path associated with `Import`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L361)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L377)

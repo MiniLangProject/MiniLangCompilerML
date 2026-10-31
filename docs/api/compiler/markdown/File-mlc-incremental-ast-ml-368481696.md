@@ -31,7 +31,7 @@ Hash the declaration view without retaining the source AST in the cache.
 | `program` | `dynamic` | — | Combined current AST before function bodies are released. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental_ast.ml#L316)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental_ast.ml#L328)
 
 <a id="function-function-mlc-incremental-ast-write-function-write-w-node-headers-only-mlc-incremental-ast-ml-1222827436"></a>
 ### write

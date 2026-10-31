@@ -2106,6 +2106,10 @@ function cmp_r32_r32(asm, left, right) return _emit_bin_rr(asm, 0x3B, left, righ
 function test_r64_r64(asm, left, right) return _emit_bin_rr(asm, 0x85, left, right, 1) end function
 
 /// Emit a conditional move used by typed symbolic inline asm.
+/// @param asm Native assembler state.
+/// @param cc Condition code, either `e` or `ne`.
+/// @param dst Destination 64-bit register.
+/// @param src Source 64-bit register.
 function cmovcc_r64_r64(asm, cc, dst, src)
   opcode = -1
   if cc == "e" then opcode = 0x44 end if
@@ -2275,8 +2279,16 @@ end function
 /// @param imm Value supplied for `imm`.
 function shl_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 4, reg_name, imm, 1) end function
 
+/// Rotate a 64-bit register left by an immediate count.
+/// @param asm Native assembler state.
+/// @param reg_name Register to rotate.
+/// @param imm Immediate rotation count.
 function rol_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 0, reg_name, imm, 1) end function
 
+/// Rotate a 64-bit register right by an immediate count.
+/// @param asm Native assembler state.
+/// @param reg_name Register to rotate.
+/// @param imm Immediate rotation count.
 function ror_r64_imm8(asm, reg_name, imm) return _emit_shift_imm8(asm, 1, reg_name, imm, 1) end function
 /// Encode or manage shr r64 imm8 in the native x64 assembler.
 /// @param asm Value supplied for `asm`.

@@ -1637,6 +1637,7 @@ function tokenize(code)
 end function
 
 /// Export packed lexer columns without retaining spare arena capacity.
+/// @internal
 function token_cache_export(tokens)
   if typeof(tokens) != "struct" or typeof(try(tokens.count)) != "int" then return void end if
   count = tokens.count
@@ -1645,6 +1646,7 @@ function token_cache_export(tokens)
 end function
 
 /// Rebuild a bounded, data-only lexer arena from a validated cache record.
+/// @internal
 function token_cache_import(record)
   if typeof(record) != "array" or len(record) != 5 then return void end if
   count = record[4]
@@ -6191,6 +6193,9 @@ function parse_program(source, filename)
 end function
 
 /// Parse caller-supplied tokens, used by the persistent lexer cache.
+/// @param source Original source text.
+/// @param filename Source filename for diagnostics.
+/// @param toks Token arena supplied by the lexer cache.
 function parse_program_tokens(source, filename, toks)
   if typeof(toks) == "struct" and typeof(try(toks.message)) == "string" then
     toks.filename = filename

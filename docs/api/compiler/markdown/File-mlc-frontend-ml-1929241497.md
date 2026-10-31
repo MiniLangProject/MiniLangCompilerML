@@ -114,7 +114,7 @@ Report frontend availability; the self-host build links it statically.
 | `path` | `dynamic` | — | Path to operate on. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L237)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L249)
 
 <a id="function-function-mlc-frontend-normalize-code-for-tokenizer-function-normalize-code-for-tokenizer-src-mlc-frontend-ml-2075062608"></a>
 ### normalize_code_for_tokenizer
@@ -163,4 +163,4 @@ Parse one file while collecting up to max_errors syntax diagnostics.
 | `max_errors` | `dynamic` | — | Value supplied for `max_errors`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L246)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/frontend.ml#L258)

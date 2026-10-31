@@ -12,7 +12,7 @@ struct NamespaceDecl
 Represents namespace decl.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L373)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L389)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `NamespaceDecl`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L381)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L397)
 
 <a id="field-field-mlc-minilang-parser-namespacedecl-pos-pos-mlc-minilang-parser-ml-1997168296"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `NamespaceDecl`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L379)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L395)
 
 <a id="field-field-mlc-minilang-parser-namespacedecl-name-name-mlc-minilang-parser-ml-1618538416"></a>
 ### name
@@ -50,7 +50,7 @@ name
 Name associated with `NamespaceDecl`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L377)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L393)
 
 <a id="field-field-mlc-minilang-parser-namespacedecl-node-kind-node-kind-mlc-minilang-parser-ml-1866655758"></a>
 ### node_kind
@@ -62,4 +62,4 @@ node_kind
 Node kind associated with `NamespaceDecl`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L375)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L391)

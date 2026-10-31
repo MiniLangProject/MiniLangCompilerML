@@ -12,7 +12,7 @@ struct ExternStructLayout
 Represents extern struct layout.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5610)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5645)
 
 ## Members
 
@@ -26,7 +26,7 @@ align
 Align associated with `ExternStructLayout`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5622)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5657)
 
 <a id="field-field-mlc-compiler-externstructlayout-fields-fields-mlc-compiler-ml-1793626140"></a>
 ### fields
@@ -38,7 +38,7 @@ fields
 Fields associated with `ExternStructLayout`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5614)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5649)
 
 <a id="field-field-mlc-compiler-externstructlayout-offsets-offsets-mlc-compiler-ml-748432026"></a>
 ### offsets
@@ -50,7 +50,7 @@ offsets
 Offsets associated with `ExternStructLayout`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5618)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5653)
 
 <a id="field-field-mlc-compiler-externstructlayout-qname-qname-mlc-compiler-ml-666692986"></a>
 ### qname
@@ -62,7 +62,7 @@ qname
 Qname associated with `ExternStructLayout`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5612)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5647)
 
 <a id="field-field-mlc-compiler-externstructlayout-size-size-mlc-compiler-ml-1592132696"></a>
 ### size
@@ -74,7 +74,7 @@ size
 Current logical size of `ExternStructLayout`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5620)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5655)
 
 <a id="field-field-mlc-compiler-externstructlayout-types-types-mlc-compiler-ml-1288485026"></a>
 ### types
@@ -86,4 +86,4 @@ types
 Types associated with `ExternStructLayout`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5616)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5651)

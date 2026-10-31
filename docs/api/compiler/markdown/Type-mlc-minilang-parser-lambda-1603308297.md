@@ -12,7 +12,7 @@ struct Lambda
 Parser-only anonymous function lowered to an ordinary nested closure.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L319)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L335)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L341)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L357)
 
 <a id="field-field-mlc-minilang-parser-lambda-pos-pos-mlc-minilang-parser-ml-361850168"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L339)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L355)
 
 <a id="field-field-mlc-minilang-parser-lambda-body-body-mlc-minilang-parser-ml-534527758"></a>
 ### body
@@ -50,7 +50,7 @@ body
 Body associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L325)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L341)
 
 <a id="field-field-mlc-minilang-parser-lambda-node-kind-node-kind-mlc-minilang-parser-ml-411531358"></a>
 ### node_kind
@@ -62,7 +62,7 @@ node_kind
 Node kind associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L321)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L337)
 
 <a id="field-field-mlc-minilang-parser-lambda-param-defaults-param-defaults-mlc-minilang-parser-ml-817036702"></a>
 ### param_defaults
@@ -74,7 +74,7 @@ param_defaults
 Param defaults associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L331)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L347)
 
 <a id="field-field-mlc-minilang-parser-lambda-param-optional-param-optional-mlc-minilang-parser-ml-1609833414"></a>
 ### param_optional
@@ -86,7 +86,7 @@ param_optional
 Param optional associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L329)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L345)
 
 <a id="field-field-mlc-minilang-parser-lambda-param-types-param-types-mlc-minilang-parser-ml-981237814"></a>
 ### param_types
@@ -98,7 +98,7 @@ param_types
 Param types associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L327)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L343)
 
 <a id="field-field-mlc-minilang-parser-lambda-params-params-mlc-minilang-parser-ml-2072712754"></a>
 ### params
@@ -110,7 +110,7 @@ params
 Params associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L323)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L339)
 
 <a id="field-field-mlc-minilang-parser-lambda-return-optional-return-optional-mlc-minilang-parser-ml-225904198"></a>
 ### return_optional
@@ -122,7 +122,7 @@ return_optional
 Return optional associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L337)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L353)
 
 <a id="field-field-mlc-minilang-parser-lambda-return-type-return-type-mlc-minilang-parser-ml-1837236726"></a>
 ### return_type
@@ -134,7 +134,7 @@ return_type
 Return type associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L335)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L351)
 
 <a id="field-field-mlc-minilang-parser-lambda-variadic-index-variadic-index-mlc-minilang-parser-ml-1691176094"></a>
 ### variadic_index
@@ -146,4 +146,4 @@ variadic_index
 Variadic index associated with `Lambda`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L333)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L349)

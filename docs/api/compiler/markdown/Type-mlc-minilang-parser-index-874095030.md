@@ -12,7 +12,7 @@ struct Index
 Represents index.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L277)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L293)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Index`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L287)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L303)
 
 <a id="field-field-mlc-minilang-parser-index-pos-pos-mlc-minilang-parser-ml-394332461"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Index`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L285)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L301)
 
 <a id="field-field-mlc-minilang-parser-index-index-index-mlc-minilang-parser-ml-182454747"></a>
 ### index
@@ -50,7 +50,7 @@ index
 Index associated with `Index`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L283)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L299)
 
 <a id="field-field-mlc-minilang-parser-index-node-kind-node-kind-mlc-minilang-parser-ml-2062503575"></a>
 ### node_kind
@@ -62,7 +62,7 @@ node_kind
 Node kind associated with `Index`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L279)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L295)
 
 <a id="field-field-mlc-minilang-parser-index-target-target-mlc-minilang-parser-ml-657802521"></a>
 ### target
@@ -74,4 +74,4 @@ target
 Target associated with `Index`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L281)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L297)

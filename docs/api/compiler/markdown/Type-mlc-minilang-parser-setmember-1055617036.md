@@ -12,7 +12,7 @@ struct SetMember
 Represents set member.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L459)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L475)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `SetMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L471)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L487)
 
 <a id="field-field-mlc-minilang-parser-setmember-pos-pos-mlc-minilang-parser-ml-1936779939"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `SetMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L469)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L485)
 
 <a id="field-field-mlc-minilang-parser-setmember-expr-expr-mlc-minilang-parser-ml-172980343"></a>
 ### expr
@@ -50,7 +50,7 @@ expr
 Expr associated with `SetMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L467)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L483)
 
 <a id="field-field-mlc-minilang-parser-setmember-field-field-mlc-minilang-parser-ml-1449055321"></a>
 ### field
@@ -62,7 +62,7 @@ field
 Field associated with `SetMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L465)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L481)
 
 <a id="field-field-mlc-minilang-parser-setmember-node-kind-node-kind-mlc-minilang-parser-ml-253132397"></a>
 ### node_kind
@@ -74,7 +74,7 @@ node_kind
 Node kind associated with `SetMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L461)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L477)
 
 <a id="field-field-mlc-minilang-parser-setmember-obj-obj-mlc-minilang-parser-ml-1225909637"></a>
 ### obj
@@ -86,4 +86,4 @@ obj
 Obj associated with `SetMember`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L463)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L479)

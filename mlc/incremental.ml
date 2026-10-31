@@ -58,6 +58,7 @@ function enabled()
 end function
 
 /// Load a source- and compiler-specific packed token arena, if present.
+/// @internal
 function loadTokens(source)
   if enabled() == false then return void end if
   key = codec.key([_cache.options, "tokens-ml-v1", source])
@@ -75,6 +76,7 @@ function loadTokens(source)
 end function
 
 /// Publish only primitive token columns; never deserialize executable ASTs.
+/// @internal
 function storeTokens(source, record)
   if enabled() == false then return end if
   key = codec.key([_cache.options, "tokens-ml-v1", source])

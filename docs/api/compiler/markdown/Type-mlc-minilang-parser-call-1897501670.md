@@ -12,7 +12,7 @@ struct Call
 Represents call.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L261)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L277)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Call`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L273)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L289)
 
 <a id="field-field-mlc-minilang-parser-call-pos-pos-mlc-minilang-parser-ml-76827401"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Call`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L271)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L287)
 
 <a id="field-field-mlc-minilang-parser-call-arg-names-arg-names-mlc-minilang-parser-ml-1844658071"></a>
 ### arg_names
@@ -50,7 +50,7 @@ arg_names
 Arg names associated with `Call`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L269)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L285)
 
 <a id="field-field-mlc-minilang-parser-call-args-args-mlc-minilang-parser-ml-1197103941"></a>
 ### args
@@ -62,7 +62,7 @@ args
 Args associated with `Call`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L267)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L283)
 
 <a id="field-field-mlc-minilang-parser-call-callee-callee-mlc-minilang-parser-ml-447062483"></a>
 ### callee
@@ -74,7 +74,7 @@ callee
 Callee associated with `Call`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L265)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L281)
 
 <a id="field-field-mlc-minilang-parser-call-node-kind-node-kind-mlc-minilang-parser-ml-1416269203"></a>
 ### node_kind
@@ -86,4 +86,4 @@ node_kind
 Node kind associated with `Call`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L263)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L279)

@@ -12,7 +12,7 @@ struct SynchronizedBlock
 Represents synchronized block.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L443)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L459)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `SynchronizedBlock`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L455)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L471)
 
 <a id="field-field-mlc-minilang-parser-synchronizedblock-pos-pos-mlc-minilang-parser-ml-556345616"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `SynchronizedBlock`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L453)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L469)
 
 <a id="field-field-mlc-minilang-parser-synchronizedblock-body-body-mlc-minilang-parser-ml-752228070"></a>
 ### body
@@ -50,7 +50,7 @@ body
 Body associated with `SynchronizedBlock`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L449)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L465)
 
 <a id="field-field-mlc-minilang-parser-synchronizedblock-cleanup-cleanup-mlc-minilang-parser-ml-952208310"></a>
 ### cleanup
@@ -62,7 +62,7 @@ cleanup
 Cleanup associated with `SynchronizedBlock`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L451)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L467)
 
 <a id="field-field-mlc-minilang-parser-synchronizedblock-lock-lock-mlc-minilang-parser-ml-2121140192"></a>
 ### lock
@@ -74,7 +74,7 @@ lock
 Lock associated with `SynchronizedBlock`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L447)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L463)
 
 <a id="field-field-mlc-minilang-parser-synchronizedblock-node-kind-node-kind-mlc-minilang-parser-ml-922934294"></a>
 ### node_kind
@@ -86,4 +86,4 @@ node_kind
 Node kind associated with `SynchronizedBlock`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L445)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L461)
