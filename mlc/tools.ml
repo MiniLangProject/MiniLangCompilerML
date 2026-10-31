@@ -190,7 +190,9 @@ end function
 /// @internal
 function inline _ast_u32_read(buf, index)
   off = index << 2
-  return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24)
+  return asm unsafe x64(in buf as bytes, in off as int) returns int
+    mov result, dword [buf.data + off]
+  end asm
 end function
 
 /// Drop every compilation-owned compact AST column and intern table. This is a bulk ownership boundary: callers must release only after code generation no longer holds or dereferences NodeIds from this arena.
