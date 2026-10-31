@@ -55,7 +55,7 @@ def main() -> int:
         shutil.copy2(bridge_source, bridge)
         for filename in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README-BINARY.md', 'CHANGELOG.md', f'RELEASE_NOTES_{args.version}.md']:
             shutil.copy2(root / filename, package / filename)
-        for document in ('EXECUTABLE_PACKING.md', 'INCREMENTAL_BUILDS.md',
+        for document in ('EXECUTABLE_PACKING.md', 'INCREMENTAL_BUILDS.md', 'OOP.md',
                          'reports/COMPILER_OPTIMIZATIONS_2026-10-30.md',
                          'reports/COMPILER_OPTIMIZATION_EXPERIMENTS_2026-10-30.md',
                          'reports/INCREMENTAL_BUILDS_2026-10-29.md',

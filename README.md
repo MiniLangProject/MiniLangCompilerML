@@ -1804,6 +1804,9 @@ struct Person implements Named
 end struct
 ```
 
+The [classes and interfaces guide](docs/OOP.md) has complete examples and
+constructor, override, and visibility rules.
+
 Classes provide single inheritance with `extends`. A subclass inherits fields,
 field defaults, methods and implemented interfaces. An overriding method must
 use `override function` and keep the inherited signature. Inside an override,

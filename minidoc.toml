@@ -36,3 +36,4 @@ hide_empty = true
 [links]
 repository = "https://github.com/MiniLangProject/MiniLangCompilerML"
 ref = "main"
+revision = "v1.3.1"
