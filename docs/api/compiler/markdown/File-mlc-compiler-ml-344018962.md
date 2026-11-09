@@ -44,7 +44,7 @@ Perform the abi param type supported compiler phase.
 | `ty` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5625)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5690)
 
 <a id="function-function-mlc-compiler-abi-return-type-supported-function-abi-return-type-supported-ty-mlc-compiler-ml-855809217"></a>
 ### _abi_return_type_supported
@@ -60,7 +60,7 @@ Perform the abi return type supported compiler phase.
 | `ty` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5632)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5697)
 
 <a id="function-function-mlc-compiler-add-diag-function-add-diag-diags-kind-filename-pos-message-mlc-compiler-ml-1139238326"></a>
 ### _add_diag
@@ -215,7 +215,7 @@ Perform the apply link patches compiler phase.
 | `invalid_prefix` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4580)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4645)
 
 <a id="function-function-mlc-compiler-apply-mlo-patches-from-file-function-apply-mlo-patches-from-file-src-patch-obj-text-off-obj-rdata-off-obj-data-off-obj-bss-off-label-map-obj-index-map-obj-index-lists-labels-link-patch-recs-text-rva-rdata-rva-data-rva-bss-rva-image-base-buf-rdata-buf-data-buf-patch-index-mlc-compiler-ml-1410354060"></a>
 ### _apply_mlo_patches_from_file
@@ -249,7 +249,7 @@ Stream one object's relocations into final section buffers. Private labels stay 
 | `patch_index` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5204)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5269)
 
 <a id="function-function-mlc-compiler-array-contains-inline-function-array-contains-arr-value-mlc-compiler-ml-173352891"></a>
 ### _array_contains
@@ -285,7 +285,7 @@ Perform the asm append section compiler phase.
 | `rva` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7498)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7563)
 
 <a id="function-function-mlc-compiler-asm-db-text-function-asm-db-text-hex-text-mlc-compiler-ml-2037720179"></a>
 ### _asm_db_text
@@ -301,7 +301,7 @@ Perform the asm db text compiler phase.
 | `hex_text` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7483)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7548)
 
 <a id="function-function-mlc-compiler-asm-default-path-function-asm-default-path-output-exe-mlc-compiler-ml-913898962"></a>
 ### _asm_default_path
@@ -317,7 +317,7 @@ Perform the asm default path compiler phase.
 | `output_exe` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7459)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7524)
 
 <a id="global-global-mlc-compiler-asm-dump-data-asm-dump-data-mlc-compiler-ml-232683154"></a>
 ### _asm_dump_data
@@ -553,7 +553,7 @@ Perform the char code local compiler phase.
 | `ch` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4660)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4725)
 
 <a id="function-function-mlc-compiler-check-decl-stmt-function-check-decl-stmt-st-module-path-diags-keep-going-max-errors-mlc-compiler-ml-1530621207"></a>
 ### _check_decl_stmt
@@ -657,7 +657,7 @@ Perform the collect extern sigs walk compiler phase.
 | `acc` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5919)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5984)
 
 <a id="function-function-mlc-compiler-collect-extern-structs-walk-function-collect-extern-structs-walk-stmts-prefix-current-file-file-prefixes-names-mlc-compiler-ml-1711984290"></a>
 ### _collect_extern_structs_walk
@@ -677,7 +677,7 @@ Perform the collect extern structs walk compiler phase.
 | `names` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5730)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5795)
 
 <a id="function-function-mlc-compiler-collect-file-package-prefixes-function-collect-file-package-prefixes-program-mlc-compiler-ml-361790580"></a>
 ### _collect_file_package_prefixes
@@ -693,7 +693,7 @@ Perform the collect file package prefixes compiler phase.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5684)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5749)
 
 <a id="function-function-mlc-compiler-collect-include-dirs-function-collect-include-dirs-args-mlc-compiler-ml-1090717049"></a>
 ### _collect_include_dirs
@@ -726,7 +726,7 @@ Perform the collect internal helper targets compiler phase.
 | `patches` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5597)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5662)
 
 <a id="function-function-mlc-compiler-collect-mlo-paths-from-dir-function-collect-mlo-paths-from-dir-obj-dir-mlc-compiler-ml-1614947159"></a>
 ### _collect_mlo_paths_from_dir
@@ -742,7 +742,7 @@ Perform the collect mlo paths from dir compiler phase.
 | `obj_dir` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4730)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4795)
 
 <a id="function-function-mlc-compiler-collect-runtime-config-function-collect-runtime-config-args-mlc-compiler-ml-470783061"></a>
 ### _collect_runtime_config
@@ -1028,7 +1028,7 @@ Perform the concat bytes parts compiler phase.
 | `parts_builder` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5518)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5583)
 
 <a id="function-function-mlc-compiler-containsdot-inline-function-containsdot-txt-mlc-compiler-ml-1491136537"></a>
 ### _containsDot
@@ -1066,7 +1066,7 @@ Perform the copy mlo sections from file compiler phase.
 | `data_off` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4922)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4987)
 
 <a id="function-function-mlc-compiler-debug-validate-patch-names-function-debug-validate-patch-names-label-patches-mlc-compiler-ml-1794564394"></a>
 ### _debug_validate_patch_names
@@ -1083,7 +1083,7 @@ Perform the debug validate patch names compiler phase.
 | `patches` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4330)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4395)
 
 <a id="function-function-mlc-compiler-declared-package-function-declared-package-program-mlc-compiler-ml-740817108"></a>
 ### _declared_package
@@ -1159,7 +1159,7 @@ Run only object emission in a child compiler. The small coordinating parent then
 | `args` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6842)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6907)
 
 <a id="function-function-mlc-compiler-endswith-inline-function-endswith-text-suf-mlc-compiler-ml-1942805904"></a>
 ### _endsWith
@@ -1243,7 +1243,7 @@ Perform the extern physical abi class compiler phase.
 | `is_out` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5802)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5867)
 
 <a id="function-function-mlc-compiler-extern-struct-field-type-supported-function-extern-struct-field-type-supported-ty-mlc-compiler-ml-299838385"></a>
 ### _extern_struct_field_type_supported
@@ -1259,7 +1259,7 @@ Perform the extern struct field type supported compiler phase.
 | `ty` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5639)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5704)
 
 <a id="function-function-mlc-compiler-extern-struct-layout-find-function-extern-struct-layout-find-layouts-qname-mlc-compiler-ml-1032279295"></a>
 ### _extern_struct_layout_find
@@ -1276,7 +1276,7 @@ Perform the extern struct layout find compiler phase.
 | `qname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5673)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5738)
 
 <a id="function-function-mlc-compiler-extern-struct-type-size-function-extern-struct-type-size-ty-mlc-compiler-ml-674070153"></a>
 ### _extern_struct_type_size
@@ -1292,7 +1292,7 @@ Perform the extern struct type size compiler phase.
 | `ty` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5662)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5727)
 
 <a id="function-function-mlc-compiler-extern-symbol-default-function-extern-symbol-default-qname-mlc-compiler-ml-970146300"></a>
 ### _extern_symbol_default
@@ -1308,7 +1308,7 @@ Perform the extern symbol default compiler phase.
 | `qname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5618)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5683)
 
 <a id="function-function-mlc-compiler-extract-imports-function-extract-imports-program-mlc-compiler-ml-284265888"></a>
 ### _extract_imports
@@ -1372,7 +1372,7 @@ Returns find main name.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5553)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5618)
 
 <a id="function-function-mlc-compiler-finish-module-mlo-function-finish-module-mlo-tmp-dir-obj-index-module-file-entry-label-mod-cg-base-state-helper-union-module-obj-paths-b-mlc-compiler-ml-825171063"></a>
 ### _finish_module_mlo
@@ -1395,7 +1395,7 @@ Perform the finish module mlo compiler phase.
 | `module_obj_paths_b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6657)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6722)
 
 <a id="function-function-mlc-compiler-fresh-link-gc-limit-from-config-function-fresh-link-gc-limit-from-config-runtime-config-mlc-compiler-ml-1336064053"></a>
 ### _fresh_link_gc_limit_from_config
@@ -1581,7 +1581,7 @@ Perform the heap probe compiler phase.
 | `tag` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6018)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6083)
 
 <a id="function-function-mlc-compiler-hex-u32-fixed-function-hex-u32-fixed-value-mlc-compiler-ml-92299427"></a>
 ### _hex_u32_fixed
@@ -1597,7 +1597,7 @@ Perform the hex u32 fixed compiler phase.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7445)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7510)
 
 <a id="extern_function-extern-function-mlc-compiler-host-closehandle-extern-function-host-closehandle-handle-as-ptr-from-kernel32-dll-symbol-closehandle-returns-bool-mlc-compiler-ml-1426532138"></a>
 ### _host_CloseHandle
@@ -1784,7 +1784,7 @@ Reports whether is internal helper label local.
 | `lbl` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5582)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5647)
 
 <a id="function-function-mlc-compiler-label-get-function-label-get-arr-key-defaultv-mlc-compiler-ml-1399089917"></a>
 ### _label_get
@@ -1837,7 +1837,7 @@ Perform the label key compiler phase.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5066)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5131)
 
 <a id="function-function-mlc-compiler-label-lookup-fallback-function-label-lookup-fallback-labels-name-defaultv-mlc-compiler-ml-1302650439"></a>
 ### _label_lookup_fallback
@@ -1855,7 +1855,7 @@ Perform the label lookup fallback compiler phase.
 | `defaultv` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4349)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4414)
 
 <a id="function-function-mlc-compiler-label-set-function-label-set-arr-key-value-mlc-compiler-ml-605281853"></a>
 ### _label_set
@@ -1910,7 +1910,7 @@ Link canonical MLO fragments into the same fixed-address ELF image as the monoli
 | `include_private_dump` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6117)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6182)
 
 <a id="function-function-mlc-compiler-link-direct-patch-target-function-link-direct-patch-target-label-map-obj-index-map-source-obj-map-source-obj-prefix-target-mlc-compiler-ml-451365211"></a>
 ### _link_direct_patch_target
@@ -1930,7 +1930,7 @@ Perform the link direct patch target compiler phase.
 | `target` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5190)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5255)
 
 <a id="function-function-mlc-compiler-link-local-labels-get-function-link-local-labels-get-local-label-map-local-labels-target-mlc-compiler-ml-1347228779"></a>
 ### _link_local_labels_get
@@ -1948,7 +1948,7 @@ Perform the link local labels get compiler phase.
 | `target` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5093)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5158)
 
 <a id="function-function-mlc-compiler-link-local-patch-target-function-link-local-patch-target-src-patch-target-mlc-compiler-ml-1611963866"></a>
 ### _link_local_patch_target
@@ -1965,7 +1965,7 @@ Perform the link local patch target compiler phase.
 | `target` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5101)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5166)
 
 <a id="function-function-mlc-compiler-link-mlo-files-function-link-mlo-files-obj-paths-output-exe-subsystem-mlc-compiler-ml-1561935609"></a>
 ### _link_mlo_files
@@ -1983,7 +1983,7 @@ Link canonical MLO fragments in input order while retaining only compact label/p
 | `subsystem` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6313)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6378)
 
 <a id="function-function-mlc-compiler-link-mlo-linux-sections-function-link-mlo-linux-sections-obj-paths-output-exe-text-buf-rdata-buf-data-buf-bss-size-patch-file-recs-imports-mlc-compiler-ml-1487032232"></a>
 ### _link_mlo_linux_sections
@@ -2006,7 +2006,7 @@ Perform the link mlo linux sections compiler phase.
 | `imports` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6231)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6296)
 
 <a id="function-function-mlc-compiler-link-obj-dir-in-fresh-process-function-link-obj-dir-in-fresh-process-input-ml-obj-dir-output-exe-subsystem-runtime-config-mlc-compiler-ml-1660364315"></a>
 ### _link_obj_dir_in_fresh_process
@@ -2026,7 +2026,7 @@ Perform the link obj dir in fresh process compiler phase.
 | `runtime_config` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6606)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6671)
 
 <a id="function-function-mlc-compiler-link-obj-label-list-get-function-link-obj-label-list-get-obj-index-lists-name-defaultv-mlc-compiler-ml-1422148126"></a>
 ### _link_obj_label_list_get
@@ -2044,7 +2044,7 @@ Perform the link obj label list get compiler phase.
 | `defaultv` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4449)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4514)
 
 <a id="function-function-mlc-compiler-link-obj-label-list-set-function-link-obj-label-list-set-obj-index-lists-name-value-mlc-compiler-ml-1415819144"></a>
 ### _link_obj_label_list_set
@@ -2062,7 +2062,7 @@ Perform the link obj label list set compiler phase.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4434)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4499)
 
 <a id="function-function-mlc-compiler-link-obj-label-map-get-function-link-obj-label-map-get-obj-index-map-name-defaultv-mlc-compiler-ml-219458575"></a>
 ### _link_obj_label_map_get
@@ -2080,7 +2080,7 @@ Perform the link obj label map get compiler phase.
 | `defaultv` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4424)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4489)
 
 <a id="function-function-mlc-compiler-link-obj-label-map-set-function-link-obj-label-map-set-obj-index-map-name-value-mlc-compiler-ml-802697151"></a>
 ### _link_obj_label_map_set
@@ -2098,7 +2098,7 @@ Perform the link obj label map set compiler phase.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4409)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4474)
 
 <a id="global-global-mlc-compiler-link-patch-keepalive-link-patch-keepalive-mlc-compiler-ml-365601846"></a>
 ### _link_patch_keepalive
@@ -2132,7 +2132,7 @@ Perform the link rec labels lookup compiler phase.
 | `defaultv` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4466)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4531)
 
 <a id="function-function-mlc-compiler-link-resolve-patch-target-function-link-resolve-patch-target-label-map-obj-index-map-obj-index-lists-local-label-map-local-labels-labels-link-patch-recs-text-rva-rdata-rva-data-rva-bss-rva-src-patch-target-mlc-compiler-ml-119289233"></a>
 ### _link_resolve_patch_target
@@ -2160,7 +2160,7 @@ Perform the link resolve patch target compiler phase.
 | `target` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5129)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5194)
 
 <a id="function-function-mlc-compiler-link-resolve-patch-target-cached-function-link-resolve-patch-target-cached-label-map-target-cache-obj-index-map-obj-index-lists-local-label-map-local-labels-labels-link-patch-recs-text-rva-rdata-rva-data-rva-bss-rva-src-patch-target-mlc-compiler-ml-1474262157"></a>
 ### _link_resolve_patch_target_cached
@@ -2189,7 +2189,7 @@ Perform the link resolve patch target cached compiler phase.
 | `target` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5173)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5238)
 
 <a id="function-function-mlc-compiler-link-resolve-target-function-link-resolve-target-label-map-labels-link-patch-recs-text-rva-rdata-rva-data-rva-bss-rva-target-mlc-compiler-ml-1812062059"></a>
 ### _link_resolve_target
@@ -2212,7 +2212,7 @@ Perform the link resolve target compiler phase.
 | `target` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5074)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5139)
 
 <a id="function-function-mlc-compiler-link-should-use-fresh-process-function-link-should-use-fresh-process-obj-paths-mlc-compiler-ml-253646810"></a>
 ### _link_should_use_fresh_process
@@ -2228,7 +2228,7 @@ Perform the link should use fresh process compiler phase.
 | `obj_paths` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6599)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6664)
 
 <a id="function-function-mlc-compiler-link-target-obj-index-function-link-target-obj-index-name-mlc-compiler-ml-1406105421"></a>
 ### _link_target_obj_index
@@ -2244,7 +2244,7 @@ Perform the link target obj index compiler phase.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4378)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4443)
 
 <a id="function-function-mlc-compiler-link-target-obj-index-num-function-link-target-obj-index-num-name-mlc-compiler-ml-369823433"></a>
 ### _link_target_obj_index_num
@@ -2260,7 +2260,7 @@ Perform the link target obj index num compiler phase.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4387)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4452)
 
 <a id="function-function-mlc-compiler-link-target-prefers-global-function-link-target-prefers-global-target-mlc-compiler-ml-47347529"></a>
 ### _link_target_prefers_global
@@ -2276,7 +2276,7 @@ Perform the link target prefers global compiler phase.
 | `target` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5114)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5179)
 
 <a id="function-function-mlc-compiler-load-program-for-codegen-function-load-program-for-codegen-entry-include-dirs-keep-going-max-errors-mlc-compiler-ml-496796531"></a>
 ### _load_program_for_codegen
@@ -2295,7 +2295,7 @@ Returns load program for codegen.
 | `max_errors` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6042)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6107)
 
 <a id="function-function-mlc-compiler-make-linux-output-executable-function-make-linux-output-executable-path-mlc-compiler-ml-511131019"></a>
 ### _make_linux_output_executable
@@ -2356,7 +2356,7 @@ Perform the merge string arrays compiler phase.
 | `src` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5566)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5631)
 
 <a id="function-function-mlc-compiler-mlo-align-down8-function-mlo-align-down8-value-mlc-compiler-ml-1922818819"></a>
 ### _mlo_align_down8
@@ -2457,7 +2457,7 @@ Perform the mlo bp write imports compiler phase.
 | `imports` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L3922)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L3948)
 
 <a id="function-function-mlc-compiler-mlo-bp-write-labels-function-mlo-bp-write-labels-bp-labels-mlc-compiler-ml-1770535327"></a>
 ### _mlo_bp_write_labels
@@ -2475,6 +2475,23 @@ Perform the mlo bp write labels compiler phase.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L3868)
+
+<a id="function-function-mlc-compiler-mlo-bp-write-native-patch-function-mlo-bp-write-native-patch-bp-pt-as-mlopatch-mlc-compiler-ml-128329474"></a>
+### _mlo_bp_write_native_patch
+
+```ml
+function _mlo_bp_write_native_patch(bp, pt as MloPatch)
+```
+
+Serialize a normalized relocation without fallible member lookups. Field values retain the legacy coercions; only the record shape is known.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `bp` | `dynamic` | — |  |
+| `pt` | `MloPatch` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L3929)
 
 <a id="function-function-mlc-compiler-mlo-bp-write-patches-function-mlo-bp-write-patches-bp-patches-mlc-compiler-ml-1687164426"></a>
 ### _mlo_bp_write_patches
@@ -2724,7 +2741,7 @@ Count public and private labels while an object is already decoded during the se
 | `obj` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4952)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5017)
 
 <a id="function-function-mlc-compiler-mlo-label-map-add-function-mlo-label-map-add-mapv-old-name-new-name-mlc-compiler-ml-1461943887"></a>
 ### _mlo_label_map_add
@@ -3012,7 +3029,7 @@ Perform the mlo read imports compiler phase.
 | `rd` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4202)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4267)
 
 <a id="function-function-mlc-compiler-mlo-read-labels-function-mlo-read-labels-rd-mlc-compiler-ml-237931306"></a>
 ### _mlo_read_labels
@@ -3028,7 +3045,7 @@ Perform the mlo read labels compiler phase.
 | `rd` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4130)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4195)
 
 <a id="function-function-mlc-compiler-mlo-read-patches-function-mlo-read-patches-rd-version-mlc-compiler-ml-878001772"></a>
 ### _mlo_read_patches
@@ -3045,7 +3062,7 @@ Perform the mlo read patches compiler phase.
 | `version` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4154)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4219)
 
 <a id="function-function-mlc-compiler-mlo-rename-labels-function-mlo-rename-labels-labels-prefix-preserve-public-label-map-mlc-compiler-ml-1844507524"></a>
 ### _mlo_rename_labels
@@ -3114,7 +3131,7 @@ Count serialized labels without decoding their names or allocating wrapper struc
 | `rd` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4821)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4886)
 
 <a id="function-function-mlc-compiler-mlo-skip-labels-function-mlo-skip-labels-rd-mlc-compiler-ml-345885774"></a>
 ### _mlo_skip_labels
@@ -3130,7 +3147,7 @@ Perform the mlo skip labels compiler phase.
 | `rd` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4761)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4826)
 
 <a id="function-function-mlc-compiler-mlo-skip-patches-function-mlo-skip-patches-rd-version-mlc-compiler-ml-1789404426"></a>
 ### _mlo_skip_patches
@@ -3147,7 +3164,7 @@ Perform the mlo skip patches compiler phase.
 | `version` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4781)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4846)
 
 <a id="function-function-mlc-compiler-mlo-sort-rank-function-mlo-sort-rank-name-mlc-compiler-ml-1514524973"></a>
 ### _mlo_sort_rank
@@ -3163,7 +3180,7 @@ Perform the mlo sort rank compiler phase.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4668)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4733)
 
 <a id="function-function-mlc-compiler-mlo-state-checkpoint-function-mlo-state-checkpoint-st-mlc-compiler-ml-381999345"></a>
 ### _mlo_state_checkpoint
@@ -3213,7 +3230,7 @@ Complete one bounded native write even if the host reports a short write. The co
 | `count` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4025)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4051)
 
 <a id="function-function-mlc-compiler-mlo-write-imports-function-mlo-write-imports-ob-imports-mlc-compiler-ml-1659589699"></a>
 ### _mlo_write_imports
@@ -3230,7 +3247,7 @@ Perform the mlo write imports compiler phase.
 | `imports` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L3984)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4010)
 
 <a id="function-function-mlc-compiler-mlo-write-labels-function-mlo-write-labels-ob-labels-mlc-compiler-ml-2107975812"></a>
 ### _mlo_write_labels
@@ -3264,7 +3281,7 @@ Serialize through a reusable bounded staging buffer. A one-megabyte batch keeps 
 | `bp` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4047)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4073)
 
 <a id="function-function-mlc-compiler-mlo-write-patches-function-mlo-write-patches-ob-patches-mlc-compiler-ml-1835208615"></a>
 ### _mlo_write_patches
@@ -3281,7 +3298,7 @@ Perform the mlo write patches compiler phase.
 | `patches` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L3951)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L3977)
 
 <a id="global-global-mlc-compiler-mlo-write-scratch-mlo-write-scratch-mlc-compiler-ml-1745366234"></a>
 ### _mlo_write_scratch
@@ -3305,7 +3322,24 @@ function _mlo_write_scratch_buffer()
 Perform the mlo write scratch buffer compiler phase.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4013)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4039)
+
+<a id="function-function-mlc-compiler-mlo-write-segments-file-function-mlo-write-segments-file-path-segments-mlc-compiler-ml-1610348959"></a>
+### _mlo_write_segments_file
+
+```ml
+function _mlo_write_segments_file(path, segments)
+```
+
+Write borrowed byte sections and paged metadata without a full-object copy.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `path` | `dynamic` | — |  |
+| `segments` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4080)
 
 <a id="extern_function-extern-function-mlc-compiler-mlo-writefile-extern-function-mlo-writefile-handle-as-ptr-input-as-bytes-count-as-int-written-as-bytes-overlapped-as-ptr-from-kernel32-dll-symbol-writefile-returns-bool-mlc-compiler-ml-2102317366"></a>
 ### _mlo_WriteFile
@@ -3359,7 +3393,7 @@ Perform the module init rec for file compiler phase.
 | `module_file` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5541)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5606)
 
 <a id="function-function-mlc-compiler-module-set-package-function-module-set-package-modules-path-package-name-mlc-compiler-ml-1273017774"></a>
 ### _module_set_package
@@ -3778,7 +3812,7 @@ Perform the patch triplets for link compiler phase.
 | `default_kind` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4546)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4611)
 
 <a id="function-function-mlc-compiler-path-abspath-function-path-abspath-p-mlc-compiler-ml-1816170412"></a>
 ### _path_abspath
@@ -3996,7 +4030,7 @@ Returns read mlo file.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4235)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4300)
 
 <a id="function-function-mlc-compiler-read-mlo-file-for-layout-function-read-mlo-file-for-layout-path-mlc-compiler-ml-485790537"></a>
 ### _read_mlo_file_for_layout
@@ -4012,7 +4046,7 @@ Returns read mlo file for layout.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4977)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5042)
 
 <a id="function-function-mlc-compiler-read-mlo-layout-scan-function-read-mlo-layout-scan-path-mlc-compiler-ml-67084131"></a>
 ### _read_mlo_layout_scan
@@ -4028,7 +4062,7 @@ First linker pass: retain only section sizes, import metadata and label capacity
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4856)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4921)
 
 <a id="function-function-mlc-compiler-read-pgo-calls-function-read-pgo-calls-path-mlc-compiler-ml-1099475409"></a>
 ### _read_pgo_calls
@@ -4056,7 +4090,7 @@ function _release_frontend_phase_arenas()
 End the parsing/semantic ownership phase in one operation. Generated code, relocations and runtime metadata no longer refer to compact AST NodeIds at the two call sites below, so the typed arenas and resolution caches can be unrooted before the next full collection instead of surviving until exit.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6030)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6095)
 
 <a id="function-function-mlc-compiler-relpath-from-root-function-relpath-from-root-path-root-mlc-compiler-ml-2063510905"></a>
 ### _relpath_from_root
@@ -4258,7 +4292,7 @@ Perform the sort strings inplace compiler phase.
 | `items` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4708)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4773)
 
 <a id="function-function-mlc-compiler-split-imports-nonimports-function-split-imports-nonimports-program-mlc-compiler-ml-582628644"></a>
 ### _split_imports_nonimports
@@ -4357,7 +4391,7 @@ Perform the string leq compiler phase.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4688)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4753)
 
 <a id="function-function-mlc-compiler-subsystem-cli-name-function-subsystem-cli-name-subsystem-mlc-compiler-ml-1234191263"></a>
 ### _subsystem_cli_name
@@ -4373,7 +4407,7 @@ Perform the subsystem cli name compiler phase.
 | `subsystem` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6592)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6657)
 
 <a id="function-function-mlc-compiler-tmp-obj-dir-function-tmp-obj-dir-output-exe-mlc-compiler-ml-1440771438"></a>
 ### _tmp_obj_dir
@@ -4558,7 +4592,7 @@ Updates write asm listing if enabled.
 | `idata_buf` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7525)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7590)
 
 <a id="function-function-mlc-compiler-write-elf-asm-listing-if-enabled-function-write-elf-asm-listing-if-enabled-output-exe-layout-text-buf-rdata-buf-data-buf-mlc-compiler-ml-1745844689"></a>
 ### _write_elf_asm_listing_if_enabled
@@ -4578,7 +4612,7 @@ Write the final relocated ELF bytes using the same column/data controls as PE.
 | `data_buf` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7551)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7616)
 
 <a id="function-function-mlc-compiler-write-linux-image-function-write-linux-image-st-asm-labels-patches-text-buf-rdata-buf-data-buf-output-exe-dynamic-imports-mlc-compiler-ml-923279549"></a>
 ### _write_linux_image
@@ -4601,7 +4635,7 @@ Compile and link one complete program in memory.
 | `dynamic_imports` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6699)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6764)
 
 <a id="function-function-mlc-compiler-write-mlo-file-function-write-mlo-file-path-obj-mlc-compiler-ml-2048967472"></a>
 ### _write_mlo_file
@@ -4618,7 +4652,7 @@ Updates write mlo file.
 | `obj` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4106)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L4164)
 
 <a id="constant-constant-mlc-compiler-auto-object-pipeline-score-const-auto-object-pipeline-score-262144-mlc-compiler-ml-2065354566"></a>
 ### AUTO_OBJECT_PIPELINE_SCORE
@@ -4646,7 +4680,7 @@ Normalize all extern declarations into deterministic signature records.
 | `program` | `dynamic` | — | Value supplied for `program`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6010)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6075)
 
 <a id="function-function-mlc-compiler-collect-extern-structs-function-collect-extern-structs-program-mlc-compiler-ml-1133109776"></a>
 ### collect_extern_structs
@@ -4662,7 +4696,7 @@ Collect native struct declarations before validating extern signatures.
 | `program` | `dynamic` | — | Value supplied for `program`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5795)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5860)
 
 <a id="function-function-mlc-compiler-compile-to-exe-function-compile-to-exe-input-ml-output-exe-mlc-compiler-ml-1488227210"></a>
 ### compile_to_exe
@@ -4679,7 +4713,7 @@ Compile with default include, diagnostic, runtime and subsystem options.
 | `output_exe` | `dynamic` | — | Value supplied for `output_exe`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L8036)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L8101)
 
 <a id="function-function-mlc-compiler-compile-to-exe-opts-function-compile-to-exe-opts-input-ml-output-exe-include-dirs-keep-going-max-errors-runtime-config-call-profile-trace-calls-subsystem-mlc-compiler-ml-1428728650"></a>
 ### compile_to_exe_opts
@@ -4703,7 +4737,7 @@ Dispatch to the selected monolithic or object-pipeline implementation.
 | `subsystem` | `dynamic` | — | Value supplied for `subsystem`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L8026)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L8091)
 
 <a id="function-function-mlc-compiler-compile-to-exe-opts-monolithic-function-compile-to-exe-opts-monolithic-input-ml-output-exe-include-dirs-keep-going-max-errors-runtime-config-call-profile-trace-calls-subsystem-mlc-compiler-ml-1267162196"></a>
 ### compile_to_exe_opts_monolithic
@@ -4727,7 +4761,7 @@ Compile and link one complete program in memory.
 | `subsystem` | `dynamic` | — | Value supplied for `subsystem`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6866)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L6931)
 
 <a id="function-function-mlc-compiler-compile-to-exe-opts-object-function-compile-to-exe-opts-object-input-ml-output-exe-include-dirs-keep-going-max-errors-runtime-config-call-profile-trace-calls-subsystem-mlc-compiler-ml-1252125628"></a>
 ### compile_to_exe_opts_object
@@ -4751,13 +4785,13 @@ Emit bounded .mlo batches and link them in a fresh compiler process.
 | `subsystem` | `dynamic` | — | Value supplied for `subsystem`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7578)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7643)
 
-<a id="constant-constant-mlc-compiler-compiler-version-const-compiler-version-1-3-2-mlc-compiler-ml-784097557"></a>
+<a id="constant-constant-mlc-compiler-compiler-version-const-compiler-version-1-3-3-mlc-compiler-ml-1646141532"></a>
 ### COMPILER_VERSION
 
 ```ml
-const COMPILER_VERSION = "1.3.2"
+const COMPILER_VERSION = "1.3.3"
 ```
 
 Track compiler version.
@@ -4765,11 +4799,11 @@ Track compiler version.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L40)
 
-<a id="constant-constant-mlc-compiler-compiler-version-text-const-compiler-version-text-minilang-compiler-1-3-2-mlc-compiler-ml-107695431"></a>
+<a id="constant-constant-mlc-compiler-compiler-version-text-const-compiler-version-text-minilang-compiler-1-3-3-mlc-compiler-ml-680828310"></a>
 ### COMPILER_VERSION_TEXT
 
 ```ml
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.2"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.3"
 ```
 
 Track compiler version text.
@@ -4860,7 +4894,7 @@ Link an existing object directory without parsing source again.
 | `subsystem` | `dynamic` | — | Value supplied for `subsystem`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L8044)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L8109)
 
 <a id="constant-constant-mlc-compiler-link-section-copy-gc-object-stride-const-link-section-copy-gc-object-stride-64-mlc-compiler-ml-1937426613"></a>
 ### LINK_SECTION_COPY_GC_OBJECT_STRIDE
@@ -4974,7 +5008,7 @@ Parse command-line arguments and execute project, compile or link mode.
 | `args` | `dynamic` | — | Command-line or call arguments. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L8059)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L8124)
 
 - [mlc.compiler.StrIntPair](Type-mlc-compiler-strintpair-989620974.md) — struct
 - [mlc.compiler.StrPair](Type-mlc-compiler-strpair-1219907985.md) — struct
@@ -4993,4 +5027,4 @@ Validate supported ABI types, out parameters, native struct references and ABI c
 | `extern_struct_names` | `dynamic` | — | Value supplied for `extern_struct_names`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5824)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L5889)

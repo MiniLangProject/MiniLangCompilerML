@@ -18,6 +18,7 @@ function main(args)
 
   expr2 = parser.parse_expression("alpha", "arena-test.ml")
   stats = t.ast_leaf_stats()
+  if stats[1] > 8192 or stats[6] > 1024 then return fail("small-parse arena capacity") end if
   if t.ast_name(expr2) != "alpha" or stats[2] != 2 or stats[3] != 1 then return fail("symbol/operator/file interning") end if
   if stats[5] != 1 then return fail("binary arena count") end if
 

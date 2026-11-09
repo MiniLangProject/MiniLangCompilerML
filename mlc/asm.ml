@@ -933,6 +933,26 @@ function _emit_bytes_u8(v)
   return b
 end function
 
+/// Emit ModRM/SIB and displacement directly, without temporary byte buffers.
+/// REX and opcode bytes belong to the caller. RBP/R13 require disp8=0, and
+/// RSP/R12 require a no-index SIB even when there is no displacement.
+/// @internal
+function _emit_mem_tail(asm, reg_field, base_id, disp)
+  base_lo = base_id & 7
+  mod = 0
+  if disp != 0 or base_lo == 5 then
+    mod = 2
+    if _fits_i8(disp) then mod = 1 end if
+  end if
+  asm = _emit8(asm, _modrm_byte(mod, reg_field, base_lo))
+  if base_lo == 4 then
+    asm = _emit8(asm, _sib_byte(0, 4, base_lo))
+  end if
+  if mod == 1 then asm = _emit8(asm, disp) end if
+  if mod == 2 then asm = _emit32(asm, disp) end if
+  return asm
+end function
+
 /// Converts encode mem.
 /// @internal
 function _encode_mem(reg_field, base_id, disp)
@@ -985,7 +1005,24 @@ function _scale_bits(scale)
   return error(1, "Invalid SIB scale: " + scale)
 end function
 
-/// Converts encode mem bis.
+/// Append a validated indexed address without an EncMem or byte concatenations.
+/// REX/opcode emission and index validation belong to the instruction emitter.
+/// @internal
+function _emit_mem_bis_tail(asm, reg_field, base_id, index_id, scale_bits, disp)
+  base_lo = base_id & 7
+  mod = 0
+  if disp != 0 or base_lo == 5 then
+    mod = 2
+    if _fits_i8(disp) then mod = 1 end if
+  end if
+  asm = _emit8(asm, _modrm_byte(mod, reg_field, 4))
+  asm = _emit8(asm, _sib_byte(scale_bits, index_id & 7, base_lo))
+  if mod == 1 then asm = _emit8(asm, disp) end if
+  if mod == 2 then asm = _emit32(asm, disp) end if
+  return asm
+end function
+
+/// Encode an independent memory operand for external users and regression oracles.
 /// @internal
 function _encode_mem_bis(reg_field, base_id, index_id, scale, disp)
   base_lo = base_id & 7
@@ -1506,10 +1543,9 @@ function call_membase_disp(asm, base, disp)
   asm = _spill_before_call(asm)
   b = _rid_any(base)
   if b < 0 then return asm end if
-  enc = _encode_mem(2, b, disp)
-  asm = _emit_rex(asm, 0, 0, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, 0, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0xFF)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, 2, b, disp)
   return asm
 end function
 
@@ -2437,12 +2473,11 @@ function mov_r64_membase_disp(asm, dst, base, disp)
   d = _rid_any(dst)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 1, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 1, rex_r, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x8B)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -2455,12 +2490,11 @@ function mov_membase_disp_r64(asm, base, disp, src)
   sreg = _rid_any(src)
   b = _rid_any(base)
   if sreg < 0 or b < 0 then return asm end if
-  enc = _encode_mem(sreg & 7, b, disp)
   rex_r = 0
   if sreg >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 1, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 1, rex_r, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x89)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, sreg & 7, b, disp)
   return asm
 end function
 
@@ -2473,12 +2507,11 @@ function mov_r32_membase_disp(asm, dst, base, disp)
   d = _rid_any(dst)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, rex_r, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x8B)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -2491,12 +2524,11 @@ function mov_membase_disp_r32(asm, base, disp, src)
   sreg = _rid_any(src)
   b = _rid_any(base)
   if sreg < 0 or b < 0 then return asm end if
-  enc = _encode_mem(sreg & 7, b, disp)
   rex_r = 0
   if sreg >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, rex_r, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x89)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, sreg & 7, b, disp)
   return asm
 end function
 
@@ -2509,14 +2541,13 @@ function lock_cmpxchg_membase_disp_r32(asm, base, disp, src)
   sreg = _rid_any(src)
   b = _rid_any(base)
   if sreg < 0 or b < 0 then return asm end if
-  enc = _encode_mem(sreg & 7, b, disp)
   rex_r = 0
   if sreg >= 8 then rex_r = 1 end if
   asm = _emit8(asm, 0xF0)
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, rex_r, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0xB1)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, sreg & 7, b, disp)
   return asm
 end function
 
@@ -2531,14 +2562,13 @@ function lock_cmpxchg_membase_disp_r64(asm, base, disp, src)
   sreg = _rid_any(src)
   b = _rid_any(base)
   if sreg < 0 or b < 0 then return asm end if
-  enc = _encode_mem(sreg & 7, b, disp)
   rex_r = 0
   if sreg >= 8 then rex_r = 1 end if
   asm = _emit8(asm, 0xF0)
-  asm = _emit_rex(asm, 1, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 1, rex_r, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0xB1)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, sreg & 7, b, disp)
   return asm
 end function
 
@@ -2553,12 +2583,11 @@ function mov_r8_membase_disp(asm, dst, base, disp)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
   force = _is_force_rex_8(dst)
-  enc = _encode_mem(d & 7, b, disp)
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, force)
+  asm = _emit_rex(asm, 0, rex_r, 0, (b >> 3) & 1, force)
   asm = _emit8(asm, 0x8A)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -2573,12 +2602,11 @@ function mov_membase_disp_r8(asm, base, disp, src)
   b = _rid_any(base)
   if sreg < 0 or b < 0 then return asm end if
   force = _is_force_rex_8(src)
-  enc = _encode_mem(sreg & 7, b, disp)
   rex_r = 0
   if sreg >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, force)
+  asm = _emit_rex(asm, 0, rex_r, 0, (b >> 3) & 1, force)
   asm = _emit8(asm, 0x88)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, sreg & 7, b, disp)
   return asm
 end function
 
@@ -2591,12 +2619,11 @@ end function
 function mov_membase_disp_imm32(asm, base, disp, imm, qword)
   b = _rid_any(base)
   if b < 0 then return asm end if
-  enc = _encode_mem(0, b, disp)
   w = 0
   if qword then w = 1 end if
-  asm = _emit_rex(asm, w, 0, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, w, 0, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0xC7)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, 0, b, disp)
   asm = _emit32(asm, imm)
   return asm
 end function
@@ -2609,10 +2636,9 @@ end function
 function mov_membase_disp_imm8(asm, base, disp, imm)
   b = _rid_any(base)
   if b < 0 then return asm end if
-  enc = _encode_mem(0, b, disp)
-  asm = _emit_rex(asm, 0, 0, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, 0, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0xC6)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, 0, b, disp)
   asm = _emit8(asm, imm)
   return asm
 end function
@@ -2626,12 +2652,11 @@ function lea_r64_membase_disp(asm, dst, base, disp)
   d = _rid_any(dst)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 1, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 1, rex_r, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x8D)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -2750,12 +2775,11 @@ function cmp_r8_membase_disp(asm, reg8, base, disp)
   b = _rid_any(base)
   if r < 0 or b < 0 then return asm end if
   force = _is_force_rex_8(reg8)
-  enc = _encode_mem(r & 7, b, disp)
   rex_r = 0
   if r >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, force)
+  asm = _emit_rex(asm, 0, rex_r, 0, (b >> 3) & 1, force)
   asm = _emit8(asm, 0x3A)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, r & 7, b, disp)
   return asm
 end function
 
@@ -2767,10 +2791,9 @@ end function
 function cmp_membase_disp_imm8(asm, base, disp, imm)
   b = _rid_any(base)
   if b < 0 then return asm end if
-  enc = _encode_mem(7, b, disp)
-  asm = _emit_rex(asm, 0, 0, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, 0, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x80)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, 7, b, disp)
   asm = _emit8(asm, imm)
   return asm
 end function
@@ -2785,13 +2808,12 @@ function movzx_r32_membase_disp(asm, dst32, base, disp)
   d = _rid_any(dst32)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, rex_r, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0xB6)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -2942,13 +2964,12 @@ function crc32_r64_membase_disp(asm, dst64, base, disp)
   d = _rid_any(dst64)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
   asm = _emit8(asm, 0xF2)
-  asm = _emit_rex(asm, 1, (d >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 1, (d >> 3) & 1, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0x38)
   asm = _emit8(asm, 0xF1)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -2962,13 +2983,12 @@ function crc32_r32_membase_disp8(asm, dst32, base, disp)
   d = _rid_any(dst32)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
   asm = _emit8(asm, 0xF2)
-  asm = _emit_rex(asm, 0, (d >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, (d >> 3) & 1, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0x38)
   asm = _emit8(asm, 0xF0)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -3027,10 +3047,9 @@ end function
 function inc_membase_disp_qword(asm, base, disp)
   b = _rid_any(base)
   if b < 0 then return asm end if
-  enc = _encode_mem(0, b, disp)
-  asm = _emit_rex(asm, 1, 0, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 1, 0, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0xFF)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, 0, b, disp)
   return asm
 end function
 
@@ -3041,10 +3060,9 @@ end function
 function dec_membase_disp_qword(asm, base, disp)
   b = _rid_any(base)
   if b < 0 then return asm end if
-  enc = _encode_mem(1, b, disp)
-  asm = _emit_rex(asm, 1, 0, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 1, 0, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0xFF)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, 1, b, disp)
   return asm
 end function
 
@@ -3252,12 +3270,14 @@ function mov_r64_mem_bis(asm, dst, base, index_reg, scale, disp)
   b = _rid_any(base)
   idx = _rid_any(index_reg)
   if d < 0 or b < 0 or idx < 0 then return asm end if
-  enc = _encode_mem_bis(d & 7, b, idx, scale, disp)
+  if (idx & 7) == 4 then return error(1, "SIB index cannot be rsp/r12") end if
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 1, rex_r, enc.rex_x, enc.rex_b, false)
+  // Reject an invalid scale before mutating the instruction stream.
+  scale_bits = _scale_bits(scale)
+  asm = _emit_rex(asm, 1, rex_r, (idx >> 3) & 1, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x8B)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_bis_tail(asm, d & 7, b, idx, scale_bits, disp)
   return asm
 end function
 
@@ -3273,12 +3293,14 @@ function mov_mem_bis_r64(asm, base, index_reg, scale, disp, src)
   b = _rid_any(base)
   idx = _rid_any(index_reg)
   if sreg < 0 or b < 0 or idx < 0 then return asm end if
-  enc = _encode_mem_bis(sreg & 7, b, idx, scale, disp)
+  if (idx & 7) == 4 then return error(1, "SIB index cannot be rsp/r12") end if
   rex_r = 0
   if sreg >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 1, rex_r, enc.rex_x, enc.rex_b, false)
+  // Reject an invalid scale before mutating the instruction stream.
+  scale_bits = _scale_bits(scale)
+  asm = _emit_rex(asm, 1, rex_r, (idx >> 3) & 1, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x89)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_bis_tail(asm, sreg & 7, b, idx, scale_bits, disp)
   return asm
 end function
 
@@ -3294,12 +3316,14 @@ function mov_r32_mem_bis(asm, dst, base, index_reg, scale, disp)
   b = _rid_any(base)
   idx = _rid_any(index_reg)
   if d < 0 or b < 0 or idx < 0 then return asm end if
-  enc = _encode_mem_bis(d & 7, b, idx, scale, disp)
+  if (idx & 7) == 4 then return error(1, "SIB index cannot be rsp/r12") end if
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, false)
+  // Reject an invalid scale before mutating the instruction stream.
+  scale_bits = _scale_bits(scale)
+  asm = _emit_rex(asm, 0, rex_r, (idx >> 3) & 1, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x8B)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_bis_tail(asm, d & 7, b, idx, scale_bits, disp)
   return asm
 end function
 
@@ -3315,12 +3339,14 @@ function mov_mem_bis_r32(asm, base, index_reg, scale, disp, src)
   b = _rid_any(base)
   idx = _rid_any(index_reg)
   if sreg < 0 or b < 0 or idx < 0 then return asm end if
-  enc = _encode_mem_bis(sreg & 7, b, idx, scale, disp)
+  if (idx & 7) == 4 then return error(1, "SIB index cannot be rsp/r12") end if
   rex_r = 0
   if sreg >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 0, rex_r, enc.rex_x, enc.rex_b, false)
+  // Reject an invalid scale before mutating the instruction stream.
+  scale_bits = _scale_bits(scale)
+  asm = _emit_rex(asm, 0, rex_r, (idx >> 3) & 1, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x89)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_bis_tail(asm, sreg & 7, b, idx, scale_bits, disp)
   return asm
 end function
 
@@ -3336,12 +3362,14 @@ function lea_r64_mem_bis(asm, dst, base, index_reg, scale, disp)
   b = _rid_any(base)
   idx = _rid_any(index_reg)
   if d < 0 or b < 0 or idx < 0 then return asm end if
-  enc = _encode_mem_bis(d & 7, b, idx, scale, disp)
+  if (idx & 7) == 4 then return error(1, "SIB index cannot be rsp/r12") end if
   rex_r = 0
   if d >= 8 then rex_r = 1 end if
-  asm = _emit_rex(asm, 1, rex_r, enc.rex_x, enc.rex_b, false)
+  // Reject an invalid scale before mutating the instruction stream.
+  scale_bits = _scale_bits(scale)
+  asm = _emit_rex(asm, 1, rex_r, (idx >> 3) & 1, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x8D)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_bis_tail(asm, d & 7, b, idx, scale_bits, disp)
   return asm
 end function
 
@@ -3640,12 +3668,11 @@ function movsd_xmm_membase_disp(asm, dst_xmm, base, disp)
   d = _xmm_id(dst_xmm)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
   asm = _emit8(asm, 0xF2)
-  asm = _emit_rex(asm, 0, (d >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, (d >> 3) & 1, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0x10)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -3658,12 +3685,11 @@ function movsd_membase_disp_xmm(asm, base, disp, src_xmm)
   sreg = _xmm_id(src_xmm)
   b = _rid_any(base)
   if sreg < 0 or b < 0 then return asm end if
-  enc = _encode_mem(sreg & 7, b, disp)
   asm = _emit8(asm, 0xF2)
-  asm = _emit_rex(asm, 0, (sreg >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, (sreg >> 3) & 1, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0x11)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, sreg & 7, b, disp)
   return asm
 end function
 
@@ -3776,12 +3802,11 @@ function movdqu_xmm_membase_disp(asm, dst, base, disp)
   d = _xmm_id(dst)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
   asm = _emit8(asm, 0xF3)
-  asm = _emit_rex(asm, 0, (d >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, (d >> 3) & 1, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0x6F)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -3794,12 +3819,11 @@ function movdqu_membase_disp_xmm(asm, base, disp, src)
   s = _xmm_id(src)
   b = _rid_any(base)
   if s < 0 or b < 0 then return asm end if
-  enc = _encode_mem(s & 7, b, disp)
   asm = _emit8(asm, 0xF3)
-  asm = _emit_rex(asm, 0, (s >> 3) & 1, enc.rex_x, enc.rex_b, false)
+  asm = _emit_rex(asm, 0, (s >> 3) & 1, 0, (b >> 3) & 1, false)
   asm = _emit8(asm, 0x0F)
   asm = _emit8(asm, 0x7F)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, s & 7, b, disp)
   return asm
 end function
 
@@ -3893,10 +3917,9 @@ function vmovdqu_ymm_membase_disp(asm, dst, base, disp)
   d = _ymm_id(dst)
   b = _rid_any(base)
   if d < 0 or b < 0 then return asm end if
-  enc = _encode_mem(d & 7, b, disp)
-  asm = _emit(asm, _vex3(1, 0, void, 1, 2, (d >> 3) & 1, enc.rex_x, enc.rex_b))
+  asm = _emit(asm, _vex3(1, 0, void, 1, 2, (d >> 3) & 1, 0, (b >> 3) & 1))
   asm = _emit8(asm, 0x6F)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, d & 7, b, disp)
   return asm
 end function
 
@@ -3909,10 +3932,9 @@ function vmovdqu_membase_disp_ymm(asm, base, disp, src)
   s = _ymm_id(src)
   b = _rid_any(base)
   if s < 0 or b < 0 then return asm end if
-  enc = _encode_mem(s & 7, b, disp)
-  asm = _emit(asm, _vex3(1, 0, void, 1, 2, (s >> 3) & 1, enc.rex_x, enc.rex_b))
+  asm = _emit(asm, _vex3(1, 0, void, 1, 2, (s >> 3) & 1, 0, (b >> 3) & 1))
   asm = _emit8(asm, 0x7F)
-  asm = _emit(asm, enc.tail)
+  asm = _emit_mem_tail(asm, s & 7, b, disp)
   return asm
 end function
 

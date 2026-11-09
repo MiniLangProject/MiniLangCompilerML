@@ -114,7 +114,7 @@ Reject every use except known field reads/writes after the constructor.
 | `records` | `dynamic` | — | Bounded AST access records for the function. |
 | `declaration` | `dynamic` | — | Original local constructor assignment. |
 | `index` | `dynamic` | — | Top-level statement index of the constructor. |
-| `fields` | `dynamic` | — | Known untyped field names in declaration order. |
+| `fields` | `dynamic` | — | Known field names in declaration order. |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_opt.ml#L181)

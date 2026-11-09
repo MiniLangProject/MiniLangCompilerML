@@ -1,23 +1,23 @@
 # Binary compiler packages
 
-Release 1.3.2 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.3.3 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, third-party notices, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
-either compiler distribution.
+either native package.
 
-## Release 1.3.2 checksums
+## Release 1.3.3 checksums
 
-The download archives are `MiniLangCompilerML-1.3.2-windows-x64.zip` and
-`MiniLangCompilerML-1.3.2-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.2).
+The download archives are `MiniLangCompilerML-1.3.3-windows-x64.zip` and
+`MiniLangCompilerML-1.3.3-linux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.3).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 65,785,856 | `AA79B1D1DC3E18BD1ED4494573C2E4BB7A2C0888EF3B720DE2C1FCF082AFEDD1` |
-| Linux `mlc` | 65,804,416 | `3EF102F6E8E4980E06D3A1C5250B802ACA4619FFDCCB0D847F02E4265DB7BA1D` |
+| Windows `mlc.exe` | 65,892,864 | `67BCEF26E3F96DEAD3C4A7ED49EB582A035B245A213F20C68DC4C6C0303B3A3A` |
+| Linux `mlc` | 65,910,960 | `B9F36F2277B8BF2680FC8C92233F6AF958D342C337EBCC34E7BD1D02E6E0BB65` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -43,7 +43,7 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.3.2 compiler-source revision and executable hash.
+The manifest identifies the 1.3.3 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
@@ -72,7 +72,7 @@ startup/memory trade-offs and signing constraints.
 
 ## Native media runtime
 
-Release 1.3.2 packages include the native-media
+Release 1.3.3 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 

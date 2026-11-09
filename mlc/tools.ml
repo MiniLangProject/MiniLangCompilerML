@@ -255,7 +255,7 @@ function _ast_bin_ensure(need)
   global _ast_bin_positions, _ast_bin_file_ids, _ast_bin_cap
   if need <= _ast_bin_cap then return void end if
   next_cap = _ast_bin_cap
-  if next_cap < 4096 then next_cap = 4096 end if
+  if next_cap < 1024 then next_cap = 1024 end if
   while next_cap < need
     next_cap = next_cap << 1
   end while
@@ -290,7 +290,9 @@ function _ast_leaf_ensure(need)
   global _ast_leaf_file_ids, _ast_leaf_symbol_ids, _ast_leaf_cap
   if need <= _ast_leaf_cap then return void end if
   next_cap = _ast_leaf_cap
-  if next_cap < 65536 then next_cap = 65536 end if
+  // Small tools should not reserve 65,536 leaves on their first expression.
+  // Geometric growth retains amortized linear copying for large source graphs.
+  if next_cap < 8192 then next_cap = 8192 end if
   while next_cap < need
     next_cap = next_cap << 1
   end while
@@ -2032,10 +2034,11 @@ function byte_pages_append_u32(bp, value)
   off = old & 0xFFFF
   if off <= 65532 then
     pg = _bp_chunk_get(b, ci)
-    pg[off] = value & 0xFF
-    pg[off + 1] = (value >> 8) & 0xFF
-    pg[off + 2] = (value >> 16) & 0xFF
-    pg[off + 3] = (value >> 24) & 0xFF
+    // Capacity and page membership are established above. A single unaligned
+    // x64 store preserves the low 32 bits without four checked byte writes.
+    asm unsafe x64(inout pg as bytes, in off as int, in value as int)
+      mov dword [pg.data + off], value
+    end asm
     b = _bp_chunk_set(b, ci, pg)
   else
     // A value can straddle two 64-KiB pages. Reuse the general byte setter

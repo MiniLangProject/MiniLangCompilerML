@@ -5,11 +5,11 @@
 | File | Package | Reachable | Symbols |
 | --- | --- | --- | ---: |
 | [mlc/__init__.ml](File-mlc-init-ml-1795718751.md) | `mlc.__init__` | no | 1 |
-| [mlc/asm.ml](File-mlc-asm-ml-1368648960.md) | `mlc.asm` | yes | 378 |
+| [mlc/asm.ml](File-mlc-asm-ml-1368648960.md) | `mlc.asm` | yes | 380 |
 | [mlc/cache_codec.ml](File-mlc-cache-codec-ml-1019638308.md) | `mlc.cache_codec` | yes | 23 |
 | [mlc/codegen/__init__.ml](File-mlc-codegen-init-ml-1019260381.md) | `mlc.codegen.__init__` | no | 1 |
 | [mlc/codegen/codegen.ml](File-mlc-codegen-codegen-ml-1154886880.md) | `mlc.codegen.codegen` | yes | 40 |
-| [mlc/codegen/codegen_builtins_alloc.ml](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md) | `mlc.codegen.codegen_builtins_alloc` | yes | 35 |
+| [mlc/codegen/codegen_builtins_alloc.ml](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md) | `mlc.codegen.codegen_builtins_alloc` | yes | 37 |
 | [mlc/codegen/codegen_concurrent_gc.ml](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md) | `mlc.codegen.codegen_concurrent_gc` | yes | 18 |
 | [mlc/codegen/codegen_core.ml](File-mlc-codegen-codegen-core-ml-528695596.md) | `mlc.codegen.codegen_core` | yes | 232 |
 | [mlc/codegen/codegen_expr.ml](File-mlc-codegen-codegen-expr-ml-59843844.md) | `mlc.codegen.codegen_expr` | yes | 181 |
@@ -19,7 +19,7 @@
 | [mlc/codegen/codegen_scope.ml](File-mlc-codegen-codegen-scope-ml-1124416197.md) | `mlc.codegen.codegen_scope` | yes | 100 |
 | [mlc/codegen/codegen_stmt.ml](File-mlc-codegen-codegen-stmt-ml-1158291323.md) | `mlc.codegen.codegen_stmt` | yes | 275 |
 | [mlc/codegen/codegen_threads.ml](File-mlc-codegen-codegen-threads-ml-1261658982.md) | `mlc.codegen.codegen_threads` | yes | 70 |
-| [mlc/compiler.ml](File-mlc-compiler-ml-344018962.md) | `mlc.compiler` | yes | 418 |
+| [mlc/compiler.ml](File-mlc-compiler-ml-344018962.md) | `mlc.compiler` | yes | 420 |
 | [mlc/constants.ml](File-mlc-constants-ml-1024884042.md) | `mlc.constants` | yes | 49 |
 | [mlc/context.ml](File-mlc-context-ml-1162383972.md) | `mlc.context` | no | 17 |
 | [mlc/data.ml](File-mlc-data-ml-557434521.md) | `mlc.data` | yes | 99 |

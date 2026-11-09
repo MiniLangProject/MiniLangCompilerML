@@ -37,9 +37,9 @@ import mlc.packing as packing
 import mlc.incremental as incremental
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.3.2"
+const COMPILER_VERSION = "1.3.3"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.2"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.3"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
@@ -3893,6 +3893,12 @@ function _mlo_bp_write_patches(bp, patches)
   if count > 0 then
     for i = 0 to count - 1
       pt = patches[i]
+      // Native normalized records have known offsets. Retain the permissive
+      // legacy path for callers passing a different record shape.
+      if pt is MloPatch then
+        bp = _mlo_bp_write_native_patch(bp, pt)
+        continue
+      end if
       if typeof(pt) != "struct" then
         bp = _mlo_bp_u32(bp, 0)
         bp = _mlo_bp_u32(bp, 0)
@@ -3916,6 +3922,26 @@ function _mlo_bp_write_patches(bp, patches)
   end if
   return bp
 end function
+
+/// Serialize a normalized relocation without fallible member lookups.
+/// Field values retain the legacy coercions; only the record shape is known.
+/// @internal
+function _mlo_bp_write_native_patch(bp, pt as MloPatch)
+  off = pt.offset
+  if typeof(off) != "int" then off = 0 end if
+  bp = _mlo_bp_u32(bp, off)
+  target = pt.target
+  if typeof(target) == "int" and target >= 0 then
+    bp = _mlo_bp_u32(bp, 1)
+    bp = _mlo_bp_u32(bp, target)
+  else
+    bp = _mlo_bp_u32(bp, 0)
+    bp = _mlo_bp_string(bp, _coerce_name(target))
+  end if
+  return _mlo_bp_string(bp, _coerce_name(pt.kind))
+end function
+
+
 
 /// Perform the mlo bp write imports compiler phase.
 /// @internal
@@ -4045,7 +4071,14 @@ end function
 /// Serialize through a reusable bounded staging buffer. A one-megabyte batch keeps native write-call overhead low while avoiding the old full-object contiguous duplicate, whose size grew without bound with an MLO fragment.
 /// @internal
 function _mlo_write_pages_file(path, bp)
-  if typeof(path) != "string" or typeof(bp) != "struct" then return error(1, "invalid paged MLO write") end if
+  if typeof(bp) != "struct" then return error(1, "invalid paged MLO write") end if
+  return _mlo_write_segments_file(path, [bp])
+end function
+
+/// Write borrowed byte sections and paged metadata without a full-object copy.
+/// @internal
+function _mlo_write_segments_file(path, segments)
+  if typeof(path) != "string" or typeof(segments) != "array" then return error(1, "invalid paged MLO write") end if
 #if TARGET_OS == "windows"
   handle = _mlo_CreateFileW(path, 0x40000000, 5, 0, 2, 0x80, 0)
   if handle == -1 then return error(1, "CreateFileW failed") end if
@@ -4055,35 +4088,60 @@ function _mlo_write_pages_file(path, bp)
 #endif
   scratch = _mlo_write_scratch_buffer()
   batch_used = 0
-  page_count = t.byte_pages_page_count(bp)
-  for page_index = 0 to page_count - 1
-    page = t.byte_pages_page(bp, page_index)
-    used = t.byte_pages_page_used(bp, page_index)
-    if used <= 0 then continue end if
-    if batch_used + used > len(scratch) then
-      if _mlo_write_handle_all(handle, scratch, batch_used) == false then
-#if TARGET_OS == "windows"
-        _mlo_CloseHandle(handle)
-#else
-        _mlo_close(handle)
-#endif
-        return error(1, "native write failed during batched MLO serialization")
+  for each segment in segments
+    paged = typeof(segment) == "struct"
+    page_count = 1
+    if paged then page_count = t.byte_pages_page_count(segment) end if
+    if page_count <= 0 then continue end if
+    for page_index = 0 to page_count - 1
+      page = segment
+      used = 0
+      if paged then
+        page = t.byte_pages_page(segment, page_index)
+        used = t.byte_pages_page_used(segment, page_index)
+      else
+        if typeof(page) == "bytes" then used = len(page) end if
       end if
-      batch_used = 0
-    end if
-    copyBytes(scratch, batch_used, page, 0, used)
-    batch_used = batch_used + used
-    if batch_used == len(scratch) then
-      if _mlo_write_handle_all(handle, scratch, batch_used) == false then
+      if used <= 0 then continue end if
+      if batch_used > 0 and (batch_used + used > len(scratch) or used >= len(scratch)) then
+        if _mlo_write_handle_all(handle, scratch, batch_used) == false then
 #if TARGET_OS == "windows"
-        _mlo_CloseHandle(handle)
+          _mlo_CloseHandle(handle)
 #else
-        _mlo_close(handle)
+          _mlo_close(handle)
 #endif
-        return error(1, "native write failed during batched MLO serialization")
+          return error(1, "native write failed during batched MLO serialization")
+        end if
+        batch_used = 0
       end if
-      batch_used = 0
-    end if
+      // Sections larger than the staging buffer can be written directly.
+      // Batch smaller sections together with metadata: flushing every 64 KiB
+      // page trades cheap copies for too many native write calls.
+      if used >= len(scratch) then
+        if _mlo_write_handle_all(handle, page, used) == false then
+#if TARGET_OS == "windows"
+          _mlo_CloseHandle(handle)
+#else
+          _mlo_close(handle)
+#endif
+          return error(1, "native write failed during direct MLO serialization")
+        end if
+        continue
+      end if
+      copyBytes(scratch, batch_used, page, 0, used)
+      batch_used = batch_used + used
+      if batch_used == len(scratch) then
+        if _mlo_write_handle_all(handle, scratch, batch_used) == false then
+#if TARGET_OS == "windows"
+          _mlo_CloseHandle(handle)
+#else
+          _mlo_close(handle)
+#endif
+          return error(1, "native write failed during batched MLO serialization")
+        end if
+        batch_used = 0
+      end if
+    end for
   end for
   if batch_used > 0 and _mlo_write_handle_all(handle, scratch, batch_used) == false then
 #if TARGET_OS == "windows"
@@ -4110,9 +4168,16 @@ function _write_mlo_file(path, obj)
   bp = _mlo_bp_string(bp, obj.kind)
   bp = _mlo_bp_string(bp, obj.module_file)
   bp = _mlo_bp_string(bp, obj.entry_label)
-  bp = _mlo_bp_bytes(bp, obj.text)
-  bp = _mlo_bp_bytes(bp, obj.rdata)
-  bp = _mlo_bp_bytes(bp, obj.data)
+  // Section order and length prefixes are identical to MLO version 2.
+  // Keep large payloads borrowed until the synchronous write completes.
+  header = bp
+  text = obj.text
+  rdata = obj.rdata
+  data = obj.data
+  if typeof(text) != "bytes" then text = bytes(0) end if
+  if typeof(rdata) != "bytes" then rdata = bytes(0) end if
+  if typeof(data) != "bytes" then data = bytes(0) end if
+  bp = t.byte_pages_new()
   bp = _mlo_bp_u32(bp, obj.bss_size)
   bp = _mlo_bp_write_labels(bp, obj.asm_labels)
   bp = _mlo_bp_write_patches(bp, obj.asm_patches)
@@ -4122,7 +4187,7 @@ function _write_mlo_file(path, obj)
   bp = _mlo_bp_write_patches(bp, obj.data_patches)
   bp = _mlo_bp_write_labels(bp, obj.bss_labels)
   bp = _mlo_bp_write_imports(bp, obj.imports)
-  return _mlo_write_pages_file(path, bp)
+  return _mlo_write_segments_file(path, [header, t.u32(len(text)), text, t.u32(len(rdata)), rdata, t.u32(len(data)), data, bp])
 end function
 
 /// Perform the mlo read labels compiler phase.

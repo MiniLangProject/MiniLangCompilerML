@@ -26,6 +26,70 @@ function checkOpcode(name, builder, expected)
   return 0
 end function
 
+/// Compare direct SIB emission with the independent standalone operand encoder.
+function checkIndexedMemoryOperands()
+  failures = 0
+  for each dest in ["rax", "r9"]
+    for each base in ["rsp", "rbp", "r12", "r13"]
+      for each index in ["rcx", "r10"]
+        for each scale in [1, 2, 4, 8]
+          for each disp in [-2147483648, -129, -128, 0, 127, 128, 2147483647]
+            rd = a._rid_any(dest)
+            rb = a._rid_any(base)
+            ri = a._rid_any(index)
+            encoded = a._encode_mem_bis(rd, rb, ri, scale, disp)
+            for method = 0 to 4
+              builder = a.newAsmBuilder()
+              width = 1
+              opcode = 0x8B
+              if method == 1 or method == 3 then opcode = 0x89 end if
+              if method == 2 or method == 3 then width = 0 end if
+              if method == 4 then opcode = 0x8D end if
+              expected = a._rex(width, (rd >> 3) & 1, encoded.rex_x, encoded.rex_b, false) + a._emit_bytes_u8(opcode) + encoded.tail
+              if method == 0 then builder = a.mov_r64_mem_bis(builder, dest, base, index, scale, disp) end if
+              if method == 1 then builder = a.mov_mem_bis_r64(builder, base, index, scale, disp, dest) end if
+              if method == 2 then builder = a.mov_r32_mem_bis(builder, dest, base, index, scale, disp) end if
+              if method == 3 then builder = a.mov_mem_bis_r32(builder, base, index, scale, disp, dest) end if
+              if method == 4 then builder = a.lea_r64_mem_bis(builder, dest, base, index, scale, disp) end if
+              if hex(a.finalize(builder)) != hex(expected) then
+                print "FAIL: indexed memory operand " + method + " " + dest + " " + base + " " + index + " " + scale + " " + disp
+                return 1
+              end if
+            end for
+          end for
+        end for
+      end for
+    end for
+  end for
+  for each index in ["rsp", "r12"]
+    builder = a.newAsmBuilder()
+    invalid = try(a.mov_r64_mem_bis(builder, "rax", "rbp", index, 1, 0))
+    if typeof(invalid) != "error" or a.pos(builder) != 0 then return 1 end if
+  end for
+  builder = a.newAsmBuilder()
+  invalidScale = try(a.mov_r64_mem_bis(builder, "rax", "rbp", "rcx", 3, 0))
+  if typeof(invalidScale) != "error" or a.pos(builder) != 0 then return 1 end if
+  return failures
+end function
+
+/// Pin little-endian truncation and the rare two-page serialization path.
+function checkBytePageU32()
+  for each offset in [0, 1, 65529, 65530, 65531, 65532, 65533, 65534, 65535, 65536]
+    for each value in [-1, 0, 1, 0x11223344, 0x80000000, 4294967296, 1152921504606846975]
+      pages = tools.byte_pages_new()
+      pages = tools.byte_pages_append(pages, bytes(offset, 170))
+      pages = tools.byte_pages_append_u32(pages, value)
+      result = tools.byte_pages_to_bytes(pages)
+      if len(result) != offset + 4 then return 1 end if
+      if offset > 0 and result[offset - 1] != 170 then return 1 end if
+      for byteIndex = 0 to 3
+        if result[offset + byteIndex] != ((value >> (byteIndex * 8)) & 255) then return 1 end if
+      end for
+    end for
+  end for
+  return 0
+end function
+
 function checkLinuxThunkLocalBranches()
   sig = TestExternSignature("strlen", "libc.so.6", "strlen", [])
   state = TestLinuxThunkState(a.newCodegenAsmBuilder(), [sig])
@@ -431,6 +495,28 @@ function checkCompactBranches()
   return failures
 end function
 
+function checkMemoryDisplacementBoundaries()
+  // Compare direct emission with the retained reference encoder for every
+  // base/destination register, SIB/REX corner and displacement width boundary.
+  registers = ["rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
+  displacements = [-2147483648, -129, -128, -1, 0, 1, 127, 128, 2147483647]
+  for base = 0 to 15
+    for destination = 0 to 15
+      for each displacement in displacements
+        encoded = a._encode_mem(destination & 7, base, displacement)
+        expected = bytes([0x48 | ((destination >> 3) << 2) | (base >> 3), 0x8B]) + encoded.tail
+        builder = a.newCodegenAsmBuilder()
+        builder = a.mov_r64_membase_disp(builder, registers[destination], registers[base], displacement)
+        if hex(a.finalize(builder)) != hex(expected) then
+          print "FAIL: direct memory operand encoding"
+          return 1
+        end if
+      end for
+    end for
+  end for
+  return 0
+end function
+
 function main(args)
   p = "tests\\asm_opcodes_golden.json"
   if fs.exists(p) == false then
@@ -641,7 +727,10 @@ function main(args)
     failures = failures + 1
   end if
 
+  failures = failures + checkIndexedMemoryOperands()
+  failures = failures + checkBytePageU32()
   failures = failures + checkLinuxThunkLocalBranches()
+  failures = failures + checkMemoryDisplacementBoundaries()
   failures = failures + checkCompactEncodings()
   failures = failures + checkCompactBranches()
   failures = failures + checkRDataLabelScale()

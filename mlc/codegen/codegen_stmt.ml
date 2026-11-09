@@ -1849,7 +1849,19 @@ function _emit_storage_stmt(state, stmt, k)
         state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
         state = scope.emit_store_var_scoped(state, nm_a, stmt)
         for arg_i = 0 to len(stmt.expr.args) - 1
-          state = exprmod.cg_emit_expr(state, stmt.expr.args[arg_i])
+          // Keep constructor guards in their original evaluation order even
+          // though the individual fields now live in precise stack roots.
+          arg_value = stmt.expr.args[arg_i]
+          contracts = scalar_plan[4]
+          if typeof(contracts) == "array" and arg_i < len(contracts) then
+            contract = contracts[arg_i]
+            if typeof(contract) == "array" and len(contract) >= 2 then
+              if typeof(contract[0]) == "string" and contract[0] != "" then
+                arg_value = ml.TypeGuard("TypeGuard", arg_value, contract[0], contract[1], t.ast_pos(arg_value), t.ast_filename(arg_value))
+              end if
+            end if
+          end if
+          state = exprmod.cg_emit_expr(state, arg_value)
           state.asm = a.mov_rsp_disp32_rax(state.asm, scalar_plan[3][arg_i])
         end for
         return state
@@ -4119,7 +4131,8 @@ function _promotion_scan_stmts(hot_names, stmts, loop_depth)
 end function
 
 /// Plan rooted field slots for unconditional local constructors whose objects
-/// cannot escape. Typed fields, aliases and unsupported syntax retain allocation.
+/// cannot escape. Constructor contracts survive in rooted scalar slots;
+/// aliases, typed object bindings and unsupported syntax retain allocation.
 /// @internal
 function _scalar_candidates(state, fn_node)
   body = fn_node.body
@@ -4165,15 +4178,8 @@ function _scalar_candidates(state, fn_node)
       for each arg_name in names if typeof(arg_name) == "string" and arg_name != "" then named = true end if end for
     end if
     contracts = exprmod._state_struct_field_types_get(state, qname)
-    if typeof(contracts) == "array" then
-      for each contract in contracts
-        if typeof(contract) == "array" and len(contract) > 0 then
-          if typeof(contract[0]) == "string" and contract[0] != "" then named = true end if
-        end if
-      end for
-    end if
     if named then continue end if
-    if opt.scalar_uses(records, st, index, fields) then plans = plans + [[st, local, fields, []]] end if
+    if opt.scalar_uses(records, st, index, fields) then plans = plans + [[st, local, fields, [], contracts]] end if
   end for
   return plans
 end function

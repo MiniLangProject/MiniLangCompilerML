@@ -1910,6 +1910,7 @@ function _helper_supported(lbl)
   if lbl == "fn_add_bytes" then return true end if
   if lbl == "fn_bytes_eq" then return true end if
   if lbl == "fn_decode" then return true end if
+  if lbl == "fn_decode_slice" then return true end if
   if lbl == "fn_decodeZ" then return true end if
   if lbl == "fn_decode16Z" then return true end if
   if lbl == "fn_hex" then return true end if
@@ -2039,6 +2040,7 @@ function _emit_helper_by_label_group4(state, lbl)
   if lbl == "fn_int_to_dec" then return rt.emit_int_to_dec_function(state) end if
   if lbl == "fn_strlen" then return rt.emit_strlen_function(state) end if
   if lbl == "fn_decode" then return bal.emit_decode_function(state) end if
+  if lbl == "fn_decode_slice" then return bal.emit_decode_slice_function(state) end if
   if lbl == "fn_decodeZ" then return bal.emit_decodeZ_function(state) end if
   if lbl == "fn_decode16Z" then return bal.emit_decode16Z_function(state) end if
   if lbl == "fn_hex" then return bal.emit_hex_function(state) end if
@@ -2114,8 +2116,9 @@ function _emit_helper_by_label(state, lbl)
   if rank < 57 then return _emit_helper_by_label_group1(state, lbl) end if
   if rank < 67 then return _emit_helper_by_label_group2(state, lbl) end if
   if rank < 77 then return _emit_helper_by_label_group3(state, lbl) end if
-  if rank < 87 then return _emit_helper_by_label_group4(state, lbl) end if
-  if rank < 97 then return _emit_helper_by_label_group5(state, lbl) end if
+  // Group boundaries follow the canonical table, including fn_decode_slice.
+  if rank < 88 then return _emit_helper_by_label_group4(state, lbl) end if
+  if rank < 99 then return _emit_helper_by_label_group5(state, lbl) end if
   if rank < 1048576 then return _emit_helper_by_label_group6(state, lbl) end if
   return _emit_helper_by_label_other(state, lbl)
 end function
@@ -2144,7 +2147,7 @@ function _helper_rank(lbl)
     "fn_string_to_upper_ascii", "fn_string_eq_ignore_case_ascii", "fn_string_join", "fn_bytes_eq",
     "fn_add_string", "fn_add_array", "fn_add_bytes", "fn_value_to_string", "fn_box_float", "fn_toNumber",
     "fn_toFloat",
-    "fn_typeof", "fn_typeName", "fn_int_to_dec", "fn_strlen", "fn_decode", "fn_decodeZ", "fn_decode16Z", "fn_hex", "fn_fromHex",
+    "fn_typeof", "fn_typeName", "fn_int_to_dec", "fn_strlen", "fn_decode", "fn_decode_slice", "fn_decodeZ", "fn_decode16Z", "fn_hex", "fn_fromHex",
     "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_copyArray", "fn_builtin_copyStringBytes", "fn_builtin_fillBytes",
     "fn_builtin_gc_collect", "fn_builtin_gc_set_limit", "fn_build_args", "fn_init_argvw", "fn_incref",
     "fn_decref", "fn_callStats", "fn_heap_count", "fn_heap_bytes_used", "fn_heap_bytes_committed",

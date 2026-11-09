@@ -9,9 +9,15 @@ itself. The [Python reference compiler](https://github.com/MiniLangProject/MiniL
 provides the bootstrap implementation and a second code-generation path.
 
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
-or read the [binary installation guide](README-BINARY.md). Version 1.3.2
+or read the [binary installation guide](README-BINARY.md). Version 1.3.3
 includes Windows and Linux packages with SHA-256 sidecars; see the
-[release notes](RELEASE_NOTES_1.3.2.md) and [changelog](CHANGELOG.md).
+[release notes](RELEASE_NOTES_1.3.3.md) and [changelog](CHANGELOG.md).
+
+Version 1.3.3 reduces temporary compiler allocations and improves generated
+code for bounded string concatenations, nonescaping local structs with typed
+fields, and decoded byte slices. Recompile applications to use these automatic
+optimizations. The [measured results](docs/reports/COMPILER_OPTIMIZATIONS_2026-11-06.md)
+describe eligible code, benchmark gains and their limits.
 
 ## Quick start with a release package
 
@@ -127,7 +133,7 @@ self-hosted monolithic compiler and self-hosted `.mlo` pipeline are expected
 to emit identical target bytes. Version 1.3.2 restored this for the OOP
 regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 [OOP regression](tests/check_oop_binary_parity.py) and
-[release verification matrix](docs/reports/release-1.3.2-version-matrix.json).
+[1.3.3 release verification matrix](docs/reports/release-1.3.3-version-matrix.json).
 
 ## Documentation and development
 
@@ -137,6 +143,7 @@ regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 | Language syntax, standard library and FFI | [Language reference](docs/LANGUAGE_REFERENCE.md) |
 | Binary packages and checksums | [Binary installation](README-BINARY.md) |
 | Incremental builds | [Guide](docs/INCREMENTAL_BUILDS.md) |
+| Compiler optimization measurements | [Allocation and emission](docs/reports/COMPILER_OPTIMIZATIONS_2026-11-04.md), [bounded concat, typed scalar replacement, and metadata](docs/reports/COMPILER_OPTIMIZATIONS_2026-11-06.md) |
 | Typed inline assembly | [Guide](docs/INLINE_ASM.md) |
 | Native crypto, checksums and CPU features | [Native primitives](docs/NATIVE_PRIMITIVES.md) |
 | Compression and platform services | [Platform services](docs/PLATFORM_SERVICES.md) |

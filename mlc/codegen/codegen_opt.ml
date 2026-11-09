@@ -177,7 +177,7 @@ end function
 /// @param records Bounded AST access records for the function.
 /// @param declaration Original local constructor assignment.
 /// @param index Top-level statement index of the constructor.
-/// @param fields Known untyped field names in declaration order.
+/// @param fields Known field names in declaration order.
 function scalar_uses(records, declaration, index, fields)
   name = declaration.name
   for each item in records

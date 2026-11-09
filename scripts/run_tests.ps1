@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.3.2"
+  $expected = "MiniLang Compiler 1.3.3"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -473,6 +473,9 @@ try {
       [pscustomobject]@{ Name = "Linux atomic Thread.Start"; Source = "thread_concurrent_start.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux thread lifecycle races"; Source = "thread_lifecycle_races.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux managed thread pool"; Source = "thread_pool.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux bounded concat and typed scalar replacement"; Source = "codegen_bounded_fusion.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux decode/slice fusion"; Source = "decode_slice_fusion.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux decode/slice worker roots"; Source = "decode_slice_threads.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux standard library"; Source = "stdlib_unit_tests.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux std.test framework"; Source = "std_test_framework.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux threading standard library"; Source = "threading_stdlib.ml"; RunArgs = @() },
@@ -569,6 +572,9 @@ try {
     [pscustomobject]@{ Name = "allocation cursor"; Source = "memory_fragmentation_cursor.ml" },
     [pscustomobject]@{ Name = "GC metadata"; Source = "memory_gc_metadata.ml" },
     [pscustomobject]@{ Name = "memory purge"; Source = "memory_purge.ml" },
+    [pscustomobject]@{ Name = "bounded concat and typed scalar replacement"; Source = "codegen_bounded_fusion.ml" },
+    [pscustomobject]@{ Name = "decode/slice fusion"; Source = "decode_slice_fusion.ml" },
+    [pscustomobject]@{ Name = "decode/slice worker roots"; Source = "decode_slice_threads.ml" },
     [pscustomobject]@{ Name = "compiler scope indexes"; Source = "compiler_scope_index.ml" },
     [pscustomobject]@{ Name = "compiler qualification cache"; Source = "compiler_qualification_cache.ml" },
     [pscustomobject]@{ Name = "checksum runtime"; Source = "checksum_runtime.ml" },

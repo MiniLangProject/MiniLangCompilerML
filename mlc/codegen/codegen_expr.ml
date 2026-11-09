@@ -4067,7 +4067,7 @@ end function
 /// Keep a fused concat limited to side-effect-free leaves. A guard miss uses
 /// the ordinary two calls, including their exact conversion/error behavior.
 /// @internal
-function _concat_three_leaf_is_pure(state, expr)
+function _concat_leaf_is_pure(state, expr)
   if t.ast_kind(expr) == "Str" then return true end if
   if t.ast_kind(expr) != "Var" or state.in_function == false then return false end if
   b = scope.cg_resolve_binding(state, _coerce_name(t.ast_name(expr)))
@@ -4095,18 +4095,22 @@ function _pgo_inline_budget(state, name)
 end function
 
 /// @internal
-function _emit_concat_three_strings(state, operands)
-  base = core.alloc_expr_temps(state, 32)
+function _emit_concat_strings(state, operands)
+  // Keep every input and the result in GC-visible stack slots. The bounded
+  // operand count limits code growth; a guard miss uses sequential additions.
+  count = len(operands)
+  temp_bytes = (count + 1) * 8
+  base = core.alloc_expr_temps(state, temp_bytes)
   lid = _next_lid(state)
   slow = "concat_three_slow_" + lid
   done = "concat_three_done_" + lid
-  for i = 0 to 2
+  for i = 0 to count - 1
     state = cg_emit_expr(state, operands[i])
     state.asm = a.mov_rsp_disp32_rax(state.asm, base + i * 8)
   end for
 
   state.asm = a.xor_r32_r32(state.asm, "r10d", "r10d")
-  for i = 0 to 2
+  for i = 0 to count - 1
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + i * 8)
     state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
     state.asm = a.and_r64_imm(state.asm, "rax", 7)
@@ -4126,29 +4130,26 @@ function _emit_concat_three_strings(state, operands)
   state.asm = a.mov_r32_r32(state.asm, "ecx", "r10d")
   state.asm = a.add_r32_imm(state.asm, "ecx", 9)
   state.asm = a.call(state.asm, "fn_alloc")
-  state.asm = a.mov_rsp_disp32_rax(state.asm, base + 24)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, base + count * 8)
   state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 0, c.OBJ_STRING, false)
   state.asm = a.xor_r32_r32(state.asm, "r10d", "r10d")
-  for i = 0 to 2
+  for i = 0 to count - 1
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + i * 8)
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
     state.asm = a.add_r32_r32(state.asm, "r10d", "edx")
   end for
-  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base + 24)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base + count * 8)
   state.asm = a.mov_membase_disp_r32(state.asm, "rax", 4, "r10d")
 
-  for i = 0 to 2
-    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + 24)
+  for i = 0 to count - 1
+    state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + count * 8)
     state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
-    if i >= 1 then
-      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base)
-      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 4)
-      state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
-    end if
-    if i >= 2 then
-      state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + 8)
-      state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 4)
-      state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+    if i > 0 then
+      for earlier = 0 to i - 1
+        state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + earlier * 8)
+        state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r11", 4)
+        state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
+      end for
     end if
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + i * 8)
     state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r11", 8)
@@ -4156,7 +4157,7 @@ function _emit_concat_three_strings(state, operands)
     state.asm = a.call(state.asm, "fn_copy_bytes")
   end for
 
-  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + 24)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base + count * 8)
   state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
   state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r11", 8)
   state.asm = a.add_r64_r64(state.asm, "rax", "r10")
@@ -4165,17 +4166,19 @@ function _emit_concat_three_strings(state, operands)
   state.asm = a.jmp(state.asm, done)
 
   state.asm = a.mark(state.asm, slow)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base + 8)
-  state.asm = a.call(state.asm, "fn_add_string")
-  state = _emit_auto_errprop(state)
-  state.asm = a.mov_rsp_disp32_rax(state.asm, base + 24)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base + 24)
-  state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base + 16)
-  state.asm = a.call(state.asm, "fn_add_string")
-  state = _emit_auto_errprop(state)
+  for i = 1 to count - 1
+    left_slot = base
+    if i > 1 then left_slot = base + count * 8 end if
+    state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", left_slot)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", base + i * 8)
+    state.asm = a.call(state.asm, "fn_add_string")
+    state = _emit_auto_errprop(state)
+    if i < count - 1 then
+      state.asm = a.mov_rsp_disp32_rax(state.asm, base + count * 8)
+    end if
+  end for
   state.asm = a.mark(state.asm, done)
-  state = core.free_expr_temps(state, 32)
+  state = core.free_expr_temps(state, temp_bytes)
   return state
 end function
 
@@ -4202,10 +4205,25 @@ function _try_emit_left_string_concat_chain(state, expr)
     current2 = t.ast_left(current2)
   end while
 
+  // Preserve the cheap, short-circuiting analysis of the common three-leaf case.
   if count == 2 then
     operands = [current2, rights[0], rights[1]]
-    if _concat_three_leaf_is_pure(state, operands[0]) and _concat_three_leaf_is_pure(state, operands[1]) and _concat_three_leaf_is_pure(state, operands[2]) then
-      state = _emit_concat_three_strings(state, operands)
+    if _concat_leaf_is_pure(state, operands[0]) and _concat_leaf_is_pure(state, operands[1]) and _concat_leaf_is_pure(state, operands[2]) then
+      state = _emit_concat_strings(state, operands)
+      return [state, true]
+    end if
+  else if count <= 7 and _concat_leaf_is_pure(state, current2) then
+    // Most rejected chains contain a call or field read. Stop at the first
+    // effect and do not allocate a second operand array on that path.
+    pure = true
+    for i = 0 to count - 1
+      if not _concat_leaf_is_pure(state, rights[i]) then pure = false; break end if
+    end for
+    if pure then
+      operands = array(count + 1)
+      operands[0] = current2
+      for i = 0 to count - 1 operands[i + 1] = rights[i] end for
+      state = _emit_concat_strings(state, operands)
       return [state, true]
     end if
   end if
@@ -6657,6 +6675,35 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
 
   // Builtin decode(bytes[, encoding]) -> string
   if (callee == "decode" or raw_name == "decode") then
+    inner = void
+    if nargs == 1 then inner = call_args[0] end if
+    if t.ast_kind(inner) == "Call" and t.ast_kind(inner.callee) == "Var" and t.ast_name(inner.callee) == "slice" and len(inner.args) == 3 then
+      named = false
+      names = try(inner.arg_names)
+      if typeof(names) == "array" then
+        for each name in names
+          if typeof(name) == "string" and name != "" then named = true end if
+        end for
+      end if
+      slice_binding = scope.cg_resolve_binding(state, "slice")
+      builtin_slice = typeof(slice_binding) != "struct"
+      if typeof(slice_binding) == "struct" then
+        builtin_slice = slice_binding.kind == "global" and slice_binding.label == _strpair_get(state.builtin_global_labels, "slice")
+      end if
+      if named == false and builtin_slice and typeof(_user_function_get(state, "slice")) != "struct" then
+        tmp_fused = core.alloc_expr_temps(state, 24)
+        for i_fused = 0 to 2
+          state = cg_emit_expr(state, inner.args[i_fused])
+          state.asm = a.mov_membase_disp_r64(state.asm, "rsp", tmp_fused + i_fused * 8, "rax")
+        end for
+        state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", tmp_fused)
+        state.asm = a.mov_r64_membase_disp(state.asm, "rdx", "rsp", tmp_fused + 8)
+        state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", tmp_fused + 16)
+        state.asm = a.call(state.asm, "fn_decode_slice")
+        state = core.free_expr_temps(state, 24)
+        return [state, true]
+      end if
+    end if
     if nargs != 1 and nargs != 2 then
       state.diagnostics = state.diagnostics +["decode() expects 1 or 2 arguments"]
       state.asm = a.mov_rax_imm64(state.asm, t.enc_void())

@@ -1564,8 +1564,22 @@ end function
 /// Lower emit slice function allocation behavior to native x64.
 /// @param state Value supplied for `state`.
 function emit_slice_function(state)
+  return _emit_slice_function(state, false)
+end function
+
+/// Fuse decode(slice(...)) without an intermediate bytes allocation.
+/// @param state Code-generation state; validation and rooting match slice.
+function emit_decode_slice_function(state)
+  return _emit_slice_function(state, true)
+end function
+
+/// Share strict slice bounds/type validation between bytes and string copies.
+/// @internal
+function _emit_slice_function(state, decode_result)
   state = mem.ensure_gc_data(state)
-  state.asm = a.mark(state.asm, "fn_slice")
+  label = "fn_slice"
+  if decode_result then label = "fn_decode_slice" end if
+  state.asm = a.mark(state.asm, label)
 
   state.asm = a.push_reg(state.asm, "rsi")
   state.asm = a.push_reg(state.asm, "rdi")
@@ -1633,8 +1647,21 @@ function emit_slice_function(state)
   state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 0x28, "rax")
 
   state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rsp", 0x30)
-  state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
-  state.asm = a.call(state.asm, "fn_bytes_alloc")
+  if decode_result then
+    state.asm = a.test_r32_r32(state.asm, "ecx", "ecx")
+    state.asm = a.jcc(state.asm, "ne", l_done + "_allocate")
+    state.asm = a.lea_r11_rip(state.asm, "obj_empty_string")
+    state.asm = a.jmp(state.asm, l_done + "_return")
+    state.asm = a.mark(state.asm, l_done + "_allocate")
+    state.asm = a.add_r32_imm(state.asm, "ecx", 9)
+    state.asm = a.call(state.asm, "fn_alloc")
+    state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "rsp", 0x30)
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 0, c.OBJ_STRING, false)
+    state.asm = a.mov_membase_disp_r32(state.asm, "rax", 4, "r9d")
+  else
+    state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+    state.asm = a.call(state.asm, "fn_bytes_alloc")
+  end if
 
   state.asm = a.mov_r11_rax(state.asm)
 
@@ -1652,6 +1679,14 @@ function emit_slice_function(state)
   state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 0x38)
 
   state.asm = a.mark(state.asm, l_done)
+  if decode_result then
+    state.asm = a.mov_r32_membase_disp(state.asm, "r9d", "rsp", 0x30)
+    state.asm = a.lea_r64_mem_bis(state.asm, "rax", "r11", "r9", 1, 8)
+    state.asm = a.mov_membase_disp_imm8(state.asm, "rax", 0, 0)
+    state.asm = a.mark(state.asm, l_done + "_return")
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+    state.asm = a.mov_rip_qword_rax(state.asm, "gc_tmp2")
+  end if
   state.asm = a.mov_rax_r11(state.asm)
   state.asm = a.add_rsp_imm8(state.asm, 0x48)
   state.asm = a.pop_reg(state.asm, "rdi")
@@ -1660,6 +1695,7 @@ function emit_slice_function(state)
 
   state.asm = a.mark(state.asm, l_fail)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  if decode_result then state.asm = a.mov_rip_qword_rax(state.asm, "gc_tmp2") end if
   state.asm = a.add_rsp_imm8(state.asm, 0x48)
   state.asm = a.pop_reg(state.asm, "rdi")
   state.asm = a.pop_reg(state.asm, "rsi")
