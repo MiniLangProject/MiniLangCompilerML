@@ -781,6 +781,16 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
     print "[FAIL] " + name + " (proven fixed-length loop retained bounds checks)"
     return false
   end if
+  single_use_labels = _label_function_block(labels, "single_use_dynamic_loop")
+  if single_use_labels == "" or s.contains(single_use_labels, "for_slow_top_") then
+    print "[FAIL] " + name + " (single-use dynamic loop was versioned)"
+    return false
+  end if
+  multi_use_labels = _label_function_block(labels, "multi_use_dynamic_loop")
+  if multi_use_labels == "" or s.contains(multi_use_labels, "for_slow_top_") == false then
+    print "[FAIL] " + name + " (multi-use dynamic loop was not versioned)"
+    return false
+  end if
   negative_index_labels = _label_function_block(labels, "fixed_negative_index")
   if s.contains(negative_index_labels, "idx_fast_array_") == false or s.contains(negative_index_labels, "idx_fast_nonnegative_") == false or s.contains(negative_index_labels, "idx_fast_oob_") == false then
     print "[FAIL] " + name + " (negative fixed index incorrectly elided normalization/bounds checks)"

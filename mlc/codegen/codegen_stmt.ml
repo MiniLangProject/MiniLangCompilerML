@@ -2634,7 +2634,11 @@ function _emit_for_stmt(state, stmt)
       state.asm = a.mark(state.asm, l_step_done_f)
     end if
 
-    versioned = const_bounds_f == false and len(index_hoists) == 1 and (index_hoists[0][2] == "array" or index_hoists[0][2] == "bytes") and index_hoists[0][3] == false and len(stmt.body) <= 8
+    // Versioning duplicates the whole loop body (fast + slow copy). It only
+    // pays off when the fast copy elides bounds checks for several indexed
+    // accesses of the hoisted container; single-use loops keep the ordinary
+    // checked loop. See docs/reports/COMPILER_OPTIMIZATION_EXPERIMENTS_2026-10-30.md.
+    versioned = const_bounds_f == false and len(index_hoists) == 1 and (index_hoists[0][2] == "array" or index_hoists[0][2] == "bytes") and index_hoists[0][3] == false and index_hoists[0][4] >= 2 and len(stmt.body) <= 8
     l_slow_top_f = "for_slow_top_" + lid_f
     l_slow_cont_f = "for_slow_cont_" + lid_f
     if versioned then
@@ -4259,7 +4263,8 @@ end function
 function _fast_target_add(items, name, expr)
   if name == "" then return items end if
   if typeof(items) != "array" then items = [] end if
-  if len(items) > 0 then for i = 0 to len(items) - 1 if items[i][0] == name then return items end if end for end if
+  // Entries stay per-use: _for_index_hoist_plans counts them to judge
+  // loop-versioning profitability and deduplicates names itself.
   return items + [[name, expr]]
 end function
 
@@ -4376,7 +4381,11 @@ function _for_index_hoist_plans(state, loop_node, index_binding)
     binding = scope.cg_resolve_binding(state, target_name)
     if typeof(binding) != "struct" or (binding.kind != "local" and binding.kind != "param") then continue end if
     if typeof(binding.boxed) == "bool" and binding.boxed then continue end if
-    plans = plans + [[binding.id, rec[1], kind, exact_len > 0]]
+    target_uses = 0
+    for ui = 0 to len(targets) - 1
+      if targets[ui][0] == target_name then target_uses = target_uses + 1 end if
+    end for
+    plans = plans + [[binding.id, rec[1], kind, exact_len > 0, target_uses]]
   end for
   return plans
 end function
