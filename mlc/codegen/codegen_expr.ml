@@ -877,9 +877,9 @@ function _alias_target_for_base(state, base)
   return target
 end function
 
-/// Lower member base alias shadowed expression behavior to native x64.
+/// Keep member reads dynamic when a local or parameter shadows a declaration.
 /// @internal
-function _member_base_alias_shadowed(state, expr)
+function _member_base_shadowed(state, expr)
   cur = expr
   while t.ast_kind(cur) == "Member"
     nxt = try(cur.target)
@@ -890,8 +890,6 @@ function _member_base_alias_shadowed(state, expr)
   if t.ast_kind(cur) != "Var" then return false end if
   base = _coerce_name(t.ast_name(cur))
   if base == "" then return false end if
-  if _alias_target_for_base(state, base) == "" then return false end if
-
   b = scope.cg_resolve_binding(state, base)
   if typeof(b) == "struct" then
     k = _coerce_name(try(b.kind))
@@ -2694,12 +2692,10 @@ function _emit_expr_member(state, expr)
   obj_m = try(expr.obj)
   if typeof(tgt_m) != "struct" and typeof(obj_m) == "struct" then tgt_m = obj_m end if
 
-  base_alias_shadowed = _member_base_alias_shadowed(state, expr)
+  base_alias_shadowed = _member_base_shadowed(state, expr)
+  qmem0 = ""
   if base_alias_shadowed == false then
     qmem0 = _qname_of(state, expr)
-    if qmem0 != "" then
-      return scope.emit_load_var_scoped(state, qmem0)
-    end if
   end if
 
   base_q = _expr_to_qualname(state, tgt_m)
@@ -2737,6 +2733,10 @@ function _emit_expr_member(state, expr)
         end if
       end for
     end if
+
+    // Enum variants are immediates, not global slots. Resolve them above
+    // before loading any other qualified declaration through its binding.
+    if qmem0 != "" then return scope.emit_load_var_scoped(state, qmem0) end if
 
     // Namespace-qualified function/extern/struct/enum references.
     qmem = _apply_import_alias(state, base_q + "." + mname)
@@ -4244,6 +4244,180 @@ function _try_emit_left_string_concat_chain(state, expr)
   return [state, true]
 end function
 
+/// Resolve type identifiers through the call resolver, preserving runtime shadowing.
+/// @param state Current code-generation and lexical-scope state.
+/// @param expr Argument of typeof/typeName or its direct comparison optimization.
+/// @internal
+function _type_query_qname(state, expr)
+  if t.ast_is_node(expr) == false then return "" end if
+  if t.ast_kind(expr) == "Var" then
+    name = _qualify_identifier(state, _coerce_name(t.ast_name(expr)))
+    binding = scope.cg_resolve_binding(state, name)
+    if typeof(binding) == "struct" and binding.kind != "global" then return "" end if
+    if _is_current_localish_name(state, name) then return "" end if
+  end if
+  return _qname_of(state, expr)
+end function
+
+/// Report the argument of a direct one-argument builtin typeof call whose lowering takes the generic runtime path. Calls whose argument has a compile-time known type, or names a struct/enum type identifier, keep the builtin fast paths and must not be folded into value tag checks.
+/// @internal
+function _typeof_fold_arg(state, expr)
+  if t.ast_is_node(expr) == false then return 0 end if
+  if _coerce_name(t.ast_kind(expr)) != "Call" then return 0 end if
+  callee = try(expr.callee)
+  if t.ast_is_node(callee) == false then return 0 end if
+  if _coerce_name(t.ast_kind(callee)) != "Var" then return 0 end if
+  if _coerce_name(t.ast_name(callee)) != "typeof" then return 0 end if
+  args = try(expr.args)
+  if typeof(args) != "array" or len(args) != 1 then return 0 end if
+  // Folding must not bypass the builtin's named-argument diagnostic.
+  names = try(expr.arg_names)
+  if typeof(names) == "array" and len(names) > 0 then
+    for i = 0 to len(names) - 1
+      if typeof(names[i]) == "string" then return 0 end if
+    end for
+  end if
+  // Declared functions can normalize defaults or resolve in a namespace.
+  // Probe the index directly: a missing builtin must not scan every function.
+  call_name = _qname_of(state, callee)
+  if call_name != "typeof" then return 0 end if
+  if typeof(state.user_function_index) == "struct" then
+    if t.fastmap_has(state.user_function_index, call_name) then return 0 end if
+  else
+    if typeof(_user_function_get(state, call_name)) == "struct" then return 0 end if
+  end if
+  arg0 = args[0]
+  if t.ast_is_node(arg0) == false then return 0 end if
+  if _opt_try_known_type_label(state, arg0, false) != "" then return 0 end if
+  arg_name = _type_query_qname(state, arg0)
+  if arg_name != "" then arg_name = _apply_import_alias(state, arg_name) end if
+  if arg_name != "" then
+    if typeof(_state_struct_fields_get(state, arg_name)) == "array" then return 0 end if
+    if _state_enum_id_get(state, arg_name, -1) >= 0 then return 0 end if
+    if s.contains(arg_name, ".") then
+      ps_t = s.split(arg_name, ".")
+      if typeof(ps_t) == "array" and len(ps_t) >= 2 then
+        v_t = _coerce_name(ps_t[len(ps_t) - 1])
+        bp_t = t.arr_drop_last(ps_t)
+        if typeof(bp_t) != "array" then bp_t = [] end if
+        b_t = _apply_import_alias(state, s.join(bp_t, "."))
+        vars_t = _state_enum_variants_get(state, b_t)
+        if _state_enum_id_get(state, b_t, -1) >= 0 and typeof(vars_t) == "array" and _arr_has_str(vars_t, v_t) then return 0 end if
+      end if
+    end if
+  end if
+  return arg0
+end function
+
+/// Report the primitive type name when an expression is a string literal that runtime typeof can return through tag or object-type checks.
+/// @internal
+function _typeof_fold_literal(expr)
+  if t.ast_is_node(expr) == false then return "" end if
+  if t.ast_kind(expr) != "Str" then return "" end if
+  lit = t.ast_value(expr)
+  if typeof(lit) != "string" then return "" end if
+  if lit == "int" or lit == "bool" or lit == "float" or lit == "string" or lit == "array" or lit == "bytes" or lit == "function" or lit == "thread" or lit == "struct" or lit == "enum" or lit == "void" then return lit end if
+  return ""
+end function
+
+/// Emit a direct `typeof(<arg>) == "<lit>"` check: value tag and, for pointer types, object-type checks replace the fn_typeof call and the generic equality cascade.
+/// @param state Value supplied for `state`.
+/// @param arg Value supplied for `arg`.
+/// @param lit Value supplied for `lit`.
+/// @internal
+function _emit_typeof_literal_check(state, arg, lit)
+  eid = _next_lid(state)
+  l_false = "tolf_false_" + eid
+  l_true = "tolf_true_" + eid
+  l_done = "tolf_done_" + eid
+
+  state = cg_emit_expr(state, arg)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.and_r64_imm(state.asm, "r10", 7)
+
+  if lit == "int" or lit == "bool" or lit == "void" or lit == "enum" then
+    tag = c.TAG_INT
+    if lit == "bool" then tag = c.TAG_BOOL end if
+    if lit == "void" then tag = c.TAG_VOID end if
+    if lit == "enum" then tag = c.TAG_ENUM end if
+    state.asm = a.cmp_r64_imm(state.asm, "r10", tag)
+    state.asm = a.setcc_al(state.asm, "e")
+    state.asm = a.movzx_eax_al(state.asm)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+    return state
+  end if
+
+  if lit == "float" then
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_FLOAT)
+    state.asm = a.jcc(state.asm, "e", l_true)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_false)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
+    state.asm = a.jcc(state.asm, "e", l_true)
+  else
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_false)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    if lit == "string" then
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
+      state.asm = a.setcc_al(state.asm, "e")
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.jmp(state.asm, l_done)
+    else if lit == "bytes" then
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+      state.asm = a.setcc_al(state.asm, "e")
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.jmp(state.asm, l_done)
+    else if lit == "thread" then
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_THREAD)
+      state.asm = a.setcc_al(state.asm, "e")
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.jmp(state.asm, l_done)
+    else if lit == "array" then
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+      state.asm = a.jcc(state.asm, "e", l_true)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+      state.asm = a.setcc_al(state.asm, "e")
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.jmp(state.asm, l_done)
+    else if lit == "function" then
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FUNCTION)
+      state.asm = a.jcc(state.asm, "e", l_true)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_CLOSURE)
+      state.asm = a.jcc(state.asm, "e", l_true)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BUILTIN)
+      state.asm = a.setcc_al(state.asm, "e")
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.jmp(state.asm, l_done)
+    else
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCTTYPE)
+      state.asm = a.jcc(state.asm, "e", l_true)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRUCT)
+      state.asm = a.jcc(state.asm, "ne", l_false)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 4)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.ERROR_STRUCT_ID)
+      state.asm = a.setcc_al(state.asm, "ne")
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.jmp(state.asm, l_done)
+    end if
+  end if
+
+  state.asm = a.mark(state.asm, l_false)
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+  if lit == "float" or lit == "array" or lit == "function" or lit == "struct" then
+    state.asm = a.jmp(state.asm, l_done)
+    state.asm = a.mark(state.asm, l_true)
+    state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+    state.asm = a.inc_r32(state.asm, "eax")
+  end if
+  state.asm = a.mark(state.asm, l_done)
+  state.asm = a.shl_rax_imm8(state.asm, 3)
+  state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+  return state
+end function
+
 /// Emit binary operators, preserving left-to-right effects and routing dynamic type/error cases through the same helpers used by the reference compiler.
 /// @internal
 function _emit_expr_bin(state, expr)
@@ -4335,6 +4509,27 @@ function _emit_expr_bin(state, expr)
     state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
     state.asm = a.mark(state.asm, l_or_end)
     return state
+  end if
+
+  // Fold `typeof(<expr>) == "<primitive>"` (either side) into direct tag and
+  // object-type checks, skipping the fn_typeof call and the generic cascade.
+  binop_ty = _coerce_name(t.ast_op(expr))
+  if binop_ty == "==" or binop_ty == "!=" then
+    ty_arg = _typeof_fold_arg(state, t.ast_left(expr))
+    ty_lit = ""
+    if ty_arg != 0 then
+      ty_lit = _typeof_fold_literal(t.ast_right(expr))
+    else
+      ty_arg = _typeof_fold_arg(state, t.ast_right(expr))
+      if ty_arg != 0 then ty_lit = _typeof_fold_literal(t.ast_left(expr)) end if
+    end if
+    if ty_arg != 0 and ty_lit != "" then
+      state = _emit_typeof_literal_check(state, ty_arg, ty_lit)
+      if binop_ty == "!=" then
+        state.asm = a.xor_r64_imm8(state.asm, "rax", 8)
+      end if
+      return state
+    end if
   end if
 
   left_expr = t.ast_left(expr)
@@ -6512,7 +6707,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
       state.asm = a.lea_rax_rip(state.asm, known_ty)
       return [state, true]
     end if
-    arg_name = _expr_to_qualname(state, arg0)
+    arg_name = _type_query_qname(state, arg0)
     if arg_name != "" then arg_name = _apply_import_alias(state, arg_name) end if
     if arg_name != "" then
       flds0 = _state_struct_fields_get(state, arg_name)
@@ -6554,7 +6749,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
       state.asm = a.lea_rax_rip(state.asm, known_tn)
       return [state, true]
     end if
-    argn = _expr_to_qualname(state, arg1)
+    argn = _type_query_qname(state, arg1)
     if argn != "" then argn = _apply_import_alias(state, argn) end if
 
     if argn != "" then
@@ -8555,6 +8750,9 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     if skip_qn != "" then
       skip_fn = _user_function_get(state, skip_qn)
       if typeof(skip_fn) == "struct" then
+        // A user function with a builtin spelling still needs rooted indirect
+        // arguments. Otherwise callee evaluation reuses released argument slots.
+        generic_nonmember_candidate = true
         skip_bind = scope.cg_resolve_binding(state, skip_qn)
         if (typeof(skip_bind) != "struct" or skip_bind.kind == "global") and _direct_user_call_enabled(state, skip_qn) then
           direct_user_global = true
@@ -9743,6 +9941,16 @@ function _qname_exists(state, qname)
   if typeof(_extern_sig_get(state, qname)) == "struct" then return true end if
   if typeof(_state_struct_fields_get(state, qname)) == "array" then return true end if
   if _state_enum_id_get(state, qname, -1) >= 0 then return true end if
+  // Enum variants are compile-time values even without runtime bindings.
+  if s.contains(qname, ".") then
+    parts = s.split(qname, ".")
+    variant = parts[len(parts) - 1]
+    base = _apply_import_alias(state, s.join(t.arr_drop_last(parts), "."))
+    if _state_enum_id_get(state, base, -1) >= 0 then
+      variants = _state_enum_variants_get(state, base)
+      if typeof(variants) == "array" and _arr_has_str(variants, variant) then return true end if
+    end if
+  end if
   b = scope.cg_resolve_binding(state, qname)
   return typeof(b) == "struct"
 end function
@@ -11177,6 +11385,8 @@ function _emit_inline_call(state, callee, args)
 
   l_end = "inline_end_" + _next_lid(state)
 
+  saved_errprop = state.errprop_suppression
+  saved_sync_depth = state.errprop_sync_depth
   saved_in_fn = state.in_function
   saved_ret = state.func_ret_label
   saved_scope_stack = state.scope_stack
@@ -11205,6 +11415,11 @@ function _emit_inline_call(state, callee, args)
   base_decl_index = t.fastmap_new(128)
   if typeof(saved_scope_declared_index_stack) == "array" and len(saved_scope_declared_index_stack) > 0 then base_decl_index = saved_scope_declared_index_stack[0] end if
 
+  // The callee has its own error boundary. A caller's try/monitor applies
+  // to argument evaluation and the result, not to operations in this body.
+  state.errprop_suppression = 0
+  state.errprop_sync_depth = 0
+  state = core.push_cold_block_scope(state)
   state.scope_stack = [base_globals, []]
   state.scope_declared = [[], []]
   state.scope_index_stack = [base_scope_index, t.fastmap_new(128)]
@@ -11297,6 +11512,9 @@ function _emit_inline_call(state, callee, args)
   state._inline_call_stack = saved_inline_call_stack
 
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.jmp(state.asm, l_end)
+  state = core.emit_deferred_cold_blocks(state)
+  core.pop_cold_block_scope(state)
   state.asm = a.mark(state.asm, l_end)
   emitted_inline_bytes = a.pos(state.asm) - inline_body_start
   if emitted_inline_bytes < 0 then emitted_inline_bytes = 0 end if
@@ -11305,6 +11523,8 @@ function _emit_inline_call(state, callee, args)
   if typeof(old_inline_bytes) != "int" then old_inline_bytes = 0 end if
   state._inline_emitted_bytes = t.fastmap_set(state._inline_emitted_bytes, callee, old_inline_bytes + emitted_inline_bytes)
 
+  state.errprop_suppression = saved_errprop
+  state.errprop_sync_depth = saved_sync_depth
   state.in_function = saved_in_fn
   state.func_ret_label = saved_ret
   state.scope_stack = saved_scope_stack

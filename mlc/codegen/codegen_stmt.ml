@@ -5811,6 +5811,17 @@ function _analysis_scan_expr(state, ex, allow_func_ident)
   if t.ast_is_node(ex) == false then return state end if
   nk = _coerce_name(t.ast_kind(ex))
 
+  // Type identifiers have no runtime namespace object to read. Use the same
+  // qualified-name and shadowing rules as typeof/typeName emission; a type
+  // may still have field metadata after its unused constructor is pruned.
+  if allow_func_ident and (nk == "Var" or nk == "Member") then
+    type_qname = exprmod._type_query_qname(state, ex)
+    if type_qname != "" then
+      if typeof(exprmod._state_struct_fields_get(state, type_qname)) == "array" then return state end if
+      if exprmod._state_enum_id_get(state, type_qname, -1) >= 0 then return state end if
+    end if
+  end if
+
   if nk == "Var" then
     nm0 = _coerce_name(t.ast_name(ex))
     if nm0 == "" then return state end if

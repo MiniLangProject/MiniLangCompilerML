@@ -81,8 +81,12 @@ def main() -> None:
             assert digest(recovered) == digest(images[0]), 'corrupt lexer cache fallback'
 
         hot = 'function hot(x as int) returns int\n  return x + 1\nend function\n'
+        # Keep enough call sites to exhaust the default budget even after
+        # type guards become smaller; otherwise PGO and default legitimately
+        # inline every call and a byte-difference assertion tests nothing.
+        call_sites = 64
         body = 'function main(args)\n  total = 0\n  for i = 0 to 999\n'
-        body += '    total += hot(i)\n' * 12
+        body += '    total += hot(i)\n' * call_sites
         body += '  end for\n  print total\n'
         training = work / 'training.ml'
         training.write_text(hot + body + '  for each stat in callStats()\n'
@@ -95,7 +99,7 @@ def main() -> None:
             profiles.append(image)
         assert digest(profiles[0]) == digest(profiles[1]), 'profile byte parity'
         training_output = run([str(profiles[0])], root)
-        assert '[call-profile] name=hot calls=12000' in training_output
+        assert f'[call-profile] name=hot calls={call_sites * 1000}' in training_output
         profile = work / 'calls.txt'
         profile.write_text(training_output, encoding='utf-8')
 
@@ -105,12 +109,12 @@ def main() -> None:
         for name, compiler in (('python', py), ('ml', ml)):
             image = work / f'{name}-pgo.exe'
             run([*compiler, str(production), str(image), '--pgo-profile', str(profile)], root)
-            assert run([str(image)], root).strip() == '6006000'
+            assert run([str(image)], root).strip() == str(call_sites * sum(range(1, 1001)))
             pgo_images.append(image)
         assert digest(pgo_images[0]) == digest(pgo_images[1]), 'PGO byte parity'
         default = work / 'production-default.exe'
         run([*py, str(production), str(default)], root)
-        assert digest(default) != digest(pgo_images[0]), 'PGO changed the inline budget'
+        assert digest(default) != digest(pgo_images[0]), 'PGO fixture must exceed the default inline budget'
 
     print('PASS compiler techniques: semantics, cache, profile, PGO, and byte parity')
 

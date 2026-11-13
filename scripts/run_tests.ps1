@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.3.4"
+  $expected = "MiniLang Compiler 1.3.5"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -487,6 +487,10 @@ try {
       [pscustomobject]@{ Name = "Linux platform services"; Source = "platform_services.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux extern/user basename collision"; Source = "extern_user_name_collision\main.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux GC safepoint publication"; Source = "gc_back_to_back_safepoint.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux typeof_literal_checks"; Source = "typeof_literal_checks.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux type_query_resolution"; Source = "type_query_resolution.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux typeof_declared_call"; Source = "typeof_declared_call.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux inline_error_boundaries"; Source = "inline_error_boundaries.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux language extensions"; Source = "language_extensions.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux operator overloading"; Source = "operator_overloading.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux mixed concat with operator overloads"; Source = "mixed_concat_overloads.ml"; RunArgs = @() },

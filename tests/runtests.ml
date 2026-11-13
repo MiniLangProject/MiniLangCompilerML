@@ -913,6 +913,10 @@ function main(args)
   if _test(compiler_path, repo_root, "compiler_frontend_normalize", "tests\\compiler_frontend_normalize.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_suite", "tests\\language_suite.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "declaration_comments", "tests\\declaration_comments.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "typeof_literal_checks", "tests\\typeof_literal_checks.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "type_query_resolution", "tests\\type_query_resolution.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "typeof_declared_call", "tests\\typeof_declared_call.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "inline_error_boundaries", "tests\\inline_error_boundaries.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_extensions", "tests\\language_extensions.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "operator_overloading", "tests\\operator_overloading.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_performance_features", "tests\\language_performance_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
@@ -926,6 +930,7 @@ function main(args)
   if _test(compiler_path, repo_root, "language_iterator_return", "tests\\language_iterator_return.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_lazy_iterator_invalid", "tests\\language_lazy_iterator_invalid.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_named_argument_error", "tests\\language_named_argument_error.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "typeof_named_argument_error", "tests\\typeof_named_argument_error.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_lambda_parameter_error", "tests\\language_lambda_parameter_error.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "operator_invalid_and", "tests\\operator_invalid_and.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "operator_invalid_owner", "tests\\operator_invalid_owner.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

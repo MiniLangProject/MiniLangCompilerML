@@ -12,7 +12,7 @@
 | [mlc/codegen/codegen_builtins_alloc.ml](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md) | `mlc.codegen.codegen_builtins_alloc` | yes | 37 |
 | [mlc/codegen/codegen_concurrent_gc.ml](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md) | `mlc.codegen.codegen_concurrent_gc` | yes | 18 |
 | [mlc/codegen/codegen_core.ml](File-mlc-codegen-codegen-core-ml-528695596.md) | `mlc.codegen.codegen_core` | yes | 232 |
-| [mlc/codegen/codegen_expr.ml](File-mlc-codegen-codegen-expr-ml-59843844.md) | `mlc.codegen.codegen_expr` | yes | 181 |
+| [mlc/codegen/codegen_expr.ml](File-mlc-codegen-codegen-expr-ml-59843844.md) | `mlc.codegen.codegen_expr` | yes | 185 |
 | [mlc/codegen/codegen_memory.ml](File-mlc-codegen-codegen-memory-ml-2136639668.md) | `mlc.codegen.codegen_memory` | yes | 63 |
 | [mlc/codegen/codegen_opt.ml](File-mlc-codegen-codegen-opt-ml-1574478370.md) | `mlc.codegen.codegen_opt` | yes | 11 |
 | [mlc/codegen/codegen_runtime.ml](File-mlc-codegen-codegen-runtime-ml-1845689217.md) | `mlc.codegen.codegen_runtime` | yes | 62 |
