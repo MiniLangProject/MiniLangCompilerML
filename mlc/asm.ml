@@ -445,47 +445,81 @@ end function
 
 /// Encode or manage rid any in the native x64 assembler.
 /// @internal
-function _rid_any(name)
-  if name == "rax" or name == "eax" or name == "al" then return 0 end if
-  if name == "rcx" or name == "ecx" or name == "cl" then return 1 end if
-  if name == "rdx" or name == "edx" or name == "dl" then return 2 end if
-  if name == "rbx" or name == "ebx" or name == "bl" then return 3 end if
-  if name == "rsp" or name == "esp" or name == "spl" then return 4 end if
-  if name == "rbp" or name == "ebp" or name == "bpl" then return 5 end if
-  if name == "rsi" or name == "esi" or name == "sil" then return 6 end if
-  if name == "rdi" or name == "edi" or name == "dil" then return 7 end if
-  if name == "r8" or name == "r8d" or name == "r8b" then return 8 end if
-  if name == "r9" or name == "r9d" or name == "r9b" then return 9 end if
-  if name == "r10" or name == "r10d" or name == "r10b" then return 10 end if
-  if name == "r11" or name == "r11d" or name == "r11b" then return 11 end if
-  if name == "r12" or name == "r12d" or name == "r12b" then return 12 end if
-  if name == "r13" or name == "r13d" or name == "r13b" then return 13 end if
-  if name == "r14" or name == "r14d" or name == "r14b" then return 14 end if
-  if name == "r15" or name == "r15d" or name == "r15b" then return 15 end if
+function inline _rid_any(name)
+  if typeof(name) != "string" then return -1 end if
+  n = len(name)
+  if n == 2 then
+    if name == "r8" then return 8 end if
+    if name == "r9" then return 9 end if
+    if name == "al" then return 0 end if
+    if name == "cl" then return 1 end if
+    if name == "dl" then return 2 end if
+    if name == "bl" then return 3 end if
+    return -1
+  end if
+  if n == 3 then
+    if name == "rax" then return 0 end if
+    if name == "rcx" then return 1 end if
+    if name == "rdx" then return 2 end if
+    if name == "rbx" then return 3 end if
+    if name == "rsp" then return 4 end if
+    if name == "rbp" then return 5 end if
+    if name == "rsi" then return 6 end if
+    if name == "rdi" then return 7 end if
+    if name == "r10" then return 10 end if
+    if name == "r11" then return 11 end if
+    if name == "r12" then return 12 end if
+    if name == "r13" then return 13 end if
+    if name == "r14" then return 14 end if
+    if name == "r15" then return 15 end if
+    if name == "eax" then return 0 end if
+    if name == "ecx" then return 1 end if
+    if name == "edx" then return 2 end if
+    if name == "ebx" then return 3 end if
+    if name == "esp" then return 4 end if
+    if name == "ebp" then return 5 end if
+    if name == "esi" then return 6 end if
+    if name == "edi" then return 7 end if
+    if name == "spl" then return 4 end if
+    if name == "bpl" then return 5 end if
+    if name == "sil" then return 6 end if
+    if name == "dil" then return 7 end if
+    if name == "r8b" or name == "r8d" then return 8 end if
+    if name == "r9b" or name == "r9d" then return 9 end if
+    return -1
+  end if
+  if n == 4 then
+    if name == "r10b" or name == "r10d" then return 10 end if
+    if name == "r11b" or name == "r11d" then return 11 end if
+    if name == "r12b" or name == "r12d" then return 12 end if
+    if name == "r13b" or name == "r13d" then return 13 end if
+    if name == "r14b" or name == "r14d" then return 14 end if
+    if name == "r15b" or name == "r15d" then return 15 end if
+  end if
   return -1
 end function
 
 /// Reports whether is r8 name.
 /// @internal
-function _is_r8_name(name as string) returns bool
+function inline _is_r8_name(name as string) returns bool
   return name == "al" or name == "cl" or name == "dl" or name == "bl" or name == "spl" or name == "bpl" or name == "sil" or name == "dil" or name == "r8b" or name == "r9b" or name == "r10b" or name == "r11b" or name == "r12b" or name == "r13b" or name == "r14b" or name == "r15b"
 end function
 
 /// Reports whether is r32 name.
 /// @internal
-function _is_r32_name(name as string) returns bool
+function inline _is_r32_name(name as string) returns bool
   return name == "eax" or name == "ecx" or name == "edx" or name == "ebx" or name == "esp" or name == "ebp" or name == "esi" or name == "edi" or name == "r8d" or name == "r9d" or name == "r10d" or name == "r11d" or name == "r12d" or name == "r13d" or name == "r14d" or name == "r15d"
 end function
 
 /// Recognize full-width GPRs without accepting their byte/dword aliases.
 /// @internal
-function _is_r64_name(name as string) returns bool
+function inline _is_r64_name(name as string) returns bool
   return _rid_any(name) >= 0 and not _is_r8_name(name) and not _is_r32_name(name)
 end function
 
 /// Reports whether is force rex 8.
 /// @internal
-function _is_force_rex_8(name as string) returns bool
+function inline _is_force_rex_8(name as string) returns bool
   return name == "spl" or name == "bpl" or name == "sil" or name == "dil"
 end function
 
