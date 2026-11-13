@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.3.3"
+  $expected = "MiniLang Compiler 1.3.4"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {

@@ -18,7 +18,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', required=True, type=Path)
     parser.add_argument('--platform', required=True, choices=['windows-x64', 'linux-x64'])
-    parser.add_argument('--version', default='1.3.3')
+    parser.add_argument('--version', default='1.3.4')
     parser.add_argument('--third-party', action='append', default=[], type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -56,6 +56,12 @@ def main() -> int:
         for filename in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README-BINARY.md', 'CHANGELOG.md', f'RELEASE_NOTES_{args.version}.md']:
             shutil.copy2(root / filename, package / filename)
         for document in ('EXECUTABLE_PACKING.md', 'INCREMENTAL_BUILDS.md', 'OOP.md',
+                         'reports/LOOP_PARITY_2026-11-13.md',
+                         'reports/LOOP_PARITY_2026-11-13.json',
+                         'reports/ARRAY_LOOP_USE_COUNT_GATE_2026-11-12.md',
+                         'reports/ARRAY_LOOP_USE_COUNT_GATE_2026-11-12.json',
+                         'reports/REGISTER_NAME_DISPATCH_2026-11-13.md',
+                         'reports/REGISTER_NAME_DISPATCH_2026-11-13.json',
                          'reports/COMPILER_OPTIMIZATIONS_2026-11-04.md',
                          'reports/COMPILER_OPTIMIZATIONS_2026-11-04.json',
                          'reports/COMPILER_OPTIMIZATIONS_2026-11-06.md',

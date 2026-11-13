@@ -9,15 +9,16 @@ itself. The [Python reference compiler](https://github.com/MiniLangProject/MiniL
 provides the bootstrap implementation and a second code-generation path.
 
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
-or read the [binary installation guide](README-BINARY.md). Version 1.3.3
+or read the [binary installation guide](README-BINARY.md). Version 1.3.4
 includes Windows and Linux packages with SHA-256 sidecars; see the
-[release notes](RELEASE_NOTES_1.3.3.md) and [changelog](CHANGELOG.md).
+[release notes](RELEASE_NOTES_1.3.4.md) and [changelog](CHANGELOG.md).
 
-Version 1.3.3 reduces temporary compiler allocations and improves generated
-code for bounded string concatenations, nonescaping local structs with typed
-fields, and decoded byte slices. Recompile applications to use these automatic
-optimizations. The [measured results](docs/reports/COMPILER_OPTIMIZATIONS_2026-11-06.md)
-describe eligible code, benchmark gains and their limits.
+Version 1.3.4 aligns conditional array/byte-loop optimization between the
+Python and native compilers, keeps small single-use loops compact, and
+reduces temporary allocation in the native loop analysis. Native register
+lookup also uses length-based dispatch. See the [compatibility and performance
+evaluation](docs/reports/LOOP_PARITY_2026-11-13.md) for measurements, regression
+coverage, and the limits of the results.
 
 ## Quick start with a release package
 
@@ -133,7 +134,7 @@ self-hosted monolithic compiler and self-hosted `.mlo` pipeline are expected
 to emit identical target bytes. Version 1.3.2 restored this for the OOP
 regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 [OOP regression](tests/check_oop_binary_parity.py) and
-[1.3.3 release verification matrix](docs/reports/release-1.3.3-version-matrix.json).
+[1.3.4 release verification matrix](docs/reports/release-1.3.4-version-matrix.json).
 
 ## Documentation and development
 

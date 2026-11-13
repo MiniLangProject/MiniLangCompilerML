@@ -4258,14 +4258,19 @@ function _select_promoted_local_registers(state, fn_node, known_types, shared_ho
   return [state, assigned]
 end function
 
-/// Lower fast target add statement behavior to native x64.
+/// Count indexed uses in one record per container, preserving its first expression.
 /// @internal
 function _fast_target_add(items, name, expr)
   if name == "" then return items end if
   if typeof(items) != "array" then items = [] end if
-  // Entries stay per-use: _for_index_hoist_plans counts them to judge
-  // loop-versioning profitability and deduplicates names itself.
-  return items + [[name, expr]]
+  // Repeated uses update a counter instead of copying an ever-growing array.
+  for each item in items
+    if item[0] == name then
+      item[2] = item[2] + 1
+      return items
+    end if
+  end for
+  return items + [[name, expr, 1]]
 end function
 
 /// Lower fast index scan expr statement behavior to native x64.
@@ -4326,6 +4331,21 @@ function _fast_index_scan_loop(loop_node, index_name)
     child = try(st.end_expr); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
     child = try(st.iterable); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
     child = try(st.obj); if t.ast_is_node(child) then targets = _fast_index_scan_expr(child, index_name, targets) end if
+    // These expressions are stored outside the ordinary statement fields.
+    // _scan_stmt_children_into visits their bodies, but not their conditions.
+    if k == "If" then
+      for each branch in st.elifs
+        targets = _fast_index_scan_expr(branch[0], index_name, targets)
+      end for
+    else if k == "Switch" then
+      for each branch in st.cases
+        for each value in branch.values
+          targets = _fast_index_scan_expr(value, index_name, targets)
+        end for
+        targets = _fast_index_scan_expr(branch.range_start, index_name, targets)
+        targets = _fast_index_scan_expr(branch.range_end, index_name, targets)
+      end for
+    end if
     stack = _scan_stmt_children_into(stack, st)
   end while
   return [targets, mutated]
@@ -4370,7 +4390,7 @@ function _for_index_hoist_plans(state, loop_node, index_binding)
   for i = 0 to len(target_names) - 1
     rec = 0
     for ri = 0 to len(targets) - 1 if targets[ri][0] == target_names[i] then rec = targets[ri]; break end if end for
-    if typeof(rec) != "array" or len(rec) < 2 then continue end if
+    if typeof(rec) != "array" or len(rec) < 3 then continue end if
     target_name = rec[0]
     if target_name == "" or _arr_has(mutated, target_name) then continue end if
     fact = _typeflow_get(state.known_value_types, target_name)
@@ -4381,11 +4401,7 @@ function _for_index_hoist_plans(state, loop_node, index_binding)
     binding = scope.cg_resolve_binding(state, target_name)
     if typeof(binding) != "struct" or (binding.kind != "local" and binding.kind != "param") then continue end if
     if typeof(binding.boxed) == "bool" and binding.boxed then continue end if
-    target_uses = 0
-    for ui = 0 to len(targets) - 1
-      if targets[ui][0] == target_name then target_uses = target_uses + 1 end if
-    end for
-    plans = plans + [[binding.id, rec[1], kind, exact_len > 0, target_uses]]
+    plans = plans + [[binding.id, rec[1], kind, exact_len > 0, rec[2]]]
   end for
   return plans
 end function

@@ -791,6 +791,18 @@ function _test_codegen_optimizations(compiler_path, repo_root, extra_flags)
     print "[FAIL] " + name + " (multi-use dynamic loop was not versioned)"
     return false
   end if
+  for each loop_name in ["elif_index_loop", "byte_elif_index_loop", "case_value_index_loop", "case_lower_index_loop", "case_upper_index_loop", "nested_index_loop"]
+    loop_labels = _label_function_block(labels, loop_name)
+    if loop_labels == "" or s.contains(loop_labels, "for_slow_top_") == false then
+      print "[FAIL] " + name + " (conditional indexed uses were missed: " + loop_name + ")"
+      return false
+    end if
+  end for
+  rebound_labels = _label_function_block(labels, "rebound_index_loop")
+  if rebound_labels == "" or s.contains(rebound_labels, "for_slow_top_") then
+    print "[FAIL] " + name + " (rebound container was incorrectly versioned)"
+    return false
+  end if
   negative_index_labels = _label_function_block(labels, "fixed_negative_index")
   if s.contains(negative_index_labels, "idx_fast_array_") == false or s.contains(negative_index_labels, "idx_fast_nonnegative_") == false or s.contains(negative_index_labels, "idx_fast_oob_") == false then
     print "[FAIL] " + name + " (negative fixed index incorrectly elided normalization/bounds checks)"
