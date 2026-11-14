@@ -4787,11 +4787,11 @@ Emit bounded .mlo batches and link them in a fresh compiler process.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L7644)
 
-<a id="constant-constant-mlc-compiler-compiler-version-const-compiler-version-1-3-7-mlc-compiler-ml-1420412320"></a>
+<a id="constant-constant-mlc-compiler-compiler-version-const-compiler-version-1-3-8-mlc-compiler-ml-1738074791"></a>
 ### COMPILER_VERSION
 
 ```ml
-const COMPILER_VERSION = "1.3.7"
+const COMPILER_VERSION = "1.3.8"
 ```
 
 Track compiler version.
@@ -4799,11 +4799,11 @@ Track compiler version.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L40)
 
-<a id="constant-constant-mlc-compiler-compiler-version-text-const-compiler-version-text-minilang-compiler-1-3-7-mlc-compiler-ml-1713459194"></a>
+<a id="constant-constant-mlc-compiler-compiler-version-text-const-compiler-version-text-minilang-compiler-1-3-8-mlc-compiler-ml-1167122101"></a>
 ### COMPILER_VERSION_TEXT
 
 ```ml
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.7"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.8"
 ```
 
 Track compiler version text.

@@ -992,6 +992,7 @@ function main(args)
   if _test_codegen_optimizations(compiler_path, repo_root, extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "optimizer_safety", "tests\\optimizer_safety.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "packing_format", "tests\\packing_format.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "stdlib_oop_services", "tests\\stdlib_oop_services.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "native_packing_workload", "tests\\native_packing_workload.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
 
   // Existing ns/import framework tests

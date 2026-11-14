@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.3.7"
+  $expected = "MiniLang Compiler 1.3.8"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -486,6 +486,7 @@ try {
       [pscustomobject]@{ Name = "Linux ECDSA-P256"; Source = "ecdsa_p256.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux shared-value snapshots"; Source = "shared_value.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux platform services"; Source = "platform_services.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux standard-library OOP services"; Source = "stdlib_oop_services.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux extern/user basename collision"; Source = "extern_user_name_collision\main.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux GC safepoint publication"; Source = "gc_back_to_back_safepoint.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux typeof_literal_checks"; Source = "typeof_literal_checks.ml"; RunArgs = @() },
@@ -592,6 +593,7 @@ try {
     [pscustomobject]@{ Name = "ECDSA-P256 signature verification"; Source = "ecdsa_p256.ml" },
     [pscustomobject]@{ Name = "portable shared-value snapshots"; Source = "shared_value.ml" },
     [pscustomobject]@{ Name = "portable platform services"; Source = "platform_services.ml" },
+    [pscustomobject]@{ Name = "standard-library OOP services"; Source = "stdlib_oop_services.ml" },
     [pscustomobject]@{ Name = "extern/user basename collision"; Source = "extern_user_name_collision\main.ml" }
   )
   foreach ($nativeCase in $nativePrimitiveCases) {

@@ -9,14 +9,13 @@ itself. The [Python reference compiler](https://github.com/MiniLangProject/MiniL
 provides the bootstrap implementation and a second code-generation path.
 
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
-or read the [binary installation guide](README-BINARY.md). Version 1.3.7
+or read the [binary installation guide](README-BINARY.md). Version 1.3.8
 includes Windows and Linux packages with SHA-256 sidecars; see the
-[release notes](RELEASE_NOTES_1.3.7.md) and [changelog](CHANGELOG.md).
+[release notes](RELEASE_NOTES_1.3.8.md) and [changelog](CHANGELOG.md).
 
-Version 1.3.7 adds optional dependency-free Windows/Linux executable packing.
-Use `--pack` to enable it; see the [packing evaluation](docs/reports/NATIVE_PACKING_2026-11-14.md)
-for size, startup and byte-parity measurements. The 1.3.6 OOP improvements
-remain available.
+Version 1.3.8 adds resource-owning methods and optional TCP/UDP objects to
+the shared standard library. See the [API and measurement report](docs/reports/STDLIB_OOP_2026-11-14.md).
+The dependency-free executable packer introduced in 1.3.7 remains available.
 
 ## Quick start with a release package
 
@@ -132,7 +131,7 @@ self-hosted monolithic compiler and self-hosted `.mlo` pipeline are expected
 to emit identical target bytes. Version 1.3.2 restored this for the OOP
 regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 [OOP regression](tests/check_oop_binary_parity.py) and
-[1.3.7 release verification matrix](docs/reports/release-1.3.7-version-matrix.json).
+[1.3.8 release verification matrix](docs/reports/release-1.3.8-version-matrix.json).
 
 ## Documentation and development
 
@@ -146,6 +145,7 @@ regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 | Typed inline assembly | [Guide](docs/INLINE_ASM.md) |
 | Native crypto, checksums and CPU features | [Native primitives](docs/NATIVE_PRIMITIVES.md) |
 | Compression and platform services | [Platform services](docs/PLATFORM_SERVICES.md) |
+| Stateful standard-library methods | [API and measurements](docs/reports/STDLIB_OOP_2026-11-14.md) |
 | Executable packing | [Packing guide](docs/EXECUTABLE_PACKING.md) |
 
 Use `--pack` for optional dependency-free PE/ELF packing. Packed programs
