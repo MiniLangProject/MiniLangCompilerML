@@ -29,6 +29,8 @@
 - [mlc.incremental_ast](Package-mlc-incremental-ast-980390788.md)
 - [mlc.linux_runtime](Package-mlc-linux-runtime-1318353858.md)
 - [mlc.minilang_parser](Package-mlc-minilang-parser-1725130264.md)
+- [mlc.native_packing](Package-mlc-native-packing-309385890.md)
+- [mlc.pack_loader_bytes](Package-mlc-pack-loader-bytes-179377110.md)
 - [mlc.packing](Package-mlc-packing-810428052.md)
 - [mlc.pe](Package-mlc-pe-1521258410.md)
 - [mlc.project](Package-mlc-project-1794969042.md)

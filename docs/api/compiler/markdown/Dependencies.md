@@ -6,8 +6,9 @@ These MiniLang source files are reachable through imports but are outside the co
 
 | Direct project imports | Package | Source file |
 | ---: | --- | --- |
-| 4 | `std.checksum.crc32` | `std/checksum/crc32.ml` |
+| 5 | `std.checksum.crc32` | `std/checksum/crc32.ml` |
 | 3 | `std.checksum.crc32c` | `std/checksum/crc32c.ml` |
+| 1 | `std.compress.lz4` | `std/compress/lz4.ml` |
 | 0 | `std.ds.list` | `std/ds/list.ml` |
 | 0 | `std.fmt` | `std/fmt.ml` |
 | 6 | `std.fs` | `std/fs.ml` |

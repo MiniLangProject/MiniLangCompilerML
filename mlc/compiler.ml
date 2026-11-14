@@ -37,9 +37,9 @@ import mlc.packing as packing
 import mlc.incremental as incremental
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.3.6"
+const COMPILER_VERSION = "1.3.7"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.6"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.7"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
@@ -473,9 +473,10 @@ function _usage()
   print "Listings:"
   print "  --asm [--asm-out <path>] [--asm-cols addr,opcodes,code]"
   print "  --pgo-profile <file>  use callStats() output for inline budgets"
-  print "  --pack [--upx <path>]    Pack output; MINILANG_UPX also selects the tool"
-  print "  --pack-exe INPUT OUTPUT --upx PATH    Pack an existing trusted image"
-  print "  --unpack-exe INPUT OUTPUT --upx PATH  Restore exact original bytes"
+  print "  --pack                     Pack output without external tools"
+  print "  --pack-exe INPUT OUTPUT    Pack an existing compiler-generated image"
+  print "  --unpack-exe INPUT OUTPUT  Restore exact original bytes"
+  print "  --pack=upx --upx PATH      Use the optional legacy UPX packer"
   print "  --asm-no-addr --asm-no-opcodes --asm-no-code --asm-data --asm-pe"
   print "Build internals:"
   print "  --object-pipeline    force the memory-bounded .mlo pipeline"
@@ -8182,8 +8183,10 @@ function run_cli(args)
   pack_options = try(packing.parseOptions(args))
   if typeof(pack_options) == "error" then print "PackError: " + pack_options.message; return 2 end if
   args = pack_options.args
+  packing_tool = pack_options.upx
+  if packing_tool != "" then packing_tool = _path_abspath(packing_tool) end if
   if pack_options.mode == "pack" or pack_options.mode == "unpack" then
-    packed_result = try(packing.transform(_path_abspath(args[0]), _path_abspath(args[1]), _path_abspath(pack_options.upx), pack_options.mode == "unpack", false, _run_child_process))
+    packed_result = try(packing.transform(_path_abspath(args[0]), _path_abspath(args[1]), packing_tool, pack_options.mode == "unpack", false, _run_child_process))
     if typeof(packed_result) == "error" then print "PackError: " + packed_result.message; return 2 end if
     return 0
   end if
@@ -8406,7 +8409,7 @@ function run_cli(args)
   if link_obj_dir != "" then
     link_rc = link_obj_dir_to_exe(link_obj_dir, out_path, subsystem)
     if link_rc == 0 and pack_options.mode == "compile" then
-      packed_result = try(packing.transform(_path_abspath(out_path), _path_abspath(out_path), _path_abspath(pack_options.upx), false, true, _run_child_process))
+      packed_result = try(packing.transform(_path_abspath(out_path), _path_abspath(out_path), packing_tool, false, true, _run_child_process))
       if typeof(packed_result) == "error" then print "PackError: " + packed_result.message; return 2 end if
     end if
     _compiler_profile_finish()
@@ -8447,7 +8450,7 @@ function run_cli(args)
     compile_rc = compile_to_exe_opts(inp, out_path, include_dirs, keep_going, max_errors, runtime_config, call_profile, trace_calls, subsystem)
   end if
   if compile_rc == 0 and pack_options.mode == "compile" and _object_emit_only == false then
-    packed_result = try(packing.transform(_path_abspath(out_path), _path_abspath(out_path), _path_abspath(pack_options.upx), false, true, _run_child_process))
+    packed_result = try(packing.transform(_path_abspath(out_path), _path_abspath(out_path), packing_tool, false, true, _run_child_process))
     if typeof(packed_result) == "error" then print "PackError: " + packed_result.message + "; unpacked compiler output retained"; return 2 end if
   end if
   if compile_rc == 0 and project_cache_enabled then

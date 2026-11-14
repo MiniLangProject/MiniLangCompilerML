@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.3.6"
+  $expected = "MiniLang Compiler 1.3.7"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -462,6 +462,7 @@ try {
       [pscustomobject]@{ Name = "Linux optimizer safety"; Source = "optimizer_safety.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux dynamic ordered comparisons"; Source = "ordered_comparison.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux packing format"; Source = "packing_format.ml"; RunArgs = @() },
+      [pscustomobject]@{ Name = "Linux native packing workload"; Source = "native_packing_workload.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux target smoke"; Source = "linux_target_smoke.ml"; RunArgs = @("one", "two") },
       [pscustomobject]@{ Name = "Linux SysV FFI"; Source = "linux_ffi.ml"; RunArgs = @() },
       [pscustomobject]@{ Name = "Linux double out FFI"; Source = "linux_ffi_out_double.ml"; RunArgs = @() },

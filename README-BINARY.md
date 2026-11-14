@@ -1,23 +1,23 @@
 # Binary compiler packages
 
-Release 1.3.6 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
+Release 1.3.7 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
 contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
 a hello example, license, third-party notices, release notes and a BUILD_INFO.json manifest. Every
 download has a SHA-256 sidecar. No separate Python installation is needed to run
 either native package.
 
-## Release 1.3.6 checksums
+## Release 1.3.7 checksums
 
-The download archives are `MiniLangCompilerML-1.3.6-windows-x64.zip` and
-`MiniLangCompilerML-1.3.6-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.6).
+The download archives are `MiniLangCompilerML-1.3.7-windows-x64.zip` and
+`MiniLangCompilerML-1.3.7-linux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.7).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 63,625,216 | `D12B9DACC63A2AFFC9E4FB6A4BEF61AF16022789659531E0C048E2E2E4A9380B` |
-| Linux `mlc` | 63,647,824 | `8B1ABB5375E315E49FD5E1BDB292E1293930106E334194806F76229E2B33FD64` |
+| Windows `mlc.exe` | 64,317,440 | `2E14327EFDDDB5BEEFD06488F57B12E660FB6D8FEDB1BF17F1EF5C3EDF6B28AA` |
+| Linux `mlc` | 64,336,224 | `1CA526D63A9FD61A166293A839ABCAB7355DE1EE59F54BAE68A7CA9CE051C158` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -43,7 +43,7 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 either target, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.3.6 compiler-source revision and executable hash.
+The manifest identifies the 1.3.7 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
@@ -65,14 +65,15 @@ and [evaluation](docs/reports/INCREMENTAL_BUILDS_2026-10-29.md).
 
 ## Optional executable packing
 
-The distributed compiler is unpacked. To opt in for your own programs, supply
-an explicit trusted UPX 5.2.1 executable with `--pack --upx PATH`. UPX is not
-bundled. See [the included guide](docs/EXECUTABLE_PACKING.md) for exact unpacking,
+The distributed compiler is unpacked. To pack your programs without external
+tools, use `--pack`; the generated executable decompresses its code in memory
+on startup. The older UPX method remains available with `--pack=upx --upx PATH`.
+See [the included guide](docs/EXECUTABLE_PACKING.md) for exact unpacking,
 startup/memory trade-offs and signing constraints.
 
 ## Native media runtime
 
-Release 1.3.6 packages include the native-media
+Release 1.3.7 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 

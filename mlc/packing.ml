@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//! Optional UPX packing with a deterministic, byte-exact restoration overlay.
+//! Built-in packing plus optional legacy UPX with exact restoration.
 package mlc.packing
 import std.fs as fs
 import std.string as s
 import std.process as process
 import std.checksum.crc32 as crc
 import mlc.tools as t
+import mlc.native_packing as nativepack
 
 /// Bound all executable buffers and restoration metadata before allocation.
 const IMAGE_LIMIT = 1073741824
@@ -35,6 +36,8 @@ struct Options
   mode,
   /// Explicit trusted host UPX executable.
   upx,
+  /// Preserve the UPX mode for explicitly selected legacy builds only.
+  legacy,
 end struct
 
 #if TARGET_OS == "windows"
@@ -112,7 +115,7 @@ end function
 /// Parse optional packing modes before normal compilation/project caching.
 /// @param args Original command-line argument vector without the executable name.
 function parseOptions(args)
-  result = Options([], "", "")
+  result = Options([], "", "", false)
   i = 0
   while i < len(args)
     arg = args[i]
@@ -121,11 +124,13 @@ function parseOptions(args)
       result.mode = "compile"
       if arg == "--pack-exe" then result.mode = "pack" end if
       if arg == "--unpack-exe" then result.mode = "unpack" end if
+      if arg == "--pack=upx" then result.legacy = true end if
     else if arg == "--upx" then
       i = i + 1
       if i >= len(args) then return error(1, "--upx requires one executable path") end if
       if args[i] == "" or s.startsWith(args[i], "--") or result.upx != "" then return error(1, "--upx requires one executable path") end if
       result.upx = args[i]
+      result.legacy = true
     else if s.startsWith(arg, "--pack=") then
       return error(1, "only --pack=upx is supported")
     else
@@ -135,11 +140,13 @@ function parseOptions(args)
   end while
   if result.upx != "" and result.mode == "" then return error(1, "--upx requires a packing mode") end if
   if result.mode != "" then
-    if result.upx == "" then
-      env = process.environment("MINILANG_UPX")
-      if typeof(env) == "string" then result.upx = env end if
+    if result.legacy then
+      if result.upx == "" then
+        env = process.environment("MINILANG_UPX")
+        if typeof(env) == "string" then result.upx = env end if
+      end if
+      if result.upx == "" or fs.isFile(result.upx) == false then return error(1, "set --upx PATH or MINILANG_UPX to a trusted UPX executable") end if
     end if
-    if result.upx == "" or fs.isFile(result.upx) == false then return error(1, "set --upx PATH or MINILANG_UPX to a trusted UPX executable") end if
     if result.mode != "compile" and len(result.args) != 2 then return error(1, "--pack-exe/--unpack-exe require INPUT OUTPUT") end if
   end if
   return result
@@ -282,9 +289,11 @@ function transform(source, destination, upx, unpack, replace, runner)
   original = try(readImage(source))
   if typeof(original) == "error" then return original end if
   info = void
-  if unpack then
+  if unpack and upx != "" then
     info = try(parseOverlay(original))
     if typeof(info) == "error" then return info end if
+  else if unpack and len(original) >= 16 and slice(original, len(original) - 16, 8) == bytes("MLPACK01") then
+    return error(1, "legacy UPX image requires --upx PATH")
   else
     if len(original) < 4 then return error(1, "only PE/ELF executables can be packed") end if
     if slice(original, 0, 2) != bytes("MZ") and slice(original, 0, 4) != bytes([127, 69, 76, 70]) then return error(1, "only PE/ELF executables can be packed") end if
@@ -298,7 +307,14 @@ function transform(source, destination, upx, unpack, replace, runner)
   roundtrip = folder + "/roundtrip.bin"
   result_path = folder + "/result.bin"
   output = void
-  if unpack then
+  if upx == "" then
+    if unpack then
+      output = try(nativepack.unpackImage(original))
+    else
+      output = try(nativepack.packImage(original))
+    end if
+    if typeof(output) == "error" then return output end if
+  else if unpack then
     written = try(fs.writeAllBytes(payload, info[0]))
     if typeof(written) == "error" then return written end if
     ran = try(runTool(upx, ["-d", "-o", roundtrip, payload], runner))

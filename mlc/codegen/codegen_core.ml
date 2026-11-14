@@ -596,7 +596,7 @@ end function
 /// @param heap_config Value supplied for `heap_config`.
 function cg_core_new(source, filename, import_aliases, extern_sigs, extern_structs, target, heap_config)
   base_imports =[
-  NamedArray("kernel32.dll", ["GetStdHandle", "ReadFile", "WriteFile", "WriteConsoleW", "MultiByteToWideChar", "SetConsoleOutputCP", "FreeConsole", "ExitProcess", "VirtualAlloc", "VirtualFree", "GetCommandLineW", "LocalFree", "WideCharToMultiByte", "CreateThread", "WaitForSingleObject", "CloseHandle", "Sleep", "InitializeCriticalSection", "EnterCriticalSection", "LeaveCriticalSection"]),
+  NamedArray("kernel32.dll", ["GetStdHandle", "ReadFile", "WriteFile", "WriteConsoleW", "MultiByteToWideChar", "SetConsoleOutputCP", "FreeConsole", "ExitProcess", "VirtualAlloc", "VirtualFree", "GetCommandLineW", "LocalFree", "WideCharToMultiByte", "CreateThread", "WaitForSingleObject", "CloseHandle", "Sleep", "InitializeCriticalSection", "EnterCriticalSection", "LeaveCriticalSection", "VirtualProtect"]),
   NamedArray("msvcrt.dll", ["_gcvt", "fmod"]),
   NamedArray("shell32.dll", ["CommandLineToArgvW"])
 ]

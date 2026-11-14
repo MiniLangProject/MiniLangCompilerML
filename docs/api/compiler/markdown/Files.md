@@ -30,7 +30,9 @@
 | [mlc/incremental_ast.ml](File-mlc-incremental-ast-ml-368481696.md) | `mlc.incremental_ast` | yes | 3 |
 | [mlc/linux_runtime.ml](File-mlc-linux-runtime-ml-1485387394.md) | `mlc.linux_runtime` | yes | 30 |
 | [mlc/minilang_parser.ml](File-mlc-minilang-parser-ml-1485036712.md) | `mlc.minilang_parser` | yes | 664 |
-| [mlc/packing.ml](File-mlc-packing-ml-1689146092.md) | `mlc.packing` | yes | 22 |
+| [mlc/native_packing.ml](File-mlc-native-packing-ml-215987304.md) | `mlc.native_packing` | yes | 20 |
+| [mlc/pack_loader_bytes.ml](File-mlc-pack-loader-bytes-ml-1442657874.md) | `mlc.pack_loader_bytes` | yes | 2 |
+| [mlc/packing.ml](File-mlc-packing-ml-1689146092.md) | `mlc.packing` | yes | 23 |
 | [mlc/pe.ml](File-mlc-pe-ml-319201864.md) | `mlc.pe` | yes | 52 |
 | [mlc/project.ml](File-mlc-project-ml-1332928426.md) | `mlc.project` | yes | 65 |
 | [mlc/tools.ml](File-mlc-tools-ml-988451276.md) | `mlc.tools` | yes | 170 |

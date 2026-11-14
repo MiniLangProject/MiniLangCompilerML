@@ -9,15 +9,14 @@ itself. The [Python reference compiler](https://github.com/MiniLangProject/MiniL
 provides the bootstrap implementation and a second code-generation path.
 
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
-or read the [binary installation guide](README-BINARY.md). Version 1.3.6
+or read the [binary installation guide](README-BINARY.md). Version 1.3.7
 includes Windows and Linux packages with SHA-256 sidecars; see the
-[release notes](RELEASE_NOTES_1.3.6.md) and [changelog](CHANGELOG.md).
+[release notes](RELEASE_NOTES_1.3.7.md) and [changelog](CHANGELOG.md).
 
-Version 1.3.6 emits checked direct calls for one- and two-candidate OOP method
-sets and for exact class parameters. It also fixes dynamic calls with more than
-eight total arguments in the Python backend. See the
-[OOP evaluation](docs/reports/OOP_DISPATCH_2026-11-14.md) for parity,
-measurements and limitations. The 1.3.5 type-query optimization remains.
+Version 1.3.7 adds optional dependency-free Windows/Linux executable packing.
+Use `--pack` to enable it; see the [packing evaluation](docs/reports/NATIVE_PACKING_2026-11-14.md)
+for size, startup and byte-parity measurements. The 1.3.6 OOP improvements
+remain available.
 
 ## Quick start with a release package
 
@@ -133,7 +132,7 @@ self-hosted monolithic compiler and self-hosted `.mlo` pipeline are expected
 to emit identical target bytes. Version 1.3.2 restored this for the OOP
 regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 [OOP regression](tests/check_oop_binary_parity.py) and
-[1.3.6 release verification matrix](docs/reports/release-1.3.6-version-matrix.json).
+[1.3.7 release verification matrix](docs/reports/release-1.3.7-version-matrix.json).
 
 ## Documentation and development
 
@@ -148,6 +147,10 @@ regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 | Native crypto, checksums and CPU features | [Native primitives](docs/NATIVE_PRIMITIVES.md) |
 | Compression and platform services | [Platform services](docs/PLATFORM_SERVICES.md) |
 | Executable packing | [Packing guide](docs/EXECUTABLE_PACKING.md) |
+
+Use `--pack` for optional dependency-free PE/ELF packing. Packed programs
+decompress their code in memory at startup; the measured size and startup
+tradeoff is in the [evaluation](docs/reports/NATIVE_PACKING_2026-11-14.md).
 | Generated APIs | [Compiler](docs/api/compiler/markdown/README.md) · [Standard library](docs/api/std/markdown/README.md) |
 | Changes and releases | [Changelog](CHANGELOG.md) · [Releases](https://github.com/MiniLangProject/MiniLangCompilerML/releases) |
 
