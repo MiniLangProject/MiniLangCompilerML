@@ -26,6 +26,7 @@ FIXTURES = (
     "language_class_qualified_static.ml",
     "language_class_static_inheritance.ml",
     "language_interface_inheritance.ml",
+    "oop_monomorphic_dispatch.ml",
 )
 
 

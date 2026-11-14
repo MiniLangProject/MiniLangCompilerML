@@ -18,7 +18,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', required=True, type=Path)
     parser.add_argument('--platform', required=True, choices=['windows-x64', 'linux-x64'])
-    parser.add_argument('--version', default='1.3.5')
+    parser.add_argument('--version', default='1.3.6')
     parser.add_argument('--third-party', action='append', default=[], type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -56,6 +56,8 @@ def main() -> int:
         for filename in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README-BINARY.md', 'CHANGELOG.md', f'RELEASE_NOTES_{args.version}.md']:
             shutil.copy2(root / filename, package / filename)
         for document in ('EXECUTABLE_PACKING.md', 'INCREMENTAL_BUILDS.md', 'OOP.md',
+                         'reports/OOP_DISPATCH_2026-11-14.md',
+                         'reports/OOP_DISPATCH_2026-11-14.json',
                          'reports/TYPEOF_FOLDING_2026-11-13.md',
                          'reports/TYPEOF_FOLDING_2026-11-13.json',
                          'reports/LOOP_PARITY_2026-11-13.md',

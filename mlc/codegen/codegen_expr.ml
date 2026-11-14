@@ -6221,13 +6221,17 @@ function _emit_expr_call(state, expr)
         cache_sid1_lbl_dyn = "mcall_ic_sid1_" + fid_dyn
         cache_pad1_lbl_dyn = "mcall_ic_sid1pad_" + fid_dyn
         cache_code1_lbl_dyn = "mcall_ic_code1_" + fid_dyn
-        state.data = d.data_pad_align(state.data, 8)
-        state.data = d.data_add_u32(state.data, cache_sid0_lbl_dyn, 0xFFFFFFFF)
-        state.data = d.data_add_u32(state.data, cache_pad0_lbl_dyn, 0)
-        state.data = d.data_add_u64(state.data, cache_code0_lbl_dyn, 0)
-        state.data = d.data_add_u32(state.data, cache_sid1_lbl_dyn, 0xFFFFFFFF)
-        state.data = d.data_add_u32(state.data, cache_pad1_lbl_dyn, 0)
-        state.data = d.data_add_u64(state.data, cache_code1_lbl_dyn, 0)
+        // Small closed method sets use direct calls without a writable cache;
+        // larger sets retain the two-entry polymorphic inline cache.
+        if len(cands_dyn) > 2 then
+          state.data = d.data_pad_align(state.data, 8)
+          state.data = d.data_add_u32(state.data, cache_sid0_lbl_dyn, 0xFFFFFFFF)
+          state.data = d.data_add_u32(state.data, cache_pad0_lbl_dyn, 0)
+          state.data = d.data_add_u64(state.data, cache_code0_lbl_dyn, 0)
+          state.data = d.data_add_u32(state.data, cache_sid1_lbl_dyn, 0xFFFFFFFF)
+          state.data = d.data_add_u32(state.data, cache_pad1_lbl_dyn, 0)
+          state.data = d.data_add_u64(state.data, cache_code1_lbl_dyn, 0)
+        end if
 
         base_dyn = core.alloc_expr_temps(state, total_dyn * 8)
         if typeof(base_dyn) != "int" or base_dyn <= 0 then
@@ -6286,54 +6290,72 @@ function _emit_expr_call(state, expr)
         // Keep argument registers intact (rdx carries arg1); use r10d for dispatch id.
         state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 4)
 
-        // Small polymorphic inline cache: primary + secondary struct_id/code pair.
-        state.asm = a.mov_eax_rip_dword(state.asm, cache_sid0_lbl_dyn)
-        state.asm = a.cmp_r32_r32(state.asm, "r10d", "eax")
-        state.asm = a.jcc(state.asm, "ne", l_ic_try1_dyn)
-        state.asm = a.mov_rax_rip_qword(state.asm, cache_code0_lbl_dyn)
-        state.asm = a.test_r64_r64(state.asm, "rax", "rax")
-        state.asm = a.jcc(state.asm, "e", l_ic_try1_dyn)
-        state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
-        state.asm = a.call_rax(state.asm)
-        state.asm = a.jmp(state.asm, l_done_dyn)
-
-        state.asm = a.mark(state.asm, l_ic_try1_dyn)
-        state.asm = a.mov_eax_rip_dword(state.asm, cache_sid1_lbl_dyn)
-        state.asm = a.cmp_r32_r32(state.asm, "r10d", "eax")
-        state.asm = a.jcc(state.asm, "ne", l_ic_miss_dyn)
-        state.asm = a.mov_rax_rip_qword(state.asm, cache_code1_lbl_dyn)
-        state.asm = a.test_r64_r64(state.asm, "rax", "rax")
-        state.asm = a.jcc(state.asm, "e", l_ic_miss_dyn)
-        state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
-        state.asm = a.call_rax(state.asm)
-        state.asm = a.jmp(state.asm, l_done_dyn)
-
-        state.asm = a.mark(state.asm, l_ic_miss_dyn)
-        state = _emit_method_candidate_search(state, cands_dyn, 0, len(cands_dyn) - 1, fid_dyn, l_fail_dyn)
-
-        for ci_dyn2 = 0 to len(cands_dyn) - 1
-          c_dyn2 = cands_dyn[ci_dyn2]
-          sid_dyn3 = -1
-          fnq_dyn3 = ""
-          if typeof(c_dyn2) == "array" and len(c_dyn2) >= 2 then
-            if typeof(c_dyn2[0]) == "int" then sid_dyn3 = c_dyn2[0] end if
-            fnq_dyn3 = _coerce_name(c_dyn2[1])
-          end if
-          if sid_dyn3 < 0 or fnq_dyn3 == "" then continue end if
-          l_case_dyn2 = "mcall_case_" + fid_dyn + "_" + sid_dyn3
-          state.asm = a.mark(state.asm, l_case_dyn2)
+        if len(cands_dyn) <= 2 then
+          for small_i_dyn = 0 to len(cands_dyn) - 1
+            small_candidate_dyn = cands_dyn[small_i_dyn]
+            small_sid_dyn = small_candidate_dyn[0]
+            small_fn_dyn = _coerce_name(small_candidate_dyn[1])
+            small_last_dyn = small_i_dyn == len(cands_dyn) - 1
+            small_next_dyn = l_fail_dyn
+            if not small_last_dyn then small_next_dyn = "mcall_small_next_" + fid_dyn + "_" + small_i_dyn end if
+            state.asm = a.cmp_r32_imm(state.asm, "r10d", small_sid_dyn)
+            state.asm = a.jcc(state.asm, "ne", small_next_dyn)
+            state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+            state.asm = a.call(state.asm, "fn_user_" + small_fn_dyn)
+            state.asm = a.jmp(state.asm, l_done_dyn)
+            if not small_last_dyn then state.asm = a.mark(state.asm, small_next_dyn) end if
+          end for
+        else
+          // Small polymorphic inline cache: primary + secondary struct_id/code pair.
           state.asm = a.mov_eax_rip_dword(state.asm, cache_sid0_lbl_dyn)
-          state.asm = a.mov_rip_dword_eax(state.asm, cache_sid1_lbl_dyn)
+          state.asm = a.cmp_r32_r32(state.asm, "r10d", "eax")
+          state.asm = a.jcc(state.asm, "ne", l_ic_try1_dyn)
           state.asm = a.mov_rax_rip_qword(state.asm, cache_code0_lbl_dyn)
-          state.asm = a.mov_rip_qword_rax(state.asm, cache_code1_lbl_dyn)
-          state.asm = a.mov_r32_r32(state.asm, "eax", "r10d")
-          state.asm = a.mov_rip_dword_eax(state.asm, cache_sid0_lbl_dyn)
-          state.asm = a.lea_rax_rip(state.asm, "fn_user_" + fnq_dyn3)
-          state.asm = a.mov_rip_qword_rax(state.asm, cache_code0_lbl_dyn)
+          state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+          state.asm = a.jcc(state.asm, "e", l_ic_try1_dyn)
           state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
-          state.asm = a.call(state.asm, "fn_user_" + fnq_dyn3)
+          state.asm = a.call_rax(state.asm)
           state.asm = a.jmp(state.asm, l_done_dyn)
-        end for
+
+          state.asm = a.mark(state.asm, l_ic_try1_dyn)
+          state.asm = a.mov_eax_rip_dword(state.asm, cache_sid1_lbl_dyn)
+          state.asm = a.cmp_r32_r32(state.asm, "r10d", "eax")
+          state.asm = a.jcc(state.asm, "ne", l_ic_miss_dyn)
+          state.asm = a.mov_rax_rip_qword(state.asm, cache_code1_lbl_dyn)
+          state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+          state.asm = a.jcc(state.asm, "e", l_ic_miss_dyn)
+          state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+          state.asm = a.call_rax(state.asm)
+          state.asm = a.jmp(state.asm, l_done_dyn)
+
+          state.asm = a.mark(state.asm, l_ic_miss_dyn)
+          state = _emit_method_candidate_search(state, cands_dyn, 0, len(cands_dyn) - 1, fid_dyn, l_fail_dyn)
+
+          for ci_dyn2 = 0 to len(cands_dyn) - 1
+            c_dyn2 = cands_dyn[ci_dyn2]
+            sid_dyn3 = -1
+            fnq_dyn3 = ""
+            if typeof(c_dyn2) == "array" and len(c_dyn2) >= 2 then
+              if typeof(c_dyn2[0]) == "int" then sid_dyn3 = c_dyn2[0] end if
+              fnq_dyn3 = _coerce_name(c_dyn2[1])
+            end if
+            if sid_dyn3 < 0 or fnq_dyn3 == "" then continue end if
+            l_case_dyn2 = "mcall_case_" + fid_dyn + "_" + sid_dyn3
+            state.asm = a.mark(state.asm, l_case_dyn2)
+            state.asm = a.mov_eax_rip_dword(state.asm, cache_sid0_lbl_dyn)
+            state.asm = a.mov_rip_dword_eax(state.asm, cache_sid1_lbl_dyn)
+            state.asm = a.mov_rax_rip_qword(state.asm, cache_code0_lbl_dyn)
+            state.asm = a.mov_rip_qword_rax(state.asm, cache_code1_lbl_dyn)
+            state.asm = a.mov_r32_r32(state.asm, "eax", "r10d")
+            state.asm = a.mov_rip_dword_eax(state.asm, cache_sid0_lbl_dyn)
+            state.asm = a.lea_rax_rip(state.asm, "fn_user_" + fnq_dyn3)
+            state.asm = a.mov_rip_qword_rax(state.asm, cache_code0_lbl_dyn)
+            state.asm = a.mov_r64_imm64(state.asm, "r10", t.enc_void())
+            state.asm = a.call(state.asm, "fn_user_" + fnq_dyn3)
+            state.asm = a.jmp(state.asm, l_done_dyn)
+          end for
+
+        end if
 
         state.asm = a.mark(state.asm, l_fail_dyn)
         state = _emit_make_error_const(state, c.ERR_METHOD_NOT_FOUND, "No matching method '" + mname_dyn + "' for receiver")

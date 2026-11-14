@@ -3942,9 +3942,20 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
       if param_i < len(param_types) then param_type = param_types[param_i] end if
       optional = false
       if typeof(param_optional) == "array" and param_i < len(param_optional) and typeof(param_optional[param_i]) == "bool" then optional = param_optional[param_i] end if
-      // Seed container contracts even without operators; later writes are
-      // still validated by the whole-function representation analysis.
-      if state.operator_overloads_present == false and param_type != "array" and param_type != "bytes" then continue end if
+      // Closed class/struct contracts have an exact receiver type after the
+      // entry guard. A base with descendants keeps virtual dispatch. Later
+      // writes still pass through the whole-function fact validation below.
+      closed_struct = false
+      if typeof(param_type) == "string" and state.operator_overloads_present == false and param_type != "array" and param_type != "bytes" then
+        if param_type != "int" and param_type != "integer" and param_type != "float" and param_type != "bool" and param_type != "boolean" and param_type != "string" and param_type != "str" and param_type != "function" and param_type != "thread" and param_type != "error" and param_type != "void" then
+          closed_fact = exprmod._operator_declared_type_fact(state, param_type, "", fn_node)
+          if s.startsWith(closed_fact, "struct:") then
+            closed_name = s.substr(closed_fact, 7, len(closed_fact) - 7)
+            closed_struct = t.fastmap_get(state.polymorphic_classes, closed_name, false) != true
+          end if
+        end if
+      end if
+      if state.operator_overloads_present == false and param_type != "array" and param_type != "bytes" and closed_struct == false then continue end if
       if typeof(param_type) == "string" and optional == false and _arr_has(excluded, param_name) == false then
         param_fact = exprmod._operator_declared_type_fact(state, param_type, "", fn_node)
         if param_fact != "" then typed_param_facts = typed_param_facts + [[param_name, param_fact]] end if

@@ -917,6 +917,7 @@ function main(args)
   if _test(compiler_path, repo_root, "type_query_resolution", "tests\\type_query_resolution.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "typeof_declared_call", "tests\\typeof_declared_call.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "inline_error_boundaries", "tests\\inline_error_boundaries.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "oop_monomorphic_dispatch", "tests\\oop_monomorphic_dispatch.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_extensions", "tests\\language_extensions.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "operator_overloading", "tests\\operator_overloading.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_performance_features", "tests\\language_performance_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
