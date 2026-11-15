@@ -33,13 +33,15 @@ import mlc.asm as a
 import mlc.data as d
 import mlc.elf as elf
 import mlc.linux_runtime as linuxrt
+import mlc.minux_runtime as minuxrt
+import mlc.sysv_runtime as sysvrt
 import mlc.packing as packing
 import mlc.incremental as incremental
 
 /// Track compiler version.
-const COMPILER_VERSION = "1.3.8"
+const COMPILER_VERSION = "1.3.9"
 /// Track compiler version text.
-const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.8"
+const COMPILER_VERSION_TEXT = "MiniLang Compiler 1.3.9"
 /// Track direct section label threshold.
 const DIRECT_SECTION_LABEL_THRESHOLD = 262144
 /// Track auto object pipeline score.
@@ -92,25 +94,53 @@ extern function _mlo_CloseHandle(handle as ptr) from "kernel32.dll" symbol "Clos
 #else
 /// Perform the host mkdir compiler phase.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _host_mkdir(path as cstr, mode as u32) from "libc.so.1" symbol "mkdir" returns i32
+#else
 extern function _host_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
+#endif
 /// Perform the host system compiler phase.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _host_system(cmd as cstr) from "libc.so.1" symbol "system" returns i32
+#else
 extern function _host_system(cmd as cstr) from "libc.so.6" symbol "system" returns i32
+#endif
 /// Perform the host chmod compiler phase.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _host_chmod(path as cstr, mode as u32) from "libc.so.1" symbol "chmod" returns i32
+#else
 extern function _host_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
+#endif
 /// Perform the host stat compiler phase.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _host_stat(path as cstr, info as bytes) from "libc.so.1" symbol "stat" returns i32
+#else
 extern function _host_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
+#endif
 /// Perform the mlo open compiler phase.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _mlo_open(path as cstr, flags as int, mode as u32) from "libc.so.1" symbol "open" returns i32
+#else
 extern function _mlo_open(path as cstr, flags as int, mode as u32) from "libc.so.6" symbol "open" returns i32
+#endif
 /// Perform the mlo write compiler phase.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _mlo_write(fd as int, input as bytes, count as u64) from "libc.so.1" symbol "write" returns i64
+#else
 extern function _mlo_write(fd as int, input as bytes, count as u64) from "libc.so.6" symbol "write" returns i64
+#endif
 /// Perform the mlo close compiler phase.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _mlo_close(fd as int) from "libc.so.1" symbol "close" returns i32
+#else
 extern function _mlo_close(fd as int) from "libc.so.6" symbol "close" returns i32
+#endif
 #endif
 
 /// Frontend diagnostics and keep-going results.
@@ -481,7 +511,7 @@ function _usage()
   print "Build internals:"
   print "  --object-pipeline    force the memory-bounded .mlo pipeline"
   print "  --no-object-pipeline force the monolithic pipeline"
-  print "  --target TARGET      windows-x64 (default) or linux-x64"
+  print "  --target TARGET      windows-x64 (default), linux-x64 or minux-x64"
   print "  --gc-concurrent     Windows background SATB collection (no heap shrink)"
   print "Conditional compilation:"
   print "  -DNAME[=VALUE] | --define NAME[=VALUE]"
@@ -749,7 +779,7 @@ end function
 /// @internal
 function _path_canon(p)
   if typeof(p) != "string" then return "" end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   if p == "" then return "." end if
   absolute = _startsWith(p, "/")
   parts = s.split(p, "/")
@@ -838,7 +868,7 @@ end function
 /// Perform the path norm compiler phase.
 /// @internal
 function _path_norm(p)
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   return _path_canon(p)
 #else
   return s.toLowerAscii(_path_canon(p))
@@ -849,7 +879,7 @@ end function
 /// @internal
 function _path_abspath(p)
   if typeof(p) != "string" or p == "" then return "" end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   if _is_abs_path(p) then return _path_canon(p) end if
   cwd = process.currentDirectory()
   if typeof(cwd) != "string" or cwd == "" then return _path_canon(p) end if
@@ -878,7 +908,7 @@ end function
 /// @internal
 function _cmd_quote_arg(x)
   if typeof(x) != "string" then return "\"\"" end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   // POSIX shells do not interpret characters inside single quotes. Encode an
   // embedded quote as the standard close/escaped-quote/reopen sequence.
   return "'" + s.replaceAll(x, "'", "'\\''") + "'"
@@ -938,7 +968,7 @@ function _run_child_process(executable, args)
       cmd = cmd + " " + _cmd_quote_arg(args[i])
     end for
   end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   return _host_system(cmd)
 #else
   startup = bytes(104, 0)
@@ -961,10 +991,14 @@ end function
 /// Native Linux filesystems require execute permission in addition to valid ELF contents. Windows cross-builds cannot represent this bit and intentionally leave deployment-time chmod behavior unchanged.
 /// @internal
 function _make_linux_output_executable(path)
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   attr = bytes(144, 0)
   if _host_stat(path, attr) != 0 then return error(1, "stat failed for Linux executable") end if
+#if TARGET_OS == "minux"
+  current_mode = _u32le_at(attr, 8) & 4095
+#else
   current_mode = _u32le_at(attr, 24) & 4095
+#endif
   // Add execute only where the umask left a corresponding read permission.
   // A private 0600 output becomes 0700; a normal 0644 output becomes 0755.
   executable_mode = current_mode | ((current_mode & 292) >> 2)
@@ -1043,7 +1077,7 @@ function inline _path_join(a, b)
   if last == "\\" or last == "/" then
     return a + b
   end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   return a + "/" + b
 #else
   return a + "\\" + b
@@ -1119,7 +1153,7 @@ function _ensure_dir_recursive(path)
     if _ensure_dir_recursive(parent) == false then return false end if
   end if
 
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   ok = _host_mkdir(path, 493) == 0
 #else
   ok = CreateDirectoryW(path, 0)
@@ -1784,7 +1818,7 @@ end function
 function _resolve_import_cache_key(requested, base_dir)
   req = requested
   if typeof(req) != "string" then req = "" + req end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   return _path_norm_cached(base_dir) + "|" + req
 #else
   return _path_norm_cached(base_dir) + "|" + s.toLowerAscii(req)
@@ -3355,7 +3389,7 @@ end function
 
 /// Encode ELF imports in the existing platform-neutral string-list field. PE readers ignore the tagged entries; the ELF linker reconstructs the exact library/symbol/data-slot triplets without adding target-specific fields.
 /// @internal
-function _mlo_linux_import_records(dynamic_imports)
+function _mlo_elf_import_records(dynamic_imports)
   records = []
   if typeof(dynamic_imports) != "array" or len(dynamic_imports) <= 0 then return records end if
   for i = 0 to len(dynamic_imports) - 1
@@ -3378,7 +3412,7 @@ end function
 
 /// Perform the mlo linux dynamic imports compiler phase.
 /// @internal
-function _mlo_linux_dynamic_imports(imports)
+function _mlo_elf_dynamic_imports(imports)
   ordered_b = t.arr_chunk_new(16)
   if typeof(imports) != "array" or len(imports) <= 0 then return [] end if
   sequence = 0
@@ -3408,7 +3442,7 @@ function _mlo_linux_dynamic_imports(imports)
       slot = toNumber(slot_text)
       if typeof(ordinal) != "int" then ordinal = sequence end if
       if typeof(slot) != "int" or slot < 0 or symbol_name == "" then continue end if
-      ordered_b = t.arr_chunk_push(ordered_b, [ordinal, sequence, linuxrt.DynamicImport(library, symbol_name, slot)])
+      ordered_b = t.arr_chunk_push(ordered_b, [ordinal, sequence, sysvrt.DynamicImport(library, symbol_name, slot)])
       sequence = sequence + 1
     end for
   end for
@@ -3441,7 +3475,7 @@ function _get_target(args)
     if args[i] == "--target" then
       if i + 1 >= len(args) then return [false, "windows-x64"] end if
       value = s.toLowerAscii(s.trim(args[i + 1]))
-      if value == "windows-x64" or value == "linux-x64" then return [true, value] end if
+      if value == "windows-x64" or value == "linux-x64" or value == "minux-x64" then return [true, value] end if
       return [false, value]
     end if
     i = i + 1
@@ -5889,6 +5923,10 @@ end function
 /// @param extern_struct_names Value supplied for `extern_struct_names`.
 function validate_extern_sigs(extern_sigs, extern_struct_names)
   if typeof(extern_sigs) != "array" or len(extern_sigs) <= 0 then return "" end if
+  if _compile_target == "minux-x64" then
+    target_error = minuxrt.validate_extern_sigs(extern_sigs)
+    if target_error != "" then return target_error end if
+  end if
   physical_keys = []
   physical_abis = []
   physical_names = []
@@ -5898,8 +5936,8 @@ function validate_extern_sigs(extern_sigs, extern_struct_names)
     if typeof(sig.dll) != "string" or s.trim(sig.dll) == "" then
       return "extern function " + sig.qname + " missing DLL name"
     end if
-    if _compile_target == "linux-x64" and s.endsWith(s.toLowerAscii(s.trim(sig.dll)), ".dll") then
-      return "extern function " + sig.qname + ": Windows DLL '" + sig.dll + "' cannot be imported by the linux-x64 target; guard the declaration with TARGET_OS or use a Linux shared library"
+    if (_compile_target == "linux-x64" or _compile_target == "minux-x64") and s.endsWith(s.toLowerAscii(s.trim(sig.dll)), ".dll") then
+      return "extern function " + sig.qname + ": Windows DLL '" + sig.dll + "' cannot be imported by the " + _compile_target + " target; guard the declaration with TARGET_OS or use a target-native shared library"
     end if
     seen_out = false
     if typeof(sig.params) == "array" and len(sig.params) > 0 then
@@ -5937,7 +5975,7 @@ function validate_extern_sigs(extern_sigs, extern_struct_names)
     symbol_name = "" + try(sig.symbol_name)
     if symbol_name == "" then symbol_name = "" + try(sig.name) end if
     library_name = sig.dll
-    if _compile_target != "linux-x64" then library_name = s.toLowerAscii(s.trim(library_name)) end if
+    if (_compile_target != "linux-x64" and _compile_target != "minux-x64") then library_name = s.toLowerAscii(s.trim(library_name)) end if
     physical_key = len(library_name) + ":" + library_name + symbol_name
     physical_abi = ""
     if typeof(sig.params) == "array" and len(sig.params) > 0 then
@@ -6294,9 +6332,9 @@ end function
 
 /// Perform the link mlo linux sections compiler phase.
 /// @internal
-function _link_mlo_linux_sections(obj_paths, output_exe, text_buf, rdata_buf, data_buf, bss_size, patch_file_recs, imports)
-  dynamic_imports = _mlo_linux_dynamic_imports(imports)
-  layout = elf.plan(len(text_buf), len(rdata_buf), len(data_buf), elf.dynamic_size(dynamic_imports))
+function _link_mlo_elf_sections(obj_paths, output_exe, text_buf, rdata_buf, data_buf, bss_size, patch_file_recs, imports)
+  dynamic_imports = _mlo_elf_dynamic_imports(imports)
+  layout = elf.plan_for_target(len(text_buf), len(rdata_buf), len(data_buf), elf.dynamic_size_for_target(dynamic_imports, _compile_target), _compile_target)
   want_labels_dump = typeof(_dump_labels_path) == "string" and _dump_labels_path != ""
   maps = _link_build_label_maps(
     patch_file_recs, layout.text_off, layout.rdata_off, layout.data_off,
@@ -6350,7 +6388,7 @@ function _link_mlo_linux_sections(obj_paths, output_exe, text_buf, rdata_buf, da
     print "CompileError: missing Linux _start label in linked objects"
     return 2
   end if
-  image = elf.build(text_buf, rdata_buf, data_buf, bss_size, entry_file_off - layout.text_off, dynamic_imports)
+  image = elf.build_for_target(text_buf, rdata_buf, data_buf, bss_size, entry_file_off - layout.text_off, dynamic_imports, _compile_target)
   if typeof(image) == "error" then
     print "CompileError: failed to build linked ELF image: " + image.message
     return 2
@@ -6472,8 +6510,8 @@ function _link_mlo_files(obj_paths, output_exe, subsystem)
   obj_path_copy = ""
   gc_collect()
 
-  if _compile_target == "linux-x64" then
-    return _link_mlo_linux_sections(
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then
+    return _link_mlo_elf_sections(
       obj_paths, output_exe, text_buf, rdata_buf, data_buf, bss_off,
       patch_file_recs, imports
     )
@@ -6762,8 +6800,8 @@ end function
 
 /// Compile and link one complete program in memory.
 /// @internal
-function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_buf, output_exe, dynamic_imports)
-  layout = elf.plan(len(text_buf), len(rdata_buf), len(data_buf), elf.dynamic_size(dynamic_imports))
+function _write_elf_image(st, asm_labels, patches, text_buf, rdata_buf, data_buf, output_exe, dynamic_imports)
+  layout = elf.plan_for_target(len(text_buf), len(rdata_buf), len(data_buf), elf.dynamic_size_for_target(dynamic_imports, _compile_target), _compile_target)
   use_combined_label_map = typeof(asm_labels) == "array" and len(asm_labels) > 0
   rdlabels = d.rdata_get_labels(st.rdata)
   dtlabels = d.data_get_labels(st.data)
@@ -6825,11 +6863,11 @@ function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_b
         end if
       end if
       if typeof(trg) != "int" or trg < 0 then
-        print "CompileError: unknown Linux patch target: " + pt.target
+        print "CompileError: unknown ELF patch target: " + pt.target
         return 2
       end if
       if pt.kind != "rip32" and pt.kind != "rel32" then
-        print "CompileError: unknown Linux patch kind: " + pt.kind
+        print "CompileError: unknown ELF patch kind: " + pt.kind
         return 2
       end if
       b4 = t.u32(trg - (layout.text_off + pt.pos + 4))
@@ -6855,11 +6893,11 @@ function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_b
           end if
         end if
         if typeof(trg) != "int" or trg < 0 then
-          print "CompileError: unknown Linux data patch target: " + pt.target
+          print "CompileError: unknown ELF data patch target: " + pt.target
           return 2
         end if
         if pt.kind != "abs64" then
-          print "CompileError: unknown Linux data patch kind: " + pt.kind
+          print "CompileError: unknown ELF data patch kind: " + pt.kind
           return 2
         end if
         b8 = t.u64(layout.base + trg)
@@ -6879,7 +6917,7 @@ function _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_b
     if typeof(entry_text_off) == "int" and entry_text_off >= 0 then entry_rva = layout.text_off + entry_text_off end if
   end if
   entry = entry_rva - layout.text_off
-  image = elf.build(text_buf, rdata_buf, data_buf, bss_size, entry, dynamic_imports)
+  image = elf.build_for_target(text_buf, rdata_buf, data_buf, bss_size, entry, dynamic_imports, _compile_target)
   if typeof(image) == "error" then
     print "CompileError: failed to build ELF image: " + image.message
     return 2
@@ -6999,18 +7037,18 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   // The monolithic/default path needs the same synthetic callStat metadata as
   // the object pipeline before member access is planned.
   cg = codegen.enable_call_profile_metadata(cg)
-  if _compile_target == "linux-x64" then cg.state = linuxrt.emit_startup(cg.state) end if
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then cg.state = _target_emit_startup(cg.state) end if
   _compile_codegen_keepalive = [load, cg]
   _compiler_profile_phase("emitting program")
   cg = codegen.emit_program(cg, load.program)
-  if _compile_target == "linux-x64" then cg.state = linuxrt.emit_runtime(cg.state) end if
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then cg.state = _target_emit_runtime(cg.state) end if
   _heap_probe("compile:codegen_done")
   st = cg.state
-  linux_dynamic_imports = []
-  if _compile_target == "linux-x64" then
-    prepared_imports = linuxrt.prepare_dynamic_imports(st)
+  elf_dynamic_imports = []
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then
+    prepared_imports = _target_prepare_imports(st)
     st = prepared_imports.state
-    linux_dynamic_imports = prepared_imports.imports
+    elf_dynamic_imports = prepared_imports.imports
     cg.state = st
   end if
   _compile_codegen_keepalive = st
@@ -7128,8 +7166,8 @@ function compile_to_exe_opts_monolithic(input_ml, output_exe, include_dirs, keep
   end if
   _heap_probe("compile:buffers_compacted")
 
-  if _compile_target == "linux-x64" then
-    return _write_linux_image(st, asm_labels, patches, text_buf, rdata_buf, data_buf, output_exe, linux_dynamic_imports)
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then
+    return _write_elf_image(st, asm_labels, patches, text_buf, rdata_buf, data_buf, output_exe, elf_dynamic_imports)
   end if
 
   _compiler_profile_phase("building PE layout")
@@ -7563,7 +7601,7 @@ end function
 /// @internal
 function _asm_append_section(bld, name, buf, rva)
   address_kind = "RVA"
-  if _compile_target == "linux-x64" then address_kind = "VA" end if
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then address_kind = "VA" end if
   bld.appendLine("; section " + name + " " + address_kind + "=0x" + _hex_u32_fixed(rva) + " size=" + len(buf))
   off = 0
   while off < len(buf)
@@ -7717,7 +7755,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   cg = codegen.enable_call_profile_metadata(cg)
   // Linux startup reserves data as well as emitting _start. Do this before
   // object planning so section allocation order matches monolithic codegen.
-  if _compile_target == "linux-x64" then cg.state = linuxrt.emit_startup(cg.state) end if
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then cg.state = _target_emit_startup(cg.state) end if
   _compile_codegen_keepalive = [load, cg]
   _heap_probe("compile:call_profile_metadata_done")
 
@@ -7788,7 +7826,7 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
 
   helper_union = _merge_string_arrays(helper_union, st.used_helpers)
   object_entry_label = "__ml_entry"
-  if _compile_target == "linux-x64" then object_entry_label = "_start" end if
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then object_entry_label = "_start" end if
   entry_obj = _mlo_from_state("entry", input_abs, object_entry_label, st)
   helper_union = _collect_internal_helper_targets(helper_union, entry_obj.asm_patches)
   helper_union = _collect_internal_helper_targets(helper_union, entry_obj.rdata_patches)
@@ -8012,16 +8050,16 @@ function compile_to_exe_opts_object(input_ml, output_exe, include_dirs, keep_goi
   tail_cg = codegen.emit_extern_stubs(tail_cg)
   _progress_phase("emitting canonical runtime helpers")
   tail_cg = codegen.emit_used_helpers(tail_cg)
-  linux_dynamic_imports = []
-  if _compile_target == "linux-x64" then
-    tail_cg.state = linuxrt.emit_runtime(tail_cg.state)
-    prepared_linux_imports = linuxrt.prepare_dynamic_imports(tail_cg.state)
-    tail_cg.state = prepared_linux_imports.state
-    linux_dynamic_imports = prepared_linux_imports.imports
+  elf_dynamic_imports = []
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then
+    tail_cg.state = _target_emit_runtime(tail_cg.state)
+    prepared_elf_imports = _target_prepare_imports(tail_cg.state)
+    tail_cg.state = prepared_elf_imports.state
+    elf_dynamic_imports = prepared_elf_imports.imports
   end if
   _progress_phase("serializing canonical support tail")
   tail_obj = _mlo_from_state_delta("support", input_abs, "", tail_cg.state, tail_checkpoint)
-  if _compile_target == "linux-x64" then tail_obj.imports = _mlo_linux_import_records(linux_dynamic_imports) end if
+  if (_compile_target == "linux-x64" or _compile_target == "minux-x64") then tail_obj.imports = _mlo_elf_import_records(elf_dynamic_imports) end if
   tail_path = _tmp_obj_path(tmp_dir, "" + module_object_seq, input_abs, "support")
   wr_tail = _write_mlo_file(tail_path, tail_obj)
   if typeof(wr_tail) == "error" then
@@ -8246,10 +8284,15 @@ function run_cli(args)
 
   target_result = _get_target(args)
   if target_result[0] == false then
-    print "CompileError: invalid target (use windows-x64 or linux-x64)"
+    print "CompileError: invalid target (use windows-x64, linux-x64 or minux-x64)"
     return 2
   end if
   _compile_target = target_result[1]
+  target_subsystem = _get_subsystem(args)
+  if _compile_target == "minux-x64" and target_subsystem[1] != 3 then
+    print "CompileOptionError: minux-x64 supports the console subsystem only"
+    return 2
+  end if
   if _has_flag(args, "--gc-concurrent") then
     if _compile_target != "windows-x64" then
       print "CompileOptionError: --gc-concurrent currently requires windows-x64"
@@ -8412,6 +8455,10 @@ function run_cli(args)
       packed_result = try(packing.transform(_path_abspath(out_path), _path_abspath(out_path), packing_tool, false, true, _run_child_process))
       if typeof(packed_result) == "error" then print "PackError: " + packed_result.message; return 2 end if
     end if
+    if link_rc == 0 and _compile_target == "minux-x64" and fs.fileSize(out_path) > 16777216 then
+      print "CompileError: MinUX loader accepts images up to 16 MiB; use --pack or reduce the program. Output retained"
+      return 2
+    end if
     _compiler_profile_finish()
     return link_rc
   end if
@@ -8453,6 +8500,10 @@ function run_cli(args)
     packed_result = try(packing.transform(_path_abspath(out_path), _path_abspath(out_path), packing_tool, false, true, _run_child_process))
     if typeof(packed_result) == "error" then print "PackError: " + packed_result.message + "; unpacked compiler output retained"; return 2 end if
   end if
+  if compile_rc == 0 and _object_emit_only == false and _compile_target == "minux-x64" and fs.fileSize(out_path) > 16777216 then
+    print "CompileError: MinUX loader accepts images up to 16 MiB; use --pack or reduce the program. Output retained"
+    return 2
+  end if
   if compile_rc == 0 and project_cache_enabled then
     if project.fingerprint(project_build, inp, include_dirs) != project_digest then
       print "[incremental] inputs changed during compilation; artifact cache not published"
@@ -8469,4 +8520,23 @@ function run_cli(args)
   incremental.report()
   _compiler_profile_finish()
   return compile_rc
+end function
+
+/// Select the configured target startup emitter.
+/// @internal
+function _target_emit_startup(state)
+  if _compile_target == "minux-x64" then return minuxrt.emit_startup(state) end if
+  return linuxrt.emit_startup(state)
+end function
+/// Select the configured target runtime emitter.
+/// @internal
+function _target_emit_runtime(state)
+  if _compile_target == "minux-x64" then return minuxrt.emit_runtime(state) end if
+  return linuxrt.emit_runtime(state)
+end function
+/// Select the configured target native-import preparation.
+/// @internal
+function _target_prepare_imports(state)
+  if _compile_target == "minux-x64" then return minuxrt.prepare_dynamic_imports(state) end if
+  return linuxrt.prepare_dynamic_imports(state)
 end function

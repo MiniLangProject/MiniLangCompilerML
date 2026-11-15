@@ -72,37 +72,65 @@ extern function _memcmp(left as ptr, right as ptr, count as u64) from "msvcrt.dl
 /// @param path Native path to a new staging directory.
 /// @param mode Requested POSIX permission bits, subject to umask.
 /// @returns Zero on success, otherwise minus one.
+#if TARGET_OS == "minux"
+extern function _mkdir(path as cstr, mode as u32) from "libc.so.1" symbol "mkdir" returns i32
+#else
 extern function _mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
+#endif
 /// Remove only the empty staging directory.
 /// @param path Native path to an empty owned directory.
 /// @returns Zero on success, otherwise minus one.
+#if TARGET_OS == "minux"
+extern function _rmdir(path as cstr) from "libc.so.1" symbol "rmdir" returns i32
+#else
 extern function _rmdir(path as cstr) from "libc.so.6" symbol "rmdir" returns i32
+#endif
 /// Atomic no-overwrite publication of a validated image.
 /// @param source Native staging-file path.
 /// @param destination Native destination that must not already exist.
 /// @returns Zero on success, otherwise minus one.
+#if TARGET_OS == "minux"
+extern function _link(source as cstr, destination as cstr) from "libc.so.1" symbol "link" returns i32
+#else
 extern function _link(source as cstr, destination as cstr) from "libc.so.6" symbol "link" returns i32
+#endif
 /// Atomic publication when compile mode explicitly replaces its own output.
 /// @param source Native staging-file path.
 /// @param destination Native compiler-owned output path.
 /// @returns Zero on success, otherwise minus one.
+#if TARGET_OS == "minux"
+extern function _rename(source as cstr, destination as cstr) from "libc.so.1" symbol "rename" returns i32
+#else
 extern function _rename(source as cstr, destination as cstr) from "libc.so.6" symbol "rename" returns i32
+#endif
 /// Read ordinary source execute/read/write permissions.
 /// @param path Native path to the original executable.
 /// @param output Buffer for the Linux x64 stat layout.
 /// @returns Zero on success, otherwise minus one.
+#if TARGET_OS == "minux"
+extern function _stat(path as cstr, output as bytes) from "libc.so.1" symbol "stat" returns i32
+#else
 extern function _stat(path as cstr, output as bytes) from "libc.so.6" symbol "stat" returns i32
+#endif
 /// Preserve ordinary permissions, never setuid/setgid bits.
 /// @param path Native staging-file path.
 /// @param mode Ordinary permission bits with privilege bits excluded.
 /// @returns Zero on success, otherwise minus one.
+#if TARGET_OS == "minux"
+extern function _chmod(path as cstr, mode as u32) from "libc.so.1" symbol "chmod" returns i32
+#else
 extern function _chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
+#endif
 /// Compare bounded blocks without temporary byte slices.
 /// @param left First readable memory range.
 /// @param right Second readable memory range.
 /// @param count Number of bytes available in both ranges.
 /// @returns Zero for equal bytes, otherwise their comparison order.
+#if TARGET_OS == "minux"
+extern function _memcmp(left as ptr, right as ptr, count as u64) from "libc.so.1" symbol "memcmp" returns i32
+#else
 extern function _memcmp(left as ptr, right as ptr, count as u64) from "libc.so.6" symbol "memcmp" returns i32
+#endif
 #endif
 
 /// Decode a previously bounds-checked little-endian u32 field.
@@ -288,6 +316,9 @@ function transform(source, destination, upx, unpack, replace, runner)
   if replace == false and fs.exists(destination) then return error(1, "destination already exists; choose a new output path") end if
   original = try(readImage(source))
   if typeof(original) == "error" then return original end if
+  if upx != "" and unpack == false and nativepack.isMinuxElf(original) then
+    return error(1, "MinUX requires the built-in packer; UPX startup stubs use another OS ABI")
+  end if
   info = void
   if unpack and upx != "" then
     info = try(parseOverlay(original))
@@ -341,10 +372,15 @@ function transform(source, destination, upx, unpack, replace, runner)
   end if
   written = try(fs.writeAllBytes(result_path, output))
   if typeof(written) == "error" then return written end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   attributes = bytes(144, 0)
   if _stat(source, attributes) != 0 then return error(1, "cannot read executable permissions") end if
-  if _chmod(result_path, u32at(attributes, 24) & 511) != 0 then return error(1, "cannot preserve executable permissions") end if
+#if TARGET_OS == "minux"
+  source_mode = u32at(attributes, 8)
+#else
+  source_mode = u32at(attributes, 24)
+#endif
+  if _chmod(result_path, source_mode & 511) != 0 then return error(1, "cannot preserve executable permissions") end if
   published = false
   if replace then published = _rename(result_path, destination) == 0 else published = _link(result_path, destination) == 0 end if
 #else

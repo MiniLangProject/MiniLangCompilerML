@@ -12,7 +12,7 @@ struct While
 Represents while.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L655)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L659)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `While`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L665)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L669)
 
 <a id="field-field-mlc-minilang-parser-while-pos-pos-mlc-minilang-parser-ml-1278047738"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `While`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L663)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L667)
 
 <a id="field-field-mlc-minilang-parser-while-body-body-mlc-minilang-parser-ml-1587012208"></a>
 ### body
@@ -50,7 +50,7 @@ body
 Body associated with `While`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L661)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L665)
 
 <a id="field-field-mlc-minilang-parser-while-cond-cond-mlc-minilang-parser-ml-924452640"></a>
 ### cond
@@ -62,7 +62,7 @@ cond
 Cond associated with `While`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L659)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L663)
 
 <a id="field-field-mlc-minilang-parser-while-node-kind-node-kind-mlc-minilang-parser-ml-82507872"></a>
 ### node_kind
@@ -74,4 +74,4 @@ node_kind
 Node kind associated with `While`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L657)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L661)

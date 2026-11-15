@@ -12,7 +12,7 @@ struct ArrayChunkBuilder
 Append-only array builder that avoids copying a growing prefix.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L63)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L67)
 
 ## Members
 
@@ -26,7 +26,7 @@ cap
 Allocated capacity of `ArrayChunkBuilder`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L69)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L73)
 
 <a id="field-field-mlc-tools-arraychunkbuilder-chunks-chunks-mlc-tools-ml-1064649448"></a>
 ### chunks
@@ -38,7 +38,7 @@ chunks
 Chunks associated with `ArrayChunkBuilder`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L65)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L69)
 
 <a id="field-field-mlc-tools-arraychunkbuilder-tail-tail-mlc-tools-ml-69832856"></a>
 ### tail
@@ -50,4 +50,4 @@ tail
 Tail associated with `ArrayChunkBuilder`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L67)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L71)

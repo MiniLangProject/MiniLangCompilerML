@@ -268,8 +268,8 @@ struct CgState
   synchronized_globals,
   /// Target associated with `CgState`.
   target,
-  /// Whether `CgState.is_linux_target` indicates linux target.
-  is_linux_target,
+  /// Whether `CgState.is_elf_target` indicates linux target.
+  is_elf_target,
   /// Whether the program declares any user-defined operators.
   operator_overloads_present,
   /// Callable globals that can be rebound; their original return contracts are not stable.
@@ -566,7 +566,7 @@ function _seed_data(cg)
   cg.data = d.data_add_u32(cg.data, "bytesRead", 0)
   cg.data = d.data_add_u32(cg.data, "ml_argc", 0)
   cg.data = d.data_add_u64(cg.data, "ml_argvw", 0)
-  if cg.is_linux_target then
+  if cg.is_elf_target then
     cg.data = d.data_add_u64(cg.data, "linux_initial_rsp", 0)
     cg.data = d.data_add_bytes(cg.data, "linux_gs_area", bytes(64, 0))
   end if
@@ -728,7 +728,7 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   true,
   [],
   target,
-  target == "linux-x64",
+  (target == "linux-x64" or target == "minux-x64"),
   false,
   t.fastmap_new(64),
   void,

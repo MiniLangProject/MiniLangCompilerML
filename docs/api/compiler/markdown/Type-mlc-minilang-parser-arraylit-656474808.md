@@ -12,7 +12,7 @@ struct ArrayLit
 Represents array lit.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L169)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L173)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `ArrayLit`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L181)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L185)
 
 <a id="field-field-mlc-minilang-parser-arraylit-pos-pos-mlc-minilang-parser-ml-730523727"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `ArrayLit`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L179)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L183)
 
 <a id="field-field-mlc-minilang-parser-arraylit-items-items-mlc-minilang-parser-ml-479284597"></a>
 ### items
@@ -50,7 +50,7 @@ items
 Items associated with `ArrayLit`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L173)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L177)
 
 <a id="field-field-mlc-minilang-parser-arraylit-node-kind-node-kind-mlc-minilang-parser-ml-896999065"></a>
 ### node_kind
@@ -62,7 +62,7 @@ node_kind
 Node kind associated with `ArrayLit`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L171)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L175)
 
 <a id="field-field-mlc-minilang-parser-arraylit-stack-variadic-stack-variadic-mlc-minilang-parser-ml-1151634857"></a>
 ### stack_variadic
@@ -74,4 +74,4 @@ stack_variadic
 Internal-only marker: a proven non-escaping variadic tail may live in the caller's rooted expression stack instead of allocating a heap array. Stack variadic associated with `ArrayLit`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L177)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L181)

@@ -12,7 +12,7 @@ struct IsType
 Represents is type.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L215)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L219)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `IsType`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L227)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L231)
 
 <a id="field-field-mlc-minilang-parser-istype-pos-pos-mlc-minilang-parser-ml-1380009481"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `IsType`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L225)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L229)
 
 <a id="field-field-mlc-minilang-parser-istype-expr-expr-mlc-minilang-parser-ml-585025485"></a>
 ### expr
@@ -50,7 +50,7 @@ expr
 Expr associated with `IsType`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L219)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L223)
 
 <a id="field-field-mlc-minilang-parser-istype-negated-negated-mlc-minilang-parser-ml-1529848331"></a>
 ### negated
@@ -62,7 +62,7 @@ negated
 Negated associated with `IsType`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L223)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L227)
 
 <a id="field-field-mlc-minilang-parser-istype-node-kind-node-kind-mlc-minilang-parser-ml-625402003"></a>
 ### node_kind
@@ -74,7 +74,7 @@ node_kind
 Node kind associated with `IsType`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L217)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L221)
 
 <a id="field-field-mlc-minilang-parser-istype-type-name-type-name-mlc-minilang-parser-ml-1955595475"></a>
 ### type_name
@@ -86,4 +86,4 @@ type_name
 Type name associated with `IsType`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L221)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L225)

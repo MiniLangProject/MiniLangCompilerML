@@ -52,6 +52,7 @@
 - [`mlc.project.GetFileAttributesW`](File-mlc-project-ml-1332928426.md#extern_function-extern-function-mlc-project-getfileattributesw-extern-function-getfileattributesw-path-as-wstr-from-kernel32-dll-returns-u32-mlc-project-ml-636884157) — extern_function
 - [`mlc.project.GetFullPathNameW`](File-mlc-project-ml-1332928426.md#extern_function-extern-function-mlc-project-getfullpathnamew-extern-function-getfullpathnamew-path-as-wstr-bufferlen-as-u32-buffer-as-buffer-filepart-as-ptr-from-kernel32-dll-returns-u32-mlc-project-ml-1571675165) — extern_function
 - [`mlc.project.MoveFileExW`](File-mlc-project-ml-1332928426.md#extern_function-extern-function-mlc-project-movefileexw-extern-function-movefileexw-source-as-wstr-destination-as-wstr-flags-as-u32-from-kernel32-dll-returns-bool-mlc-project-ml-1805939892) — extern_function
+- [`mlc.project.PROJECT_STAT_MODE_OFFSET`](File-mlc-project-ml-1332928426.md#constant-constant-mlc-project-project-stat-mode-offset-const-project-stat-mode-offset-24-mlc-project-ml-926470735) — constant
 - [`mlc.project.ProjectBuild`](Type-mlc-project-projectbuild-645380487.md) — struct
 - [`mlc.project.ProjectExpansion`](Type-mlc-project-projectexpansion-663805966.md) — struct
 - [`mlc.project.ProjectFileCollector`](Type-mlc-project-projectfilecollector-1536015482.md) — struct

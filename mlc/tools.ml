@@ -45,7 +45,11 @@ extern function _copy_native_bytes(destination as ptr, source as ptr, count as u
 #else
 /// Provide the copy native bytes compiler utility operation.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _copy_native_bytes(destination as ptr, source as ptr, count as u64) from "libc.so.1" symbol "memmove" returns ptr
+#else
 extern function _copy_native_bytes(destination as ptr, source as ptr, count as u64) from "libc.so.6" symbol "memmove" returns ptr
+#endif
 #endif
 
 /// Return every array element except the last one. The builtin slice() operates on bytes, so compiler data structures must use an explicit array copy.

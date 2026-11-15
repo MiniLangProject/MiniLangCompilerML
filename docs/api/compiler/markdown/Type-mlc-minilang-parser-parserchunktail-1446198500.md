@@ -12,7 +12,7 @@ struct ParserChunkTail
 Capacity-backed parser list tail used to avoid repeated array concatenation.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L95)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L99)
 
 ## Members
 
@@ -26,7 +26,7 @@ cap
 Allocated capacity of `ParserChunkTail`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L101)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L105)
 
 <a id="field-field-mlc-minilang-parser-parserchunktail-data-data-mlc-minilang-parser-ml-1840746533"></a>
 ### data
@@ -38,7 +38,7 @@ data
 Backing data owned by `ParserChunkTail`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L97)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L101)
 
 <a id="field-field-mlc-minilang-parser-parserchunktail-used-used-mlc-minilang-parser-ml-141898887"></a>
 ### used
@@ -50,4 +50,4 @@ used
 Number of populated entries in `ParserChunkTail`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L99)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L103)

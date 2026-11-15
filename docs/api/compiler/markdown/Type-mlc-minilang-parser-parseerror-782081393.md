@@ -12,7 +12,7 @@ struct ParseError
 Parser failure with absolute source offset and originating filename.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L36)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L40)
 
 ## Members
 
@@ -26,7 +26,7 @@ filename
 Filename associated with `ParseError`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L42)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L46)
 
 <a id="field-field-mlc-minilang-parser-parseerror-message-message-mlc-minilang-parser-ml-357506678"></a>
 ### message
@@ -38,7 +38,7 @@ message
 Diagnostic message carried by `ParseError`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L38)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L42)
 
 <a id="field-field-mlc-minilang-parser-parseerror-pos-pos-mlc-minilang-parser-ml-363852042"></a>
 ### pos
@@ -50,4 +50,4 @@ pos
 Pos associated with `ParseError`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L40)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L44)

@@ -63,13 +63,16 @@ end struct
 /// @param rdata_size Value supplied for `rdata_size`.
 /// @param data_size Value supplied for `data_size`.
 /// @param dynamic_size Value supplied for `dynamic_size`.
-function plan(text_size, rdata_size, data_size, dynamic_size)
+/// @param target ELF platform, linux-x64 or minux-x64.
+function plan_for_target(text_size, rdata_size, data_size, dynamic_size, target)
   text_off = 0x1000
   rdata_off = t.align_up(text_off + text_size, 0x1000)
   data_off = t.align_up(rdata_off + rdata_size, 0x1000)
   dynamic_off = t.align_up(data_off + data_size, 8)
   bss_off = t.align_up(dynamic_off + dynamic_size, 16)
-  return ELFLayout(0x400000, text_off, rdata_off, data_off, dynamic_off, bss_off)
+  base = 0x400000
+  if target == "minux-x64" then base = 0x100000000 end if
+  return ELFLayout(base, text_off, rdata_off, data_off, dynamic_off, bss_off)
 end function
 
 /// Emit array has in the Linux ELF image.
@@ -102,8 +105,9 @@ end function
 
 /// Serialize PT_INTERP contents, SysV symbol/hash tables, RELA relocations and the DT_* vector as one deterministic data-segment blob. Import order remains significant because it is part of Python/self-hosted binary parity.
 /// @internal
-function _dynamic_blob(imports, image_base, data_off, blob_off)
+function _dynamic_blob(imports, image_base, data_off, blob_off, target)
   interp = bytes("/lib64/ld-linux-x86-64.so.2\0")
+  if target == "minux-x64" then interp = bytes("/lib/ld-minux.so\0") end if
   blob = interp
   libraries = []
   symbols = []
@@ -194,9 +198,10 @@ end function
 
 /// Measure the exact metadata payload with the same serializer used by build().
 /// @param imports Value supplied for `imports`.
-function dynamic_size(imports)
+/// @param target ELF platform, linux-x64 or minux-x64.
+function dynamic_size_for_target(imports, target)
   if typeof(imports) != "array" or len(imports) <= 0 then return 0 end if
-  return len(_dynamic_blob(imports, 0, 0, 0).data)
+  return len(_dynamic_blob(imports, 0, 0, 0, target).data)
 end function
 
 /// Encode one ELF64 program header. File and virtual offsets intentionally use the same fixed-address layout so no section-header table is required.
@@ -213,14 +218,15 @@ end function
 /// @param bss_size Value supplied for `bss_size`.
 /// @param entry_offset Value supplied for `entry_offset`.
 /// @param imports Value supplied for `imports`.
-function build(text, rdata, data, bss_size, entry_offset, imports)
-  dyn_size = dynamic_size(imports)
-  layout = plan(len(text), len(rdata), len(data), dyn_size)
+/// @param target ELF platform, linux-x64 or minux-x64.
+function build_for_target(text, rdata, data, bss_size, entry_offset, imports, target)
+  dyn_size = dynamic_size_for_target(imports, target)
+  layout = plan_for_target(len(text), len(rdata), len(data), dyn_size, target)
   has_dynamic = dyn_size > 0
   dynamic = DynamicBlob(bytes(0), 0, 0, 0, 0)
   phnum = 4
   if has_dynamic then
-    dynamic = _dynamic_blob(imports, layout.base, layout.data_off, layout.dynamic_off)
+    dynamic = _dynamic_blob(imports, layout.base, layout.data_off, layout.dynamic_off, target)
     phnum = 6
   end if
 
@@ -249,4 +255,28 @@ function build(text, rdata, data, bss_size, entry_offset, imports)
   copyBytes(image, layout.data_off, data, 0, len(data))
   if has_dynamic then copyBytes(image, layout.dynamic_off, dynamic.data, 0, len(dynamic.data)) end if
   return image
+end function
+
+/// Lay out a Linux ELF image using the compatibility entry point.
+/// @param text_size Length of executable text.
+/// @param rdata_size Length of read-only data.
+/// @param data_size Length of initialized writable data.
+/// @param dynamic_size Length of dynamic-loader metadata.
+function plan(text_size, rdata_size, data_size, dynamic_size)
+  return plan_for_target(text_size, rdata_size, data_size, dynamic_size, "linux-x64")
+end function
+/// Measure dynamic-loader metadata for a Linux ELF image.
+/// @param imports Native symbols to import.
+function dynamic_size(imports)
+  return dynamic_size_for_target(imports, "linux-x64")
+end function
+/// Assemble a Linux ELF image using the compatibility entry point.
+/// @param text Executable text bytes.
+/// @param rdata Read-only data bytes.
+/// @param data Initialized writable data bytes.
+/// @param bss_size Uninitialized storage length.
+/// @param entry_offset Entry offset within text.
+/// @param imports Native symbols to import.
+function build(text, rdata, data, bss_size, entry_offset, imports)
+  return build_for_target(text, rdata, data, bss_size, entry_offset, imports, "linux-x64")
 end function

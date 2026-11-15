@@ -12,7 +12,7 @@ struct VoidLit
 Represents void lit.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L147)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L151)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `VoidLit`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L153)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L157)
 
 <a id="field-field-mlc-minilang-parser-voidlit-pos-pos-mlc-minilang-parser-ml-1198112060"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `VoidLit`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L151)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L155)
 
 <a id="field-field-mlc-minilang-parser-voidlit-node-kind-node-kind-mlc-minilang-parser-ml-1655422498"></a>
 ### node_kind
@@ -50,4 +50,4 @@ node_kind
 Node kind associated with `VoidLit`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L149)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L153)

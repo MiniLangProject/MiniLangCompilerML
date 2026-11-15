@@ -25,6 +25,7 @@
 - [`mlc.native_packing._u64`](File-mlc-native-packing-ml-215987304.md#function-function-mlc-native-packing-u64-function-u64-data-offset-mlc-native-packing-ml-319186753) — function
 - [`mlc.native_packing.FOOTER_SIZE`](File-mlc-native-packing-ml-215987304.md#constant-constant-mlc-native-packing-footer-size-const-footer-size-48-mlc-native-packing-ml-240271247) — constant
 - [`mlc.native_packing.IMAGE_LIMIT`](File-mlc-native-packing-ml-215987304.md#constant-constant-mlc-native-packing-image-limit-const-image-limit-1073741824-mlc-native-packing-ml-1630346612) — constant
+- [`mlc.native_packing.isMinuxElf`](File-mlc-native-packing-ml-215987304.md#function-function-mlc-native-packing-isminuxelf-function-isminuxelf-image-mlc-native-packing-ml-420752295) — function
 - [`mlc.native_packing.MAGIC`](File-mlc-native-packing-ml-215987304.md#constant-constant-mlc-native-packing-magic-const-magic-mlnpack1-mlc-native-packing-ml-1062832882) — constant
 - [`mlc.native_packing.packImage`](File-mlc-native-packing-ml-215987304.md#function-function-mlc-native-packing-packimage-function-packimage-original-mlc-native-packing-ml-1001617017) — function
 - [`mlc.native_packing.unpackImage`](File-mlc-native-packing-ml-215987304.md#function-function-mlc-native-packing-unpackimage-function-unpackimage-image-mlc-native-packing-ml-580444269) — function

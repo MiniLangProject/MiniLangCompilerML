@@ -12,7 +12,7 @@ struct ArrayChunkTail
 Partially filled final chunk with explicit logical length.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L73)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L77)
 
 ## Members
 
@@ -26,7 +26,7 @@ cap
 Allocated capacity of `ArrayChunkTail`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L79)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L83)
 
 <a id="field-field-mlc-tools-arraychunktail-data-data-mlc-tools-ml-1167706699"></a>
 ### data
@@ -38,7 +38,7 @@ data
 Backing data owned by `ArrayChunkTail`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L75)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L79)
 
 <a id="field-field-mlc-tools-arraychunktail-used-used-mlc-tools-ml-1418910085"></a>
 ### used
@@ -50,4 +50,4 @@ used
 Number of populated entries in `ArrayChunkTail`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L77)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L81)

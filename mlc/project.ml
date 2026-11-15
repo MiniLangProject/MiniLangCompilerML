@@ -18,6 +18,11 @@ limitations under the License.
 //! Provides the mlc project package.
 
 package mlc.project
+#if TARGET_OS == "minux"
+const PROJECT_STAT_MODE_OFFSET = 8
+#else
+const PROJECT_STAT_MODE_OFFSET = 24
+#endif
 
 import std.fs as fs
 import std.process as process
@@ -44,19 +49,39 @@ extern function MoveFileExW(source as wstr, destination as wstr, flags as u32) f
 #else
 /// Resolve project mkdir during project and module loading.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _project_mkdir(path as cstr, mode as u32) from "libc.so.1" symbol "mkdir" returns i32
+#else
 extern function _project_mkdir(path as cstr, mode as u32) from "libc.so.6" symbol "mkdir" returns i32
+#endif
 /// Resolve project stat during project and module loading.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _project_stat(path as cstr, info as bytes) from "libc.so.1" symbol "stat" returns i32
+#else
 extern function _project_stat(path as cstr, info as bytes) from "libc.so.6" symbol "stat" returns i32
+#endif
 /// Resolve project lstat during project and module loading.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _project_lstat(path as cstr, info as bytes) from "libc.so.1" symbol "lstat" returns i32
+#else
 extern function _project_lstat(path as cstr, info as bytes) from "libc.so.6" symbol "lstat" returns i32
+#endif
 /// Resolve project chmod during project and module loading.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _project_chmod(path as cstr, mode as u32) from "libc.so.1" symbol "chmod" returns i32
+#else
 extern function _project_chmod(path as cstr, mode as u32) from "libc.so.6" symbol "chmod" returns i32
+#endif
 /// Resolve project rename during project and module loading.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _project_rename(source as cstr, destination as cstr) from "libc.so.1" symbol "rename" returns i32
+#else
 extern function _project_rename(source as cstr, destination as cstr) from "libc.so.6" symbol "rename" returns i32
+#endif
 #endif
 
 /// Expanded project configuration carried through compilation and caching.
@@ -122,7 +147,7 @@ function _join(a, b)
   if typeof(a) != "string" or a == "" or a == "." then return b end if
   if typeof(b) != "string" or b == "" then return a end if
   if a[len(a) - 1] == "\\" or a[len(a) - 1] == "/" then return a + b end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   return a + "/" + b
 #else
   return a + "\\" + b
@@ -141,7 +166,7 @@ end function
 /// Resolve abspath during project and module loading.
 /// @internal
 function _abspath(path)
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   if _is_abs(path) then return _canon_linux(path) end if
   cwd = process.currentDirectory()
   if typeof(cwd) != "string" or cwd == "" then return _canon_linux(path) end if
@@ -201,7 +226,7 @@ function _ensure_dir(path)
   if parent != path and parent != "." then
     if _ensure_dir(parent) == false then return false end if
   end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   if _project_mkdir(path, 493) == 0 then return true end if
 #else
   if CreateDirectoryW(path, 0) then return true end if
@@ -443,7 +468,7 @@ end function
 /// Windows paths are case-insensitive; POSIX paths must retain exact spelling.
 /// @internal
 function _path_key(path)
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   return path
 #else
   return s.toLowerAscii(path)
@@ -460,7 +485,7 @@ function _is_directory_link(path)
 #else
   info = bytes(144, 0)
   if _project_lstat(path, info) != 0 then return false end if
-  mode = _project_u32le(info, 24)
+  mode = _project_u32le(info, PROJECT_STAT_MODE_OFFSET)
   return (mode & 61440) == 40960 and fs.isDir(path)
 #endif
 end function
@@ -508,14 +533,14 @@ end function
 /// Updates append unique path.
 /// @internal
 function _append_unique_path(paths, path)
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   key = path
 #else
   key = s.toLowerAscii(path)
 #endif
   if len(paths) > 0 then
     for i = 0 to len(paths) - 1
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
       if paths[i] == key then return paths end if
 #else
       if s.toLowerAscii(paths[i]) == key then return paths end if
@@ -618,7 +643,7 @@ function _collector_add_import_file(collector, path, excluded)
   absolute = _abspath(path)
   key = _path_key(absolute)
   excluded_key = _path_key(excluded)
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   separator = "/"
 #else
   separator = "\\"
@@ -675,7 +700,7 @@ end function
 /// Resolve string less during project and module loading.
 /// @internal
 function _string_less(left, right)
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   left_bytes = bytes(left)
   right_bytes = bytes(right)
 #else
@@ -755,10 +780,10 @@ end function
 function _copy_file_preserve_mode(source_path, destination_path)
   copied = fs.copyFile(source_path, destination_path, true)
   if typeof(copied) == "error" then return copied end if
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
   attr = bytes(144, 0)
   if _project_stat(source_path, attr) != 0 then return error(1, "failed to read cached file mode") end if
-  mode = _project_u32le(attr, 24) & 4095
+  mode = _project_u32le(attr, PROJECT_STAT_MODE_OFFSET) & 4095
   if _project_chmod(destination_path, mode) != 0 then return error(1, "failed to preserve cached file mode") end if
 #endif
   return true
@@ -799,7 +824,7 @@ function fingerprint(pb, input_path, include_dirs)
       data = fs.readAllBytes(unique_files[fi])
       if typeof(data) == "error" then return data end if
       h = _hash_byte(h, 0)
-#if TARGET_OS == "linux"
+#if TARGET_OS == "linux" or TARGET_OS == "minux"
       h = _hash_text(h, unique_files[fi])
 #else
       h = _hash_text(h, s.toLowerAscii(unique_files[fi]))

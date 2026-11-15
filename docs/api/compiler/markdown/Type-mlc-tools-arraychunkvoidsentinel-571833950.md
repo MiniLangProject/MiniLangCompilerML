@@ -12,7 +12,7 @@ struct ArrayChunkVoidSentinel
 Internal marker that preserves actual void values inside spare capacity.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L83)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L87)
 
 ## Members
 
@@ -26,4 +26,4 @@ tag
 Tag associated with `ArrayChunkVoidSentinel`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L85)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L89)

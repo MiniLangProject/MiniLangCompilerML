@@ -29,7 +29,11 @@ extern function _parse_strtod(text as cstr, endptr as ptr) from "msvcrt.dll" sym
 #else
 /// Returns parse strtod.
 /// @internal
+#if TARGET_OS == "minux"
+extern function _parse_strtod(text as cstr, endptr as ptr) from "libc.so.1" symbol "strtod" returns double
+#else
 extern function _parse_strtod(text as cstr, endptr as ptr) from "libc.so.6" symbol "strtod" returns double
+#endif
 #endif
 
 /// Parser failure with absolute source offset and originating filename.
@@ -4636,7 +4640,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.3.8")
+    CompileValue("MINILANG_VERSION", "1.3.9")
   ]
 end function
 
@@ -4659,8 +4663,9 @@ function set_compile_target(target)
     _compile_target_format = "pe"
     return true
   end if
-  if normalized == "linux-x64" or normalized == "linux" or normalized == "linux64" then
+  if normalized == "linux-x64" or normalized == "linux" or normalized == "linux64" or normalized == "minux-x64" then
     _compile_target_os = "linux"
+    if normalized == "minux-x64" then _compile_target_os = "minux" end if
     _compile_target_abi = "sysv"
     _compile_target_format = "elf"
     return true

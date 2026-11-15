@@ -1,23 +1,25 @@
 # Binary compiler packages
 
-Release 1.3.8 provides Windows x64 ZIP and Linux x64 tar.gz packages. Each
-contains an executable compiler (`mlc.exe` or `mlc`), the matching `std/` library,
-a hello example, license, third-party notices, release notes and a BUILD_INFO.json manifest. Every
-download has a SHA-256 sidecar. No separate Python installation is needed to run
-either native package.
+Release 1.3.9 provides Windows x64 ZIP, Linux x64 tar.gz and MinUX x64 tar.gz
+packages. Each contains a native compiler (`mlc.exe` or `mlc`), matching `std/`
+sources, runtime libraries, a Hello example, license notices, documentation,
+release notes and BUILD_INFO.json. Every download has a SHA-256 sidecar.
+The compilers run without a Python installation.
 
-## Release 1.3.8 checksums
+## Release 1.3.9 checksums
 
-The download archives are `MiniLangCompilerML-1.3.8-windows-x64.zip` and
-`MiniLangCompilerML-1.3.8-linux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.8).
+The download archives are `MiniLangCompilerML-1.3.9-windows-x64.zip` and
+`MiniLangCompilerML-1.3.9-linux-x64.tar.gz`, plus
+`MiniLangCompilerML-1.3.9-minux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.9).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 64,356,352 | `5684B8C01D0C3574FDDFE3C0E8BCD0CD1BB9B089323F949F12DEFE7A37030F33` |
-| Linux `mlc` | 64,381,424 | `E11386C7F1C6209DA33C07F6FF54D3E28F736B8A7FD6874625811642000D3A2E` |
+| Windows `mlc.exe` | 64,658,944 | `269aecaa2232b634809edd80be95eda52f837ad4be022f9a778633bd47d9ba62` |
+| Linux `mlc` | 64,680,656 | `86be4da4a2dd32c404a64f3ec412898c033fef77d83692cc462fa2fce4e59103` |
+| MinUX `mlc` (packed) | 14,491,854 | `1bffa698a195d4cea95574b4e56fce51bfa2dad6bec32a237a90eaeaebaf36ee` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -35,15 +37,32 @@ On Linux:
 ./hello
 ```
 
+On MinUX, first build/update the [required kernel changes](https://github.com/n1k0m0/MinUX/commit/3675df7)
+and its matching driver modules, then install the included shared libraries in
+`/lib`. Preserve `third-party/minux` and install a trusted CA bundle when using
+TLS certificate verification. From the extracted package directory:
+
+```sh
+chmod +x mlc runtimes/minux-x64/*.so
+./mlc --version
+./mlc examples/hello.ml hello --target minux-x64 -I . --pack
+./hello
+```
+
+The MinUX compiler is packed to satisfy the 16 MiB loader limit. Its runtime
+manifest records every bundled library hash. See [MINUX.md](docs/MINUX.md) for
+native filesystem, networking, media and GUI limits. Source for all MinUX
+adapters and the Mbed TLS license are included.
+
 The Linux tar archive preserves the executable bit. These builds were tested on
 Ubuntu 24.04 x86-64 (glibc 2.39) and Windows 11 x64. Older Linux distributions
 and musl-based systems are not covered. Keep `-I /path/to/extracted/package`
 when building from another directory so standard-library imports resolve.
 Windows remains the compiler's default output target; select `--target linux-x64`
 explicitly when producing Linux applications. Either host compiler can emit
-either target, but the resulting program runs on its selected target OS.
+all three targets, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.3.8 compiler-source revision and executable hash.
+The manifest identifies the 1.3.9 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
@@ -65,7 +84,7 @@ and [evaluation](docs/reports/INCREMENTAL_BUILDS_2026-10-29.md).
 
 ## Optional executable packing
 
-The distributed compiler is unpacked. To pack your programs without external
+The Windows/Linux compilers are unpacked; the MinUX compiler is packed. To pack your programs without external
 tools, use `--pack`; the generated executable decompresses its code in memory
 on startup. The older UPX method remains available with `--pack=upx --upx PATH`.
 See [the included guide](docs/EXECUTABLE_PACKING.md) for exact unpacking,
@@ -73,7 +92,7 @@ startup/memory trade-offs and signing constraints.
 
 ## Native media runtime
 
-Release 1.3.8 packages include the native-media
+Release 1.3.9 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 

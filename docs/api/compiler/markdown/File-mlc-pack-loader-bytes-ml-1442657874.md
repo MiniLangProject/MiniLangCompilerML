@@ -2,7 +2,7 @@
 
 [Home](README.md) · [Files](Files.md)
 
-Embedded fixed-layout x64 loader bytes for dependency-free packing.
+Generated native executable unpacking stubs.
 
 Package: [`mlc.pack_loader_bytes`](Package-mlc-pack-loader-bytes-179377110.md)
 
@@ -17,10 +17,22 @@ Reachable from entry: **yes**
 function linux()
 ```
 
-Decode the Linux startup stub generated from pack_stubs/loader.S.
+Return the generated linux unpacking stub.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pack_loader_bytes.ml#L26)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pack_loader_bytes.ml#L16)
+
+<a id="function-function-mlc-pack-loader-bytes-minux-function-minux-mlc-pack-loader-bytes-ml-664625172"></a>
+### minux
+
+```ml
+function minux()
+```
+
+Return the generated minux unpacking stub.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pack_loader_bytes.ml#L22)
 
 <a id="function-function-mlc-pack-loader-bytes-windows-function-windows-mlc-pack-loader-bytes-ml-1464735648"></a>
 ### windows
@@ -29,7 +41,7 @@ Decode the Linux startup stub generated from pack_stubs/loader.S.
 function windows()
 ```
 
-Decode the Windows startup stub generated from pack_stubs/loader.S.
+Return the generated windows unpacking stub.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pack_loader_bytes.ml#L21)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/pack_loader_bytes.ml#L10)

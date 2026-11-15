@@ -12,7 +12,7 @@ struct TokenArena
 Structure-of-arrays token arena. Parser cursors are integer IDs; kinds use one byte and positions/text IDs use packed u32 columns. Identifier, keyword and operator spellings are module-local symbols instead of per-token strings.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L56)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L60)
 
 ## Members
 
@@ -26,7 +26,7 @@ cap
 Allocated capacity of `TokenArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L70)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L74)
 
 <a id="field-field-mlc-minilang-parser-tokenarena-count-count-mlc-minilang-parser-ml-1566796063"></a>
 ### count
@@ -38,7 +38,7 @@ count
 Count associated with `TokenArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L68)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L72)
 
 <a id="field-field-mlc-minilang-parser-tokenarena-kinds-kinds-mlc-minilang-parser-ml-403319639"></a>
 ### kinds
@@ -50,7 +50,7 @@ kinds
 Kinds associated with `TokenArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L58)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L62)
 
 <a id="field-field-mlc-minilang-parser-tokenarena-positions-positions-mlc-minilang-parser-ml-349866527"></a>
 ### positions
@@ -62,7 +62,7 @@ positions
 Positions associated with `TokenArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L62)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L66)
 
 <a id="field-field-mlc-minilang-parser-tokenarena-text-index-text-index-mlc-minilang-parser-ml-1463337103"></a>
 ### text_index
@@ -74,7 +74,7 @@ text_index
 Text index associated with `TokenArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L66)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L70)
 
 <a id="field-field-mlc-minilang-parser-tokenarena-texts-texts-mlc-minilang-parser-ml-119586551"></a>
 ### texts
@@ -86,7 +86,7 @@ texts
 Texts associated with `TokenArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L64)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L68)
 
 <a id="field-field-mlc-minilang-parser-tokenarena-value-ids-value-ids-mlc-minilang-parser-ml-1879296103"></a>
 ### value_ids
@@ -98,4 +98,4 @@ value_ids
 Value ids associated with `TokenArena`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L60)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L64)

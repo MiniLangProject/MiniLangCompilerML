@@ -12,7 +12,7 @@ struct ProjectHash
 Two-lane deterministic hash state used for cache fingerprints.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L87)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L112)
 
 ## Members
 
@@ -26,7 +26,7 @@ a
 A associated with `ProjectHash`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L89)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L114)
 
 <a id="field-field-mlc-project-projecthash-b-b-mlc-project-ml-1680632256"></a>
 ### b
@@ -38,4 +38,4 @@ b
 B associated with `ProjectHash`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L91)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L116)

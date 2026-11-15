@@ -12,7 +12,7 @@ struct TypeGuard
 Runtime guard inserted at explicitly annotated type boundaries.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L231)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L235)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `TypeGuard`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L243)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L247)
 
 <a id="field-field-mlc-minilang-parser-typeguard-pos-pos-mlc-minilang-parser-ml-1236420882"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `TypeGuard`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L241)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L245)
 
 <a id="field-field-mlc-minilang-parser-typeguard-expr-expr-mlc-minilang-parser-ml-700326782"></a>
 ### expr
@@ -50,7 +50,7 @@ expr
 Expr associated with `TypeGuard`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L235)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L239)
 
 <a id="field-field-mlc-minilang-parser-typeguard-node-kind-node-kind-mlc-minilang-parser-ml-1442544408"></a>
 ### node_kind
@@ -62,7 +62,7 @@ node_kind
 Node kind associated with `TypeGuard`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L233)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L237)
 
 <a id="field-field-mlc-minilang-parser-typeguard-optional-optional-mlc-minilang-parser-ml-870148496"></a>
 ### optional
@@ -74,7 +74,7 @@ optional
 Optional associated with `TypeGuard`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L239)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L243)
 
 <a id="field-field-mlc-minilang-parser-typeguard-type-name-type-name-mlc-minilang-parser-ml-308201080"></a>
 ### type_name
@@ -86,4 +86,4 @@ type_name
 Type name associated with `TypeGuard`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L237)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L241)

@@ -12,7 +12,7 @@ struct ParserChunkVoidSentinel
 Internal marker that distinguishes spare capacity from a real void element.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L105)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L109)
 
 ## Members
 
@@ -26,4 +26,4 @@ tag
 Tag associated with `ParserChunkVoidSentinel`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L107)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L111)

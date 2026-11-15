@@ -265,6 +265,19 @@ function _elf_rows(image)
 end function
 
 /// Keep original virtual addresses so all text/data references remain valid.
+/// Identify the fixed MinUX header mapping without scanning application strings.
+/// @param image Executable bytes to inspect.
+function isMinuxElf(image)
+  if len(image) < 4096 or slice(image, 0, 4) != bytes([127, 69, 76, 70]) then return false end if
+  rows = try(_elf_rows(image))
+  if typeof(rows) == "error" then return false end if
+  for each row in rows
+    if row[0] == 1 and row[2] == 0 and row[3] == 0x100000000 then return true end if
+  end for
+  return false
+end function
+
+/// Keep original virtual addresses so all text/data references remain valid.
 /// @param original Compiler-generated ELF image bytes.
 function _pack_elf(original)
   rows = try(_elf_rows(original))
@@ -316,6 +329,7 @@ function _pack_elf(original)
   end for
   loader_va = _align(loader_va, 4096)
   template = loaders.linux()
+  if rows[header_index][3] == 0x100000000 then template = loaders.minux() end if
   loader_off = _align(cursor, 4096)
   cursor = loader_off + len(template)
   packed_va = _align(loader_va + len(template), 4096)
@@ -439,6 +453,9 @@ function packImage(original)
   prefix = slice(original, 0, text_off)
   size = len(base) + len(prefix) + FOOTER_SIZE
   if size >= len(original) then return error(1, "packing would not make this executable smaller") end if
+  if isMinuxElf(original) and size > 16777216 then
+    return error(1, "packed MinUX image exceeds the loader limit of 16 MiB")
+  end if
   output = bytes(size, 0)
   copyBytes(output, 0, base, 0, len(base))
   copyBytes(output, len(base), prefix, 0, len(prefix))

@@ -12,7 +12,7 @@ struct Bin
 Represents bin.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L199)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L203)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Bin`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L211)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L215)
 
 <a id="field-field-mlc-minilang-parser-bin-pos-pos-mlc-minilang-parser-ml-1080460310"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Bin`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L209)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L213)
 
 <a id="field-field-mlc-minilang-parser-bin-left-left-mlc-minilang-parser-ml-1012881874"></a>
 ### left
@@ -50,7 +50,7 @@ left
 Left associated with `Bin`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L203)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L207)
 
 <a id="field-field-mlc-minilang-parser-bin-node-kind-node-kind-mlc-minilang-parser-ml-972894860"></a>
 ### node_kind
@@ -62,7 +62,7 @@ node_kind
 Node kind associated with `Bin`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L201)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L205)
 
 <a id="field-field-mlc-minilang-parser-bin-op-op-mlc-minilang-parser-ml-522508446"></a>
 ### op
@@ -74,7 +74,7 @@ op
 Op associated with `Bin`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L205)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L209)
 
 <a id="field-field-mlc-minilang-parser-bin-right-right-mlc-minilang-parser-ml-18815132"></a>
 ### right
@@ -86,4 +86,4 @@ right
 Right associated with `Bin`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L207)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L211)

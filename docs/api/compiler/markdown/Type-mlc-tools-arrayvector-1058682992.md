@@ -12,7 +12,7 @@ struct ArrayVector
 Capacity-backed mutable sequence for compiler-internal hot paths. MiniLang arrays have exact length, so repeatedly doing `items = items + [value]` copies the complete prefix. ArrayVector grows geometrically and is materialized only at API boundaries.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L89)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L93)
 
 ## Members
 
@@ -26,7 +26,7 @@ cap
 Allocated capacity of `ArrayVector`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L95)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L99)
 
 <a id="field-field-mlc-tools-arrayvector-data-data-mlc-tools-ml-575517417"></a>
 ### data
@@ -38,7 +38,7 @@ data
 Backing data owned by `ArrayVector`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L91)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L95)
 
 <a id="field-field-mlc-tools-arrayvector-size-size-mlc-tools-ml-761290395"></a>
 ### size
@@ -50,4 +50,4 @@ size
 Current logical size of `ArrayVector`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L93)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L97)

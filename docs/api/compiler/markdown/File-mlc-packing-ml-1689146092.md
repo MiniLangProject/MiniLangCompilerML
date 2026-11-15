@@ -139,7 +139,7 @@ Remove only four exact private files and their empty parent; no recursion.
 | `folder` | `dynamic` | — | Exclusively owned staging directory to remove if empty. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L261)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L289)
 
 <a id="constant-constant-mlc-packing-image-limit-const-image-limit-1073741824-mlc-packing-ml-107107674"></a>
 ### IMAGE_LIMIT
@@ -169,7 +169,7 @@ Store only original 4-KiB blocks normalized by UPX, plus whole-file CRCs. CRCs d
 | `restored` | `dynamic` | — | UPX-unpacked bytes used to identify normalized blocks. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L168)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L196)
 
 <a id="constant-constant-mlc-packing-meta-limit-const-meta-limit-16777216-mlc-packing-ml-596282758"></a>
 ### META_LIMIT
@@ -196,7 +196,7 @@ Parse optional packing modes before normal compilation/project caching.
 | `args` | `dynamic` | — | Original command-line argument vector without the executable name. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L117)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L145)
 
 <a id="function-function-mlc-packing-parseoverlay-function-parseoverlay-image-mlc-packing-ml-1994926891"></a>
 ### parseOverlay
@@ -212,7 +212,7 @@ Validate lengths, checksums and all sorted non-overlapping restoration blocks be
 | `image` | `dynamic` | — | Packed executable bytes including the restoration footer. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L193)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L221)
 
 <a id="function-function-mlc-packing-readimage-function-readimage-path-mlc-packing-ml-187032787"></a>
 ### readImage
@@ -228,7 +228,7 @@ Read an image only after validating its on-disk size.
 | `path` | `dynamic` | — | Existing executable file to read within the image-size limit. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L157)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L185)
 
 <a id="function-function-mlc-packing-restoreimage-function-restoreimage-restored-info-mlc-packing-ml-8737460"></a>
 ### restoreImage
@@ -245,7 +245,7 @@ Restore original bytes, including header/import-table normalization by UPX.
 | `info` | `dynamic` | — | Validated restoration metadata returned by the overlay parser. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L234)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L262)
 
 <a id="function-function-mlc-packing-runtool-function-runtool-upx-arguments-runner-mlc-packing-ml-1641203203"></a>
 ### runTool
@@ -263,7 +263,7 @@ Execute the trusted external packer with fixed, reproducible options.
 | `runner` | `dynamic` | — | Host command-execution callback supplied by the compiler driver. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L273)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L301)
 
 <a id="function-function-mlc-packing-stagedirectory-function-stagedirectory-destination-mlc-packing-ml-456493542"></a>
 ### stageDirectory
@@ -279,7 +279,7 @@ Create an exclusive sibling directory; never reuse another invocation's files.
 | `destination` | `dynamic` | — | Output path whose parent will hold private staging files. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L247)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L275)
 
 <a id="function-function-mlc-packing-transform-function-transform-source-destination-upx-unpack-replace-runner-mlc-packing-ml-1386066656"></a>
 ### transform
@@ -300,7 +300,7 @@ Stage, validate and atomically publish a packed/unpacked executable. Standalone 
 | `runner` | `dynamic` | — | Host command-execution callback supplied by the compiler driver. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L287)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L315)
 
 <a id="function-function-mlc-packing-u32at-function-u32at-data-offset-mlc-packing-ml-1484204415"></a>
 ### u32at
@@ -317,4 +317,4 @@ Decode a previously bounds-checked little-endian u32 field.
 | `offset` | `dynamic` | — | Zero-based byte offset of the four-byte field. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L111)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/packing.ml#L139)

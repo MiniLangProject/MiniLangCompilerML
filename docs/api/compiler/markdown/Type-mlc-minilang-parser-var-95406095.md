@@ -12,7 +12,7 @@ struct Var
 Represents var.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L157)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L161)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Var`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L165)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L169)
 
 <a id="field-field-mlc-minilang-parser-var-pos-pos-mlc-minilang-parser-ml-1658192078"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Var`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L163)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L167)
 
 <a id="field-field-mlc-minilang-parser-var-name-name-mlc-minilang-parser-ml-529889742"></a>
 ### name
@@ -50,7 +50,7 @@ name
 Name associated with `Var`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L161)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L165)
 
 <a id="field-field-mlc-minilang-parser-var-node-kind-node-kind-mlc-minilang-parser-ml-736921124"></a>
 ### node_kind
@@ -62,4 +62,4 @@ node_kind
 Node kind associated with `Var`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L159)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L163)

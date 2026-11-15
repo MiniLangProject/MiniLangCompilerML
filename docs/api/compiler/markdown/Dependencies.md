@@ -17,6 +17,6 @@ These MiniLang source files are reachable through imports but are outside the co
 | 0 | `std.platform` | `std/platform.ml` |
 | 4 | `std.process` | `std/process.ml` |
 | 1 | `std.sort` | `std/sort.ml` |
-| 10 | `std.string` | `std/string.ml` |
+| 12 | `std.string` | `std/string.ml` |
 | 2 | `std.string_builder` | `std/string_builder.ml` |
 | 1 | `std.time` | `std/time.ml` |

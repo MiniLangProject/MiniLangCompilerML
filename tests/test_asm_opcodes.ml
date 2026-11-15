@@ -2,7 +2,7 @@ import std.fs as fs
 import std.string as s
 import mlc.asm as a
 import mlc.data as d
-import mlc.linux_runtime as linux_runtime
+import mlc.sysv_runtime as sysv_runtime
 import mlc.tools as tools
 
 struct TestExternSignature
@@ -93,7 +93,7 @@ end function
 function checkLinuxThunkLocalBranches()
   sig = TestExternSignature("strlen", "libc.so.6", "strlen", [])
   state = TestLinuxThunkState(a.newCodegenAsmBuilder(), [sig])
-  state = linux_runtime._emit_extern_thunks(state)
+  state = sysv_runtime.emit_extern_thunks(state, false)
   state.asm = a.materialize(state.asm)
   buf = state.asm.buf
   seen = 0

@@ -11059,8 +11059,8 @@ function _emit_extern_call(state, call_node, args, out_kind, out_name, pos)
     end while
   end if
 
-  state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym, state.is_linux_target))
-  if state.is_linux_target then
+  state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym, state.is_elf_target))
+  if state.is_elf_target then
     extern_resolved = "L_extern_resolved_" + _next_lid(state)
     state.asm = a.jcc(state.asm, "ae", extern_resolved)
     if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if
@@ -11787,8 +11787,8 @@ function emit_extern_stubs(state)
       end for
     end if
 
-    state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym, state.is_linux_target))
-    if state.is_linux_target then
+    state.asm = a.call_rip_qword(state.asm, _extern_iat_label(dll, sym, state.is_elf_target))
+    if state.is_elf_target then
       extern_resolved = "lbl_extern_stub_resolved_" + _next_lid(state)
       state.asm = a.jcc(state.asm, "ae", extern_resolved)
       if threaded_native then state.asm = a.call(state.asm, "fn_gc_native_leave") end if

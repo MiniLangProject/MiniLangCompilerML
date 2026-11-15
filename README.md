@@ -4,18 +4,18 @@
 [![Language: MiniLang](https://img.shields.io/badge/written%20in-MiniLang-5b5bd6.svg)](.)
 
 This compiler is written in MiniLang and compiles `.ml` programs to native
-**Windows x64 (PE32+)** and **Linux x64 (ELF64)** executables. It can rebuild
+**Windows x64 (PE32+)**, **Linux x64 (ELF64)** and **MinUX x64 (ELF64)** executables. It can rebuild
 itself. The [Python reference compiler](https://github.com/MiniLangProject/MiniLangCompilerPy)
 provides the bootstrap implementation and a second code-generation path.
 
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
-or read the [binary installation guide](README-BINARY.md). Version 1.3.8
-includes Windows and Linux packages with SHA-256 sidecars; see the
-[release notes](RELEASE_NOTES_1.3.8.md) and [changelog](CHANGELOG.md).
+or read the [binary installation guide](README-BINARY.md). Version 1.3.9
+includes Windows, Linux and MinUX packages with SHA-256 sidecars; see the
+[release notes](RELEASE_NOTES_1.3.9.md) and [changelog](CHANGELOG.md).
 
-Version 1.3.8 adds resource-owning methods and optional TCP/UDP objects to
-the shared standard library. See the [API and measurement report](docs/reports/STDLIB_OOP_2026-11-14.md).
-The dependency-free executable packer introduced in 1.3.7 remains available.
+Version 1.3.9 adds native MinUX output, packing and compiler selfhosting,
+including MinUX standard-library, TLS/crypto, file, terminal and media adapters.
+See the [MinUX guide](docs/MINUX.md) for setup, verified capabilities and limits.
 
 ## Quick start with a release package
 
@@ -131,7 +131,7 @@ self-hosted monolithic compiler and self-hosted `.mlo` pipeline are expected
 to emit identical target bytes. Version 1.3.2 restored this for the OOP
 regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 [OOP regression](tests/check_oop_binary_parity.py) and
-[1.3.8 release verification matrix](docs/reports/release-1.3.8-version-matrix.json).
+[1.3.9 release verification matrix](docs/reports/release-1.3.9-version-matrix.json).
 
 ## Documentation and development
 
@@ -164,3 +164,12 @@ Both compiler implementations and their documentation were developed with the
 assistance of generative AI. Licensed under [Apache 2.0](LICENSE); see
 [third-party notices](THIRD_PARTY_NOTICES.md) for bundled or generated-code
 components that require attribution.
+
+## MinUX target (source builds)
+
+Use `--target minux-x64` to cross-compile native MinUX programs. The target
+uses MinUX ELF loading, libc, VM services and pthreads; it includes file, time,
+process, synchronization, networking/TLS/crypto, native GUI/media adapters,
+built-in packing and compiler self-rebuild. See [MinUX usage and verification](docs/MINUX.md)
+for prerequisites, supported modules, repeatable guest tests and current limits.
+Available in release 1.3.9; older compiler packages must be rebuilt.

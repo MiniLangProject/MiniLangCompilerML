@@ -12,7 +12,7 @@ struct Bool
 Represents bool.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L135)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L139)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `Bool`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L143)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L147)
 
 <a id="field-field-mlc-minilang-parser-bool-pos-pos-mlc-minilang-parser-ml-1932031809"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `Bool`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L141)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L145)
 
 <a id="field-field-mlc-minilang-parser-bool-node-kind-node-kind-mlc-minilang-parser-ml-963076075"></a>
 ### node_kind
@@ -50,7 +50,7 @@ node_kind
 Node kind associated with `Bool`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L137)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L141)
 
 <a id="field-field-mlc-minilang-parser-bool-value-value-mlc-minilang-parser-ml-1002311071"></a>
 ### value
@@ -62,4 +62,4 @@ value
 Value associated with `Bool`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L139)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L143)

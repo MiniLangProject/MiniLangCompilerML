@@ -35,7 +35,7 @@ Resolve abspath during project and module loading.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L143)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L168)
 
 <a id="function-function-mlc-project-append-unique-path-function-append-unique-path-paths-path-mlc-project-ml-91913875"></a>
 ### _append_unique_path
@@ -52,7 +52,7 @@ Updates append unique path.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L510)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L535)
 
 <a id="function-function-mlc-project-atomic-cache-replace-function-atomic-cache-replace-source-path-destination-path-mlc-project-ml-377815657"></a>
 ### _atomic_cache_replace
@@ -69,7 +69,7 @@ Atomically publish a disposable fragment without a per-function disk flush. A cr
 | `destination_path` | `dynamic` | — | Persistent slot to replace atomically. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L922)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L947)
 
 <a id="function-function-mlc-project-atomic-replace-function-atomic-replace-source-path-destination-path-mlc-project-ml-2036966507"></a>
 ### _atomic_replace
@@ -86,7 +86,7 @@ Atomically update the cached artifact and its validation metadata.
 | `destination_path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L907)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L932)
 
 <a id="function-function-mlc-project-cache-artifact-path-function-cache-artifact-path-pb-digest-mlc-project-ml-423707984"></a>
 ### _cache_artifact_path
@@ -103,7 +103,7 @@ Resolve cache artifact path during project and module loading.
 | `digest` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L749)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L774)
 
 <a id="function-function-mlc-project-canon-linux-function-canon-linux-path-mlc-project-ml-1761756277"></a>
 ### _canon_linux
@@ -119,7 +119,7 @@ Normalize a POSIX path lexically so output paths need not exist yet.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L161)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L186)
 
 <a id="function-function-mlc-project-collect-import-dependencies-function-collect-import-dependencies-collector-include-dirs-excluded-mlc-project-ml-1279196130"></a>
 ### _collect_import_dependencies
@@ -137,7 +137,7 @@ Broad root traversal covers inactive package imports. This second pass follows q
 | `excluded` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L636)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L661)
 
 <a id="function-function-mlc-project-collect-ml-files-function-collect-ml-files-path-excluded-collector-mlc-project-ml-349996124"></a>
 ### _collect_ml_files
@@ -155,7 +155,7 @@ Resolve collect ml files during project and module loading.
 | `collector` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L502)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L527)
 
 <a id="function-function-mlc-project-collect-ml-files-inner-function-collect-ml-files-inner-path-excluded-collector-follow-directory-link-mlc-project-ml-1921535988"></a>
 ### _collect_ml_files_inner
@@ -174,7 +174,7 @@ Collect every MiniLang source below a root once. Indexed directory/file sets mak
 | `follow_directory_link` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L470)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L495)
 
 <a id="function-function-mlc-project-collector-add-import-file-function-collector-add-import-file-collector-path-excluded-mlc-project-ml-1071809644"></a>
 ### _collector_add_import_file
@@ -192,7 +192,7 @@ Resolve collector add import file during project and module loading.
 | `excluded` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L617)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L642)
 
 <a id="function-function-mlc-project-copy-file-preserve-mode-function-copy-file-preserve-mode-source-path-destination-path-mlc-project-ml-1481878617"></a>
 ### _copy_file_preserve_mode
@@ -209,7 +209,7 @@ Std.fs.copyFile intentionally copies bytes only. Cache artifacts additionally re
 | `destination_path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L755)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L780)
 
 <a id="function-function-mlc-project-dirname-function-dirname-path-mlc-project-ml-1922658205"></a>
 ### _dirname
@@ -225,7 +225,7 @@ Resolve dirname during project and module loading.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L106)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L131)
 
 <a id="function-function-mlc-project-ensure-dir-function-ensure-dir-path-mlc-project-ml-636457735"></a>
 ### _ensure_dir
@@ -241,7 +241,7 @@ Resolve ensure dir during project and module loading.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L197)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L222)
 
 <a id="function-function-mlc-project-file-content-id-function-file-content-id-path-mlc-project-ml-1934850017"></a>
 ### _file_content_id
@@ -257,7 +257,7 @@ Single-artifact callers retain the simple API; object-set validation reuses one 
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L732)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L757)
 
 <a id="function-function-mlc-project-file-content-id-with-buffer-function-file-content-id-with-buffer-path-buffer-mlc-project-ml-1790270063"></a>
 ### _file_content_id_with_buffer
@@ -274,7 +274,7 @@ Two native CRC polynomials plus the exact length provide a fast bounded- memory 
 | `buffer` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L704)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L729)
 
 <a id="function-function-mlc-project-hash-byte-function-hash-byte-h-value-mlc-project-ml-2106437887"></a>
 ### _hash_byte
@@ -291,7 +291,7 @@ Reports whether hash byte.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L419)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L444)
 
 <a id="function-function-mlc-project-hash-bytes-function-hash-bytes-h-value-mlc-project-ml-1455792965"></a>
 ### _hash_bytes
@@ -308,7 +308,7 @@ Reports whether hash bytes.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L427)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L452)
 
 <a id="function-function-mlc-project-hash-text-function-hash-text-h-value-mlc-project-ml-260538367"></a>
 ### _hash_text
@@ -325,7 +325,7 @@ Reports whether hash text.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L438)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L463)
 
 <a id="function-function-mlc-project-hex32-function-hex32-value-mlc-project-ml-1227518279"></a>
 ### _hex32
@@ -341,7 +341,7 @@ Resolve hex32 during project and module loading.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L664)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L689)
 
 <a id="function-function-mlc-project-is-abs-function-is-abs-path-mlc-project-ml-642925041"></a>
 ### _is_abs
@@ -357,7 +357,7 @@ Reports whether is abs.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L134)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L159)
 
 <a id="function-function-mlc-project-is-directory-link-function-is-directory-link-path-mlc-project-ml-1407735777"></a>
 ### _is_directory_link
@@ -373,7 +373,7 @@ Broad source-root discovery deliberately does not descend into directory links. 
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L455)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L480)
 
 <a id="function-function-mlc-project-is-known-key-function-is-known-key-key-mlc-project-ml-1385337063"></a>
 ### _is_known_key
@@ -389,7 +389,7 @@ Reports whether is known key.
 | `key` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L269)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L294)
 
 <a id="function-function-mlc-project-join-function-join-a-b-mlc-project-ml-1487255859"></a>
 ### _join
@@ -406,7 +406,7 @@ Resolve join during project and module loading.
 | `b` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L121)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L146)
 
 <a id="function-function-mlc-project-object-cache-dir-function-object-cache-dir-pb-digest-mlc-project-ml-1184984058"></a>
 ### _object_cache_dir
@@ -423,7 +423,7 @@ Resolve object cache dir during project and module loading.
 | `digest` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L849)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L874)
 
 <a id="function-function-mlc-project-parse-string-array-function-parse-string-array-value-mlc-project-ml-804613051"></a>
 ### _parse_string_array
@@ -439,7 +439,7 @@ Returns parse string array.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L225)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L250)
 
 <a id="function-function-mlc-project-path-key-function-path-key-path-mlc-project-ml-1639727953"></a>
 ### _path_key
@@ -455,7 +455,7 @@ Windows paths are case-insensitive; POSIX paths must retain exact spelling.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L445)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L470)
 
 <a id="function-function-mlc-project-project-u32le-function-project-u32le-value-offset-mlc-project-ml-2074318368"></a>
 ### _project_u32le
@@ -472,7 +472,7 @@ Resolve project u32le during project and module loading.
 | `offset` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L698)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L723)
 
 <a id="function-function-mlc-project-project-word-char-function-project-word-char-source-index-mlc-project-ml-2072998205"></a>
 ### _project_word_char
@@ -489,7 +489,7 @@ Resolve project word char during project and module loading.
 | `index` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L530)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L555)
 
 <a id="function-function-mlc-project-quoted-import-paths-function-quoted-import-paths-source-mlc-project-ml-1344714487"></a>
 ### _quoted_import_paths
@@ -505,7 +505,7 @@ Extract quoted import paths without treating strings or comments as source. Fals
 | `source` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L582)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L607)
 
 <a id="function-function-mlc-project-relative-path-function-relative-path-base-value-mlc-project-ml-1890277016"></a>
 ### _relative_path
@@ -522,7 +522,7 @@ Resolve relative path during project and module loading.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L190)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L215)
 
 <a id="function-function-mlc-project-skip-import-trivia-function-skip-import-trivia-source-index-mlc-project-ml-141654301"></a>
 ### _skip_import_trivia
@@ -539,7 +539,7 @@ Advance past whitespace and comments between the import keyword and path.
 | `index` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L538)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L563)
 
 <a id="function-function-mlc-project-skip-project-string-function-skip-project-string-source-index-mlc-project-ml-2029185969"></a>
 ### _skip_project_string
@@ -556,7 +556,7 @@ Resolve skip project string during project and module loading.
 | `index` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L567)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L592)
 
 <a id="function-function-mlc-project-string-less-function-string-less-left-right-mlc-project-ml-2012463843"></a>
 ### _string_less
@@ -573,7 +573,7 @@ Resolve string less during project and module loading.
 | `right` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L677)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L702)
 
 <a id="function-function-mlc-project-unquote-function-unquote-value-mlc-project-ml-2065359739"></a>
 ### _unquote
@@ -589,7 +589,7 @@ Resolve unquote during project and module loading.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L214)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L239)
 
 <a id="function-function-mlc-project-valid-define-name-function-valid-define-name-name-mlc-project-ml-1269587149"></a>
 ### _valid_define_name
@@ -605,7 +605,7 @@ Resolve valid define name during project and module loading.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L275)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L300)
 
 <a id="function-function-mlc-project-valid-define-value-function-valid-define-value-value-mlc-project-ml-812173753"></a>
 ### _valid_define_value
@@ -621,7 +621,7 @@ Resolve valid define value during project and module loading.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L290)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L315)
 
 <a id="function-function-mlc-project-valid-project-digest-function-valid-project-digest-value-mlc-project-ml-928786795"></a>
 ### _valid_project_digest
@@ -637,7 +637,7 @@ Resolve valid project digest during project and module loading.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L738)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L763)
 
 <a id="extern_function-extern-function-mlc-project-createdirectoryw-extern-function-createdirectoryw-path-as-wstr-securityattributes-as-ptr-from-kernel32-dll-returns-bool-mlc-project-ml-1626609254"></a>
 ### CreateDirectoryW
@@ -654,7 +654,7 @@ Creates create directory w.
 | `securityAttributes` | `ptr` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L40)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L45)
 
 <a id="function-function-mlc-project-ensureoutputdirectory-function-ensureoutputdirectory-output-path-mlc-project-ml-196881123"></a>
 ### ensureOutputDirectory
@@ -670,7 +670,7 @@ Create the parent directory required by a configured output path.
 | `output_path` | `dynamic` | — | Value supplied for `output_path`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L1031)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L1056)
 
 <a id="function-function-mlc-project-expandargs-function-expandargs-args-mlc-project-ml-1114332615"></a>
 ### expandArgs
@@ -686,7 +686,7 @@ Replace --project arguments with validated ordinary compiler arguments.
 | `args` | `dynamic` | — | Command-line or call arguments. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L308)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L333)
 
 <a id="function-function-mlc-project-fingerprint-function-fingerprint-pb-input-path-include-dirs-mlc-project-ml-1921258819"></a>
 ### fingerprint
@@ -704,7 +704,7 @@ Hash the manifest, effective arguments and all broad-root/imported sources. The 
 | `include_dirs` | `dynamic` | — | Value supplied for `include_dirs`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L771)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L796)
 
 <a id="extern_function-extern-function-mlc-project-getfileattributesw-extern-function-getfileattributesw-path-as-wstr-from-kernel32-dll-returns-u32-mlc-project-ml-636884157"></a>
 ### GetFileAttributesW
@@ -720,7 +720,7 @@ Returns get file attributes w.
 | `path` | `wstr` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L37)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L42)
 
 <a id="extern_function-extern-function-mlc-project-getfullpathnamew-extern-function-getfullpathnamew-path-as-wstr-bufferlen-as-u32-buffer-as-buffer-filepart-as-ptr-from-kernel32-dll-returns-u32-mlc-project-ml-1571675165"></a>
 ### GetFullPathNameW
@@ -739,7 +739,7 @@ Returns get full path name w.
 | `filePart` | `ptr` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L34)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L39)
 
 <a id="extern_function-extern-function-mlc-project-movefileexw-extern-function-movefileexw-source-as-wstr-destination-as-wstr-flags-as-u32-from-kernel32-dll-returns-bool-mlc-project-ml-1805939892"></a>
 ### MoveFileExW
@@ -757,7 +757,17 @@ Resolve move file ex w during project and module loading.
 | `flags` | `u32` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L43)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L48)
+
+<a id="constant-constant-mlc-project-project-stat-mode-offset-const-project-stat-mode-offset-24-mlc-project-ml-926470735"></a>
+### PROJECT_STAT_MODE_OFFSET
+
+```ml
+const PROJECT_STAT_MODE_OFFSET = 24
+```
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L24)
 
 - [mlc.project.ProjectBuild](Type-mlc-project-projectbuild-645380487.md) — struct
 - [mlc.project.ProjectExpansion](Type-mlc-project-projectexpansion-663805966.md) — struct
@@ -779,7 +789,7 @@ Restore only a checksum-validated artifact from the requested generation.
 | `output_path` | `dynamic` | — | Value supplied for `output_path`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L829)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L854)
 
 <a id="function-function-mlc-project-restoreobjects-function-restoreobjects-pb-digest-mlc-project-ml-1176711488"></a>
 ### restoreObjects
@@ -796,7 +806,7 @@ Return a complete immutable MLO set for this exact project fingerprint. Publicat
 | `digest` | `dynamic` | — | Value supplied for `digest`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L856)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L881)
 
 <a id="function-function-mlc-project-store-function-store-pb-digest-output-path-mlc-project-ml-1878511363"></a>
 ### store
@@ -814,7 +824,7 @@ Updates store.
 | `output_path` | `dynamic` | — | Value supplied for `output_path`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L934)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L959)
 
 <a id="function-function-mlc-project-storeobjects-function-storeobjects-pb-digest-source-dir-mlc-project-ml-833177017"></a>
 ### storeObjects
@@ -832,4 +842,4 @@ Populate the flat per-fingerprint object directory and publish its state marker 
 | `source_dir` | `dynamic` | — | Value supplied for `source_dir`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L972)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L997)

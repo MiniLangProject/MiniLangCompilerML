@@ -80,7 +80,7 @@ Keep original virtual addresses so all text/data references remain valid.
 | `original` | `dynamic` | — | Compiler-generated ELF image bytes. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/native_packing.ml#L269)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/native_packing.ml#L282)
 
 <a id="function-function-mlc-native-packing-pack-pe-function-pack-pe-original-mlc-native-packing-ml-1162043777"></a>
 ### _pack_pe
@@ -291,6 +291,22 @@ const IMAGE_LIMIT = 1073741824
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/native_packing.ml#L24)
 
+<a id="function-function-mlc-native-packing-isminuxelf-function-isminuxelf-image-mlc-native-packing-ml-420752295"></a>
+### isMinuxElf
+
+```ml
+function isMinuxElf(image)
+```
+
+Keep original virtual addresses so all text/data references remain valid. Identify the fixed MinUX header mapping without scanning application strings.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `image` | `dynamic` | — | Executable bytes to inspect. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/native_packing.ml#L270)
+
 <a id="constant-constant-mlc-native-packing-magic-const-magic-mlnpack1-mlc-native-packing-ml-1062832882"></a>
 ### MAGIC
 
@@ -315,7 +331,7 @@ Compress only code; leave OS imports and dynamic linker tables readable. No exte
 | `original` | `dynamic` | — | Compiler-generated PE or ELF bytes. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/native_packing.ml#L422)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/native_packing.ml#L436)
 
 <a id="function-function-mlc-native-packing-unpackimage-function-unpackimage-image-mlc-native-packing-ml-580444269"></a>
 ### unpackImage
@@ -331,4 +347,4 @@ Restore a native-packed image exactly, including original file padding. This is 
 | `image` | `dynamic` | — | Complete packed PE or ELF bytes. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/native_packing.ml#L354)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/native_packing.ml#L368)

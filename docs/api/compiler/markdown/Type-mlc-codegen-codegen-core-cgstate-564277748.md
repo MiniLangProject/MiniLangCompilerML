@@ -1020,14 +1020,14 @@ Declared interface names, including interfaces with no implementers.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L290)
 
-<a id="field-field-mlc-codegen-codegen-core-cgstate-is-linux-target-is-linux-target-mlc-codegen-codegen-core-ml-966497423"></a>
-### is_linux_target
+<a id="field-field-mlc-codegen-codegen-core-cgstate-is-elf-target-is-elf-target-mlc-codegen-codegen-core-ml-583036047"></a>
+### is_elf_target
 
 ```ml
-is_linux_target
+is_elf_target
 ```
 
-Whether `CgState.is_linux_target` indicates linux target.
+Whether `CgState.is_elf_target` indicates linux target.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L272)

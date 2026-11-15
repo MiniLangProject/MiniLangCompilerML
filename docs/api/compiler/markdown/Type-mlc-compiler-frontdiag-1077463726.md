@@ -12,7 +12,7 @@ struct FrontDiag
 Frontend diagnostics and keep-going results.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L117)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L147)
 
 ## Members
 
@@ -26,7 +26,7 @@ filename
 Filename associated with `FrontDiag`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L121)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L151)
 
 <a id="field-field-mlc-compiler-frontdiag-kind-kind-mlc-compiler-ml-19008939"></a>
 ### kind
@@ -38,7 +38,7 @@ kind
 Kind associated with `FrontDiag`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L119)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L149)
 
 <a id="field-field-mlc-compiler-frontdiag-message-message-mlc-compiler-ml-2133474879"></a>
 ### message
@@ -50,7 +50,7 @@ message
 Diagnostic message carried by `FrontDiag`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L125)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L155)
 
 <a id="field-field-mlc-compiler-frontdiag-pos-pos-mlc-compiler-ml-571633675"></a>
 ### pos
@@ -62,4 +62,4 @@ pos
 Pos associated with `FrontDiag`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L123)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L153)

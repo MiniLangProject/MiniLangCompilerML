@@ -2649,7 +2649,7 @@ function _emit_for_stmt(state, stmt)
 
     // The positive-length version can omit per-index bounds checks. Empty
     // arrays or buffers retain the ordinary descending 0..-1 loop and its error path.
-    if state.is_linux_target then state.asm = a.align_loop(state.asm, _heap_cfg_get_int(state, "cg_object_text_base", 0)) end if
+    if state.is_elf_target then state.asm = a.align_loop(state.asm, _heap_cfg_get_int(state, "cg_object_text_base", 0)) end if
     if versioned then
       fast_targets = [[hoist_targets[0][0], hoist_targets[0][1], hoist_targets[0][2], true]]
       state = _emit_for_loop_version(state, stmt, qv, loop_index_binding, fast_targets, l_top_f, l_cont_f, l_end_f, end_name_f, step_name_f, const_bounds_f, const_end_f, const_step_f)

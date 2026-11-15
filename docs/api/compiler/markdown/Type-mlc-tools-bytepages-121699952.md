@@ -12,7 +12,7 @@ struct BytePages
 Paged byte buffer used by large assembler and linker outputs.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L99)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L103)
 
 ## Members
 
@@ -26,7 +26,7 @@ chunk_pages
 Chunk pages associated with `BytePages`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L101)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L105)
 
 <a id="field-field-mlc-tools-bytepages-chunk-tail-chunk-tail-mlc-tools-ml-1494078245"></a>
 ### chunk_tail
@@ -38,7 +38,7 @@ chunk_tail
 Chunk tail associated with `BytePages`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L103)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L107)
 
 <a id="field-field-mlc-tools-bytepages-size-size-mlc-tools-ml-1928401511"></a>
 ### size
@@ -50,4 +50,4 @@ size
 Current logical size of `BytePages`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L105)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L109)

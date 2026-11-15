@@ -12,7 +12,7 @@ struct Token
 Lexical token preserving raw value and absolute source offset.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L46)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L50)
 
 ## Members
 
@@ -26,7 +26,7 @@ kind
 Kind associated with `Token`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L48)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L52)
 
 <a id="field-field-mlc-minilang-parser-token-pos-pos-mlc-minilang-parser-ml-1016782360"></a>
 ### pos
@@ -38,7 +38,7 @@ pos
 Pos associated with `Token`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L52)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L56)
 
 <a id="field-field-mlc-minilang-parser-token-value-value-mlc-minilang-parser-ml-1310873340"></a>
 ### value
@@ -50,4 +50,4 @@ value
 Value associated with `Token`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L50)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L54)

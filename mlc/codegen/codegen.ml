@@ -270,7 +270,7 @@ function set_target(cg, target)
   if typeof(cg) != "struct" or typeof(cg.state) != "struct" then return cg end if
   normalized = "" + target
   cg.state.target = normalized
-  cg.state.is_linux_target = normalized == "linux-x64"
+  cg.state.is_elf_target = ((normalized == "linux-x64" or normalized == "minux-x64") or normalized == "minux-x64")
   return cg
 end function
 
@@ -375,7 +375,7 @@ function _clone_state_for_object(base, seed_runtime)
   st.callprof_n = base.callprof_n
   st.is_windows_subsystem = base.is_windows_subsystem
   st.target = base.target
-  st.is_linux_target = base.is_linux_target
+  st.is_elf_target = base.is_elf_target
   st.func_ret_label = ""
   st.func_frame_size = 0
   st.errprop_suppression = 0

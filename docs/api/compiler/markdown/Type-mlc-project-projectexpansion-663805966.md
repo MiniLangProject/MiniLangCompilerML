@@ -12,7 +12,7 @@ struct ProjectExpansion
 Success/error envelope for command-line manifest expansion.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L75)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L100)
 
 ## Members
 
@@ -26,7 +26,7 @@ args
 Args associated with `ProjectExpansion`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L79)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L104)
 
 <a id="field-field-mlc-project-projectexpansion-message-message-mlc-project-ml-2146912137"></a>
 ### message
@@ -38,7 +38,7 @@ message
 Diagnostic message carried by `ProjectExpansion`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L83)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L108)
 
 <a id="field-field-mlc-project-projectexpansion-ok-ok-mlc-project-ml-960703957"></a>
 ### ok
@@ -50,7 +50,7 @@ ok
 Whether `ProjectExpansion` represents a successful result.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L77)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L102)
 
 <a id="field-field-mlc-project-projectexpansion-project-project-mlc-project-ml-1828736193"></a>
 ### project
@@ -62,4 +62,4 @@ project
 Project associated with `ProjectExpansion`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L81)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L106)

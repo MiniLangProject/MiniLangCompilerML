@@ -12,7 +12,7 @@ struct ExternSigParam
 Normalized native ABI declarations used by validation and import planning.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L245)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L275)
 
 ## Members
 
@@ -26,7 +26,7 @@ is_out
 Whether `ExternSigParam.is_out` indicates out.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L251)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L281)
 
 <a id="field-field-mlc-compiler-externsigparam-name-name-mlc-compiler-ml-257950889"></a>
 ### name
@@ -38,7 +38,7 @@ name
 Name associated with `ExternSigParam`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L247)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L277)
 
 <a id="field-field-mlc-compiler-externsigparam-ty-ty-mlc-compiler-ml-1858514153"></a>
 ### ty
@@ -50,4 +50,4 @@ ty
 Ty associated with `ExternSigParam`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L249)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/compiler.ml#L279)

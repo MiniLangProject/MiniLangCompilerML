@@ -12,7 +12,7 @@ struct ProjectBuild
 Expanded project configuration carried through compilation and caching.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L63)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L88)
 
 ## Members
 
@@ -26,7 +26,7 @@ cache_dir
 Cache dir associated with `ProjectBuild`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L67)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L92)
 
 <a id="field-field-mlc-project-projectbuild-expanded-args-expanded-args-mlc-project-ml-1291776266"></a>
 ### expanded_args
@@ -38,7 +38,7 @@ expanded_args
 Expanded args associated with `ProjectBuild`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L71)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L96)
 
 <a id="field-field-mlc-project-projectbuild-incremental-incremental-mlc-project-ml-221365962"></a>
 ### incremental
@@ -50,7 +50,7 @@ incremental
 Incremental associated with `ProjectBuild`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L69)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L94)
 
 <a id="field-field-mlc-project-projectbuild-manifest-manifest-mlc-project-ml-632446676"></a>
 ### manifest
@@ -62,4 +62,4 @@ manifest
 Manifest associated with `ProjectBuild`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L65)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/project.ml#L90)

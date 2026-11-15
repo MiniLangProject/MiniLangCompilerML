@@ -12,7 +12,7 @@ struct RuntimeLabel
 Represents runtime label.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L27)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L28)
 
 ## Members
 
@@ -26,7 +26,7 @@ name
 Name associated with `RuntimeLabel`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L29)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L30)
 
 <a id="field-field-mlc-linux-runtime-runtimelabel-offset-offset-mlc-linux-runtime-ml-1468440763"></a>
 ### offset
@@ -38,4 +38,4 @@ offset
 Offset associated with `RuntimeLabel`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L31)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/linux_runtime.ml#L32)

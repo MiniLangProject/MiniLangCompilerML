@@ -12,7 +12,7 @@ struct FastMap
 Compiler-internal open-addressing map with power-of-two capacity.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L109)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L113)
 
 ## Members
 
@@ -26,7 +26,7 @@ cap
 Allocated capacity of `FastMap`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L117)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L121)
 
 <a id="field-field-mlc-tools-fastmap-epoch-epoch-mlc-tools-ml-301254399"></a>
 ### epoch
@@ -38,7 +38,7 @@ epoch
 Epoch associated with `FastMap`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L121)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L125)
 
 <a id="field-field-mlc-tools-fastmap-keys-keys-mlc-tools-ml-618080287"></a>
 ### keys
@@ -50,7 +50,7 @@ keys
 Keys associated with `FastMap`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L111)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L115)
 
 <a id="field-field-mlc-tools-fastmap-size-size-mlc-tools-ml-1112622089"></a>
 ### size
@@ -62,7 +62,7 @@ size
 Current logical size of `FastMap`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L119)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L123)
 
 <a id="field-field-mlc-tools-fastmap-touched-touched-mlc-tools-ml-618640747"></a>
 ### touched
@@ -74,7 +74,7 @@ touched
 Touched associated with `FastMap`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L123)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L127)
 
 <a id="field-field-mlc-tools-fastmap-used-used-mlc-tools-ml-1092092001"></a>
 ### used
@@ -86,7 +86,7 @@ used
 Number of populated entries in `FastMap`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L115)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L119)
 
 <a id="field-field-mlc-tools-fastmap-values-values-mlc-tools-ml-329853099"></a>
 ### values
@@ -98,4 +98,4 @@ values
 Values associated with `FastMap`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L113)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/tools.ml#L117)

@@ -2863,8 +2863,19 @@ end function
 /// @param state Value supplied for `state`.
 function emit_strlen_function(state)
   state.asm = a.mark(state.asm, "fn_strlen")
-  state.asm = a.mov_r32_imm32(state.asm, "edx", 0x7FFFFFFF)
-  state.asm = a.call(state.asm, "fn_scan_nul_bytes")
+  // A native C string may end immediately before an unmapped guard page.
+  loop_label = "strlen_loop_" + state.label_id
+  state.label_id = state.label_id + 1
+  done = loop_label + "_done"
+  state.asm = a.xor_r32_r32(state.asm, "edx", "edx")
+  state.asm = a.mark(state.asm, loop_label)
+  state.asm = a.lea_r64_mem_bis(state.asm, "r11", "rcx", "rdx", 1, 0)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "r11", 0)
+  state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.jcc(state.asm, "e", done)
+  state.asm = a.inc_r32(state.asm, "edx")
+  state.asm = a.jmp(state.asm, loop_label)
+  state.asm = a.mark(state.asm, done)
   state.asm = a.ret(state.asm)
   return state
 end function
@@ -3408,7 +3419,7 @@ end function
 /// Emit emit build args function in the native runtime.
 /// @param state Value supplied for `state`.
 function emit_build_args_function(state)
-  if state.is_linux_target then return _emit_build_args_linux(state) end if
+  if state.is_elf_target then return _emit_build_args_linux(state) end if
   state.asm = a.mark(state.asm, "fn_build_args")
   // Frame:
   // [rsp+0x40] array_base (qword)
