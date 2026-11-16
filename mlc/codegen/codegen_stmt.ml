@@ -2092,17 +2092,24 @@ function _emit_storage_stmt(state, stmt, k)
     state.asm = a.jmp(state.asm, l_done_si)
 
     state.asm = a.mark(state.asm, l_store_bytes)
-    state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
-    state.asm = a.and_r64_imm(state.asm, "r8", 7)
-    state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_INT)
-    state.asm = a.jcc(state.asm, "ne", l_bad_byte)
+    // Only an integer literal in 0..255 proves the RHS valid. All operand
+    // evaluation and target/index/bounds checks stay above in the same order.
+    byte_literal = _opt_is_byte_literal(stmt.expr)
+    if byte_literal == false then
+      state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
+      state.asm = a.and_r64_imm(state.asm, "r8", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_bad_byte)
+    end if
 
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
-    state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
-    state.asm = a.jcc(state.asm, "l", l_bad_byte)
-    state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
-    state.asm = a.jcc(state.asm, "g", l_bad_byte)
+    if byte_literal == false then
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_bad_byte)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
+      state.asm = a.jcc(state.asm, "g", l_bad_byte)
+    end if
 
     state.asm = a.mov_r64_r64(state.asm, "r8", "r11")
     state.asm = a.add_r64_r64(state.asm, "r8", "rcx")
@@ -3314,7 +3321,7 @@ end function
 
 /// Collect the statement facts shared by integer inference, value-type flow and local-register promotion in one deterministic traversal. These analyses used to repeat the same function-sized walk independently.
 /// @internal
-function _collect_function_flow_inputs(fn_node, analysis_scratch)
+function _collect_function_flow_inputs(fn_node, analysis_scratch, extended = false)
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
   int_assignments = []
   value_assignments = []
@@ -3373,7 +3380,7 @@ function _collect_function_flow_inputs(fn_node, analysis_scratch)
 
   body = try(fn_node.body)
   if typeof(body) != "array" then body = [] end if
-  if len(body) > 0 then
+  if len(body) > 0 and extended == false then
     for i = 0 to len(body) - 1
       direct_stmt = body[i]
       if typeof(direct_stmt) != "struct" then continue end if
@@ -3435,6 +3442,7 @@ function _collect_function_flow_inputs(fn_node, analysis_scratch)
         value_assignments = _intflow_map_add(value_assignments, nm, try(st.expr))
         int_normal_names = _arr_add_unique(int_normal_names, nm)
         value_normal_names = _arr_add_unique(value_normal_names, nm)
+        if extended then direct_initializers = direct_initializers + [[nm, try(st.expr)]] end if
       end if
     else if k == "SynchronizedDecl" then
       nm_sync = _coerce_name(try(st.name))
@@ -3448,6 +3456,7 @@ function _collect_function_flow_inputs(fn_node, analysis_scratch)
       if nm_const != "" and s.contains(nm_const, ".") == false then
         value_assignments = _intflow_map_add(value_assignments, nm_const, try(st.expr))
         value_normal_names = _arr_add_unique(value_normal_names, nm_const)
+        if extended then direct_initializers = direct_initializers + [[nm_const, try(st.expr)]] end if
       end if
     end if
     if k == "For" then
@@ -3642,7 +3651,7 @@ end function
 
 /// Lower typeflow expr type statement behavior to native x64.
 /// @internal
-function _typeflow_expr_type(state, ex, known)
+function _typeflow_expr_type(state, ex, known, extended = false)
   if t.ast_is_node(ex) == false then return "" end if
   k = _coerce_name(t.ast_kind(ex))
   if k == "Num" then
@@ -3665,7 +3674,10 @@ function _typeflow_expr_type(state, ex, known)
     if lower_guard_type == "integer" then lower_guard_type = "int" end if
     if lower_guard_type == "boolean" then lower_guard_type = "bool" end if
     if lower_guard_type == "str" then lower_guard_type = "string" end if
-    if lower_guard_type == "int" or lower_guard_type == "float" or lower_guard_type == "bool" or lower_guard_type == "string" or lower_guard_type == "array" or lower_guard_type == "bytes" or lower_guard_type == "function" or lower_guard_type == "thread" or lower_guard_type == "error" or lower_guard_type == "void" then return lower_guard_type end if
+    if lower_guard_type == "int" or lower_guard_type == "float" or lower_guard_type == "bool" or lower_guard_type == "string" or lower_guard_type == "array" or lower_guard_type == "bytes" or lower_guard_type == "function" or lower_guard_type == "thread" or lower_guard_type == "error" or lower_guard_type == "void" then
+      if extended and exprmod._opt_builtin_name_is_direct(state, "typeof") == false then return "" end if
+      return lower_guard_type
+    end if
     qualified_guard = exprmod._qualify_identifier(state, raw_guard_type)
     if qualified_guard == "" then qualified_guard = raw_guard_type end if
     return "struct:" + qualified_guard
@@ -3673,9 +3685,13 @@ function _typeflow_expr_type(state, ex, known)
   if k == "IsType" then return "bool" end if
   if k == "Unary" then
     op_u = _coerce_name(t.ast_op(ex))
-    operand_fact = _typeflow_expr_type(state, t.ast_right(ex), known)
+    operand_fact = _typeflow_expr_type(state, t.ast_right(ex), known, extended)
     overload_u = exprmod._resolve_operator_overload_facts(state, op_u, [operand_fact], ex, false)
-    if overload_u[0] and overload_u[1] != "" then return overload_u[2] end if
+    if overload_u[0] and overload_u[1] != "" then
+      overload_base_u = _typeflow_base(overload_u[2])
+      if extended and (overload_base_u == "int" or overload_base_u == "float" or overload_base_u == "number") then return "" end if
+      return overload_u[2]
+    end if
     rb = _typeflow_base(operand_fact)
     if op_u == "not" and rb != "" then return "bool" end if
     if op_u == "~" and rb == "int" then return "int" end if
@@ -3685,10 +3701,14 @@ function _typeflow_expr_type(state, ex, known)
   end if
   if k == "Bin" then
     op_b = _coerce_name(t.ast_op(ex))
-    left_fact = _typeflow_expr_type(state, t.ast_left(ex), known)
-    right_fact = _typeflow_expr_type(state, t.ast_right(ex), known)
+    left_fact = _typeflow_expr_type(state, t.ast_left(ex), known, extended)
+    right_fact = _typeflow_expr_type(state, t.ast_right(ex), known, extended)
     overload_b = exprmod._resolve_operator_overload_facts(state, op_b, [left_fact, right_fact], ex, false)
-    if overload_b[0] and overload_b[1] != "" then return overload_b[2] end if
+    if overload_b[0] and overload_b[1] != "" then
+      overload_base_b = _typeflow_base(overload_b[2])
+      if extended and (overload_base_b == "int" or overload_base_b == "float" or overload_base_b == "number") then return "" end if
+      return overload_b[2]
+    end if
     lb = _typeflow_base(left_fact)
     rb2 = _typeflow_base(right_fact)
     if op_b == "==" or op_b == "!=" then return "bool" end if
@@ -3703,6 +3723,7 @@ function _typeflow_expr_type(state, ex, known)
     if typeof(right_cv) == "struct" and right_cv.ok then
       right_tv = typeof(right_cv.value)
       right_nonzero = (right_tv == "int" or right_tv == "float") and right_cv.value != 0
+      if extended and right_cv.value != right_cv.value then right_nonzero = false end if
       right_nonnegative_int = right_tv == "int" and right_cv.value >= 0
     end if
     if (op_b == "&" or op_b == "|" or op_b == "^") and lb == "int" and rb2 == "int" then return "int" end if
@@ -3717,7 +3738,7 @@ function _typeflow_expr_type(state, ex, known)
     return ""
   end if
   if k == "Index" then
-    tb = _typeflow_base(_typeflow_expr_type(state, try(ex.target), known))
+    tb = _typeflow_base(_typeflow_expr_type(state, try(ex.target), known, extended))
     if tb == "bytes" or tb == "bytes?" then return "int" end if
     if tb == "string" then return "string" end if
     return ""
@@ -3727,14 +3748,28 @@ function _typeflow_expr_type(state, ex, known)
     raw = _member_qname(cal)
     args = try(ex.args)
     if typeof(args) != "array" then args = [] end if
-    if raw == "len" then return "int" end if
+    float_arg = 0
+    if extended then float_arg = exprmod._opt_builtin_tofloat_arg(state, ex) end if
+    if t.ast_is_node(float_arg) and exprmod._opt_numeric_arg_is_pure(state, float_arg, known) then
+      arg_base = _typeflow_base(_typeflow_expr_type(state, float_arg, known, extended))
+      if arg_base == "int" or arg_base == "float" or arg_base == "number" then return "float" end if
+    end if
+    if raw == "len" then
+      if extended and exprmod._opt_builtin_name_is_direct(state, "len") == false then return "" end if
+      return "int"
+    end if
     if raw == "typeof" or raw == "typeName" then return "string" end if
     fn_qname = exprmod._opt_static_user_fn(state, cal)
     if fn_qname != "" then
       declared_fn = exprmod._user_function_get(state, fn_qname)
       if typeof(declared_fn) == "struct" and (typeof(try(declared_fn.return_optional)) != "bool" or declared_fn.return_optional == false) and typeof(try(declared_fn.return_type)) == "string" then
         guarded_call = ml.TypeGuard("TypeGuard", ex, declared_fn.return_type, false, t.ast_pos(ex), t.ast_filename(ex))
-        return _typeflow_expr_type(state, guarded_call, known)
+        declared_result = _typeflow_expr_type(state, guarded_call, known, extended)
+        // An annotation alone does not cover implicit void fallthrough or
+        // another namespace's custom typeof.
+        declared_base = _typeflow_base(declared_result)
+        if extended and (declared_base == "int" or declared_base == "float" or declared_base == "number") then return "" end if
+        return declared_result
       end if
     end if
     if raw == "bytes" or raw == "byteBuffer" then
@@ -3742,7 +3777,7 @@ function _typeflow_expr_type(state, ex, known)
       if len(args) == 1 then
         sz = _intflow_const_int(state, args[0])
         if sz[0] and sz[1] >= 0 and sz[1] <= 2147483647 then return "bytes:" + sz[1] end if
-        arg_type = _typeflow_expr_type(state, args[0], known)
+        arg_type = _typeflow_expr_type(state, args[0], known, extended)
         arg_base = _typeflow_base(arg_type)
         if arg_base == "string" then return "bytes" end if
         if arg_base == "bytes" then return arg_type end if
@@ -3819,7 +3854,7 @@ end function
 
 /// Lower typeflow scan read order statement behavior to native x64.
 /// @internal
-function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, direct)
+function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, direct, extended = false)
   stmt_count = 0
   stmt_vector = t.arr_vec_is(stmts)
   if typeof(stmts) == "array" then stmt_count = len(stmts) else if stmt_vector then stmt_count = t.arr_vec_count(stmts) end if
@@ -3834,15 +3869,16 @@ function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, dir
     if k == "FunctionDef" or k == "GlobalDecl" then continue end if
     if k == "Assign" or k == "ConstDecl" or k == "SynchronizedDecl" then
       read_before = _typeflow_scan_read_expr(try(st.expr), tracked, initialized, read_before)
-      if direct then initialized = _arr_add_unique(initialized, _coerce_name(try(st.name))) end if
+      if direct or extended then initialized = _arr_add_unique(initialized, _coerce_name(try(st.name))) end if
       continue
     end if
     if k == "For" then
       read_before = _typeflow_scan_read_expr(try(st.start), tracked, initialized, read_before)
       read_before = _typeflow_scan_read_expr(try(st.end_expr), tracked, initialized, read_before)
+      if extended then read_before = _typeflow_scan_read_expr(try(st.step), tracked, initialized, read_before) end if
       inner_for = initialized + []
       inner_for = _arr_add_unique(inner_for, _coerce_name(try(st.var)))
-      nested_for = _typeflow_scan_read_order(try(st.body), tracked, inner_for, read_before, false)
+      nested_for = _typeflow_scan_read_order(try(st.body), tracked, inner_for, read_before, false, extended)
       read_before = nested_for[1]
       continue
     end if
@@ -3850,26 +3886,56 @@ function _typeflow_scan_read_order(stmts, tracked, initialized, read_before, dir
       read_before = _typeflow_scan_read_expr(try(st.iterable), tracked, initialized, read_before)
       inner_each = initialized + []
       inner_each = _arr_add_unique(inner_each, _foreach_var_name(st))
-      nested_each = _typeflow_scan_read_order(try(st.body), tracked, inner_each, read_before, false)
+      nested_each = _typeflow_scan_read_order(try(st.body), tracked, inner_each, read_before, false, extended)
       read_before = nested_each[1]
       continue
     end if
     exprs = [try(st.expr), try(st.cond), try(st.target), try(st.index), try(st.start), try(st.end_expr), try(st.iterable), try(st.obj)]
     for each ex in exprs read_before = _typeflow_scan_read_expr(ex, tracked, initialized, read_before) end for
-    elifs = try(st.elifs)
-    if typeof(elifs) == "array" and len(elifs) > 0 then
-      for each branch in elifs
-        if typeof(branch) == "array" and len(branch) >= 2 then
-          read_before = _typeflow_scan_read_expr(branch[0], tracked, initialized, read_before)
-        end if
-      end for
-    end if
-    // Flatten nested statements once into a capacity-backed vector. This
-    // preserves the historical field order without repeated array copies or
-    // one recursive call per individual parser field.
-    child_stmts = _scan_stmt_children_into(void, st)
-    if t.arr_vec_count(child_stmts) > 0 then
-      nested = _typeflow_scan_read_order(child_stmts, tracked, initialized + [], read_before, false)
+    if extended then read_before = _typeflow_scan_read_expr(try(st.lock), tracked, initialized, read_before) end if
+    // Each branch owns a separate initialized set. Sequential writes dominate
+    // later reads within that block, never a sibling or code after a loop.
+    if k == "If" then
+      nested_then = _typeflow_scan_read_order(try(st.then_body), tracked, initialized + [], read_before, false, extended)
+      read_before = nested_then[1]
+      elifs = try(st.elifs)
+      if typeof(elifs) == "array" and len(elifs) > 0 then
+        for each branch in elifs
+          if typeof(branch) == "array" and len(branch) >= 2 then
+            read_before = _typeflow_scan_read_expr(branch[0], tracked, initialized, read_before)
+            nested_elif = _typeflow_scan_read_order(branch[1], tracked, initialized + [], read_before, false, extended)
+            read_before = nested_elif[1]
+          end if
+        end for
+      end if
+      nested_else = _typeflow_scan_read_order(try(st.else_body), tracked, initialized + [], read_before, false, extended)
+      read_before = nested_else[1]
+    else if k == "Switch" then
+      cases = try(st.cases)
+      if typeof(cases) == "array" then
+        for each switch_case in cases
+          if extended then
+            values = try(switch_case.values)
+            if typeof(values) == "array" then
+              for each value in values
+                if typeof(value) == "array" then
+                  for each part in value read_before = _typeflow_scan_read_expr(part, tracked, initialized, read_before) end for
+                else
+                  read_before = _typeflow_scan_read_expr(value, tracked, initialized, read_before)
+                end if
+              end for
+            end if
+            read_before = _typeflow_scan_read_expr(try(switch_case.range_start), tracked, initialized, read_before)
+            read_before = _typeflow_scan_read_expr(try(switch_case.range_end), tracked, initialized, read_before)
+          end if
+          nested_case = _typeflow_scan_read_order(try(switch_case.body), tracked, initialized + [], read_before, false, extended)
+          read_before = nested_case[1]
+        end for
+      end if
+      nested_default = _typeflow_scan_read_order(try(st.default_body), tracked, initialized + [], read_before, false, extended)
+      read_before = nested_default[1]
+    else
+      nested = _typeflow_scan_read_order(try(st.body), tracked, initialized + [], read_before, false, extended)
       read_before = nested[1]
     end if
   end while
@@ -3919,13 +3985,13 @@ end function
 
 /// Lower infer known value types statement behavior to native x64.
 /// @internal
-function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
+function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch, extended = false)
   if typeof(fn_node) != "struct" then return [] end if
   previous_typeflow_function = state.typeflow_function
   state.typeflow_function = fn_node
   scratch = _prepare_function_analysis_scratch(analysis_scratch)
   inputs = flow_inputs
-  if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node, scratch) end if
+  if typeof(inputs) != "array" or len(inputs) < 10 then inputs = _collect_function_flow_inputs(fn_node, scratch, extended) end if
   assignments = inputs[1]
   direct_initializers = inputs[2]
   loop_names = inputs[4]
@@ -3935,6 +4001,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   params = try(fn_node.params)
   param_types = try(fn_node.param_types)
   param_optional = try(fn_node.param_optional)
+  primitive_guards_known = extended == false or exprmod._opt_builtin_name_is_direct(state, "typeof")
   if typeof(params) == "array" and typeof(param_types) == "array" and len(params) > 0 then
     for param_i = 0 to len(params) - 1
       param_name = _coerce_name(params[param_i])
@@ -3955,9 +4022,11 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
           end if
         end if
       end if
-      if state.operator_overloads_present == false and param_type != "array" and param_type != "bytes" and closed_struct == false then continue end if
+      param_fact = exprmod._operator_declared_type_fact(state, param_type, "", fn_node)
+      primitive = param_fact == "int" or param_fact == "float" or param_fact == "bool" or param_fact == "string" or param_fact == "array" or param_fact == "bytes" or param_fact == "function" or param_fact == "thread" or param_fact == "error" or param_fact == "void"
+      if extended and primitive and primitive_guards_known == false then excluded = _arr_add_unique(excluded, param_name); continue end if
+      if state.operator_overloads_present == false and param_type != "array" and param_type != "bytes" and closed_struct == false and (extended == false or primitive == false) then continue end if
       if typeof(param_type) == "string" and optional == false and _arr_has(excluded, param_name) == false then
-        param_fact = exprmod._operator_declared_type_fact(state, param_type, "", fn_node)
         if param_fact != "" then typed_param_facts = typed_param_facts + [[param_name, param_fact]] end if
       end if
     end for
@@ -3965,6 +4034,21 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
 
   body = try(fn_node.body)
   if typeof(body) != "array" then body = [] end if
+  if extended then
+    local_counts = t.fastmap_new(64)
+    locals = state.function_locals
+    local_count = 0
+    local_vector = t.arr_vec_is(locals)
+    if local_vector then local_count = t.arr_vec_count(locals) else if typeof(locals) == "array" then local_count = len(locals) end if
+    for local_i = 0 to local_count - 1
+      binding = void
+      if local_vector then binding = t.arr_vec_get(locals, local_i, void) else binding = locals[local_i] end if
+      local_name = _coerce_name(try(binding.name))
+      count = t.fastmap_get(local_counts, local_name, 0) + 1
+      local_counts = t.fastmap_set(local_counts, local_name, count)
+      if count > 1 then excluded = _arr_add_unique(excluded, local_name) end if
+    end for
+  end if
 
   if len(loop_names) > 0 then
     for i = 0 to len(loop_names) - 1
@@ -3976,7 +4060,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   if len(assignments) > 0 then for i = 0 to len(assignments) - 1 tracked_names = _arr_add_unique(tracked_names, assignments[i][0]) end for end if
   typed_param_names = []
   if len(typed_param_facts) > 0 then for each param_rec in typed_param_facts tracked_names = _arr_add_unique(tracked_names, param_rec[0]); typed_param_names = _arr_add_unique(typed_param_names, param_rec[0]) end for end if
-  read_order = _typeflow_scan_read_order(body, tracked_names, typed_param_names, [], true)
+  read_order = _typeflow_scan_read_order(body, tracked_names, typed_param_names, [], true, extended)
   read_before_init = read_order[1]
   if len(read_before_init) > 0 then for i = 0 to len(read_before_init) - 1 excluded = _arr_add_unique(excluded, read_before_init[i]) end for end if
 
@@ -3996,6 +4080,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
   fact_names = []
   if len(typed_param_facts) > 0 then
     for each param_rec in typed_param_facts
+      if extended and _arr_has(excluded, param_rec[0]) then continue end if
       facts_index = t.fastmap_set(facts_index, param_rec[0], param_rec[1])
       fact_names = _arr_add_unique(fact_names, param_rec[0])
     end for
@@ -4012,7 +4097,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
     for i = 0 to len(direct_initializers) - 1
       rec0 = direct_initializers[i]
       if _arr_has(candidates, rec0[0]) and _typeflow_get(facts_index, rec0[0]) == "" then
-        ft0 = _typeflow_expr_type(state, rec0[1], facts_index)
+        ft0 = _typeflow_expr_type(state, rec0[1], facts_index, extended)
         if ft0 != "" then
           facts_index = t.fastmap_set(facts_index, rec0[0], ft0)
           fact_names = _arr_add_unique(fact_names, rec0[0])
@@ -4043,7 +4128,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
     vals = _intflow_map_get(assignments, nm_c)
     if len(vals) <= 0 then continue end if
     inferred = []
-    for j = 0 to len(vals) - 1 inferred = inferred + [_typeflow_expr_type(state, vals[j], facts_index)] end for
+    for j = 0 to len(vals) - 1 inferred = inferred + [_typeflow_expr_type(state, vals[j], facts_index, extended)] end for
     merged = _typeflow_merge(inferred)
     if merged == "" or _typeflow_get(facts_index, nm_c) == merged then continue end if
     facts_index = t.fastmap_set(facts_index, nm_c, merged)
@@ -4077,7 +4162,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch)
     if _arr_has(loop_names, nm_v) and len(_intflow_map_get(assignments, nm_v)) <= 0 then continue end if
     vals_v = _intflow_map_get(assignments, nm_v)
     inferred_v = []
-    for j = 0 to len(vals_v) - 1 inferred_v = inferred_v + [_typeflow_expr_type(state, vals_v[j], facts_index)] end for
+    for j = 0 to len(vals_v) - 1 inferred_v = inferred_v + [_typeflow_expr_type(state, vals_v[j], facts_index, extended)] end for
     if len(vals_v) > 0 and _typeflow_merge(inferred_v) != "" then continue end if
     facts_index = t.fastmap_set(facts_index, nm_v, "")
     invalidated = t.fastmap_get(dependents, nm_v, [])
@@ -4417,6 +4502,14 @@ function _for_index_hoist_plans(state, loop_node, index_binding)
   return plans
 end function
 
+/// Prove byte validity only for integer literals, without constant folding.
+/// @internal
+function _opt_is_byte_literal(ex)
+  if t.ast_kind(ex) != "Num" then return false end if
+  value = t.ast_value(ex)
+  return typeof(value) == "int" and value >= 0 and value <= 255
+end function
+
 /// Lower opt emit known setindex statement behavior to native x64.
 /// @internal
 function _opt_emit_known_setindex(state, stmt, plan)
@@ -4491,16 +4584,24 @@ function _opt_emit_known_setindex(state, stmt, plan)
     state.asm = a.mov_mem_bis_r64(state.asm, "r11", "rcx", 8, 8, "r10")
     state.asm = a.jmp(state.asm, l_done)
   else
-    state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
-    state.asm = a.and_r64_imm(state.asm, "r8", 7)
-    state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_INT)
-    state.asm = a.jcc(state.asm, "ne", l_bad_byte)
+    // A literal byte cannot fail these RHS checks. Keep evaluation,
+    // target/bounds errors and decoding unchanged; floats, bools and
+    // computed values still take the checked path.
+    byte_literal = _opt_is_byte_literal(stmt.expr)
+    if byte_literal == false then
+      state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
+      state.asm = a.and_r64_imm(state.asm, "r8", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_bad_byte)
+    end if
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
     state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
-    state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
-    state.asm = a.jcc(state.asm, "l", l_bad_byte)
-    state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
-    state.asm = a.jcc(state.asm, "g", l_bad_byte)
+    if byte_literal == false then
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 0)
+      state.asm = a.jcc(state.asm, "l", l_bad_byte)
+      state.asm = a.cmp_r64_imm(state.asm, "rax", 255)
+      state.asm = a.jcc(state.asm, "g", l_bad_byte)
+    end if
     state.asm = a.lea_r64_mem_bis(state.asm, "r8", "r11", "rcx", 1, 8)
     state.asm = a.mov_membase_disp_r8(state.asm, "r8", 0, "al")
     state.asm = a.jmp(state.asm, l_done)
@@ -10094,6 +10195,7 @@ function emit_module_init_object(state, module_rec)
   old_root_static_qwords = state._current_root_static_qwords
   old_known_int_names = state.known_int_names
   old_known_value_types = state.known_value_types
+  old_known_numeric_value_types = state.known_numeric_value_types
   old_loop_index_fast_stack = state.loop_index_fast_stack
   old_scope_stack = state.scope_stack
   old_scope_declared = state.scope_declared
@@ -10117,6 +10219,7 @@ function emit_module_init_object(state, module_rec)
   state._current_root_static_qwords = (root_top - root_base) / 8
   state.known_int_names = []
   state.known_value_types = []
+  state.known_numeric_value_types = []
   state.loop_index_fast_stack = []
   state.scope_stack = [base_globals]
   state.scope_declared = [[]]
@@ -10206,6 +10309,7 @@ function emit_module_init_object(state, module_rec)
   state._current_root_static_qwords = old_root_static_qwords
   state.known_int_names = old_known_int_names
   state.known_value_types = old_known_value_types
+  state.known_numeric_value_types = old_known_numeric_value_types
   state.loop_index_fast_stack = old_loop_index_fast_stack
   state.scope_stack = old_scope_stack
   state.scope_declared = old_scope_declared
@@ -10411,6 +10515,9 @@ function emit_user_function(state, fn_node, analysis_scratch)
   state.current_qname_prefix = _qname_parent_prefix(qn)
   state.current_file_prefix = _strpair_get(state.file_prefix_map, _st_file(fn_node))
   known_value_types_for_fn = _infer_known_value_types(state, fn_node, flow_inputs_for_fn, analysis_scratch)
+  // Existing consumers retain the exact legacy facts. Stronger numeric
+  // proofs live separately and are requested only by new lowering paths.
+  known_numeric_types_for_fn = _infer_known_value_types(state, fn_node, void, void, true)
   old_scalar_structs = state.scalar_structs
   state.scalar_structs = _scalar_candidates(state, fn_node)
   state.current_qname_prefix = valueflow_saved_qpref
@@ -10515,6 +10622,7 @@ function emit_user_function(state, fn_node, analysis_scratch)
   old_root_static_qwords = state._current_root_static_qwords
   old_known_int_names = state.known_int_names
   old_known_value_types = state.known_value_types
+  old_known_numeric_value_types = state.known_numeric_value_types
   old_loop_index_fast_stack = state.loop_index_fast_stack
   old_boxed_names = state.current_fn_boxed_names
   old_env_index = state.current_fn_env_index
@@ -10581,6 +10689,7 @@ function emit_user_function(state, fn_node, analysis_scratch)
   state.current_qname_prefix = intflow_saved_qpref
   state.current_file_prefix = intflow_saved_fpref
   state.known_value_types = known_value_types_for_fn
+  state.known_numeric_value_types = known_numeric_types_for_fn
   state.loop_index_fast_stack = []
   state.current_fn_boxed_names = boxed_names
   state.current_fn_env_index = env_index
@@ -10995,6 +11104,7 @@ function emit_user_function(state, fn_node, analysis_scratch)
   state._current_root_static_qwords = old_root_static_qwords
   state.known_int_names = old_known_int_names
   state.known_value_types = old_known_value_types
+  state.known_numeric_value_types = old_known_numeric_value_types
   state.loop_index_fast_stack = old_loop_index_fast_stack
   state.current_fn_boxed_names = old_boxed_names
   state.scalar_structs = old_scalar_structs

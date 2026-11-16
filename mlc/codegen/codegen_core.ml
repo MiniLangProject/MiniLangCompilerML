@@ -292,6 +292,8 @@ struct CgState
   polymorphic_classes,
   class_constructor_arities,
   method_candidates,
+  /// Stronger facts consumed explicitly by new numeric lowering only.
+  known_numeric_value_types,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
@@ -741,7 +743,8 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   [],
   t.fastmap_new(128),
   [],
-  t.fastmap_new(128)
+  t.fastmap_new(128),
+  []
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)
@@ -1572,6 +1575,36 @@ function emit_normalize_xmm0_to_value(state)
   state.asm = a.mark(state.asm, l_box)
   state.asm = a.call(state.asm, "fn_box_float")
   state.asm = a.mark(state.asm, l_end)
+  return state
+end function
+
+/// Keep normalize(XMM0) unboxed for an immediate numeric consumer.
+/// Exact integer results still retag/wrap to signed 61 bits before conversion
+/// back to double. Preserve the existing unordered/equal branch and f32 probe;
+/// the caller must not keep raw XMM0 across a call or a safepoint.
+function emit_normalize_xmm0_for_double_consumer(state)
+  lid = new_label_id(state)
+  l_int = "norm_double_int_" + lid
+  l_float = "norm_double_float_" + lid
+  l_done = "norm_double_done_" + lid
+  state.asm = a.cvttsd2si_r64_xmm(state.asm, "rax", "xmm0")
+  state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm1", "rax")
+  state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.jcc(state.asm, "e", l_int)
+  state.asm = a.jmp(state.asm, l_float)
+  state.asm = a.mark(state.asm, l_int)
+  state.asm = a.shl_rax_imm8(state.asm, 3)
+  state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+  state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm0", "rax")
+  state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_float)
+  // Both f32-immediate and boxed-f64 unbox to the original XMM0. Keep the
+  // float32 probe, including its floating-point status effects.
+  state.asm = a.cvtsd2ss_xmm_xmm(state.asm, "xmm2", "xmm0")
+  state.asm = a.cvtss2sd_xmm_xmm(state.asm, "xmm3", "xmm2")
+  state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm3")
+  state.asm = a.mark(state.asm, l_done)
   return state
 end function
 

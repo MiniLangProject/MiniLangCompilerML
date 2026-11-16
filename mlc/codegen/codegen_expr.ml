@@ -1656,7 +1656,7 @@ function cg_emit_expr(state, expr)
   end if
 
   if k == "Bin" then
-    return _emit_expr_bin(state, expr)
+    return _emit_expr_bin(state, expr, true)
   end if
 
   if k == "Call" then
@@ -2311,6 +2311,11 @@ end function
 /// Lower emit expr type guard expression behavior to native x64.
 /// @internal
 function _emit_expr_type_guard(state, expr)
+  if _opt_literal_guard_is_redundant(state, expr) then
+    // Ordinary emission retains folding and numeric normalization. A proven
+    // primitive constant cannot be Error or allocate and needs no guard root.
+    return cg_emit_expr(state, expr.expr)
+  end if
   lid = _next_lid(state)
   l_valid = "type_guard_valid_" + lid
   l_done = "type_guard_done_" + lid
@@ -3181,11 +3186,11 @@ end function
 
 /// Lower opt const nonzero number expression behavior to native x64.
 /// @internal
-function _opt_const_nonzero_number(state, ex)
+function _opt_const_nonzero_number(state, ex, ordered = false)
   cv = cg_expr_try_const_value(state, ex)
   if typeof(cv) != "struct" or cv.ok == false then return false end if
   tv = typeof(cv.value)
-  return (tv == "int" or tv == "float") and cv.value != 0
+  return (tv == "int" or tv == "float") and cv.value != 0 and (ordered == false or cv.value == cv.value)
 end function
 
 /// Lower opt const nonnegative int expression behavior to native x64.
@@ -3441,9 +3446,68 @@ function _emit_operator_overload(state, op_symbol, operands, node)
   return [state, true]
 end function
 
+/// Identify a builtin without callable/name rebinding. Function-wide analysis
+/// runs before local bindings exist, so consult its owning function as well.
+/// @internal
+function _opt_builtin_name_is_direct(state, name)
+  owner = state.typeflow_function
+  if typeof(owner) == "struct" then
+    if _arr_has_str(try(owner._ml_locals), name) or _arr_has_str(try(owner._ml_captures), name) or _arr_has_str(try(owner.params), name) then return false end if
+  end if
+  binding = scope.resolve_binding(state, name)
+  if typeof(binding) == "struct" and binding.kind != "global" then return false end if
+  if _qualify_identifier(state, name) != name then return false end if
+  if typeof(_user_function_get(state, name)) == "struct" then return false end if
+  if typeof(_extern_sig_get(state, name)) == "struct" then return false end if
+  if typeof(_state_struct_fields_get(state, name)) == "array" then return false end if
+  if _state_enum_id_get(state, name, -1) >= 0 then return false end if
+  return true
+end function
+
+/// Return a direct toFloat operand without treating captured errors as numbers.
+/// @internal
+function _opt_builtin_tofloat_arg(state, ex)
+  if typeof(state.errprop_suppression) == "int" and state.errprop_suppression != 0 then return 0 end if
+  if t.ast_kind(ex) != "Call" then return 0 end if
+  callee = try(ex.callee)
+  if t.ast_kind(callee) != "Var" or _coerce_name(t.ast_name(callee)) != "toFloat" then return 0 end if
+  args = try(ex.args)
+  if typeof(args) != "array" or len(args) != 1 then return 0 end if
+  names = try(ex.arg_names)
+  if typeof(names) == "array" then
+    for each name in names if typeof(name) == "string" then return 0 end if end for
+  end if
+  if _opt_builtin_name_is_direct(state, "toFloat") == false then return 0 end if
+  return args[0]
+end function
+
+/// Limit new builtin facts to numeric leaves and primitive arithmetic.
+/// @internal
+function _opt_numeric_arg_is_pure(state, ex, known = void)
+  kind = t.ast_kind(ex)
+  if kind == "Num" then
+    value_type = typeof(t.ast_value(ex))
+    return value_type == "int" or value_type == "float"
+  end if
+  if kind == "Var" then
+    fact = ""
+    if typeof(known) == "void" then fact = _opt_expr_known_type(state, ex, true) else fact = _opt_type_fact_get(known, _coerce_name(t.ast_name(ex))) end if
+    base = _opt_type_base(fact)
+    return base == "int" or base == "float" or base == "number"
+  end if
+  op = _coerce_name(t.ast_op(ex))
+  if kind == "Unary" and (op == "-" or op == "~") then return _opt_numeric_arg_is_pure(state, t.ast_right(ex), known) end if
+  // Fallible division/modulo needs a separate non-zero, ordered proof.
+  // Keep this new builtin fact limited to total primitive arithmetic.
+  if kind == "Bin" and (op == "+" or op == "-" or op == "*" or op == "&" or op == "|" or op == "^" or op == "<<" or op == ">>") then
+    return _opt_numeric_arg_is_pure(state, t.ast_left(ex), known) and _opt_numeric_arg_is_pure(state, t.ast_right(ex), known)
+  end if
+  return false
+end function
+
 /// Lower opt expr known type expression behavior to native x64.
 /// @internal
-function _opt_expr_known_type(state, ex)
+function _opt_expr_known_type(state, ex, extended = false)
   if t.ast_is_node(ex) == false then return "" end if
   k = _coerce_name(t.ast_kind(ex))
   if k == "Num" then
@@ -3460,7 +3524,9 @@ function _opt_expr_known_type(state, ex)
   end if
   if k == "Var" then
     nm = _coerce_name(t.ast_name(ex))
-    fact = _opt_type_fact_get(state.known_value_types, nm)
+    facts = state.known_value_types
+    if extended then facts = state.known_numeric_value_types end if
+    fact = _opt_type_fact_get(facts, nm)
     if fact == "" then return "" end if
     b = scope.cg_resolve_binding(state, nm)
     if typeof(b) != "struct" then return "" end if
@@ -3474,9 +3540,13 @@ function _opt_expr_known_type(state, ex)
     // Reuse full operand facts for overload resolution and builtin inference.
     // Walking both paths recursively doubles work at every nesting level
     // whenever any imported module declares an operator.
-    right_fact_u = _opt_expr_known_type(state, t.ast_right(ex))
+    right_fact_u = _opt_expr_known_type(state, t.ast_right(ex), extended)
     overload_u = _resolve_operator_overload_facts(state, op_u, [right_fact_u], ex, false)
-    if overload_u[0] and overload_u[1] != "" then return overload_u[2] end if
+    if overload_u[0] and overload_u[1] != "" then
+      overload_base_u = _opt_type_base(overload_u[2])
+      if extended and (overload_base_u == "int" or overload_base_u == "float" or overload_base_u == "number") then return "" end if
+      return overload_u[2]
+    end if
     rb = _opt_type_base(right_fact_u)
     if op_u == "not" and rb != "" then return "bool" end if
     if op_u == "~" and rb == "int" then return "int" end if
@@ -3488,10 +3558,14 @@ function _opt_expr_known_type(state, ex)
     op_b = _coerce_name(t.ast_op(ex))
     // Preserve qualified struct facts for exact overload selection; reduce
     // them to representation base types only for builtin inference below.
-    left_fact_b = _opt_expr_known_type(state, t.ast_left(ex))
-    right_fact_b = _opt_expr_known_type(state, t.ast_right(ex))
+    left_fact_b = _opt_expr_known_type(state, t.ast_left(ex), extended)
+    right_fact_b = _opt_expr_known_type(state, t.ast_right(ex), extended)
     overload_b = _resolve_operator_overload_facts(state, op_b, [left_fact_b, right_fact_b], ex, false)
-    if overload_b[0] and overload_b[1] != "" then return overload_b[2] end if
+    if overload_b[0] and overload_b[1] != "" then
+      overload_base_b = _opt_type_base(overload_b[2])
+      if extended and (overload_base_b == "int" or overload_base_b == "float" or overload_base_b == "number") then return "" end if
+      return overload_b[2]
+    end if
     lb = _opt_type_base(left_fact_b)
     rb2 = _opt_type_base(right_fact_b)
     if op_b == "==" or op_b == "!=" then return "bool" end if
@@ -3503,21 +3577,21 @@ function _opt_expr_known_type(state, ex)
     if (op_b == "&" or op_b == "|" or op_b == "^") and lb == "int" and rb2 == "int" then return "int" end if
     if (op_b == "<<" or op_b == ">>") and lb == "int" and rb2 == "int" and _opt_const_nonnegative_int(state, right_b) then return "int" end if
     if (op_b == "+" or op_b == "-" or op_b == "*") and lb == "int" and rb2 == "int" then return "int" end if
-    if op_b == "%" and lb == "int" and rb2 == "int" and _opt_const_nonzero_number(state, right_b) then return "int" end if
-    if op_b == "div" and lb == "int" and rb2 == "int" and _opt_const_nonzero_number(state, right_b) then return "int" end if
+    if op_b == "%" and lb == "int" and rb2 == "int" and _opt_const_nonzero_number(state, right_b, extended) then return "int" end if
+    if op_b == "div" and lb == "int" and rb2 == "int" and _opt_const_nonzero_number(state, right_b, extended) then return "int" end if
     numeric_l = lb == "int" or lb == "float" or lb == "number"
     numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "+" or op_b == "-" or op_b == "*") and numeric_l and numeric_r then return "number" end if
-    if (op_b == "/" or op_b == "%") and numeric_l and numeric_r and _opt_const_nonzero_number(state, right_b) then return "number" end if
+    if (op_b == "/" or op_b == "%") and numeric_l and numeric_r and _opt_const_nonzero_number(state, right_b, extended) then return "number" end if
     return ""
   end if
   if k == "Index" then
-    target_type = _opt_expr_known_type(state, try(ex.target))
+    target_type = _opt_expr_known_type(state, try(ex.target), extended)
     tb = _opt_type_base(target_type)
     exact_len = _opt_type_exact_length(target_type)
     index_cv = cg_expr_try_const_value(state, try(ex.index))
     if tb == "bytes" and exact_len >= 0 and typeof(index_cv) == "struct" and index_cv.ok and typeof(index_cv.value) == "int" and index_cv.value >= 0 - exact_len and index_cv.value < exact_len then return "int" end if
-    index_base = _opt_type_base(_opt_expr_known_type(state, try(ex.index)))
+    index_base = _opt_type_base(_opt_expr_known_type(state, try(ex.index), extended))
     // Specialized indexing propagates target and bounds errors. Its normal
     // continuation has a stable result type even when bytes(...) still needs
     // a runtime target guard.
@@ -3526,12 +3600,24 @@ function _opt_expr_known_type(state, ex)
   end if
   if k == "Call" then
     callee = try(ex.callee)
+    float_arg = 0
+    if extended then float_arg = _opt_builtin_tofloat_arg(state, ex) end if
+    if t.ast_is_node(float_arg) and _opt_numeric_arg_is_pure(state, float_arg) then
+      arg_type = _opt_type_base(_opt_expr_known_type(state, float_arg, extended))
+      if arg_type == "int" or arg_type == "float" or arg_type == "number" then return "float" end if
+    end if
     fn_qname = _opt_static_user_fn(state, callee)
     if fn_qname != "" then
       declared_fn = _user_function_get(state, fn_qname)
       if typeof(declared_fn) == "struct" and (typeof(try(declared_fn.return_optional)) != "bool" or declared_fn.return_optional == false) then
         declared_result = _operator_declared_type_fact(state, try(declared_fn.return_type), "", declared_fn)
-        if declared_result != "" then return declared_result end if
+        if declared_result != "" then
+          // An annotation does not cover implicit void fallthrough or a
+          // callee whose typeof resolves in another namespace.
+          declared_base = _opt_type_base(declared_result)
+          if extended and (declared_base == "int" or declared_base == "float" or declared_base == "number") then return "" end if
+          return declared_result
+        end if
       end if
     end if
     constructor_qname = _expr_to_qualname(state, callee)
@@ -3603,11 +3689,11 @@ function _validate_statically_known_index(state, ex)
   if typeof(ex) != "struct" then return state end if
   target = try(ex.target)
   index = try(ex.index)
-  target_fact = _opt_expr_known_type(state, target)
+  target_fact = _opt_expr_known_type(state, target, false)
   target_kind = _opt_type_base(target_fact)
   indexable = target_kind == "array" or target_kind == "bytes" or target_kind == "bytes?" or target_kind == "string"
   if not indexable then return state end if
-  index_kind = _opt_type_base(_opt_expr_known_type(state, index))
+  index_kind = _opt_type_base(_opt_expr_known_type(state, index, false))
   if index_kind != "" and index_kind != "int" then
     state.diagnostics = state.diagnostics + ["Index must be an int; statically known type is '" + index_kind + "'"]
     return state
@@ -3995,7 +4081,16 @@ function _emit_known_float_binop(state, expr)
   rhs = _opt_type_base(_opt_expr_known_type(state, t.ast_right(expr)))
   lhs_numeric = lhs == "int" or lhs == "float" or lhs == "number"
   rhs_numeric = rhs == "int" or rhs == "float" or rhs == "number"
-  if lhs_numeric == false or rhs_numeric == false or (lhs != "float" and rhs != "float") then return [state, false] end if
+  if lhs_numeric == false or rhs_numeric == false or (lhs != "float" and rhs != "float") then
+    // Preserve the complete legacy pair before considering stronger facts.
+    // Never combine a new peer with an opaque legacy call-return fact.
+    if typeof(state.errprop_suppression) == "int" and state.errprop_suppression != 0 then return [state, false] end if
+    lhs = _opt_type_base(_opt_expr_known_type(state, t.ast_left(expr), true))
+    rhs = _opt_type_base(_opt_expr_known_type(state, t.ast_right(expr), true))
+    lhs_numeric = lhs == "int" or lhs == "float" or lhs == "number"
+    rhs_numeric = rhs == "int" or rhs == "float" or rhs == "number"
+    if lhs_numeric == false or rhs_numeric == false or (lhs != "float" and rhs != "float") then return [state, false] end if
+  end if
 
   lid = _next_lid(state)
   l_fail = "numeric_float_fail_" + lid
@@ -4060,6 +4155,160 @@ function _emit_known_float_binop(state, expr)
 
   state.asm = a.mark(state.asm, l_fail)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.mark(state.asm, l_done)
+  return [state, true]
+end function
+
+/// Prove a bounded, call-free numeric tree and collect its local leaves.
+/// @internal
+function _float_child_local_leaves(state, expr, depth)
+  if depth > 2 then return 0 end if
+  kind = t.ast_kind(expr)
+  if kind == "Num" then
+    value_type = typeof(t.ast_value(expr))
+    if value_type == "int" or value_type == "float" then return [] end if
+    return 0
+  end if
+  if kind == "Var" then
+    if state.in_function == false then return 0 end if
+    fact = _opt_type_base(_opt_expr_known_type(state, expr, true))
+    b = scope.cg_resolve_binding(state, _coerce_name(t.ast_name(expr)))
+    if fact != "int" and fact != "float" and fact != "number" then return 0 end if
+    if typeof(b) != "struct" then return 0 end if
+    if b.kind != "local" and b.kind != "param" then return 0 end if
+    if b.boxed then return 0 end if
+    if typeof(b.capture_index) == "int" and b.capture_index >= 0 then return 0 end if
+    return [expr]
+  end if
+  if kind == "Bin" then
+    op = t.ast_op(expr)
+    if op != "+" and op != "-" and op != "*" then return 0 end if
+    left = _float_child_local_leaves(state, t.ast_left(expr), depth + 1)
+    if typeof(left) != "array" then return 0 end if
+    right = _float_child_local_leaves(state, t.ast_right(expr), depth + 1)
+    if typeof(right) != "array" then return 0 end if
+    for each leaf in right
+      present = false
+      for each earlier in left
+        if t.ast_name(earlier) == t.ast_name(leaf) then present = true; break end if
+      end for
+      if present == false then left = left + [leaf] end if
+    end for
+    return left
+  end if
+  return 0
+end function
+
+/// Elide one numeric child's box for an immediate float-literal parent.
+/// Deeper operands keep ordinary rooted evaluation. Raw XMM0 exists only after
+/// that boundary and until parent materialization; it never crosses a call.
+/// @internal
+function _emit_float_parent_without_child_box(state, expr)
+  parent_op = t.ast_op(expr)
+  if parent_op != "+" and parent_op != "-" and parent_op != "*" then return [state, false] end if
+  literal = t.ast_right(expr)
+  if t.ast_kind(literal) != "Num" then return [state, false] end if
+  if typeof(t.ast_value(literal)) != "float" then return [state, false] end if
+  child = t.ast_left(expr)
+  if t.ast_kind(child) != "Bin" then return [state, false] end if
+  child_op = t.ast_op(child)
+  if child_op != "+" and child_op != "-" and child_op != "*" then return [state, false] end if
+  leaves = _float_child_local_leaves(state, child, 0)
+  if typeof(leaves) != "array" then return [state, false] end if
+  if len(leaves) == 0 then return [state, false] end if
+  lhs = _opt_type_base(_opt_expr_known_type(state, t.ast_left(child), true))
+  rhs = _opt_type_base(_opt_expr_known_type(state, t.ast_right(child), true))
+  if lhs != "int" and lhs != "float" and lhs != "number" then return [state, false] end if
+  if rhs != "int" and rhs != "float" and rhs != "number" then return [state, false] end if
+  // Integer-only and folded children have no runtime float box to remove.
+  if lhs == "int" and rhs == "int" then return [state, false] end if
+  folded = _opt_try_const_value(state, child)
+  if folded.ok then return [state, false] end if
+  lid = _next_lid(state)
+  l_slow = "float_parent_nobox_slow_" + lid
+  l_float = "float_parent_nobox_float_" + lid
+  l_parent = "float_parent_nobox_parent_" + lid
+  l_done = "float_parent_nobox_done_" + lid
+  state.asm = a.mark(state.asm, "float_parent_nobox_guard_" + lid)
+  // Check leaf facts before either subtree is evaluated. A miss runs the
+  // original expression once, retaining its exact error behavior. Calls,
+  // captures and globals are excluded, so these local values cannot change.
+  for i = 0 to len(leaves) - 1
+    leaf = leaves[i]
+    fact = _opt_type_base(_opt_expr_known_type(state, leaf, true))
+    l_ok = "float_parent_nobox_leaf_" + lid + "_" + i
+    state = cg_emit_expr(state, leaf)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+    if fact == "int" then
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+      state.asm = a.jcc(state.asm, "ne", l_slow)
+    else
+      if fact == "number" then
+        state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+        state.asm = a.jcc(state.asm, "e", l_ok)
+      end if
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_FLOAT)
+      state.asm = a.jcc(state.asm, "e", l_ok)
+      state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_slow)
+      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
+      state.asm = a.jcc(state.asm, "ne", l_slow)
+    end if
+    state.asm = a.mark(state.asm, l_ok)
+  end for
+
+  state.asm = a.mark(state.asm, "float_parent_nobox_fast_" + lid)
+  left_tmp = core.alloc_expr_temps(state, 8)
+  state = cg_emit_expr(state, t.ast_left(child))
+  state.asm = a.mov_rsp_disp32_rax(state.asm, left_tmp)
+  state = cg_emit_expr(state, t.ast_right(child))
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
+  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", left_tmp)
+  state = core.free_expr_temps(state, 8)
+  state.asm = a.mark(state.asm, "float_parent_nobox_child_" + lid)
+
+  // A number fact admits actual int/int operands. Compute the tagged result
+  // first: converting operands early would lose integer precision above 2^53.
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.and_rax_imm8(state.asm, 7)
+  state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+  state.asm = a.jcc(state.asm, "ne", l_float)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+  state.asm = a.and_rax_imm8(state.asm, 7)
+  state.asm = a.cmp_rax_imm8(state.asm, c.TAG_INT)
+  state.asm = a.jcc(state.asm, "ne", l_float)
+  state = _emit_known_int_binop(state, child_op, false, 0, false, 0)
+  state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm0", "rax")
+  state.asm = a.jmp(state.asm, l_parent)
+
+  state.asm = a.mark(state.asm, l_float)
+  // Guarded leaves and total primitive +,-,* operations prove these conversions
+  // succeed. The defensive slow edges cannot repeat evaluated language effects.
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  state = core.emit_to_double_xmm(state, 0, l_slow)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
+  state = core.emit_to_double_xmm(state, 1, l_slow)
+  if child_op == "+" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if child_op == "-" then state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if child_op == "*" then state.asm = a.mulsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  state = core.emit_normalize_xmm0_for_double_consumer(state)
+
+  state.asm = a.mark(state.asm, l_parent)
+  // Loading this literal cannot call, collect, or overwrite raw XMM0.
+  state = _opt_emit_const_value(state, t.ast_value(literal))
+  state = core.emit_to_double_xmm(state, 1, l_slow)
+  if parent_op == "+" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if parent_op == "-" then state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if parent_op == "*" then state.asm = a.mulsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  state.asm = a.mark(state.asm, "float_parent_nobox_materialize_" + lid)
+  state = core.emit_normalize_xmm0_to_value(state)
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_slow)
+  state = _emit_expr_bin(state, expr, false)
   state.asm = a.mark(state.asm, l_done)
   return [state, true]
 end function
@@ -4320,6 +4569,44 @@ function _typeof_fold_literal(expr)
   return ""
 end function
 
+/// Recognize primitive literal trees without consulting any type-flow facts.
+/// Names, calls and nested guards are excluded so a declaration cannot prove
+/// its own initializer guard; parameter entry contracts remain effective.
+/// @internal
+function _opt_literal_expr(expr)
+  k = t.ast_kind(expr)
+  if k == "Num" or k == "Bool" or k == "Str" then return true end if
+  if k == "Unary" then return _opt_literal_expr(t.ast_right(expr)) end if
+  if k == "Bin" then
+    return _opt_literal_expr(t.ast_left(expr)) and _opt_literal_expr(t.ast_right(expr))
+  end if
+  return false
+end function
+
+/// Prove a primitive guard from the same constant value its RHS will emit.
+/// @internal
+function _opt_literal_guard_is_redundant(state, expr)
+  if _opt_literal_expr(expr.expr) == false then return false end if
+  cv = cg_expr_try_const_value(state, expr.expr)
+  if cv.ok == false then return false end if
+  value_type = typeof(cv.value)
+  if value_type != "bool" and value_type != "int" and value_type != "float" and value_type != "string" then return false end if
+  raw_type = _coerce_name(expr.type_name)
+  canonical = raw_type
+  if s.contains(raw_type, ".") == false then
+    canonical = s.toLowerAscii(raw_type)
+    if canonical == "integer" then canonical = "int" end if
+    if canonical == "boolean" then canonical = "bool" end if
+    if canonical == "str" then canonical = "string" end if
+  end if
+  if canonical != value_type then return false end if
+  // Use the existing direct typeof/tag-check resolver. User declarations of
+  // typeof may have observable effects and must retain the ordinary guard.
+  probe_arg = ml.DeferredCapture("DeferredCapture", 0, -1, "")
+  probe = ml.Call("Call", ml.Var("Var", "typeof", -1, ""), [probe_arg], [], -1, "")
+  return t.ast_kind(_typeof_fold_arg(state, probe)) == "DeferredCapture"
+end function
+
 /// Emit a direct `typeof(<arg>) == "<lit>"` check: value tag and, for pointer types, object-type checks replace the fn_typeof call and the generic equality cascade.
 /// @param state Value supplied for `state`.
 /// @param arg Value supplied for `arg`.
@@ -4420,7 +4707,7 @@ end function
 
 /// Emit binary operators, preserving left-to-right effects and routing dynamic type/error cases through the same helpers used by the reference compiler.
 /// @internal
-function _emit_expr_bin(state, expr)
+function _emit_expr_bin(state, expr, allow_float_box_elision)
   overloaded_b = _emit_operator_overload(state, _coerce_name(t.ast_op(expr)), [t.ast_left(expr), t.ast_right(expr)], expr)
   state = overloaded_b[0]
   if overloaded_b[1] then return state end if
@@ -4530,6 +4817,12 @@ function _emit_expr_bin(state, expr)
       end if
       return state
     end if
+  end if
+
+  if allow_float_box_elision then
+    float_parent = _emit_float_parent_without_child_box(state, expr)
+    state = float_parent[0]
+    if float_parent[1] then return state end if
   end if
 
   left_expr = t.ast_left(expr)
@@ -11427,6 +11720,7 @@ function _emit_inline_call(state, callee, args)
   saved_env_index = state.current_fn_env_index
   saved_param_names = try(state.current_fn_param_names)
   saved_known_value_types = state.known_value_types
+  saved_known_numeric_value_types = state.known_numeric_value_types
   saved_known_int_names = state.known_int_names
   saved_loop_index_fast_stack = state.loop_index_fast_stack
 
@@ -11488,6 +11782,9 @@ function _emit_inline_call(state, callee, args)
       if _opt_type_base(fact) == "int" then state.known_int_names = t.fastmap_set(state.known_int_names, pname, 1) end if
     end for
   end if
+  // Inline scopes keep legacy facts; new facts require the whole-function
+  // proof and must not inherit assumptions from the caller.
+  state.known_numeric_value_types = []
   state.loop_index_fast_stack = []
 
   dot = -1
@@ -11565,6 +11862,7 @@ function _emit_inline_call(state, callee, args)
   state.current_fn_env_index = saved_env_index
   state.current_fn_param_names = saved_param_names
   state.known_value_types = saved_known_value_types
+  state.known_numeric_value_types = saved_known_numeric_value_types
   state.known_int_names = saved_known_int_names
   state.loop_index_fast_stack = saved_loop_index_fast_stack
 
