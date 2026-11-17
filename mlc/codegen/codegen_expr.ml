@@ -1656,7 +1656,7 @@ function cg_emit_expr(state, expr)
   end if
 
   if k == "Bin" then
-    return _emit_expr_bin(state, expr, true)
+    return _emit_expr_bin(state, expr, true, true)
   end if
 
   if k == "Call" then
@@ -4165,6 +4165,195 @@ function _emit_known_float_binop(state, expr)
   return [state, true]
 end function
 
+/// Plan a bounded float-only tree without changing the ordinary type facts.
+/// Returns [unique locals, arithmetic node count, pending right-subtree saves],
+/// or 0 when the tree cannot use the guarded, call-free expression path.
+/// @internal
+function _float_tree_plan(state, expr, depth)
+  kind = t.ast_kind(expr)
+  if kind == "Num" then
+    if typeof(t.ast_value(expr)) == "float" then return [[], 0, 0] end if
+    return 0
+  end if
+  if kind == "Var" then
+    if state.in_function == false then return 0 end if
+    fact = _opt_type_base(_opt_expr_known_type(state, expr, true))
+    if fact != "float" and fact != "number" and fact != "number?" then return 0 end if
+    b = scope.cg_resolve_binding(state, _coerce_name(t.ast_name(expr)))
+    if typeof(b) != "struct" then return 0 end if
+    if b.kind != "local" and b.kind != "param" then return 0 end if
+    if b.boxed then return 0 end if
+    if typeof(b.capture_index) == "int" and b.capture_index >= 0 then return 0 end if
+    return [[expr], 0, 0]
+  end if
+  if kind != "Bin" or depth >= 3 then return 0 end if
+  op = t.ast_op(expr)
+  if op != "+" and op != "-" and op != "*" then return 0 end if
+  // Preserve the normal constant-folding behavior at every subtree boundary.
+  folded = _opt_try_const_value(state, expr)
+  if folded.ok then return 0 end if
+  left = _float_tree_plan(state, t.ast_left(expr), depth + 1)
+  if typeof(left) != "array" then return 0 end if
+  right = _float_tree_plan(state, t.ast_right(expr), depth + 1)
+  if typeof(right) != "array" then return 0 end if
+  leaves = left[0]
+  for each leaf in right[0]
+    present = false
+    for each earlier in leaves
+      if t.ast_name(earlier) == t.ast_name(leaf) then present = true; break end if
+    end for
+    if present == false then leaves = leaves + [leaf] end if
+  end for
+  count = 1 + left[1] + right[1]
+  if count > 7 then return 0 end if
+  pending = left[2]
+  right_pending = 0
+  if t.ast_kind(t.ast_right(expr)) == "Bin" then right_pending = right[2] + 1 end if
+  if right_pending > pending then pending = right_pending end if
+  if pending > 2 then return 0 end if
+  return [leaves, count, pending]
+end function
+
+/// Keep an intermediate raw only if normal materialization would remain float.
+/// The unordered/equal normalizer branch includes NaN and exact integers; both
+/// restart the original pure expression before an int result could lose bits.
+/// @internal
+function _emit_float_tree_normalize(state, l_slow)
+  lid = _next_lid(state)
+  state.asm = a.mark(state.asm, "float_tree_normalize_" + lid)
+  state.asm = a.cvttsd2si_r64_xmm(state.asm, "rax", "xmm0")
+  state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm1", "rax")
+  state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.jcc(state.asm, "e", l_slow)
+  // The f32 probe has the same floating-point status effects as materializing.
+  state.asm = a.cvtsd2ss_xmm_xmm(state.asm, "xmm2", "xmm0")
+  state.asm = a.cvtss2sd_xmm_xmm(state.asm, "xmm3", "xmm2")
+  state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm3")
+  return state
+end function
+
+/// Evaluate an accepted tree in XMM0, preserving source order and parentheses.
+/// Only XMM4/5 hold pending left results. No raw value enters a stack root or
+/// survives a call; ordinary leaf loads and conversions cannot allocate.
+/// @internal
+function _emit_float_tree_raw(state, expr, save_depth, l_slow, normalize)
+  if t.ast_kind(expr) != "Bin" then
+    state = cg_emit_expr(state, expr)
+    return core.emit_to_double_xmm(state, 0, l_slow)
+  end if
+  state = _emit_float_tree_raw(state, t.ast_left(expr), save_depth, l_slow, true)
+  right = t.ast_right(expr)
+  if t.ast_kind(right) == "Bin" then
+    saved = "xmm" + (4 + save_depth)
+    state.asm = a.movapd_xmm_xmm(state.asm, saved, "xmm0")
+    state = _emit_float_tree_raw(state, right, save_depth + 1, l_slow, true)
+    state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
+    state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", saved)
+  else
+    state = cg_emit_expr(state, right)
+    state = core.emit_to_double_xmm(state, 1, l_slow)
+  end if
+  op = t.ast_op(expr)
+  if op == "+" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if op == "-" then state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if op == "*" then state.asm = a.mulsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if normalize then state = _emit_float_tree_normalize(state, l_slow) end if
+  return state
+end function
+
+/// Materialize once at a bounded arithmetic root, or compare its raw operands.
+/// Every local leaf must be an actual float. Any leaf or intermediate miss uses
+/// the existing expression path, including its integer, Error and GC behavior.
+/// @internal
+function _emit_float_tree(state, expr)
+  op = t.ast_op(expr)
+  is_compare = op == "==" or op == "!=" or op == "<" or op == "<=" or op == ">" or op == ">="
+  if op != "+" and op != "-" and op != "*" and is_compare == false then return [state, false] end if
+  leaves = []
+  if is_compare then
+    left = _float_tree_plan(state, t.ast_left(expr), 0)
+    if typeof(left) != "array" then return [state, false] end if
+    right = _float_tree_plan(state, t.ast_right(expr), 0)
+    if typeof(right) != "array" then return [state, false] end if
+    count = left[1] + right[1]
+    if count < 1 or count > 7 then return [state, false] end if
+    pending = left[2]
+    right_pending = 0
+    if t.ast_kind(t.ast_right(expr)) == "Bin" then right_pending = right[2] + 1 end if
+    if right_pending > pending then pending = right_pending end if
+    if pending > 2 then return [state, false] end if
+    leaves = left[0]
+    for each leaf in right[0]
+      present = false
+      for each earlier in leaves
+        if t.ast_name(earlier) == t.ast_name(leaf) then present = true; break end if
+      end for
+      if present == false then leaves = leaves + [leaf] end if
+    end for
+  else
+    plan = _float_tree_plan(state, expr, 0)
+    if typeof(plan) != "array" then return [state, false] end if
+    if plan[1] < 2 then return [state, false] end if
+    leaves = plan[0]
+  end if
+  if len(leaves) == 0 then return [state, false] end if
+  lid = _next_lid(state)
+  l_slow = "float_tree_slow_" + lid
+  l_done = "float_tree_done_" + lid
+  state.asm = a.mark(state.asm, "float_tree_guard_" + lid)
+  for i = 0 to len(leaves) - 1
+    l_ok = "float_tree_leaf_" + lid + "_" + i
+    state = cg_emit_expr(state, leaves[i])
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_FLOAT)
+    state.asm = a.jcc(state.asm, "e", l_ok)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_slow)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
+    state.asm = a.jcc(state.asm, "ne", l_slow)
+    state.asm = a.mark(state.asm, l_ok)
+  end for
+  state.asm = a.mark(state.asm, "float_tree_fast_" + lid)
+  state = _emit_float_tree_raw(state, expr, 0, l_slow, false)
+  if is_compare then
+    state.asm = a.mark(state.asm, "float_tree_compare_" + lid)
+    state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+    if op == "==" then
+      state.asm = a.setcc_al(state.asm, "e")
+      state.asm = a.setcc_r8(state.asm, "p", "dl")
+      state.asm = a.xor_r8_imm8(state.asm, "dl", 1)
+      state.asm = a.and_r8_r8(state.asm, "al", "dl")
+    else if op == "!=" then
+      state.asm = a.setcc_al(state.asm, "ne")
+      state.asm = a.setcc_r8(state.asm, "p", "dl")
+      state.asm = a.or_r8_r8(state.asm, "al", "dl")
+    else
+      cc = "b"
+      if op == "<=" then cc = "be" end if
+      if op == ">" then cc = "a" end if
+      if op == ">=" then cc = "ae" end if
+      state.asm = a.setcc_al(state.asm, cc)
+      state.asm = a.setcc_r8(state.asm, "p", "dl")
+      state.asm = a.xor_r8_imm8(state.asm, "dl", 1)
+      state.asm = a.and_r8_r8(state.asm, "al", "dl")
+    end if
+    state.asm = a.movzx_eax_al(state.asm)
+    state.asm = a.shl_rax_imm8(state.asm, 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+  else
+    state.asm = a.mark(state.asm, "float_tree_materialize_" + lid)
+    state = core.emit_normalize_xmm0_to_value(state)
+  end if
+  state.asm = a.jmp(state.asm, l_done)
+  state.asm = a.mark(state.asm, l_slow)
+  // Preserve the Phase 3 optimization on a miss without re-entering this root.
+  state = _emit_expr_bin(state, expr, true, false)
+  state.asm = a.mark(state.asm, l_done)
+  return [state, true]
+end function
+
 /// Collect bounded, call-free numeric candidates for runtime guards.
 /// A number? fact permits void and is not a numeric guarantee. Every collected
 /// local is checked before evaluating the guarded expression.
@@ -4352,7 +4541,7 @@ function _emit_float_parent_without_child_box(state, expr)
   state.asm = a.jmp(state.asm, l_done)
 
   state.asm = a.mark(state.asm, l_slow)
-  state = _emit_expr_bin(state, expr, false)
+  state = _emit_expr_bin(state, expr, false, false)
   state.asm = a.mark(state.asm, l_done)
   return [state, true]
 end function
@@ -4751,7 +4940,7 @@ end function
 
 /// Emit binary operators, preserving left-to-right effects and routing dynamic type/error cases through the same helpers used by the reference compiler.
 /// @internal
-function _emit_expr_bin(state, expr, allow_float_box_elision)
+function _emit_expr_bin(state, expr, allow_float_box_elision, allow_float_tree_elision)
   overloaded_b = _emit_operator_overload(state, _coerce_name(t.ast_op(expr)), [t.ast_left(expr), t.ast_right(expr)], expr)
   state = overloaded_b[0]
   if overloaded_b[1] then return state end if
@@ -4861,6 +5050,12 @@ function _emit_expr_bin(state, expr, allow_float_box_elision)
       end if
       return state
     end if
+  end if
+
+  if allow_float_tree_elision then
+    float_tree = _emit_float_tree(state, expr)
+    state = float_tree[0]
+    if float_tree[1] then return state end if
   end if
 
   if allow_float_box_elision then
