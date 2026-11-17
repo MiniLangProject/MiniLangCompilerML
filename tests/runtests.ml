@@ -926,6 +926,9 @@ function main(args)
   if _test(compiler_path, repo_root, "numeric_float_tree", "tests\\numeric_float_tree.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "numeric_float_tree_typeof", "tests\\numeric_float_tree_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "numeric_float_tree_tofloat", "tests\\numeric_float_tree_tofloat.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "numeric_float_loop", "tests\\numeric_float_loop.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "numeric_float_loop_typeof", "tests\\numeric_float_loop_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "numeric_float_loop_threads", "tests\\numeric_float_loop_threads.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "typeof_declared_call", "tests\\typeof_declared_call.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "inline_error_boundaries", "tests\\inline_error_boundaries.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "oop_monomorphic_dispatch", "tests\\oop_monomorphic_dispatch.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

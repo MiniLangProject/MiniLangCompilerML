@@ -294,6 +294,14 @@ struct CgState
   method_candidates,
   /// Stronger facts consumed explicitly by new numeric lowering only.
   known_numeric_value_types,
+  /// Private raw-number arena beyond every publishable expression root.
+  _float_loop_raw_base,
+  /// Bytes reserved for bounded transactional float-loop state.
+  _float_loop_raw_size,
+  /// Top-level while sites belonging to the active function frame.
+  _float_loop_sites,
+  /// Suppress the region hook while emitting its ordinary fallback.
+  _float_loop_disabled,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
@@ -744,7 +752,11 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   t.fastmap_new(128),
   [],
   t.fastmap_new(128),
-  []
+  [],
+  -1,
+  0,
+  [],
+  false
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)

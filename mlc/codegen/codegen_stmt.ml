@@ -1542,6 +1542,401 @@ function _emit_struct_field_index_dispatch_local(state, field, struct_id_reg, ou
   return state
 end function
 
+/// Read one entry from a bounded immutable numeric-region map.
+/// @internal
+function _float_loop_pair_get(items, name)
+  for each item in items
+    if item[0] == name then return item[1] end if
+  end for
+  return 0
+end function
+
+/// Replace the map rather than its entries so definition snapshots stay stable.
+/// @internal
+function _float_loop_pair_set(items, name, value)
+  result = []
+  found = false
+  for each item in items
+    if item[0] == name then
+      result = result + [[name, value]]
+      found = true
+    else
+      result = result + [item]
+    end if
+  end for
+  if found == false then result = result + [[name, value]] end if
+  return result
+end function
+
+/// Check a pure tree and collect use-before-definition names in flow[0].
+/// flow[1] maps names to [0, committed slot] or [1, fresh definition].
+/// @internal
+function _opt_float_loop_tree(expr, counter, bound_name, flow, depth)
+  kind = t.ast_kind(expr)
+  if kind == "Num" then
+    if typeof(t.ast_value(expr)) == "float" then return [0, 0, false] end if
+    return 0
+  end if
+  if kind == "Var" then
+    name = _coerce_name(t.ast_name(expr))
+    if ml._compile_valid_name(name) == false or name == counter or name == bound_name then return 0 end if
+    ref = _float_loop_pair_get(flow[1], name)
+    if typeof(ref) != "array" then
+      flow[1] = _float_loop_pair_set(flow[1], name, [0, len(flow[0])])
+      flow[0] = flow[0] + [name]
+    end if
+    return [0, 0, true]
+  end if
+  if kind != "Bin" or depth >= 3 then return 0 end if
+  op = t.ast_op(expr)
+  if op != "+" and op != "-" and op != "*" then return 0 end if
+  left = _opt_float_loop_tree(t.ast_left(expr), counter, bound_name, flow, depth + 1)
+  right = _opt_float_loop_tree(t.ast_right(expr), counter, bound_name, flow, depth + 1)
+  if typeof(left) != "array" or typeof(right) != "array" then return 0 end if
+  // Recomputing a constant-only subtree can change its encoded folded result.
+  if left[2] == false and right[2] == false then return 0 end if
+  count = left[0] + right[0] + 1
+  saved = left[1]
+  right_saved = 0
+  if t.ast_kind(t.ast_right(expr)) == "Bin" then right_saved = right[1] + 1 end if
+  if right_saved > saved then saved = right_saved end if
+  if count > 7 or saved > 2 then return 0 end if
+  return [count, saved, true]
+end function
+
+/// Plan a bounded pure counted loop without relying on active lexical scopes.
+/// Plan fields: counter, bound, bound name, update, live-ins, state names,
+/// definitions, source steps, body-local bindings, final outputs, arena bytes.
+/// Definitions retain immutable environment snapshots; steps use -1 for aliases.
+/// @internal
+function _opt_float_loop_shape(state, loop_node)
+  if t.ast_kind(loop_node) != "While" then return 0 end if
+  cond = try(loop_node.cond)
+  if t.ast_kind(cond) != "Bin" or t.ast_op(cond) != "<" or t.ast_kind(t.ast_left(cond)) != "Var" then return 0 end if
+  counter = _coerce_name(t.ast_name(t.ast_left(cond)))
+  if ml._compile_valid_name(counter) == false then return 0 end if
+  bound = t.ast_right(cond)
+  bound_name = ""
+  if t.ast_kind(bound) == "Var" then
+    bound_name = _coerce_name(t.ast_name(bound))
+    if ml._compile_valid_name(bound_name) == false or bound_name == counter then return 0 end if
+  else
+    if t.ast_kind(bound) != "Num" or typeof(t.ast_value(bound)) != "int" then return 0 end if
+    if t.ast_value(bound) < -1152921504606846976 or t.ast_value(bound) > 1152921504606846975 then return 0 end if
+  end if
+  body = try(loop_node.body)
+  if typeof(body) != "array" or len(body) < 2 or len(body) > 12 then return 0 end if
+  update = body[len(body) - 1]
+  if t.ast_kind(update) != "Assign" or _coerce_name(try(update.name)) != counter then return 0 end if
+  update_type = try(update.declared_type)
+  if typeof(update_type) != "void" and update_type != "" and update_type != "int" then return 0 end if
+  if typeof(try(update.declared_optional)) == "bool" and update.declared_optional then return 0 end if
+  increment = update.expr
+  if t.ast_kind(increment) == "TypeGuard" then
+    if increment.type_name != "int" or increment.optional then return 0 end if
+    increment = increment.expr
+  end if
+  if t.ast_kind(increment) != "Bin" or t.ast_op(increment) != "+" then return 0 end if
+  if t.ast_kind(t.ast_left(increment)) != "Var" or _coerce_name(t.ast_name(t.ast_left(increment))) != counter then return 0 end if
+  if t.ast_kind(t.ast_right(increment)) != "Num" or typeof(t.ast_value(t.ast_right(increment))) != "int" or t.ast_value(t.ast_right(increment)) != 1 then return 0 end if
+
+  flow = [[], []]
+  definitions = []
+  steps = []
+  body_locals = []
+  output_names = []
+  output_nodes = []
+  for body_index = 0 to len(body) - 2
+    node = body[body_index]
+    if t.ast_kind(node) != "Assign" then return 0 end if
+    declared_type = try(node.declared_type)
+    if typeof(declared_type) != "void" and declared_type != "" then return 0 end if
+    if typeof(try(node.declared_optional)) == "bool" and node.declared_optional then return 0 end if
+    name = _coerce_name(node.name)
+    if ml._compile_valid_name(name) == false or name == counter or name == bound_name or name == "typeof" then return 0 end if
+    rhs = node.expr
+    if t.ast_kind(rhs) != "Bin" and t.ast_kind(rhs) != "Var" then return 0 end if
+    tree = _opt_float_loop_tree(rhs, counter, bound_name, flow, 0)
+    if typeof(tree) != "array" then return 0 end if
+    if t.ast_kind(rhs) == "Bin" then
+      definition_index = len(definitions)
+      definitions = definitions + [[rhs, flow[1]]]
+      flow[1] = _float_loop_pair_set(flow[1], name, [1, definition_index])
+      steps = steps + [[node, definition_index]]
+    else
+      flow[1] = _float_loop_pair_set(flow[1], name, _float_loop_pair_get(flow[1], _coerce_name(t.ast_name(rhs))))
+      steps = steps + [[node, -1]]
+    end if
+    declared = 0
+    if typeof(state.decl_site_bindings) == "struct" then
+      declared = t.fastmap_get(state.decl_site_bindings, scope._decl_key(node, name), 0)
+    end if
+    if typeof(declared) == "struct" then body_locals = _float_loop_pair_set(body_locals, name, declared) end if
+    if typeof(_float_loop_pair_get(body_locals, name)) != "struct" then
+      output_names = _arr_add_unique(output_names, name)
+      output_nodes = _float_loop_pair_set(output_nodes, name, node)
+    end if
+  end for
+
+  live_ins = flow[0]
+  if len(live_ins) == 0 or len(output_names) == 0 or len(definitions) < 1 or len(definitions) > 8 then return 0 end if
+  states = live_ins
+  outputs = []
+  for each output_name in output_names
+    output_ref = _float_loop_pair_get(flow[1], output_name)
+    // Retaining an initial object/literal would require dynamic alias identity.
+    if output_ref[0] != 1 then return 0 end if
+    states = _arr_add_unique(states, output_name)
+    outputs = outputs + [[output_name, output_ref[1], _float_loop_pair_get(output_nodes, output_name)]]
+  end for
+  if len(states) > 8 then return 0 end if
+  raw_bytes = t.align_up((len(states) + len(definitions) + 1) * 8, 16)
+  return [counter, bound, bound_name, update, live_ins, states, definitions, steps, body_locals, outputs, raw_bytes]
+end function
+
+/// Reserve only syntactic top-level candidates; active bindings are checked later.
+/// @internal
+function _opt_float_loop_arena_bytes(state, fn)
+  if state.native_threads_possible then return 0 end if
+  if typeof(state._inline_call_stack) == "array" and len(state._inline_call_stack) > 0 then return 0 end if
+  if typeof(state._inline_param_stack) == "array" and len(state._inline_param_stack) > 0 then return 0 end if
+  size = 0
+  for each node in fn.body
+    plan = _opt_float_loop_shape(state, node)
+    if typeof(plan) == "array" and plan[10] > size then size = plan[10] end if
+  end for
+  return size
+end function
+
+/// Evaluate one accepted definition with XMM0-XMM5 and private raw slots only.
+/// @internal
+function _opt_emit_float_loop_raw(state, expr, env, state_count, saved, l_slow, target)
+  kind = t.ast_kind(expr)
+  if kind == "Var" then
+    ref = _float_loop_pair_get(env, _coerce_name(t.ast_name(expr)))
+    slot = ref[1]
+    if ref[0] != 0 then slot = slot + state_count end if
+    state.asm = a.movsd_xmm_membase_disp(state.asm, target, "rsp", state._float_loop_raw_base + slot * 8)
+    return state
+  end if
+  if kind == "Num" then
+    state = exprmod.cg_emit_expr(state, expr)
+    xmm_index = 0
+    if target == "xmm1" then xmm_index = 1 end if
+    return core.emit_to_double_xmm(state, xmm_index, l_slow)
+  end if
+  state = _opt_emit_float_loop_raw(state, t.ast_left(expr), env, state_count, saved, l_slow, "xmm0")
+  if t.ast_kind(t.ast_right(expr)) == "Bin" then
+    left_reg = "xmm" + (4 + saved)
+    state.asm = a.movapd_xmm_xmm(state.asm, left_reg, "xmm0")
+    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved + 1, l_slow, "xmm0")
+    state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
+    state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", left_reg)
+  else
+    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved, l_slow, "xmm1")
+  end if
+  op = t.ast_op(expr)
+  if op == "+" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if op == "-" then state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  if op == "*" then state.asm = a.mulsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
+  // Assignment roots retain the same integer/NaN bailout as inner operations.
+  return exprmod._emit_float_tree_normalize(state, l_slow)
+end function
+
+/// Compare actual tagged int61 operands without conversion or reassociation.
+/// @internal
+function _opt_emit_float_loop_compare(state, node, plan, l_exit)
+  state = exprmod.cg_emit_expr(state, plan[1])
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  state = core.emit_load_var(state, plan[0], node)
+  state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.jcc(state.asm, "ge", l_exit)
+  return state
+end function
+
+/// Materialize each fresh alias group once, publishing it before another box.
+/// @internal
+function _opt_emit_float_loop_materialize(state, plan, slots)
+  lid = core.new_label_id(state)
+  state.asm = a.mark(state.asm, "float_loop_materialize_" + lid)
+  seen = []
+  for each output in plan[9]
+    definition = output[1]
+    if _arr_has(seen, definition) then continue end if
+    seen = seen + [definition]
+    state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", _float_loop_pair_get(slots, output[0]))
+    state = core.emit_force_xmm0_to_float_value(state)
+    for each alias in plan[9]
+      if alias[1] == definition then state = core.emit_store_var(state, alias[0], alias[2]) end if
+    end for
+  end for
+  return state
+end function
+
+/// Keep a pure counted loop's float state raw until exit or a transactional miss.
+/// A failed definition neither changes Value homes nor advances the counter.
+/// @internal
+function _opt_emit_float_loop(state, node)
+  if state.in_function == false or state.native_threads_possible or state._float_loop_disabled then return [state, false] end if
+  if _arr_has(state._float_loop_sites, node) == false or state._float_loop_raw_size <= 0 then return [state, false] end if
+  if typeof(state._inline_call_stack) == "array" and len(state._inline_call_stack) > 0 then return [state, false] end if
+  if typeof(state._inline_param_stack) == "array" and len(state._inline_param_stack) > 0 then return [state, false] end if
+  plan = _opt_float_loop_shape(state, node)
+  if typeof(plan) != "array" or plan[10] > state._float_loop_raw_size then return [state, false] end if
+  // Runtime tags cannot override an earlier static operator/integer decision,
+  // and dropping the typed update must not remove a user-defined typeof call.
+  if exprmod._opt_builtin_name_is_direct(state, "typeof") == false then return [state, false] end if
+  for each operand in [t.ast_left(node.cond), plan[1]]
+    if exprmod._opt_expr_known_int(state, operand) == false then return [state, false] end if
+    operand_fact = exprmod._opt_type_base(exprmod._opt_expr_known_type(state, operand))
+    if operand_fact != "" and operand_fact != "int" then return [state, false] end if
+  end for
+  for each input_name in plan[4]
+    input_var = ml.Var("Var", input_name, t.ast_pos(node), t.ast_filename(node))
+    fact = exprmod._opt_type_base(exprmod._opt_expr_known_type(state, input_var, true))
+    if fact != "float" and fact != "number" and fact != "number?" then return [state, false] end if
+  end for
+  float_names = plan[5]
+  for each body_local in plan[8]
+    float_names = float_names + [body_local[0]]
+  end for
+  for each float_name in float_names
+    fact = _typeflow_base(_typeflow_get(state.known_value_types, float_name))
+    if exprmod._intflow_name_has(state.known_int_names, float_name) then return [state, false] end if
+    if fact != "" and fact != "float" and fact != "number" and fact != "number?" then return [state, false] end if
+  end for
+
+  names = plan[5] + [plan[0]]
+  if plan[2] != "" then names = names + [plan[2]] end if
+  for each body_local2 in plan[8]
+    names = names + [body_local2[0]]
+  end for
+  counts = t.fastmap_new(32)
+  local_index = 0
+  local_count = scope.frame_count(state.function_locals)
+  while local_index < local_count
+    binding = scope.frame_get(state.function_locals, local_index)
+    counts = t.fastmap_set(counts, binding.name, t.fastmap_get(counts, binding.name, 0) + 1)
+    local_index = local_index + 1
+  end while
+  // Params are not part of function_locals. Count their actual lexical homes
+  // instead of relying on compiler-only optional diagnostic state fields.
+  for each frame in state.scope_stack
+    frame_index = 0
+    frame_count = scope.frame_count(frame)
+    while frame_index < frame_count
+      param = scope.frame_get(frame, frame_index)
+      if typeof(param) == "struct" and param.kind == "param" then
+        counts = t.fastmap_set(counts, param.name, t.fastmap_get(counts, param.name, 0) + 1)
+      end if
+      frame_index = frame_index + 1
+    end while
+  end for
+  for each name in names
+    binding2 = _float_loop_pair_get(plan[8], name)
+    if typeof(binding2) != "struct" then binding2 = scope.cg_resolve_binding(state, name) end if
+    if t.fastmap_get(counts, name, 0) != 1 or typeof(binding2) != "struct" then return [state, false] end if
+    if binding2.kind != "local" and binding2.kind != "param" then return [state, false] end if
+    if binding2.boxed or binding2.is_const or typeof(binding2.offset) != "int" then return [state, false] end if
+    if typeof(binding2.capture_index) == "int" and binding2.capture_index >= 0 then return [state, false] end if
+    for each scalar in state.scalar_structs
+      if binding2 == scalar[1] then return [state, false] end if
+    end for
+  end for
+  for each input_name2 in plan[4]
+    // A use preceding a new body's declaration belongs to another binding.
+    if typeof(_float_loop_pair_get(plan[8], input_name2)) == "struct" then return [state, false] end if
+  end for
+
+  lid = core.new_label_id(state)
+  l_fast = "float_loop_fast_" + lid
+  l_deopt = "float_loop_deopt_" + lid
+  l_slow = "float_loop_slow_" + lid
+  l_done = "float_loop_done_" + lid
+  state_count = len(plan[5])
+  work_base = state._float_loop_raw_base + state_count * 8
+  flag_off = work_base + len(plan[6]) * 8
+  slots = []
+  slot_index = 0
+  for each state_name in plan[5]
+    slots = slots + [[state_name, state._float_loop_raw_base + slot_index * 8]]
+    slot_index = slot_index + 1
+  end for
+
+  state.asm = a.mark(state.asm, "float_loop_guard_" + lid)
+  for each int_operand in [t.ast_left(node.cond), plan[1]]
+    state = exprmod.cg_emit_expr(state, int_operand)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "ne", l_slow)
+  end for
+  // A zero-trip loop neither inspects float inputs nor allocates new Values.
+  state = _opt_emit_float_loop_compare(state, node, plan, l_done)
+  input_index = 0
+  for each guarded_name in plan[4]
+    l_accepted = "float_loop_leaf_" + lid + "_" + input_index
+    state = core.emit_load_var(state, guarded_name, node)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_FLOAT)
+    state.asm = a.jcc(state.asm, "e", l_accepted)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_slow)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
+    state.asm = a.jcc(state.asm, "ne", l_slow)
+    state.asm = a.mark(state.asm, l_accepted)
+    input_index = input_index + 1
+  end for
+  for each loaded_name in plan[4]
+    state = core.emit_load_var(state, loaded_name, node)
+    state = core.emit_to_double_xmm(state, 0, l_slow)
+    state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", _float_loop_pair_get(slots, loaded_name), "xmm0")
+  end for
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", flag_off, 0, true)
+
+  state.asm = a.mark(state.asm, l_fast)
+  for each step in plan[7]
+    state = core.emit_dbg_line(state, step[0])
+    if step[1] >= 0 then
+      definition = plan[6][step[1]]
+      state = _opt_emit_float_loop_raw(state, definition[0], definition[1], state_count, 0, l_deopt, "xmm0")
+      state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", work_base + step[1] * 8, "xmm0")
+    end if
+  end for
+  state.asm = a.mark(state.asm, "float_loop_commit_" + lid)
+  for each committed in plan[9]
+    state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", work_base + committed[1] * 8)
+    state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", _float_loop_pair_get(slots, committed[0]), "xmm0")
+  end for
+  state = core.emit_dbg_line(state, plan[3])
+  state = core.emit_load_var(state, plan[0], node)
+  // Guarded int61 values and i < invariant bound prove +1 cannot overflow.
+  state.asm = a.add_rax_imm8(state.asm, 8)
+  state = core.emit_store_var(state, plan[0], plan[3])
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", flag_off, 1, true)
+  l_exit = "float_loop_exit_" + lid
+  state = _opt_emit_float_loop_compare(state, node, plan, l_exit)
+  state.asm = a.jmp(state.asm, l_fast)
+  state.asm = a.mark(state.asm, l_exit)
+  state = _opt_emit_float_loop_materialize(state, plan, slots)
+  state.asm = a.jmp(state.asm, l_done)
+
+  state.asm = a.mark(state.asm, l_deopt)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", flag_off)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "e", l_slow)
+  state = _opt_emit_float_loop_materialize(state, plan, slots)
+  state.asm = a.mark(state.asm, l_slow)
+  old_disabled = state._float_loop_disabled
+  state._float_loop_disabled = true
+  state = cg_emit_stmt(state, node)
+  state._float_loop_disabled = old_disabled
+  state.asm = a.mark(state.asm, l_done)
+  return [state, true]
+end function
+
 /// Emit one statement without changing source-order semantics. Nested control flow owns its labels and must leave root/lock scopes balanced on every exit.
 /// @param state Value supplied for `state`.
 /// @param stmt Value supplied for `stmt`.
@@ -2421,6 +2816,9 @@ function _emit_execution_stmt(state, stmt, k)
     if typeof(tv_w) == "bool" and tv_w == false then
       return state
     end if
+    float_loop_emit = _opt_emit_float_loop(state, stmt)
+    state = float_loop_emit[0]
+    if float_loop_emit[1] then return state end if
 
     lid_w = state.label_id
     state.label_id = state.label_id + 1
@@ -10596,7 +10994,12 @@ function emit_user_function(state, fn_node, analysis_scratch)
   call_temp_bytes = t.align_up(call_temp_bytes, 16)
   expr_temp_base = call_temp_base + call_temp_bytes
   frame_end = expr_temp_base + state.expr_temp_max
-  frame = t.align_up(frame_end + 0x20, 16)
+  // Raw doubles live beyond the maximum publishable root prefix. They never
+  // pass through alloc_expr_temps and remain valid across materialization.
+  float_loop_raw_size = _opt_float_loop_arena_bytes(state, fn_node)
+  float_loop_raw_base = -1
+  if float_loop_raw_size > 0 then float_loop_raw_base = frame_end end if
+  frame = t.align_up(frame_end + float_loop_raw_size + 0x20, 16)
   root_rec_off = frame - 0x20
   root_base = local_base
   root_top = expr_temp_base
@@ -10636,6 +11039,10 @@ function emit_user_function(state, fn_node, analysis_scratch)
   old_known_value_types = state.known_value_types
   old_known_numeric_value_types = state.known_numeric_value_types
   old_loop_index_fast_stack = state.loop_index_fast_stack
+  old_float_loop_raw_base = state._float_loop_raw_base
+  old_float_loop_raw_size = state._float_loop_raw_size
+  old_float_loop_sites = state._float_loop_sites
+  old_float_loop_disabled = state._float_loop_disabled
   old_boxed_names = state.current_fn_boxed_names
   old_env_index = state.current_fn_env_index
   old_env_root = state.current_env_root_off
@@ -10703,6 +11110,15 @@ function emit_user_function(state, fn_node, analysis_scratch)
   state.known_value_types = known_value_types_for_fn
   state.known_numeric_value_types = known_numeric_types_for_fn
   state.loop_index_fast_stack = []
+  state._float_loop_raw_base = float_loop_raw_base
+  state._float_loop_raw_size = float_loop_raw_size
+  state._float_loop_sites = []
+  for each float_loop_site in fn_node.body
+    if t.ast_kind(float_loop_site) == "While" then
+      state._float_loop_sites = state._float_loop_sites + [float_loop_site]
+    end if
+  end for
+  state._float_loop_disabled = false
   state.current_fn_boxed_names = boxed_names
   state.current_fn_env_index = env_index
   state.current_env_root_off = env_root_off
@@ -11118,6 +11534,10 @@ function emit_user_function(state, fn_node, analysis_scratch)
   state.known_value_types = old_known_value_types
   state.known_numeric_value_types = old_known_numeric_value_types
   state.loop_index_fast_stack = old_loop_index_fast_stack
+  state._float_loop_raw_base = old_float_loop_raw_base
+  state._float_loop_raw_size = old_float_loop_raw_size
+  state._float_loop_sites = old_float_loop_sites
+  state._float_loop_disabled = old_float_loop_disabled
   state.current_fn_boxed_names = old_boxed_names
   state.scalar_structs = old_scalar_structs
   state.current_fn_env_index = old_env_index
