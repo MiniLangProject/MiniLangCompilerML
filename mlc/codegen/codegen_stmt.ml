@@ -3735,6 +3735,12 @@ function _typeflow_expr_type(state, ex, known, extended = false)
     numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "+" or op_b == "-" or op_b == "*") and numeric_l and numeric_r then return "number" end if
     if (op_b == "/" or op_b == "%") and numeric_l and numeric_r and right_nonzero then return "number" end if
+    if extended then
+      // A fallible division may return void. These are candidates for guarded
+      // lowering only, never a proof that the actual value is numeric.
+      if op_b == "/" and numeric_l and numeric_r then return "number?" end if
+      if (op_b == "+" or op_b == "-" or op_b == "*") and (lb == "number?" or rb2 == "number?") and (numeric_l or lb == "number?") and (numeric_r or rb2 == "number?") then return "number?" end if
+    end if
     return ""
   end if
   if k == "Index" then
@@ -3800,12 +3806,14 @@ end function
 
 /// Lower typeflow merge statement behavior to native x64.
 /// @internal
-function _typeflow_merge(inferred)
+function _typeflow_merge(inferred, extended = false)
   if typeof(inferred) != "array" or len(inferred) <= 0 then return "" end if
   first = inferred[0]
   if typeof(first) != "string" or first == "" then return "" end if
   all_same = true
   numeric = true
+  nullable_numeric = true
+  has_nullable = false
   base0 = _typeflow_base(first)
   same_base = true
   for i = 0 to len(inferred) - 1
@@ -3815,9 +3823,13 @@ function _typeflow_merge(inferred)
     base = _typeflow_base(value)
     if base != base0 then same_base = false end if
     if base != "int" and base != "float" and base != "number" then numeric = false end if
+    if base == "number?" then has_nullable = true end if
+    if base != "int" and base != "float" and base != "number" and base != "number?" then nullable_numeric = false end if
   end for
   if all_same then return first end if
   if numeric then return "number" end if
+  // Never strengthen a nullable candidate into a guaranteed numeric fact.
+  if extended and has_nullable and nullable_numeric then return "number?" end if
   if same_base and (base0 == "array" or base0 == "bytes" or base0 == "string") then return base0 end if
   return ""
 end function
@@ -4129,7 +4141,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch,
     if len(vals) <= 0 then continue end if
     inferred = []
     for j = 0 to len(vals) - 1 inferred = inferred + [_typeflow_expr_type(state, vals[j], facts_index, extended)] end for
-    merged = _typeflow_merge(inferred)
+    merged = _typeflow_merge(inferred, extended)
     if merged == "" or _typeflow_get(facts_index, nm_c) == merged then continue end if
     facts_index = t.fastmap_set(facts_index, nm_c, merged)
     fact_names = _arr_add_unique(fact_names, nm_c)
@@ -4163,7 +4175,7 @@ function _infer_known_value_types(state, fn_node, flow_inputs, analysis_scratch,
     vals_v = _intflow_map_get(assignments, nm_v)
     inferred_v = []
     for j = 0 to len(vals_v) - 1 inferred_v = inferred_v + [_typeflow_expr_type(state, vals_v[j], facts_index, extended)] end for
-    if len(vals_v) > 0 and _typeflow_merge(inferred_v) != "" then continue end if
+    if len(vals_v) > 0 and _typeflow_merge(inferred_v, extended) != "" then continue end if
     facts_index = t.fastmap_set(facts_index, nm_v, "")
     invalidated = t.fastmap_get(dependents, nm_v, [])
     if typeof(invalidated) == "array" then

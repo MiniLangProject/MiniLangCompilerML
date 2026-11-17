@@ -3583,6 +3583,12 @@ function _opt_expr_known_type(state, ex, extended = false)
     numeric_r = rb2 == "int" or rb2 == "float" or rb2 == "number"
     if (op_b == "+" or op_b == "-" or op_b == "*") and numeric_l and numeric_r then return "number" end if
     if (op_b == "/" or op_b == "%") and numeric_l and numeric_r and _opt_const_nonzero_number(state, right_b, extended) then return "number" end if
+    if extended then
+      // Candidate only: direct numeric lowering must still reject number?.
+      // Only complete runtime tag guards may admit its actual numeric value.
+      if op_b == "/" and numeric_l and numeric_r then return "number?" end if
+      if (op_b == "+" or op_b == "-" or op_b == "*") and (lb == "number?" or rb2 == "number?") and (numeric_l or lb == "number?") and (numeric_r or rb2 == "number?") then return "number?" end if
+    end if
     return ""
   end if
   if k == "Index" then
@@ -4159,7 +4165,9 @@ function _emit_known_float_binop(state, expr)
   return [state, true]
 end function
 
-/// Prove a bounded, call-free numeric tree and collect its local leaves.
+/// Collect bounded, call-free numeric candidates for runtime guards.
+/// A number? fact permits void and is not a numeric guarantee. Every collected
+/// local is checked before evaluating the guarded expression.
 /// @internal
 function _float_child_local_leaves(state, expr, depth)
   if depth > 2 then return 0 end if
@@ -4173,7 +4181,7 @@ function _float_child_local_leaves(state, expr, depth)
     if state.in_function == false then return 0 end if
     fact = _opt_type_base(_opt_expr_known_type(state, expr, true))
     b = scope.cg_resolve_binding(state, _coerce_name(t.ast_name(expr)))
-    if fact != "int" and fact != "float" and fact != "number" then return 0 end if
+    if fact != "int" and fact != "float" and fact != "number" and fact != "number?" then return 0 end if
     if typeof(b) != "struct" then return 0 end if
     if b.kind != "local" and b.kind != "param" then return 0 end if
     if b.boxed then return 0 end if
@@ -4199,16 +4207,27 @@ function _float_child_local_leaves(state, expr, depth)
   return 0
 end function
 
-/// Elide one numeric child's box for an immediate float-literal parent.
+/// Elide one numeric child's box for an actual-float parent operand.
 /// Deeper operands keep ordinary rooted evaluation. Raw XMM0 exists only after
 /// that boundary and until parent materialization; it never crosses a call.
 /// @internal
 function _emit_float_parent_without_child_box(state, expr)
   parent_op = t.ast_op(expr)
   if parent_op != "+" and parent_op != "-" and parent_op != "*" then return [state, false] end if
-  literal = t.ast_right(expr)
-  if t.ast_kind(literal) != "Num" then return [state, false] end if
-  if typeof(t.ast_value(literal)) != "float" then return [state, false] end if
+  right_expr = t.ast_right(expr)
+  rhs_is_local = false
+  if t.ast_kind(right_expr) == "Num" and typeof(t.ast_value(right_expr)) == "float" then
+    rhs_is_local = false
+  else if t.ast_kind(right_expr) == "Var" then
+    right_fact = _opt_type_base(_opt_expr_known_type(state, right_expr, true))
+    if right_fact != "float" and right_fact != "number" and right_fact != "number?" then return [state, false] end if
+    right_leaves = _float_child_local_leaves(state, right_expr, 0)
+    if typeof(right_leaves) != "array" then return [state, false] end if
+    if len(right_leaves) == 0 then return [state, false] end if
+    rhs_is_local = true
+  else
+    return [state, false]
+  end if
   child = t.ast_left(expr)
   if t.ast_kind(child) != "Bin" then return [state, false] end if
   child_op = t.ast_op(child)
@@ -4218,8 +4237,8 @@ function _emit_float_parent_without_child_box(state, expr)
   if len(leaves) == 0 then return [state, false] end if
   lhs = _opt_type_base(_opt_expr_known_type(state, t.ast_left(child), true))
   rhs = _opt_type_base(_opt_expr_known_type(state, t.ast_right(child), true))
-  if lhs != "int" and lhs != "float" and lhs != "number" then return [state, false] end if
-  if rhs != "int" and rhs != "float" and rhs != "number" then return [state, false] end if
+  if lhs != "int" and lhs != "float" and lhs != "number" and lhs != "number?" then return [state, false] end if
+  if rhs != "int" and rhs != "float" and rhs != "number" and rhs != "number?" then return [state, false] end if
   // Integer-only and folded children have no runtime float box to remove.
   if lhs == "int" and rhs == "int" then return [state, false] end if
   folded = _opt_try_const_value(state, child)
@@ -4230,9 +4249,28 @@ function _emit_float_parent_without_child_box(state, expr)
   l_parent = "float_parent_nobox_parent_" + lid
   l_done = "float_parent_nobox_done_" + lid
   state.asm = a.mark(state.asm, "float_parent_nobox_guard_" + lid)
+  if rhs_is_local then
+    state.asm = a.mark(state.asm, "float_parent_nobox_rhs_guard_" + lid)
+    l_rhs_ok = "float_parent_nobox_rhs_ok_" + lid
+    state = cg_emit_expr(state, right_expr)
+    state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+    state.asm = a.and_r64_imm(state.asm, "rdx", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_FLOAT)
+    state.asm = a.jcc(state.asm, "e", l_rhs_ok)
+    state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_PTR)
+    state.asm = a.jcc(state.asm, "ne", l_slow)
+    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
+    state.asm = a.jcc(state.asm, "ne", l_slow)
+    state.asm = a.mark(state.asm, l_rhs_ok)
+    // An actual int RHS retains the original int/int parent path. Converting
+    // the child to double first could lose integer precision above 2^53.
+  end if
   // Check leaf facts before either subtree is evaluated. A miss runs the
   // original expression once, retaining its exact error behavior. Calls,
   // captures and globals are excluded, so these local values cannot change.
+  // This also holds under try: guards leave only total numeric +,-,* operations,
+  // and every miss retains the original error-suppression scope.
   for i = 0 to len(leaves) - 1
     leaf = leaves[i]
     fact = _opt_type_base(_opt_expr_known_type(state, leaf, true))
@@ -4244,7 +4282,7 @@ function _emit_float_parent_without_child_box(state, expr)
       state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
       state.asm = a.jcc(state.asm, "ne", l_slow)
     else
-      if fact == "number" then
+      if fact == "number" or fact == "number?" then
         state.asm = a.cmp_r64_imm(state.asm, "rdx", c.TAG_INT)
         state.asm = a.jcc(state.asm, "e", l_ok)
       end if
@@ -4260,6 +4298,7 @@ function _emit_float_parent_without_child_box(state, expr)
   end for
 
   state.asm = a.mark(state.asm, "float_parent_nobox_fast_" + lid)
+  if rhs_is_local then state.asm = a.mark(state.asm, "float_parent_nobox_rhs_fast_" + lid) end if
   left_tmp = core.alloc_expr_temps(state, 8)
   state = cg_emit_expr(state, t.ast_left(child))
   state.asm = a.mov_rsp_disp32_rax(state.asm, left_tmp)
@@ -4297,8 +4336,13 @@ function _emit_float_parent_without_child_box(state, expr)
   state = core.emit_normalize_xmm0_for_double_consumer(state)
 
   state.asm = a.mark(state.asm, l_parent)
-  // Loading this literal cannot call, collect, or overwrite raw XMM0.
-  state = _opt_emit_const_value(state, t.ast_value(literal))
+  // The local remains rooted during deeper operands. Reload after possible
+  // collections; neither permitted RHS load calls or overwrites raw XMM0.
+  if rhs_is_local then
+    state = cg_emit_expr(state, right_expr)
+  else
+    state = _opt_emit_const_value(state, t.ast_value(right_expr))
+  end if
   state = core.emit_to_double_xmm(state, 1, l_slow)
   if parent_op == "+" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
   if parent_op == "-" then state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if

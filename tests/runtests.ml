@@ -920,6 +920,9 @@ function main(args)
   if _test(compiler_path, repo_root, "numeric_typeflow_boxing", "tests\\numeric_typeflow_boxing.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "numeric_typeflow_typeof", "tests\\numeric_typeflow_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "numeric_typeflow_tofloat", "tests\\numeric_typeflow_tofloat.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "numeric_nullable_boxing", "tests\\numeric_nullable_boxing.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "numeric_nullable_typeof", "tests\\numeric_nullable_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "numeric_nullable_tofloat", "tests\\numeric_nullable_tofloat.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "typeof_declared_call", "tests\\typeof_declared_call.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "inline_error_boundaries", "tests\\inline_error_boundaries.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "oop_monomorphic_dispatch", "tests\\oop_monomorphic_dispatch.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
