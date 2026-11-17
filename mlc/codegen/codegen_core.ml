@@ -298,7 +298,7 @@ struct CgState
   _float_loop_raw_base,
   /// Bytes reserved for bounded transactional float-loop state.
   _float_loop_raw_size,
-  /// Top-level while sites belonging to the active function frame.
+  /// Supported lexical while sites belonging to the active function frame.
   _float_loop_sites,
   /// Suppress the region hook while emitting its ordinary fallback.
   _float_loop_disabled,
