@@ -1840,9 +1840,39 @@ function _opt_float_loop_registers(plan)
   return registers
 end function
 
+/// Prove a primitive sibling keeps its parent on double arithmetic.
+/// Entry guards establish floats for committed leaves; strict assignment-root
+/// normalization establishes floats for fresh definitions. A Bin is not proof.
+/// @internal
+function _opt_float_loop_double_consumer(other)
+  kind = t.ast_kind(other)
+  if kind == "Var" then return true end if
+  return kind == "Num" and typeof(t.ast_value(other)) == "float"
+end function
+
+/// Decode an emitted float literal without its already-proven tag dispatch.
+/// Preserve the original literal object and exact immediate f32 conversion,
+/// including its floating-point status effects.
+/// @internal
+function _opt_emit_float_loop_literal(state, expr, target)
+  if t.ast_kind(expr) != "Num" or typeof(t.ast_value(expr)) != "float" then return [state, false] end if
+  lid = core.new_label_id(state)
+  if typeof(t.try_enc_float_immediate(t.ast_value(expr))) == "int" then
+    state.asm = a.mark(state.asm, "float_loop_literal_immf_" + lid)
+    state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+    state.asm = a.shr_r64_imm8(state.asm, "rcx", 3)
+    state.asm = a.movq_xmm_r64(state.asm, target, "rcx")
+    state.asm = a.cvtss2sd_xmm_xmm(state.asm, target, target)
+  else
+    state.asm = a.mark(state.asm, "float_loop_literal_boxed_" + lid)
+    state.asm = a.movsd_xmm_membase_disp(state.asm, target, "rax", 8)
+  end if
+  return [state, true]
+end function
+
 /// Evaluate one accepted definition with XMM0-XMM5 and private raw slots only.
 /// @internal
-function _opt_emit_float_loop_raw(state, expr, env, state_count, saved, l_slow, target, registers)
+function _opt_emit_float_loop_raw(state, expr, env, state_count, saved, l_slow, target, registers, integer_rejoins, double_consumer)
   kind = t.ast_kind(expr)
   if kind == "Var" then
     ref = _float_loop_pair_get(env, _coerce_name(t.ast_name(expr)))
@@ -1857,26 +1887,43 @@ function _opt_emit_float_loop_raw(state, expr, env, state_count, saved, l_slow, 
   end if
   if kind == "Num" then
     state = exprmod.cg_emit_expr(state, expr)
+    literal = _opt_emit_float_loop_literal(state, expr, target)
+    state = literal[0]
+    if literal[1] then return state end if
     xmm_index = 0
     if target == "xmm1" then xmm_index = 1 end if
     return core.emit_to_double_xmm(state, xmm_index, l_slow)
   end if
-  state = _opt_emit_float_loop_raw(state, t.ast_left(expr), env, state_count, saved, l_slow, "xmm0", registers)
+  state = _opt_emit_float_loop_raw(state, t.ast_left(expr), env, state_count, saved, l_slow, "xmm0", registers, integer_rejoins, _opt_float_loop_double_consumer(t.ast_right(expr)))
   if t.ast_kind(t.ast_right(expr)) == "Bin" then
     left_reg = "xmm" + (4 + saved)
     state.asm = a.movapd_xmm_xmm(state.asm, left_reg, "xmm0")
-    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved + 1, l_slow, "xmm0", registers)
+    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved + 1, l_slow, "xmm0", registers, integer_rejoins, _opt_float_loop_double_consumer(t.ast_left(expr)))
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", left_reg)
   else
-    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved, l_slow, "xmm1", registers)
+    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved, l_slow, "xmm1", registers, integer_rejoins, false)
   end if
   op = t.ast_op(expr)
   if op == "+" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
   if op == "-" then state.asm = a.subsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
   if op == "*" then state.asm = a.mulsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
-  // Assignment roots retain the same integer/NaN bailout as inner operations.
-  return exprmod._emit_float_tree_normalize(state, l_slow)
+  if double_consumer then
+    // The proven-float sibling makes the next operation a double consumer.
+    // Keep the float path unchanged; canonical integers rejoin out of line.
+    lid = core.new_label_id(state)
+    canonical = "float_loop_consumer_int_" + lid
+    resume = "float_loop_consumer_resume_" + lid
+    state.asm = a.mark(state.asm, "float_loop_consumer_" + lid)
+    integer_rejoins[0] = integer_rejoins[0] + [[canonical, resume]]
+    state = exprmod._emit_float_tree_normalize(state, canonical)
+    state.asm = a.mark(state.asm, resume)
+  else
+    // Assignment roots and children without a proven-float sibling retain
+    // the integer/NaN bailout and committed rollback state.
+    state = exprmod._emit_float_tree_normalize(state, l_slow)
+  end if
+  return state
 end function
 
 /// Compare actual tagged int61 operands without conversion or reassociation.
@@ -1892,20 +1939,21 @@ end function
 
 /// Compare one pure float escape condition against the committed raw bank.
 /// @internal
-function _opt_emit_float_loop_escape(state, plan, state_count, lid, l_deopt, l_exit, registers)
+function _opt_emit_float_loop_escape(state, plan, state_count, lid, l_deopt, l_exit, registers, integer_rejoins)
   escape = plan[12]
   state.asm = a.mark(state.asm, "float_loop_condition_" + lid)
-  state = _opt_emit_float_loop_raw(state, t.ast_left(escape), plan[13], state_count, 0, l_deopt, "xmm0", registers)
+  state = _opt_emit_float_loop_raw(state, t.ast_left(escape), plan[13], state_count, 0, l_deopt, "xmm0", registers, integer_rejoins, _opt_float_loop_double_consumer(t.ast_right(escape)))
   if t.ast_kind(t.ast_right(escape)) == "Bin" then
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm4", "xmm0")
-    state = _opt_emit_float_loop_raw(state, t.ast_right(escape), plan[13], state_count, 1, l_deopt, "xmm0", registers)
+    state = _opt_emit_float_loop_raw(state, t.ast_right(escape), plan[13], state_count, 1, l_deopt, "xmm0", registers, integer_rejoins, _opt_float_loop_double_consumer(t.ast_left(escape)))
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", "xmm4")
   else
-    state = _opt_emit_float_loop_raw(state, t.ast_right(escape), plan[13], state_count, 0, l_deopt, "xmm1", registers)
+    state = _opt_emit_float_loop_raw(state, t.ast_right(escape), plan[13], state_count, 0, l_deopt, "xmm1", registers, integer_rejoins, false)
   end if
   state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
-  // Leaf NaNs retain unordered comparisons; arithmetic NaNs already bailed out.
+  // Leaf NaNs retain unordered comparisons. Arithmetic NaNs are canonicalized
+  // like ordinary values or take the strict bailout.
   escape_op = t.ast_op(escape)
   if escape_op == "!=" then
     accepted = "float_loop_condition_true_" + lid
@@ -2034,6 +2082,8 @@ function _opt_emit_float_loop(state, node)
     slot_index = slot_index + 1
   end for
   registers = _opt_float_loop_registers(plan)
+  // A shared outer array collects local rejoin pairs across recursive calls.
+  integer_rejoins = [[]]
 
   state.asm = a.mark(state.asm, l_guard)
   for each int_operand in [t.ast_left(plan[11]), plan[1]]
@@ -2071,13 +2121,13 @@ function _opt_emit_float_loop(state, node)
   state.asm = a.mark(state.asm, l_fast)
   l_exit = "float_loop_exit_" + lid
   if t.ast_kind(plan[12]) == "Bin" then
-    state = _opt_emit_float_loop_escape(state, plan, state_count, lid, l_deopt, l_exit, registers)
+    state = _opt_emit_float_loop_escape(state, plan, state_count, lid, l_deopt, l_exit, registers, integer_rejoins)
   end if
   for each step in plan[7]
     state = core.emit_dbg_line(state, step[0])
     if step[1] >= 0 then
       definition = plan[6][step[1]]
-      state = _opt_emit_float_loop_raw(state, definition[0], definition[1], state_count, 0, l_deopt, "xmm0", registers)
+      state = _opt_emit_float_loop_raw(state, definition[0], definition[1], state_count, 0, l_deopt, "xmm0", registers, integer_rejoins, false)
       cached_register = registers[step[1]]
       if cached_register != "" then
         state.asm = a.mark(state.asm, "float_loop_cache_" + lid + "_" + step[1] + "_" + cached_register)
@@ -2114,6 +2164,17 @@ function _opt_emit_float_loop(state, node)
   end if
   state = _opt_emit_float_loop_materialize(state, plan, slots)
   state.asm = a.jmp(state.asm, l_done)
+
+  for each rejoin in integer_rejoins[0]
+    state.asm = a.mark(state.asm, rejoin[0])
+    // RAX still holds CVTTSD2SI's result. Reproduce tagged signed61 wrapping,
+    // including the unordered/equal NaN branch, without committing raw state.
+    state.asm = a.shl_r64_imm8(state.asm, "rax", 3)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+    state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
+    state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm0", "rax")
+    state.asm = a.jmp(state.asm, rejoin[1])
+  end for
 
   state.asm = a.mark(state.asm, l_deopt)
   state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", flag_off)
