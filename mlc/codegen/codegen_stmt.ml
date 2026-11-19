@@ -1772,12 +1772,84 @@ function _opt_float_loop_arena_bytes(state, fn)
   return size
 end function
 
-/// Evaluate one accepted definition with XMM0-XMM5 and private raw slots only.
+/// Count fresh-definition reads and return saved-left register pressure.
+/// Scores belong to this plan only; expression environments remain immutable.
 /// @internal
-function _opt_emit_float_loop_raw(state, expr, env, state_count, saved, l_slow, target)
+function _opt_float_loop_register_visit(expr, env, scores)
   kind = t.ast_kind(expr)
   if kind == "Var" then
     ref = _float_loop_pair_get(env, _coerce_name(t.ast_name(expr)))
+    if ref[0] != 0 then scores[ref[1]] = scores[ref[1]] + 1 end if
+    return 0
+  end if
+  if kind != "Bin" then return 0 end if
+  left = _opt_float_loop_register_visit(t.ast_left(expr), env, scores)
+  right = _opt_float_loop_register_visit(t.ast_right(expr), env, scores)
+  saved_right = 0
+  if t.ast_kind(t.ast_right(expr)) == "Bin" then saved_right = right + 1 end if
+  if saved_right > left then return saved_right end if
+  return left
+end function
+
+/// Cache fresh definitions in volatile registers unused by every tree.
+/// XMM0-XMM3 remain normalization scratch, XMM4/XMM5 hold saved left operands.
+/// Preserve the committed memory bank as the authoritative rollback state.
+/// @internal
+function _opt_float_loop_registers(plan)
+  scores = []
+  registers = []
+  for each definition in plan[6]
+    scores = scores + [0]
+    registers = registers + [""]
+  end for
+  pressure = 0
+  escape = plan[12]
+  if t.ast_kind(escape) == "Bin" then
+    left = _opt_float_loop_register_visit(t.ast_left(escape), plan[13], scores)
+    right = _opt_float_loop_register_visit(t.ast_right(escape), plan[13], scores)
+    pressure = left
+    if t.ast_kind(t.ast_right(escape)) == "Bin" and right + 1 > pressure then
+      pressure = right + 1
+    end if
+  end if
+  for each body_definition in plan[6]
+    needed = _opt_float_loop_register_visit(body_definition[0], body_definition[1], scores)
+    if needed > pressure then pressure = needed end if
+  end for
+  for each output in plan[9]
+    scores[output[1]] = scores[output[1]] + 1
+  end for
+  // Highest read/commit score first, with source definition order as tie-break.
+  register_index = 4 + pressure
+  while register_index <= 5
+    best = -1
+    best_score = 0
+    score_index = 0
+    while score_index < len(scores)
+      if scores[score_index] > best_score then
+        best = score_index
+        best_score = scores[score_index]
+      end if
+      score_index = score_index + 1
+    end while
+    if best < 0 then break end if
+    registers[best] = "xmm" + register_index
+    scores[best] = -1
+    register_index = register_index + 1
+  end while
+  return registers
+end function
+
+/// Evaluate one accepted definition with XMM0-XMM5 and private raw slots only.
+/// @internal
+function _opt_emit_float_loop_raw(state, expr, env, state_count, saved, l_slow, target, registers)
+  kind = t.ast_kind(expr)
+  if kind == "Var" then
+    ref = _float_loop_pair_get(env, _coerce_name(t.ast_name(expr)))
+    if ref[0] != 0 and registers[ref[1]] != "" then
+      state.asm = a.movapd_xmm_xmm(state.asm, target, registers[ref[1]])
+      return state
+    end if
     slot = ref[1]
     if ref[0] != 0 then slot = slot + state_count end if
     state.asm = a.movsd_xmm_membase_disp(state.asm, target, "rsp", state._float_loop_raw_base + slot * 8)
@@ -1789,15 +1861,15 @@ function _opt_emit_float_loop_raw(state, expr, env, state_count, saved, l_slow, 
     if target == "xmm1" then xmm_index = 1 end if
     return core.emit_to_double_xmm(state, xmm_index, l_slow)
   end if
-  state = _opt_emit_float_loop_raw(state, t.ast_left(expr), env, state_count, saved, l_slow, "xmm0")
+  state = _opt_emit_float_loop_raw(state, t.ast_left(expr), env, state_count, saved, l_slow, "xmm0", registers)
   if t.ast_kind(t.ast_right(expr)) == "Bin" then
     left_reg = "xmm" + (4 + saved)
     state.asm = a.movapd_xmm_xmm(state.asm, left_reg, "xmm0")
-    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved + 1, l_slow, "xmm0")
+    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved + 1, l_slow, "xmm0", registers)
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", left_reg)
   else
-    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved, l_slow, "xmm1")
+    state = _opt_emit_float_loop_raw(state, t.ast_right(expr), env, state_count, saved, l_slow, "xmm1", registers)
   end if
   op = t.ast_op(expr)
   if op == "+" then state.asm = a.addsd_xmm_xmm(state.asm, "xmm0", "xmm1") end if
@@ -1820,17 +1892,17 @@ end function
 
 /// Compare one pure float escape condition against the committed raw bank.
 /// @internal
-function _opt_emit_float_loop_escape(state, plan, state_count, lid, l_deopt, l_exit)
+function _opt_emit_float_loop_escape(state, plan, state_count, lid, l_deopt, l_exit, registers)
   escape = plan[12]
   state.asm = a.mark(state.asm, "float_loop_condition_" + lid)
-  state = _opt_emit_float_loop_raw(state, t.ast_left(escape), plan[13], state_count, 0, l_deopt, "xmm0")
+  state = _opt_emit_float_loop_raw(state, t.ast_left(escape), plan[13], state_count, 0, l_deopt, "xmm0", registers)
   if t.ast_kind(t.ast_right(escape)) == "Bin" then
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm4", "xmm0")
-    state = _opt_emit_float_loop_raw(state, t.ast_right(escape), plan[13], state_count, 1, l_deopt, "xmm0")
+    state = _opt_emit_float_loop_raw(state, t.ast_right(escape), plan[13], state_count, 1, l_deopt, "xmm0", registers)
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm1", "xmm0")
     state.asm = a.movapd_xmm_xmm(state.asm, "xmm0", "xmm4")
   else
-    state = _opt_emit_float_loop_raw(state, t.ast_right(escape), plan[13], state_count, 0, l_deopt, "xmm1")
+    state = _opt_emit_float_loop_raw(state, t.ast_right(escape), plan[13], state_count, 0, l_deopt, "xmm1", registers)
   end if
   state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
   // Leaf NaNs retain unordered comparisons; arithmetic NaNs already bailed out.
@@ -1961,6 +2033,7 @@ function _opt_emit_float_loop(state, node)
     slots = slots + [[state_name, state._float_loop_raw_base + slot_index * 8]]
     slot_index = slot_index + 1
   end for
+  registers = _opt_float_loop_registers(plan)
 
   state.asm = a.mark(state.asm, l_guard)
   for each int_operand in [t.ast_left(plan[11]), plan[1]]
@@ -1998,20 +2071,31 @@ function _opt_emit_float_loop(state, node)
   state.asm = a.mark(state.asm, l_fast)
   l_exit = "float_loop_exit_" + lid
   if t.ast_kind(plan[12]) == "Bin" then
-    state = _opt_emit_float_loop_escape(state, plan, state_count, lid, l_deopt, l_exit)
+    state = _opt_emit_float_loop_escape(state, plan, state_count, lid, l_deopt, l_exit, registers)
   end if
   for each step in plan[7]
     state = core.emit_dbg_line(state, step[0])
     if step[1] >= 0 then
       definition = plan[6][step[1]]
-      state = _opt_emit_float_loop_raw(state, definition[0], definition[1], state_count, 0, l_deopt, "xmm0")
-      state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", work_base + step[1] * 8, "xmm0")
+      state = _opt_emit_float_loop_raw(state, definition[0], definition[1], state_count, 0, l_deopt, "xmm0", registers)
+      cached_register = registers[step[1]]
+      if cached_register != "" then
+        state.asm = a.mark(state.asm, "float_loop_cache_" + lid + "_" + step[1] + "_" + cached_register)
+        state.asm = a.movapd_xmm_xmm(state.asm, cached_register, "xmm0")
+      else
+        state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", work_base + step[1] * 8, "xmm0")
+      end if
     end if
   end for
   state.asm = a.mark(state.asm, "float_loop_commit_" + lid)
   for each committed in plan[9]
-    state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", work_base + committed[1] * 8)
-    state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", _float_loop_pair_get(slots, committed[0]), "xmm0")
+    committed_register = registers[committed[1]]
+    if committed_register != "" then
+      state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", _float_loop_pair_get(slots, committed[0]), committed_register)
+    else
+      state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "rsp", work_base + committed[1] * 8)
+      state.asm = a.movsd_membase_disp_xmm(state.asm, "rsp", _float_loop_pair_get(slots, committed[0]), "xmm0")
+    end if
   end for
   state = core.emit_dbg_line(state, plan[3])
   state = core.emit_load_var(state, plan[0], node)
