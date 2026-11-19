@@ -4225,10 +4225,13 @@ function _emit_float_tree_normalize(state, l_slow)
   state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm1", "rax")
   state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
   state.asm = a.jcc(state.asm, "e", l_slow)
-  // The f32 probe has the same floating-point status effects as materializing.
+  // Retain both f32 conversions and their floating-point status effects.
+  // The old final UCOMISD only produced dead EFLAGS: NaNs already leave through
+  // the unordered/equal branch above, and any denormal XMM0 already raised DE
+  // there. Widening a non-NaN f32 produces zero, a normal double or infinity,
+  // so comparing XMM0 with that result cannot add a new MXCSR exception flag.
   state.asm = a.cvtsd2ss_xmm_xmm(state.asm, "xmm2", "xmm0")
   state.asm = a.cvtss2sd_xmm_xmm(state.asm, "xmm3", "xmm2")
-  state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm3")
   return state
 end function
 
