@@ -1675,7 +1675,7 @@ function _opt_float_loop_shape(state, loop_node)
     if t.ast_value(bound) < -1152921504606846976 or t.ast_value(bound) > 1152921504606846975 then return 0 end if
   end if
   body = try(loop_node.body)
-  if typeof(body) != "array" or len(body) < 2 or len(body) > 12 then return 0 end if
+  if typeof(body) != "array" or len(body) < 2 or len(body) > 13 then return 0 end if
   update = body[len(body) - 1]
   if t.ast_kind(update) != "Assign" or _coerce_name(try(update.name)) != counter then return 0 end if
   update_type = try(update.declared_type)
@@ -4949,7 +4949,7 @@ function _scalar_candidates(state, fn_node)
     qname = exprmod._qualify_identifier(state, raw)
     fields = exprmod._state_struct_fields_get(state, qname)
     if typeof(fields) != "array" or qname == "error" then continue end if
-    if len(fields) < 1 or len(fields) > 8 or len(call.args) != len(fields) then continue end if
+    if len(fields) < 1 or len(fields) > 12 or len(call.args) != len(fields) then continue end if
     named = false
     names = try(call.arg_names)
     if typeof(names) == "array" then
