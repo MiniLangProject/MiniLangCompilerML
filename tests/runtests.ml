@@ -917,6 +917,10 @@ function main(args)
   if _test(compiler_path, repo_root, "type_query_resolution", "tests\\type_query_resolution.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "proven_check_elision", "tests\\proven_check_elision.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "proven_check_elision_typeof", "tests\\proven_check_elision_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "typed_numeric_temporary_inline", "tests\\typed_numeric_temporary_inline.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "typed_local_custom_typeof", "tests\\typed_local_custom_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "typed_float_temporary_inline", "tests\\typed_float_temporary_inline.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "typed_float_temporary_typeof", "tests\\typed_float_temporary_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "numeric_typeflow_boxing", "tests\\numeric_typeflow_boxing.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "numeric_typeflow_typeof", "tests\\numeric_typeflow_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "numeric_typeflow_tofloat", "tests\\numeric_typeflow_tofloat.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
@@ -938,6 +942,10 @@ function main(args)
   if _test(compiler_path, repo_root, "inline_error_boundaries", "tests\\inline_error_boundaries.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "oop_monomorphic_dispatch", "tests\\oop_monomorphic_dispatch.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_extensions", "tests\\language_extensions.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_typed_bindings", "tests\\language_typed_bindings.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_typed_binding_typeof", "tests\\language_typed_binding_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_typed_binding_mismatch", "tests\\language_typed_binding_mismatch.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_typed_binding_redeclare", "tests\\language_typed_binding_redeclare.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "operator_overloading", "tests\\operator_overloading.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_performance_features", "tests\\language_performance_features.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "variadic_escape_lifetime", "tests\\variadic_escape_lifetime.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

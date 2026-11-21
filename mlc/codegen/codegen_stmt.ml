@@ -1471,6 +1471,20 @@ function _dotted_name_expr(ex)
   return ""
 end function
 
+/// Identify namespace storage without redirecting real object members.
+/// @internal
+function _qualified_global_write_name(state, obj, field)
+  name = _dotted_name_expr(obj)
+  if name == "" or field == "" then return "" end if
+  dot = s.indexOf(name, ".", 0)
+  root = name
+  if dot >= 0 then root = s.substr(name, 0, dot) end if
+  if typeof(scope.cg_resolve_binding(state, root)) == "struct" then return "" end if
+  root = exprmod._qualify_identifier(state, root)
+  if typeof(scope.cg_resolve_binding(state, root)) == "struct" then return "" end if
+  return exprmod._apply_import_alias(state, name + "." + field)
+end function
+
 /// Lower emit struct field index dispatch local statement behavior to native x64.
 /// @internal
 function _emit_struct_field_index_dispatch_local(state, field, struct_id_reg, out_reg, ok_label, fail_label, tag)
@@ -2442,6 +2456,26 @@ function cg_emit_stmt(state, stmt)
   return state
 end function
 
+/// Diagnose a literal assignment that cannot satisfy its builtin contract.
+/// @internal
+function _validate_binding_literal(state, guard)
+  if t.ast_kind(guard) != "TypeGuard" or guard.binding_write == 0 then return state end if
+  expected = ml.binding_type_key(guard.type_name)
+  if expected != "int" and expected != "float" and expected != "bool" and expected != "string" and expected != "array" and expected != "bytes" and expected != "function" and expected != "struct" and expected != "enum" and expected != "error" and expected != "thread" and expected != "void" then return state end if
+  value = guard.expr
+  kind = t.ast_kind(value)
+  actual = ""
+  if kind == "Num" then actual = typeof(t.ast_value(value)) end if
+  if kind == "Bool" then actual = "bool" end if
+  if kind == "Str" then actual = "string" end if
+  if kind == "VoidLit" then actual = "void" end if
+  if actual == "" or actual == expected or (actual == "void" and guard.optional) then return state end if
+  suffix = ""
+  if guard.optional then suffix = "?" end if
+  state.diagnostics = state.diagnostics + ["Cannot assign " + actual + " to binding of type " + guard.type_name + suffix + _diag_stmt_loc(guard)]
+  return state
+end function
+
 /// Emit declarations and assignments that update program storage.
 /// @internal
 function _emit_storage_stmt(state, stmt, k)
@@ -2507,6 +2541,25 @@ function _emit_storage_stmt(state, stmt, k)
     end if
     nm_a = _coerce_name(stmt.name)
     if nm_a == "" then return state end if
+    global_name = ""
+    if t.fastmap_size(state.global_binding_contracts) > 0 then
+      destination = scope.resolve_binding_for_write(state, nm_a)
+      if state.in_function then
+        if typeof(destination) == "struct" and destination.kind == "global" then global_name = destination.name end if
+      else if typeof(destination) != "struct" or destination.depth == 0 then
+        global_name = nm_a
+      end if
+    end if
+    contract = t.fastmap_get(state.global_binding_contracts, global_name, void)
+    if typeof(contract) == "array" then
+      checked = try(ml.guard_binding_write(stmt, contract, state.in_function))
+      if typeof(checked) == "error" then
+        state.diagnostics = state.diagnostics + [checked.message + _diag_stmt_loc(stmt)]
+        return state
+      end if
+      stmt.expr = checked
+    end if
+    state = _validate_binding_literal(state, stmt.expr)
     for each scalar_plan in state.scalar_structs
       if stmt == scalar_plan[0] then
         state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -2579,28 +2632,17 @@ function _emit_storage_stmt(state, stmt, k)
     field = _coerce_name(try(stmt.field))
     if field == "" then field = _coerce_name(try(stmt.name)) end if
 
-    qobj = _dotted_name_expr(obj_expr)
-    if qobj != "" then
-      parts = s.split(qobj, ".")
-      root = ""
-      if typeof(parts) == "array" and len(parts) > 0 then root = _coerce_name(parts[0]) end if
-      bound = false
-      if root != "" then
-        rb = scope.cg_resolve_binding(state, root)
-        if typeof(rb) != "struct" then
-          rq = exprmod._qualify_identifier(state, root)
-          if typeof(rq) == "string" and rq != "" and rq != root then
-            rb = scope.cg_resolve_binding(state, rq)
-          end if
-        end if
-        bound = typeof(rb) == "struct"
+    full = _qualified_global_write_name(state, obj_expr, field)
+    if full != "" then
+      value = stmt.expr
+      contract = t.fastmap_get(state.global_binding_contracts, full, void)
+      if typeof(contract) == "array" then
+        value = ml.TypeGuard("TypeGuard", value, contract[2], contract[1], t.ast_pos(stmt), t.ast_filename(stmt), 2)
+        state = _validate_binding_literal(state, value)
       end if
-      if bound == false and field != "" then
-        full = exprmod._apply_import_alias(state, qobj + "." + field)
-        state = exprmod.cg_emit_expr(state, stmt.expr)
-        state = scope.emit_store_existing_global(state, full)
-        return state
-      end if
+      state = exprmod.cg_emit_expr(state, value)
+      state = scope.emit_store_existing_global(state, full)
+      return state
     end if
 
     known_struct_sm = exprmod._opt_expr_known_type(state, obj_expr)
@@ -6822,7 +6864,9 @@ function _analysis_scan_stmt(state, st)
   if k == "SetMember" then
     obj_expr = try(st.obj)
     if t.ast_is_node(obj_expr) == false then obj_expr = try(st.target) end if
-    state = _analysis_scan_expr(state, obj_expr, false)
+    if _qualified_global_write_name(state, obj_expr, _coerce_name(st.field)) == "" then
+      state = _analysis_scan_expr(state, obj_expr, false)
+    end if
     state = _analysis_scan_expr(state, try(st.expr), false)
     return state
   end if
@@ -9379,6 +9423,48 @@ function _ensure_global_binding_label(state, qname, decl_node)
   return [state, lbl]
 end function
 
+/// Lower local writes before inlining and collect module slot contracts.
+/// @internal
+function _prepare_binding_contracts(state, program)
+  seen = void
+  state.global_binding_contracts = void
+  if ml.has_typed_binding_declarations() == false then return state end if
+  for each st in program
+    kind = t.ast_kind(st)
+    if kind != "Assign" and kind != "ConstDecl" and kind != "SynchronizedDecl" then continue end if
+    name = st.name
+    fixed = ml.declares_binding_type(st)
+    if t.fastmap_has(seen, name) then
+      if fixed then state.diagnostics = state.diagnostics + ["Typed binding '" + name + "' requires a new variable" + _diag_stmt_loc(st)] end if
+      continue
+    end if
+    seen = t.fastmap_set(seen, name, true)
+    if fixed == false then continue end if
+    raw = st.declared_type
+    qualified = exprmod._apply_import_alias(state, raw)
+    if _has_dot_name(qualified) == false then
+      prefix = ""
+      dot = s.lastIndexOf(name, ".")
+      if dot >= 0 then prefix = s.substr(name, 0, dot + 1) end if
+      package_prefix = _strpair_get(state.file_prefix_map, t.ast_filename(st))
+      for each candidate in [prefix + qualified, _join_qname(package_prefix, qualified)]
+        if typeof(exprmod._state_struct_fields_get(state, candidate)) == "array" or exprmod._state_enum_id_get(state, candidate, -1) >= 0 or _arr_has(state.interface_names, candidate) then
+          qualified = candidate
+          break
+        end if
+      end for
+    end if
+    state.global_binding_contracts = t.fastmap_set(state.global_binding_contracts, name, [raw, st.declared_optional, qualified])
+  end for
+  for each entry in state.user_functions
+    checked = try(ml.apply_local_binding_contracts(entry[1]))
+    if typeof(checked) == "error" then state.diagnostics = state.diagnostics + [checked.message] end if
+  end for
+  checked = try(ml.apply_module_binding_contracts(program))
+  if typeof(checked) == "error" then state.diagnostics = state.diagnostics + [checked.message] end if
+  return state
+end function
+
 /// Lower declare top level global bindings statement behavior to native x64.
 /// @internal
 function _declare_top_level_global_bindings(state, program)
@@ -10575,6 +10661,7 @@ function prepare_program_for_objects(state, program)
   state = _mem_probe(state, "pre_flatten")
   state.synchronized_globals = []
   program = _flatten_runtime(state, program)
+  state = _prepare_binding_contracts(state, program)
   state = _collect_mutable_user_functions(state, program)
   state.inline_only_functions = _analyze_inline_only_functions(state, program)
   state.pruned_inline_functions = []
@@ -10592,7 +10679,7 @@ function prepare_program_for_objects(state, program)
       if typeof(ifn_rec) != "array" or len(ifn_rec) != 2 then continue end if
       ifn = ifn_rec[1]
       if typeof(ifn) != "struct" then continue end if
-      if exprmod._function_wants_inline(ifn) == false then continue end if
+      if exprmod._function_wants_inline(ifn, state.operator_overloads_present) == false then continue end if
       if exprmod._inline_call_eligible(ifn) == false then continue end if
       ifn_arity = max_calls_stmts(state, try(ifn.body))
       if typeof(ifn_arity) == "int" and ifn_arity > state.max_inline_call_args_global then
@@ -10668,7 +10755,7 @@ function prepare_program_for_objects(state, program)
     for each rec in state.user_functions
       fn = rec[1]
       inline_source = ""
-      if exprmod._function_wants_inline(fn) then inline_source = incremental.sourceIdentity(t.ast_filename(fn)) end if
+      if exprmod._function_wants_inline(fn, state.operator_overloads_present) then inline_source = incremental.sourceIdentity(t.ast_filename(fn)) end if
       contracts = t.arr_chunk_push(contracts, [rec[0], exprmod._variadic_param_stack_safe(fn), inline_source])
     end for
     incremental.seal(state, t.arr_chunk_finish(contracts))

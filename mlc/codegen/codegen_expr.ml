@@ -2311,9 +2311,9 @@ end function
 /// Lower emit expr type guard expression behavior to native x64.
 /// @internal
 function _emit_expr_type_guard(state, expr)
-  if _opt_literal_guard_is_redundant(state, expr) then
-    // Ordinary emission retains folding and numeric normalization. A proven
-    // primitive constant cannot be Error or allocate and needs no guard root.
+  if _opt_literal_guard_is_redundant(state, expr) or _opt_fixed_binding_copy_is_redundant(state, expr) or _opt_proven_int_bin_guard_is_redundant(state, expr) then
+    // Ordinary emission retains numeric normalization. The proof excludes
+    // effects, allocation and errors, so no guard root is needed.
     return cg_emit_expr(state, expr.expr)
   end if
   lid = _next_lid(state)
@@ -2338,19 +2338,38 @@ function _emit_expr_type_guard(state, expr)
   end if
   loaded = ml.DeferredCapture("DeferredCapture", off, -1, "")
   primitive = canonical == "int" or canonical == "float" or canonical == "bool" or canonical == "string" or canonical == "array" or canonical == "bytes" or canonical == "function" or canonical == "struct" or canonical == "enum" or canonical == "error" or canonical == "thread" or canonical == "void" or canonical == "unknown"
-  check = 0
-  if primitive then
+  if expr.binding_write != 0 and primitive then
+    if canonical == "error" or canonical == "unknown" then
+      state = cg_emit_expr(state, loaded)
+      state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
+      state.asm = a.call(state.asm, "fn_typeof")
+      state.asm = a.lea_rdx_rip(state.asm, "obj_type_" + canonical)
+      state.asm = a.cmp_r64_r64(state.asm, "rax", "rdx")
+      state.asm = a.setcc_al(state.asm, "e")
+      state.asm = a.movzx_eax_al(state.asm)
+      state.asm = a.shl_rax_imm8(state.asm, 3)
+      state.asm = a.or_rax_imm8(state.asm, c.TAG_BOOL)
+    else
+      state = _emit_typeof_literal_check(state, loaded, canonical)
+    end if
+  else if primitive then
     typeof_call = ml.Call("Call", ml.Var("Var", "typeof", -1, ""), [loaded], [], -1, "")
     check = ml.Bin("Bin", typeof_call, "==", ml.Str("Str", canonical, -1, ""), -1, "")
+    state = cg_emit_expr(state, check)
   else
     check = ml.IsType("IsType", loaded, raw_type, false, -1, "")
+    state = cg_emit_expr(state, check)
   end if
-  state = cg_emit_expr(state, check)
   state.asm = a.cmp_rax_imm8(state.asm, t.enc_bool(true))
   state.asm = a.jcc(state.asm, "e", l_valid)
   suffix = ""
   if optional then suffix = "?" end if
   state = _emit_make_error_const(state, c.ERR_TYPE_GUARD, "Expected value of type " + raw_type + suffix)
+  stores_error = expr.binding_write != 0 and canonical == "error"
+  if stores_error then
+    // A caught Error is a valid payload. Only the mismatch propagates.
+    state = _emit_auto_errprop(state)
+  end if
   state.asm = a.jmp(state.asm, l_done)
   state.asm = a.mark(state.asm, l_valid)
   state.asm = a.mov_rax_rsp_disp32(state.asm, off)
@@ -2358,7 +2377,7 @@ function _emit_expr_type_guard(state, expr)
   state = core.free_expr_temps(state, 8)
   // Type contracts propagate like other fallible expressions, while try()
   // suppresses this branch through the shared errprop_suppression counter.
-  state = _emit_auto_errprop(state)
+  if stores_error == false then state = _emit_auto_errprop(state) end if
   return state
 end function
 
@@ -4836,11 +4855,50 @@ function _opt_literal_guard_is_redundant(state, expr)
     if canonical == "str" then canonical = "string" end if
   end if
   if canonical != value_type then return false end if
+  if expr.binding_write != 0 then return true end if
   // Use the existing direct typeof/tag-check resolver. User declarations of
   // typeof may have observable effects and must retain the ordinary guard.
   probe_arg = ml.DeferredCapture("DeferredCapture", 0, -1, "")
   probe = ml.Call("Call", ml.Var("Var", "typeof", -1, ""), [probe_arg], [], -1, "")
   return t.ast_kind(_typeof_fold_arg(state, probe)) == "DeferredCapture"
+end function
+
+/// Prove a pure integer result from checked parameters or locals.
+/// Entry guards are bare variables and remain mandatory for dynamic calls.
+/// @internal
+function _opt_proven_int_bin_guard_is_redundant(state, guard)
+  if state.in_function == false or state.operator_overloads_present then return false end if
+  if _coerce_name(try(guard.type_name)) != "int" then return false end if
+  if typeof(try(guard.optional)) == "bool" and guard.optional then return false end if
+  expr = try(guard.expr)
+  if t.ast_kind(expr) != "Bin" then return false end if
+  op = t.ast_op(expr)
+  if op != "+" and op != "-" and op != "*" then return false end if
+  for each leaf in [t.ast_left(expr), t.ast_right(expr)]
+    kind = t.ast_kind(leaf)
+    if kind == "Num" and typeof(t.ast_value(leaf)) == "int" then continue end if
+    if kind != "Var" then return false end if
+    binding = scope.cg_resolve_binding(state, t.ast_name(leaf))
+    if typeof(binding) != "struct" then return false end if
+    parameter = binding.kind == "param"
+    if parameter == false and (binding.kind != "local" or guard.binding_write == 0) then return false end if
+    if _opt_type_base(_opt_expr_known_type(state, leaf, parameter == false)) != "int" then return false end if
+  end for
+  probe_arg = ml.DeferredCapture("DeferredCapture", 0, -1, "")
+  probe = ml.Call("Call", ml.Var("Var", "typeof", -1, ""), [probe_arg], [], -1, "")
+  return t.ast_kind(_typeof_fold_arg(state, probe)) == "DeferredCapture"
+end function
+
+/// Reuse the checked declaration of an already visible local.
+/// @internal
+function _opt_fixed_binding_copy_is_redundant(state, guard)
+  if guard.binding_write == 0 or t.ast_kind(guard.expr) != "Var" then return false end if
+  expected = ml.binding_type_key(guard.type_name)
+  if expected != "int" and expected != "float" and expected != "bool" and expected != "string" and expected != "array" and expected != "bytes" and expected != "function" and expected != "thread" then return false end if
+  binding = scope.cg_resolve_binding(state, t.ast_name(guard.expr))
+  if typeof(binding) != "struct" or binding.kind != "local" or binding.boxed then return false end if
+  decl = binding.decl_node
+  return ml.declares_binding_type(decl) and (decl.declared_optional == false or guard.optional) and ml.binding_type_key(decl.declared_type) == expected
 end function
 
 /// Emit a direct `typeof(<arg>) == "<lit>"` check: value tag and, for pointer types, object-type checks replace the fn_typeof call and the generic equality cascade.
@@ -6698,7 +6756,7 @@ function _emit_expr_call(state, expr)
           known_inline_used = t.fastmap_get(state._inline_emitted_bytes, known_method_dyn, 0)
           if typeof(known_inline_used) != "int" then known_inline_used = 0 end if
         end if
-        if known_inline_used < _pgo_inline_budget(state, known_method_dyn) and _function_wants_inline(known_def_dyn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(known_def_dyn) then
+        if known_inline_used < _pgo_inline_budget(state, known_method_dyn) and _function_wants_inline(known_def_dyn, state.operator_overloads_present) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(known_def_dyn) then
           // Only the inliner needs a synthetic receiver-plus-arguments array;
           // the common direct-call path emits from the original AST arrays.
           known_args_b = t.arr_chunk_new(total_dyn)
@@ -9418,7 +9476,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
     inline_used_bytes = t.fastmap_get(state._inline_emitted_bytes, inline_name, 0)
     if typeof(inline_used_bytes) != "int" then inline_used_bytes = 0 end if
   end if
-  if inline_used_bytes < _pgo_inline_budget(state, inline_name) and t.fastmap_get(state.mutable_user_functions, inline_name, 0) == 0 and typeof(inline_fn) == "struct" and _function_wants_inline(inline_fn) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(inline_fn) then
+  if inline_used_bytes < _pgo_inline_budget(state, inline_name) and t.fastmap_get(state.mutable_user_functions, inline_name, 0) == 0 and typeof(inline_fn) == "struct" and _function_wants_inline(inline_fn, state.operator_overloads_present) and _call_args_have_stack_variadic(call_args) == false and _inline_call_eligible(inline_fn) then
     inline_binding = scope.cg_resolve_binding(state, inline_name)
     if typeof(inline_binding) != "struct" or inline_binding.kind == "global" then
       state = _emit_inline_call(state, inline_name, call_args)
@@ -11802,9 +11860,93 @@ function _inline_collect_stmt_stats(st, stats)
   return 6
 end function
 
+/// Recognize a pure two-leaf integer expression in a typed inline helper.
+/// @internal
+function _inline_numeric_bin(expr, names)
+  if t.ast_kind(expr) == "TypeGuard" then
+    if _coerce_name(try(expr.type_name)) != "int" then return false end if
+    if typeof(try(expr.optional)) == "bool" and expr.optional then return false end if
+    expr = try(expr.expr)
+  end if
+  if t.ast_kind(expr) != "Bin" then return false end if
+  op = _coerce_name(t.ast_op(expr))
+  if op != "+" and op != "-" and op != "*" then return false end if
+  left = t.ast_left(expr)
+  right = t.ast_right(expr)
+  for each leaf in [left, right]
+    kind = t.ast_kind(leaf)
+    if kind == "Num" then
+      value = t.ast_value(leaf)
+      if typeof(value) != "int" then return false end if
+    else
+      if kind != "Var" or _intflow_name_has(names, t.ast_name(leaf)) == false then return false end if
+    end if
+  end for
+  return true
+end function
+
+/// Report whether a leaf is a float literal or a declared float parameter.
+/// @internal
+function _inline_float_leaf(leaf, params)
+  kind = t.ast_kind(leaf)
+  if kind == "Num" then return typeof(t.ast_value(leaf)) == "float" end if
+  return kind == "Var" and _intflow_name_has(params, t.ast_name(leaf))
+end function
+
+/// Fuse one private float temporary into a guarded two-operation return tree.
+/// The shared float-tree emitter validates tags and replays Value operations
+/// when an intermediate result normalizes to an integer.
+/// @internal
+function _inline_float_temporary_return(fn, operator_overloads_present)
+  if operator_overloads_present then return void end if
+  if _coerce_name(try(fn.return_type)) != "float" then return void end if
+  if typeof(try(fn.return_optional)) == "bool" and fn.return_optional then return void end if
+  params = try(fn.params)
+  types = try(fn.param_types)
+  optional = try(fn.param_optional)
+  body = try(fn.body)
+  if typeof(params) != "array" or len(params) <= 0 or typeof(types) != "array" or typeof(body) != "array" then return void end if
+  if len(types) < len(params) or len(body) != len(params) + 2 then return void end if
+  for pi = 0 to len(params) - 1
+    if types[pi] != "float" then return void end if
+    if typeof(optional) == "array" and pi < len(optional) and optional[pi] then return void end if
+    guard = body[pi]
+    if t.ast_kind(guard) != "Assign" or _coerce_name(try(guard.name)) != _coerce_name(params[pi]) or t.ast_kind(try(guard.expr)) != "TypeGuard" then return void end if
+  end for
+  temporary = body[len(params)]
+  returned = body[len(body) - 1]
+  if t.ast_kind(temporary) != "Assign" or t.ast_kind(returned) != "Return" then return void end if
+  temp_name = _coerce_name(try(temporary.name))
+  if _intflow_name_has(params, temp_name) or _intflow_name_has(try(fn._ml_globals_declared), temp_name) then return void end if
+  return_guard = try(returned.expr)
+  if t.ast_kind(return_guard) != "TypeGuard" or _coerce_name(try(return_guard.type_name)) != "float" then return void end if
+  if typeof(try(return_guard.optional)) == "bool" and return_guard.optional then return void end if
+  first = try(temporary.expr)
+  second = try(return_guard.expr)
+  if t.ast_kind(first) != "Bin" or t.ast_kind(second) != "Bin" then return void end if
+  first_op = t.ast_op(first)
+  second_op = t.ast_op(second)
+  if (first_op != "+" and first_op != "-" and first_op != "*") or (second_op != "+" and second_op != "-" and second_op != "*") then return void end if
+  if _inline_float_leaf(t.ast_left(first), params) == false or _inline_float_leaf(t.ast_right(first), params) == false then return void end if
+  left = t.ast_left(second)
+  right = t.ast_right(second)
+  left_is_temp = t.ast_kind(left) == "Var" and t.ast_name(left) == temp_name
+  right_is_temp = t.ast_kind(right) == "Var" and t.ast_name(right) == temp_name
+  if left_is_temp == right_is_temp then return void end if
+  other = left
+  if left_is_temp then other = right end if
+  if _inline_float_leaf(other, params) == false then return void end if
+  fused_left = other
+  fused_right = first
+  if left_is_temp then fused_left = first; fused_right = other end if
+  fused = ml.Bin("Bin", fused_left, second_op, fused_right, t.ast_pos(second), t.ast_filename(second))
+  guarded = ml.TypeGuard("TypeGuard", fused, "float", false, t.ast_pos(return_guard), t.ast_filename(return_guard))
+  return ml.Return("Return", guarded, t.ast_pos(returned), t.ast_filename(returned))
+end function
+
 /// Lower function wants inline expression behavior to native x64.
 /// @internal
-function _function_wants_inline(fn)
+function _function_wants_inline(fn, operator_overloads_present = false)
   if typeof(fn) != "struct" then return false end if
   if typeof(try(fn.is_inline)) == "bool" and fn.is_inline then return true end if
   if typeof(try(fn.is_synchronized)) == "bool" and fn.is_synchronized then return false end if
@@ -11826,12 +11968,41 @@ function _function_wants_inline(fn)
   if fully_typed == false and generated_lambda == false then return false end if
   body = try(fn.body)
   if typeof(body) != "array" or len(body) <= 0 or t.ast_kind(body[len(body) - 1]) != "Return" then return false end if
+  simple_expression_body = true
   if len(body) > 1 then
     for bi = 0 to len(body) - 2
       guard = body[bi]
-      if t.ast_kind(guard) != "Assign" or _intflow_name_has(params, _coerce_name(try(guard.name))) == false or t.ast_kind(try(guard.expr)) != "TypeGuard" then return false end if
+      if t.ast_kind(guard) != "Assign" or _intflow_name_has(params, _coerce_name(try(guard.name))) == false or t.ast_kind(try(guard.expr)) != "TypeGuard" then
+        simple_expression_body = false
+        break
+      end if
     end for
   end if
+  if simple_expression_body then return true end if
+  if typeof(_inline_float_temporary_return(fn, operator_overloads_present)) == "struct" then return true end if
+  if operator_overloads_present then return false end if
+
+  // A single integer temporary can share the existing bounded inline path.
+  // Parameter and return contract behavior remains unchanged.
+  return_type = try(fn.return_type)
+  if return_type != "int" then return false end if
+  if len(params) <= 0 or len(types) < len(params) or len(body) != len(params) + 2 then return false end if
+  if typeof(try(fn.return_optional)) == "bool" and fn.return_optional then return false end if
+  optional = try(fn.param_optional)
+  for pi = 0 to len(params) - 1
+    if types[pi] != "int" then return false end if
+    if typeof(optional) == "array" and pi < len(optional) and optional[pi] then return false end if
+    guard = body[pi]
+    if t.ast_kind(guard) != "Assign" or _coerce_name(try(guard.name)) != _coerce_name(params[pi]) or t.ast_kind(try(guard.expr)) != "TypeGuard" then return false end if
+  end for
+  temp = body[len(params)]
+  if t.ast_kind(temp) != "Assign" then return false end if
+  temp_name = _coerce_name(try(temp.name))
+  if _intflow_name_has(params, temp_name) or _intflow_name_has(try(fn._ml_globals_declared), temp_name) then return false end if
+  if _inline_numeric_bin(try(temp.expr), params) == false then return false end if
+  result_expr = try(body[len(body) - 1].expr)
+  if t.ast_kind(result_expr) == "TypeGuard" then result_expr = try(result_expr.expr) end if
+  if _inline_numeric_bin(result_expr, params + [temp_name]) == false then return false end if
   return true
 end function
 
@@ -12024,6 +12195,28 @@ function _emit_inline_call(state, callee, args)
       if _opt_type_base(fact) == "int" then state.known_int_names = t.fastmap_set(state.known_int_names, pname, 1) end if
     end for
   end if
+  // Preserve the native body's proven integer-local fact in this isolated
+  // inline scope. It also keeps return-contract effects identical when a
+  // user-defined typeof is visible at the call site.
+  if state.operator_overloads_present == false and _coerce_name(try(fn.return_type)) == "int" and len(params) > 0 then
+    body_fact = try(fn.body)
+    if typeof(body_fact) == "array" and len(body_fact) == len(params) + 2 then
+      all_int_params = true
+      for ti = 0 to len(params) - 1
+        if ti >= len(param_types) or param_types[ti] != "int" then all_int_params = false; break end if
+        if ti < len(param_optional) and param_optional[ti] then all_int_params = false; break end if
+      end for
+      if all_int_params then
+        temporary = body_fact[len(params)]
+        guarded_temp = try(temporary.expr)
+        if t.ast_kind(temporary) == "Assign" and _intflow_name_has(params, _coerce_name(try(temporary.name))) == false and t.ast_kind(guarded_temp) == "TypeGuard" and _coerce_name(try(guarded_temp.type_name)) == "int" and (typeof(try(guarded_temp.optional)) != "bool" or guarded_temp.optional == false) and _inline_numeric_bin(guarded_temp, params) then
+          temp_name = _coerce_name(try(temporary.name))
+          state.known_value_types = t.fastmap_set(state.known_value_types, temp_name, "int")
+          state.known_int_names = t.fastmap_set(state.known_int_names, temp_name, 1)
+        end if
+      end if
+    end if
+  end if
   // Inline scopes keep legacy facts; new facts require the whole-function
   // proof and must not inherit assumptions from the caller.
   state.known_numeric_value_types = []
@@ -12064,10 +12257,24 @@ function _emit_inline_call(state, callee, args)
   if typeof(emitter) != "function" then
     state.diagnostics = state.diagnostics + ["Internal error: inline statement emitter is unavailable"]
   else
-    if len(body) > 0 then
-      for bi = 0 to len(body) - 1
+    fused_return = _inline_float_temporary_return(fn, state.operator_overloads_present)
+    if typeof(fused_return) == "struct" then
+      for bi = 0 to len(params) - 1
         state = emitter(state, body[bi])
       end for
+      // Candidate facts are used only after entry guards. The float-tree
+      // emitter checks actual tags and replays normal Value operations.
+      state.known_numeric_value_types = t.fastmap_new(32)
+      for pi = 0 to len(params) - 1
+        state.known_numeric_value_types = t.fastmap_set(state.known_numeric_value_types, _coerce_name(params[pi]), "float")
+      end for
+      state = emitter(state, fused_return)
+    else
+      if len(body) > 0 then
+        for bi = 0 to len(body) - 1
+          state = emitter(state, body[bi])
+        end for
+      end if
     end if
   end if
   state._inline_call_stack = saved_inline_call_stack

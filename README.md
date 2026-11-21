@@ -9,11 +9,12 @@ itself. The [Python reference compiler](https://github.com/MiniLangProject/MiniL
 provides the bootstrap implementation and a second code-generation path.
 
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
-or read the [binary installation guide](README-BINARY.md). Version 1.3.9
+or read the [binary installation guide](README-BINARY.md). Version 1.3.10
 includes Windows, Linux and MinUX packages with SHA-256 sidecars; see the
-[release notes](RELEASE_NOTES_1.3.9.md) and [changelog](CHANGELOG.md).
+[release notes](RELEASE_NOTES_1.3.10.md) and [changelog](CHANGELOG.md).
 
-Version 1.3.9 adds native MinUX output, packing and compiler selfhosting,
+Version 1.3.10 adds fixed variable types and expands typed numeric code generation.
+Native MinUX output, packing and compiler selfhosting arrived in 1.3.9,
 including MinUX standard-library, TLS/crypto, file, terminal and media adapters.
 See the [MinUX guide](docs/MINUX.md) for setup, verified capabilities and limits.
 
@@ -131,7 +132,7 @@ self-hosted monolithic compiler and self-hosted `.mlo` pipeline are expected
 to emit identical target bytes. Version 1.3.2 restored this for the OOP
 regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 [OOP regression](tests/check_oop_binary_parity.py) and
-[1.3.9 release verification matrix](docs/reports/release-1.3.9-version-matrix.json).
+[1.3.10 release verification matrix](docs/reports/release-1.3.10-version-matrix.json).
 
 ## Documentation and development
 
@@ -143,6 +144,8 @@ regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 | Incremental builds | [Guide](docs/INCREMENTAL_BUILDS.md) |
 | Compiler optimization measurements | [Allocation and emission](docs/reports/COMPILER_OPTIMIZATIONS_2026-11-04.md), [bounded concat, typed scalar replacement, and metadata](docs/reports/COMPILER_OPTIMIZATIONS_2026-11-06.md) |
 | Generated-program runtime and memory | [Measured codegen and GC experiments](docs/reports/GENERATED_RUNTIME_OPTIMIZATIONS_2026-11-20.md) |
+| Typed numeric helper calls | [Inlining A/B evaluation](docs/reports/TYPED_NUMERIC_CALL_OPTIMIZATION_2026-11-20.md) |
+| Fixed variable types | [Type contracts and measured check elision](docs/reports/TYPED_BINDINGS_2026-11-21.md) |
 | Typed inline assembly | [Guide](docs/INLINE_ASM.md) |
 | Native crypto, checksums and CPU features | [Native primitives](docs/NATIVE_PRIMITIVES.md) |
 | Compression and platform services | [Platform services](docs/PLATFORM_SERVICES.md) |

@@ -245,6 +245,8 @@ struct TypeGuard
   _pos,
   /// Filename associated with `TypeGuard`.
   _filename,
+  /// 1 for a fixed declaration, 2 for a subsequent checked write.
+  binding_write = 0,
 end struct
 
 /// Typed symbolic inline x64 assembly expression.
@@ -1768,6 +1770,9 @@ _ns_depth = 0
 _seen_package = false
 /// Track seen nonpackage toplevel stmt compiler state.
 _seen_nonpackage_toplevel_stmt = false
+/// Whether this compilation has parsed a fixed variable declaration.
+/// @internal
+_typed_binding_declarations_seen = false
 /// Track collect errors compiler state.
 _collect_errors = false
 /// Track max errors compiler state.
@@ -4446,7 +4451,9 @@ end function
 function _parse_stmt_ident(start_pos, first_tok)
   /// Current func depth used by this routine.
   /// @internal
-  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i
+  global _func_depth, _ns_depth, _seen_package, _seen_nonpackage_toplevel_stmt, _i, _typed_binding_declarations_seen
+  fixed_binding = _tok_value(first_tok) == "var" and _tok_kind_id(_peek2()) == TK_IDENT
+  if fixed_binding then _advance() end if
   expr = _parse_postfix()
   if _has_error() then return end if
   declared_type = void
@@ -4465,6 +4472,11 @@ function _parse_stmt_ident(start_pos, first_tok)
     compound_base = _compound_assignment_base(assignment_symbol)
     if assignment_symbol == "=" or compound_base != "" then _advance() else assignment_symbol = "" end if
   end if
+  if fixed_binding and (typeof(declared_type) != "string" or assignment_symbol != "=") then
+    _set_error("A typed binding requires 'var name as Type = expression'", start_pos)
+    return
+  end if
+  if fixed_binding then _typed_binding_declarations_seen = true end if
   if assignment_symbol != "" then
     rhs = _parse_expr(0)
     if _has_error() then return end if
@@ -4481,7 +4493,9 @@ function _parse_stmt_ident(start_pos, first_tok)
     end if
     if t.ast_kind(expr) == "Var" then
       if typeof(declared_type) == "string" then
-        rhs = TypeGuard("TypeGuard", rhs, declared_type, declared_optional, start_pos, _filename)
+        marker = 0
+        if fixed_binding then marker = 1 end if
+        rhs = TypeGuard("TypeGuard", rhs, declared_type, declared_optional, start_pos, _filename, marker)
       end if
       return Assign("Assign", t.ast_name(expr), rhs, declared_type, declared_optional, start_pos, _filename)
     end if
@@ -4640,7 +4654,7 @@ function _compile_predefined_values()
     CompileValue("TARGET_ABI", _compile_target_abi),
     CompileValue("TARGET_FORMAT", _compile_target_format),
     CompileValue("POINTER_SIZE", 8),
-    CompileValue("MINILANG_VERSION", "1.3.9")
+    CompileValue("MINILANG_VERSION", "1.3.10")
   ]
 end function
 
@@ -5886,6 +5900,14 @@ end function
 /// Parse or represent lang lower lazy iterator in the MiniLang front end.
 /// @internal
 function _lang_lower_lazy_iterator(fn)
+  // Apply source-level contracts before moving writes into separate states.
+  if has_typed_binding_declarations() then
+    checked = try(apply_local_binding_contracts(fn, [], true))
+    if typeof(checked) == "error" then
+      _lang_fail(checked.message)
+      return fn
+    end if
+  end if
   if fn.is_async then _lang_fail("A function cannot be both async and iterator") return fn end if
   state_name = _lang_fresh("lazy_state")
   next_name = _lang_fresh("lazy_next")
@@ -5922,6 +5944,175 @@ function _lang_lower_lazy_iterator(fn)
   fn.return_optional = false
   fn.is_iterator = false
   return fn
+end function
+
+/// Normalize primitive spellings while preserving qualified type names.
+/// @internal
+function binding_type_key(name)
+  if s.contains(name, ".") then return name end if
+  lower = s.toLowerAscii(name)
+  if lower == "integer" then return "int" end if
+  if lower == "boolean" then return "bool" end if
+  if lower == "str" then return "string" end if
+  if lower == "int" or lower == "float" or lower == "bool" or lower == "string" or lower == "array" or lower == "bytes" or lower == "function" or lower == "struct" or lower == "enum" or lower == "error" or lower == "thread" or lower == "void" or lower == "unknown" then
+    return lower
+  end if
+  return name
+end function
+
+/// Keep an established type contract on a write before its store.
+/// @internal
+function guard_binding_write(st, contract, qualify = false)
+  name = contract[0]
+  optional = contract[1]
+  qualified = contract[2]
+  declared = try(st.declared_type)
+  if typeof(declared) == "string" and declared != "" then
+    key = binding_type_key(declared)
+    if (key != binding_type_key(name) and key != binding_type_key(qualified)) or st.declared_optional != optional then
+      return error(1600, "Cannot change the type of '" + st.name + "'")
+    end if
+    checked = st.expr
+    if checked.binding_write == 0 then checked.binding_write = 2 end if
+    return checked
+  end if
+  if qualify then name = qualified end if
+  expr = st.expr
+  if t.ast_kind(expr) == "TypeGuard" and expr.type_name == name and expr.optional == optional then
+    if expr.binding_write == 0 then expr.binding_write = 2 end if
+    return expr
+  end if
+  return TypeGuard("TypeGuard", expr, name, optional, t.ast_pos(st), t.ast_filename(st), 2)
+end function
+
+/// Distinguish fixed declarations from the original single-write contracts.
+/// @internal
+function declares_binding_type(st)
+  return t.ast_kind(st) == "Assign" and t.ast_kind(st.expr) == "TypeGuard" and st.expr.binding_write == 1
+end function
+
+/// Resolve a local assignment in the current lexical frame chain.
+/// Frames carry an untyped sentinel so shadowing also masks a contract.
+/// @internal
+function _binding_in_frames(frames, name)
+  for each frame in frames
+    value = t.fastmap_get(frame[0], name, void)
+    if typeof(value) != "void" then return value end if
+  end for
+  return void
+end function
+
+/// Lower explicit and subsequent writes to source bindings.
+/// @internal
+function _binding_walk(body, frames, global_names, nested, consume_declarations, module_scope)
+  if typeof(body) != "array" then return end if
+  for each st in body
+    kind = t.ast_kind(st)
+    if kind == "GlobalDecl" then
+      for each name in st.names
+        global_names[0] = t.fastmap_set(global_names[0], name, true)
+      end for
+    else if kind == "Assign" or kind == "SynchronizedDecl" then
+      name = st.name
+      fixed = declares_binding_type(st)
+      if module_scope == false and (t.fastmap_has(global_names[0], name) or s.contains(name, ".")) then
+        if fixed then return error(1600, "Declare the type of global '" + name + "' at module scope") end if
+        continue
+      end if
+      previous = _binding_in_frames(frames, name)
+      if fixed and typeof(previous) != "void" then
+        return error(1600, "Typed binding '" + name + "' requires a new variable at " + t.ast_filename(st) + ":" + t.ast_pos(st))
+      end if
+      if typeof(previous) == "array" then
+        guarded = try(guard_binding_write(st, previous))
+        if typeof(guarded) == "error" then
+          return error(1600, guarded.message + " at " + t.ast_filename(st) + ":" + t.ast_pos(st))
+        end if
+        st.expr = guarded
+      else if typeof(previous) == "void" then
+        contract = false
+        if fixed then
+          contract = [st.declared_type, st.declared_optional, st.declared_type]
+          if consume_declarations then
+            decl_guard = st.expr
+            decl_guard.binding_write = 2
+          end if
+        end if
+        frames[0][0] = t.fastmap_set(frames[0][0], name, contract)
+      end if
+    else if kind == "FunctionDef" then
+      if module_scope then continue end if
+      previous = _binding_in_frames(frames, st.name)
+      if typeof(previous) == "array" then
+        return error(1600, "Function declaration would overwrite typed binding '" + st.name + "' at " + t.ast_filename(st) + ":" + t.ast_pos(st))
+      end if
+      if typeof(previous) == "void" then
+        frames[0][0] = t.fastmap_set(frames[0][0], st.name, false)
+      end if
+      nested = t.arr_vec_push(nested, [st, frames])
+    else if kind == "ConstDecl" then
+      if t.fastmap_has(frames[0][0], st.name) == false then
+        frames[0][0] = t.fastmap_set(frames[0][0], st.name, false)
+      end if
+    else if kind == "If" then
+      _binding_walk(st.then_body, [[void]] + frames, global_names, nested, consume_declarations, module_scope)
+      for each branch in st.elifs
+        _binding_walk(branch[1], [[void]] + frames, global_names, nested, consume_declarations, module_scope)
+      end for
+      _binding_walk(st.else_body, [[void]] + frames, global_names, nested, consume_declarations, module_scope)
+    else if kind == "Switch" then
+      for each branch in st.cases
+        _binding_walk(branch.body, [[void]] + frames, global_names, nested, consume_declarations, module_scope)
+      end for
+      _binding_walk(st.default_body, [[void]] + frames, global_names, nested, consume_declarations, module_scope)
+    else if kind == "For" or kind == "ForEach" or kind == "ForEachArray" or kind == "ForEachString" then
+      counter = t.fastmap_set(void, st.var, false)
+      _binding_walk(st.body, [[counter]] + frames, global_names, nested, consume_declarations, module_scope)
+    else if kind == "While" or kind == "DoWhile" or kind == "SynchronizedBlock" then
+      _binding_walk(st.body, [[void]] + frames, global_names, nested, consume_declarations, module_scope)
+    end if
+  end for
+end function
+
+/// Resolve lexical writes before codegen makes copies for inlining.
+/// @internal
+function apply_local_binding_contracts(fn, inherited = [], consume_declarations = false)
+  params = void
+  if len(fn.params) > 0 then
+    for pi = 0 to len(fn.params) - 1
+      params = t.fastmap_set(params, fn.params[pi], false)
+    end for
+  end if
+  captures = void
+  if len(inherited) > 0 then
+    for each name in fn._ml_captures
+      depth = t.fastmap_get(fn._ml_capture_depth, name, 0)
+      if depth <= 0 or depth > len(inherited) then continue end if
+      found = _binding_in_frames(inherited[depth - 1], name)
+      if typeof(found) != "void" then captures = t.fastmap_set(captures, name, found) end if
+    end for
+  end if
+  globals_map = [void]
+  for each name in fn._ml_globals_declared
+    globals_map[0] = t.fastmap_set(globals_map[0], name, true)
+  end for
+  nested = t.arr_vec_new(4)
+  _binding_walk(fn.body, [[params], [captures]], globals_map, nested, consume_declarations, false)
+  for each item in t.arr_vec_finish(nested)
+    apply_local_binding_contracts(item[0], [item[1]] + inherited, consume_declarations)
+  end for
+end function
+
+/// Avoid an extra AST walk for programs using only the original syntax.
+/// @internal
+function has_typed_binding_declarations()
+  return _typed_binding_declarations_seen
+end function
+
+/// Apply contracts to variables scoped to a module initializer block.
+/// @internal
+function apply_module_binding_contracts(program)
+  return _binding_walk(program, [[void]], [void], void, false, true)
 end function
 
 /// Parse or represent lang lower async in the MiniLang front end.

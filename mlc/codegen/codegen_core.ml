@@ -302,6 +302,8 @@ struct CgState
   _float_loop_sites,
   /// Suppress the region hook while emitting its ordinary fallback.
   _float_loop_disabled,
+  /// Type contracts indexed by qualified module storage name.
+  global_binding_contracts,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
@@ -756,7 +758,8 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   -1,
   0,
   [],
-  false
+  false,
+  void
   )
   cg = _seed_rdata(cg)
   cg = _seed_data(cg)

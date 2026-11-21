@@ -147,7 +147,8 @@ function seal(state, contracts)
   _cache.context = codec.key([_cache.options, _cache.declarations, contracts,
     t.fastmap_items(state.dead_functions), state.native_threads_possible,
     t.fastmap_items(state.mutable_user_functions), state.max_inline_call_args_global,
-    state.synchronized_globals, t.arr_chunk_finish(globals_view)])
+    state.synchronized_globals, t.fastmap_items(state.global_binding_contracts),
+    t.arr_chunk_finish(globals_view)])
 end function
 
 /// Snapshot stream-wide effects, excluding disposable analysis arenas.

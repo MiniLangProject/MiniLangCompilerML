@@ -78,6 +78,7 @@ function writeNode(w, node, headers_only)
     write(w, node.expr, headers_only)
     codec.write(w, node.type_name)
     codec.write(w, node.optional)
+    codec.write(w, node.binding_write)
     return w
   end if
   if kind == "AsmExpr" then

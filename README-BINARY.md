@@ -1,25 +1,25 @@
 # Binary compiler packages
 
-Release 1.3.9 provides Windows x64 ZIP, Linux x64 tar.gz and MinUX x64 tar.gz
+Release 1.3.10 provides Windows x64 ZIP, Linux x64 tar.gz and MinUX x64 tar.gz
 packages. Each contains a native compiler (`mlc.exe` or `mlc`), matching `std/`
 sources, runtime libraries, a Hello example, license notices, documentation,
 release notes and BUILD_INFO.json. Every download has a SHA-256 sidecar.
 The compilers run without a Python installation.
 
-## Release 1.3.9 checksums
+## Release 1.3.10 checksums
 
-The download archives are `MiniLangCompilerML-1.3.9-windows-x64.zip` and
-`MiniLangCompilerML-1.3.9-linux-x64.tar.gz`, plus
-`MiniLangCompilerML-1.3.9-minux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.9).
+The download archives are `MiniLangCompilerML-1.3.10-windows-x64.zip` and
+`MiniLangCompilerML-1.3.10-linux-x64.tar.gz`, plus
+`MiniLangCompilerML-1.3.10-minux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.10).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 64,658,944 | `269aecaa2232b634809edd80be95eda52f837ad4be022f9a778633bd47d9ba62` |
-| Linux `mlc` | 64,680,656 | `86be4da4a2dd32c404a64f3ec412898c033fef77d83692cc462fa2fce4e59103` |
-| MinUX `mlc` (packed) | 14,491,854 | `1bffa698a195d4cea95574b4e56fce51bfa2dad6bec32a237a90eaeaebaf36ee` |
+| Windows `mlc.exe` | 67,020,800 | `d58437fc45cf01bfbbf3a69fa129cca57db1fbb2b5429fb8c58c67200a864abe` |
+| Linux `mlc` | 67,044,416 | `8f877a387918f0d349dc94e7cfa04cde1329355a978390da77c83ab417027caf` |
+| MinUX `mlc` (packed) | 15,005,650 | `dcc56f6df560bdbba94a7513d9dbe959960d30786f0a2cf9a77ea851b0535b88` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -62,7 +62,7 @@ Windows remains the compiler's default output target; select `--target linux-x64
 explicitly when producing Linux applications. Either host compiler can emit
 all three targets, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.3.9 compiler-source revision and executable hash.
+The manifest identifies the 1.3.10 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
@@ -92,7 +92,7 @@ startup/memory trade-offs and signing constraints.
 
 ## Native media runtime
 
-Release 1.3.9 packages include the native-media
+Release 1.3.10 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
 
