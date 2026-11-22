@@ -2310,8 +2310,236 @@ end function
 
 /// Lower emit expr type guard expression behavior to native x64.
 /// @internal
-function _emit_expr_type_guard(state, expr)
-  if _opt_literal_guard_is_redundant(state, expr) or _opt_fixed_binding_copy_is_redundant(state, expr) or _opt_proven_int_bin_guard_is_redundant(state, expr) then
+function _proved_contract_type(state, value, follow_call = true)
+  kind = t.ast_kind(value)
+  if kind == "Num" then return typeof(t.ast_value(value)) end if
+  if kind == "Bool" then return "bool" end if
+  if kind == "Str" then return "string" end if
+  if kind == "VoidLit" then return "void" end if
+  if kind == "ArrayLit" then return "array" end if
+  if kind == "TypeGuard" and value.binding_write == 3 then return value.type_name end if
+  if kind == "Var" then
+    binding = scope.cg_resolve_binding(state, t.ast_name(value))
+    if typeof(binding) != "struct" or binding.kind != "local" or binding.boxed then return "" end if
+    decl = binding.decl_node
+    if ml.declares_binding_type(decl) and not decl.declared_optional then return ml.binding_type_key(decl.declared_type) end if
+  end if
+  if follow_call and kind == "Call" then
+    name = _opt_static_user_fn(state, value.callee)
+    return _proved_direct_leaf_type(state, _user_function_get(state, name))
+  end if
+  return ""
+end function
+
+/// Summarize the successful return of a literal leaf function.
+/// @internal
+function _proved_direct_leaf_type(state, fn)
+  if typeof(fn) != "struct" or len(fn.body) == 0 then return "" end if
+  last = len(fn.body) - 1
+  if t.ast_kind(fn.body[last]) != "Return" then return "" end if
+  // Parameter guards can abort, but branches and calls can change the result.
+  if last > 0 then
+    for i = 0 to last - 1
+      stmt = fn.body[i]
+      if t.ast_kind(stmt) != "Assign" or _intflow_name_has(fn.params, stmt.name) == false or t.ast_kind(stmt.expr) != "TypeGuard" then return "" end if
+    end for
+  end if
+  result = fn.body[last].expr
+  if t.ast_kind(result) == "TypeGuard" and result.binding_write != 3 then result = result.expr end if
+  result_kind = t.ast_kind(result)
+  if result_kind == "Num" or result_kind == "Bool" or result_kind == "Str" or result_kind == "VoidLit" or result_kind == "ArrayLit" then
+    return _proved_contract_type(state, result, false)
+  end if
+  return ""
+end function
+
+/// Only diagnose concrete primitive contracts with disjoint results.
+/// @internal
+function _strict_primitive_or_array(typ)
+  return typ == "int" or typ == "float" or typ == "bool" or typ == "string" or typ == "array" or typ == "bytes" or typ == "void" or ml.typed_array_code(typ) != 0
+end function
+
+/// Diagnose a provable mismatch while retaining dynamic checks for unknown values.
+/// @internal
+function _strict_contract_check(state, value, expected, optional, description, node)
+  if _expr_heap_cfg_bool(state, "strict_types", false) == false then return state end if
+  expected_key = ml.binding_type_key(expected)
+  actual = _proved_contract_type(state, value)
+  if _strict_primitive_or_array(actual) == false or _strict_primitive_or_array(expected_key) == false then return state end if
+  if actual == expected_key or (actual == "void" and optional) or (expected_key == "array" and ml.typed_array_code(actual) != 0) then return state end if
+  suffix = ""
+  if optional then suffix = "?" end if
+  message = description + " expects " + expected + suffix + ", got " + actual
+  file = t.ast_filename(node)
+  if file != "" then message = message + " at " + file + ":" + t.ast_pos(node) end if
+  state.diagnostics = state.diagnostics + [message]
+  return state
+end function
+
+/// Check a statically resolved argument list after named/default normalization.
+/// @internal
+function _strict_check_call(state, call, fn, args, implicit)
+  if _expr_heap_cfg_bool(state, "strict_types", false) == false or len(args) == 0 then return state end if
+  for index = 0 to len(args) - 1
+    param = index + implicit
+    if param >= len(fn.param_types) then break end if
+    typ = fn.param_types[param]
+    if typeof(typ) != "string" or typ == "" then continue end if
+    optional = param < len(fn.param_optional) and fn.param_optional[param]
+    state = _strict_contract_check(state, args[index], typ, optional, "Argument '" + fn.params[param] + "' of " + fn.name, call)
+  end for
+  return state
+end function
+
+/// Return whether to check an element and whether the store is immediate-only.
+/// @internal
+function _typed_store_check_plan(state, stmt)
+  if ml.has_typed_arrays() == false then return [state, false, false] end if
+  typ = _proved_contract_type(state, stmt.target, false)
+  code = ml.typed_array_code(typ)
+  if code == 0 then return [state, true, false] end if
+  optional = (code & 128) != 0
+  width = len(typ) - 7
+  if optional then width = width - 1 end if
+  element = s.substr(typ, 6, width)
+  state = _strict_contract_check(state, stmt.expr, element, optional, "Array element", stmt)
+  actual = _proved_contract_type(state, stmt.expr, false)
+  proven = actual == element or (optional and actual == "void")
+  return [state, not proven, proven and (element == "int" or element == "bool")]
+end function
+
+/// Compute the fixed-size object header used by a typed array.
+/// @internal
+function _typed_array_header(code)
+  kind = c.OBJ_ARRAY
+  if (code & 127) == 1 or (code & 127) == 3 then kind = c.OBJ_ARRAY_IMM end if
+  return kind | (code << 8)
+end function
+
+/// Test the invariant element contract stored in the object's header.
+/// @internal
+function _emit_typed_array_test(state, value, code, negated = false)
+  lid = _next_lid(state)
+  miss = "typed_array_miss_" + lid
+  done = "typed_array_test_done_" + lid
+  state = cg_emit_expr(state, value)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.and_r64_imm(state.asm, "r10", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", miss)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "e", miss)
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "rax", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "r10d", _typed_array_header(code))
+  state.asm = a.jcc(state.asm, "ne", miss)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(not negated))
+  state.asm = a.jmp(state.asm, done)
+  state.asm = a.mark(state.asm, miss)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(negated))
+  state.asm = a.mark(state.asm, done)
+  return state
+end function
+
+/// Copy a source array into an independently checked typed array.
+/// @internal
+function _emit_typed_array_copy(state, value, code, typ)
+  lid = _next_lid(state)
+  bad = "typed_copy_bad_" + lid
+  valid = "typed_copy_ok_" + lid
+  repeat_copy = "typed_copy_loop_" + lid
+  finish = "typed_copy_finish_" + lid
+  done = "typed_copy_done_" + lid
+  state = cg_emit_expr(state, value)
+  source = core.alloc_expr_temps(state, 8)
+  state.asm = a.mov_rsp_disp32_rax(state.asm, source)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.and_r64_imm(state.asm, "r10", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", bad)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "e", bad)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
+  state.asm = a.jcc(state.asm, "e", valid)
+  state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+  state.asm = a.jcc(state.asm, "ne", bad)
+  state.asm = a.mark(state.asm, valid)
+  state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "rax", 4)
+  state.asm = a.shl_r64_imm8(state.asm, "rcx", 3)
+  state.asm = a.add_r64_imm(state.asm, "rcx", 8)
+  state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.mov_r64_r64(state.asm, "r12", "rax")
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", source)
+  header = _typed_array_header(code)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r12", 0, header, false)
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+  state.asm = a.mov_membase_disp_r32(state.asm, "r12", 4, "edx")
+  state.asm = a.xor_r32_r32(state.asm, "ecx", "ecx")
+  state.asm = a.mark(state.asm, repeat_copy)
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+  state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
+  state.asm = a.jcc(state.asm, "ge", finish)
+  state.asm = a.mov_r64_mem_bis(state.asm, "r10", "r11", "rcx", 8, 8)
+  state.asm = a.mov_r32_imm32(state.asm, "edx", header)
+  state.asm = a.call(state.asm, "fn_typed_array_element")
+  state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.jcc(state.asm, "e", bad)
+  state.asm = a.mov_mem_bis_r64(state.asm, "r12", "rcx", 8, 8, "r10")
+  state.asm = a.inc_r32(state.asm, "ecx")
+  state.asm = a.jmp(state.asm, repeat_copy)
+  state.asm = a.mark(state.asm, finish)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r12")
+  state.asm = a.jmp(state.asm, done)
+  state.asm = a.mark(state.asm, bad)
+  state = _emit_make_error_const(state, c.ERR_TYPE_GUARD, "Cannot construct " + typ + " from the supplied value")
+  state.asm = a.mark(state.asm, done)
+  state = core.free_expr_temps(state, 8)
+  return _emit_auto_errprop(state)
+end function
+
+/// Validate the arguments of a first-class struct constructor.
+/// @internal
+function _emit_indirect_struct_guards(state, nargs, base, failure, node)
+  contracts = t.fastmap_get(state.indirect_struct_contracts, nargs, [])
+  if len(contracts) == 0 then return state end if
+  lid = _next_lid(state)
+  done = "icall_field_guards_done_" + lid
+  state.asm = a.mov_r32_membase_disp(state.asm, "r10d", "r11", 8)
+  for each record in contracts
+    state.asm = a.cmp_r32_imm(state.asm, "r10d", record[0])
+    state.asm = a.jcc(state.asm, "e", "icall_field_guards_" + lid + "_" + record[0])
+  end for
+  state.asm = a.jmp(state.asm, done)
+  for each record in contracts
+    state.asm = a.mark(state.asm, "icall_field_guards_" + lid + "_" + record[0])
+    for each entry in record[1]
+      value = ml.DeferredCapture("DeferredCapture", base + (entry[0] + 1) * 8, -1, "")
+      guard = ml.TypeGuard("TypeGuard", value, entry[1], entry[2], t.ast_pos(node), t.ast_filename(node), 2)
+      state = _emit_expr_type_guard(state, guard, failure)
+    end for
+    state.asm = a.jmp(state.asm, done)
+  end for
+  state.asm = a.mark(state.asm, done)
+  return state
+end function
+
+/// Emit a type contract, optionally skipping a pending store on mismatch.
+/// @internal
+function _emit_expr_type_guard(state, expr, failure = "")
+  array_code = ml.typed_array_code(expr.type_name)
+  if expr.binding_write == 3 then return _emit_typed_array_copy(state, expr.expr, array_code, expr.type_name) end if
+  if failure == "" and array_code != 0 and t.ast_kind(expr.expr) == "TypeGuard" and expr.expr.binding_write == 3 and expr.expr.type_name == expr.type_name and state.errprop_suppression == 0 then
+    return cg_emit_expr(state, expr.expr)
+  end if
+  state = _strict_contract_check(state, expr.expr, expr.type_name, expr.optional, "Type contract", expr)
+  literal_call = false
+  if (expr.binding_write == 1 or expr.binding_write == 2) and t.ast_kind(expr.expr) == "Call" and state.errprop_suppression == 0 then
+    expected_key = ml.binding_type_key(expr.type_name)
+    if expected_key == "int" or expected_key == "float" or expected_key == "bool" or expected_key == "string" then
+      literal_call = _proved_contract_type(state, expr.expr) == expected_key
+    end if
+  end if
+  if literal_call or _opt_literal_guard_is_redundant(state, expr) or _opt_fixed_binding_copy_is_redundant(state, expr) or _opt_proven_int_bin_guard_is_redundant(state, expr) then
     // Ordinary emission retains numeric normalization. The proof excludes
     // effects, allocation and errors, so no guard root is needed.
     return cg_emit_expr(state, expr.expr)
@@ -2338,7 +2566,9 @@ function _emit_expr_type_guard(state, expr)
   end if
   loaded = ml.DeferredCapture("DeferredCapture", off, -1, "")
   primitive = canonical == "int" or canonical == "float" or canonical == "bool" or canonical == "string" or canonical == "array" or canonical == "bytes" or canonical == "function" or canonical == "struct" or canonical == "enum" or canonical == "error" or canonical == "thread" or canonical == "void" or canonical == "unknown"
-  if expr.binding_write != 0 and primitive then
+  if array_code != 0 then
+    state = _emit_typed_array_test(state, loaded, array_code)
+  else if expr.binding_write != 0 and primitive then
     if canonical == "error" or canonical == "unknown" then
       state = cg_emit_expr(state, loaded)
       state.asm = a.mov_r64_r64(state.asm, "rcx", "rax")
@@ -2366,7 +2596,10 @@ function _emit_expr_type_guard(state, expr)
   if optional then suffix = "?" end if
   state = _emit_make_error_const(state, c.ERR_TYPE_GUARD, "Expected value of type " + raw_type + suffix)
   stores_error = expr.binding_write != 0 and canonical == "error"
-  if stores_error then
+  if failure != "" then
+    state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", off, t.enc_void(), true)
+    state.asm = a.jmp(state.asm, failure)
+  else if stores_error then
     // A caught Error is a valid payload. Only the mismatch propagates.
     state = _emit_auto_errprop(state)
   end if
@@ -2377,7 +2610,7 @@ function _emit_expr_type_guard(state, expr)
   state = core.free_expr_temps(state, 8)
   // Type contracts propagate like other fallible expressions, while try()
   // suppresses this branch through the shared errprop_suppression counter.
-  if stores_error == false then state = _emit_auto_errprop(state) end if
+  if stores_error == false and failure == "" then state = _emit_auto_errprop(state) end if
   return state
 end function
 
@@ -2441,6 +2674,8 @@ function _emit_expr_is_type(state, expr)
   ty_raw = _coerce_name(expr.type_name)
   neg = false
   if typeof(expr.negated) == "bool" and expr.negated then neg = true end if
+  array_code = ml.typed_array_code(ty_raw)
+  if array_code != 0 then return _emit_typed_array_test(state, expr.expr, array_code, neg) end if
 
   ty_q = ty_raw
   if s.contains(ty_q, ".") then
@@ -2987,7 +3222,7 @@ function _emit_expr_index(state, expr)
   state.asm = a.test_r64_r64(state.asm, "r11", "r11")
   state.asm = a.jcc(state.asm, "e", l_bad_target)
 
-  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r11", 0)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
   state.asm = a.jcc(state.asm, "e", l_arr)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
@@ -3001,28 +3236,25 @@ function _emit_expr_index(state, expr)
   state.asm = a.mark(state.asm, l_arr)
   state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
   l_a_ok = "idx_a_ok_" + lid_ix
-  state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+  state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
   state.asm = a.jcc(state.asm, "ge", l_a_ok)
-  state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+  state.asm = a.add_r64_r64(state.asm, "rcx", "rdx")
   state.asm = a.mark(state.asm, l_a_ok)
-  state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
-  state.asm = a.jcc(state.asm, "l", l_oob)
-  state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
-  state.asm = a.jcc(state.asm, "ge", l_oob)
+  state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+  // A still-negative index is unsigned-above every valid length.
+  state.asm = a.jcc(state.asm, "ae", l_oob)
   state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r11", "rcx", 8, 8)
   state.asm = a.jmp(state.asm, l_done)
 
   state.asm = a.mark(state.asm, l_bytes)
   state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
   l_b_ok = "idx_b_ok_" + lid_ix
-  state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+  state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
   state.asm = a.jcc(state.asm, "ge", l_b_ok)
-  state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+  state.asm = a.add_r64_r64(state.asm, "rcx", "rdx")
   state.asm = a.mark(state.asm, l_b_ok)
-  state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
-  state.asm = a.jcc(state.asm, "l", l_oob)
-  state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
-  state.asm = a.jcc(state.asm, "ge", l_oob)
+  state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+  state.asm = a.jcc(state.asm, "ae", l_oob)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
   state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
   state.asm = a.add_rax_imm8(state.asm, 8)
@@ -3034,14 +3266,12 @@ function _emit_expr_index(state, expr)
   state.asm = a.mark(state.asm, l_str)
   state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
   l_s_ok = "idx_s_ok_" + lid_ix
-  state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+  state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
   state.asm = a.jcc(state.asm, "ge", l_s_ok)
-  state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+  state.asm = a.add_r64_r64(state.asm, "rcx", "rdx")
   state.asm = a.mark(state.asm, l_s_ok)
-  state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
-  state.asm = a.jcc(state.asm, "l", l_oob)
-  state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
-  state.asm = a.jcc(state.asm, "ge", l_oob)
+  state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+  state.asm = a.jcc(state.asm, "ae", l_oob)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
   state.asm = a.add_r64_r64(state.asm, "rax", "rcx")
   state.asm = a.add_rax_imm8(state.asm, 8)
@@ -3776,14 +4006,13 @@ function _opt_emit_known_index(state, expr, plan)
   if bounds_proven == false then
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
     l_nonnegative = "idx_fast_nonnegative_" + lid
-    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
     state.asm = a.jcc(state.asm, "ge", l_nonnegative)
-    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.add_r64_r64(state.asm, "rcx", "rdx")
     state.asm = a.mark(state.asm, l_nonnegative)
-    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
-    state.asm = a.jcc(state.asm, "l", l_oob)
-    state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
-    state.asm = a.jcc(state.asm, "ge", l_oob)
+    state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+    // A remaining negative index compares above every valid length.
+    state.asm = a.jcc(state.asm, "ae", l_oob)
   end if
   if kind == "array" then
     state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r11", "rcx", 8, 8)
@@ -4894,7 +5123,7 @@ end function
 function _opt_fixed_binding_copy_is_redundant(state, guard)
   if guard.binding_write == 0 or t.ast_kind(guard.expr) != "Var" then return false end if
   expected = ml.binding_type_key(guard.type_name)
-  if expected != "int" and expected != "float" and expected != "bool" and expected != "string" and expected != "array" and expected != "bytes" and expected != "function" and expected != "thread" then return false end if
+  if expected != "int" and expected != "float" and expected != "bool" and expected != "string" and expected != "array" and expected != "bytes" and expected != "function" and expected != "thread" and ml.typed_array_code(expected) == 0 then return false end if
   binding = scope.cg_resolve_binding(state, t.ast_name(guard.expr))
   if typeof(binding) != "struct" or binding.kind != "local" or binding.boxed then return false end if
   decl = binding.decl_node
@@ -4940,7 +5169,7 @@ function _emit_typeof_literal_check(state, arg, lit)
   else
     state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
     state.asm = a.jcc(state.asm, "ne", l_false)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
     if lit == "string" then
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
       state.asm = a.setcc_al(state.asm, "e")
@@ -5635,7 +5864,7 @@ function _emit_expr_bin(state, expr, allow_float_box_elision, allow_float_tree_e
     state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
     state.asm = a.jcc(state.asm, "ne", l_add_str)
     state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
     state.asm = a.jcc(state.asm, "e", l_arr_ok1)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
@@ -5647,7 +5876,7 @@ function _emit_expr_bin(state, expr, allow_float_box_elision, allow_float_tree_e
     state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
     state.asm = a.jcc(state.asm, "ne", l_add_str)
     state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
     state.asm = a.jcc(state.asm, "e", l_arr_ok2)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
@@ -6307,7 +6536,7 @@ function _emit_expr_bin(state, expr, allow_float_box_elision, allow_float_tree_e
     state.asm = a.and_rax_imm8(state.asm, 7)
     state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
     state.asm = a.jcc(state.asm, "ne", l_add_str)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r10", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r10", 0)
     l_arr_ok1 = "arr_add_ok1_" + lid
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
     state.asm = a.jcc(state.asm, "e", l_arr_ok1)
@@ -6318,7 +6547,7 @@ function _emit_expr_bin(state, expr, allow_float_box_elision, allow_float_tree_e
     state.asm = a.and_rax_imm8(state.asm, 7)
     state.asm = a.cmp_rax_imm8(state.asm, c.TAG_PTR)
     state.asm = a.jcc(state.asm, "ne", l_add_str)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r11", 0)
     l_arr_ok2 = "arr_add_ok2_" + lid
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
     state.asm = a.jcc(state.asm, "e", l_arr_ok2)
@@ -6486,6 +6715,9 @@ function _emit_expr_call(state, expr)
       return state
     end if
     call_args = normalized.args
+    if t.fastmap_get(state.mutable_user_functions, callee, 0) == 0 then
+      state = _strict_check_call(state, expr, direct_decl, call_args, 0)
+    end if
     expr.args = call_args
     expr.arg_names = array(len(call_args), void)
     nargs = len(call_args)
@@ -6736,6 +6968,7 @@ function _emit_expr_call(state, expr)
           return state
         end if
         call_args = normalized_dyn.args
+        state = _strict_check_call(state, expr, known_def_dyn, call_args, 1)
         expr.args = call_args
         expr.arg_names = array(len(call_args), void)
         nargs = len(call_args)
@@ -7122,7 +7355,100 @@ end function
 
 /// Lower emit expr call early builtins expression behavior to native x64.
 /// @internal
+function _emit_packed_i32_access(state, args, store)
+  lid = _next_lid(state)
+  bad_type = "packed_i32_type_" + lid
+  bad_index = "packed_i32_index_" + lid
+  bad_value = "packed_i32_value_" + lid
+  done = "packed_i32_done_" + lid
+  bytes_needed = len(args) * 8
+  base = core.alloc_expr_temps(state, bytes_needed)
+  for i = 0 to len(args) - 1
+    state = cg_emit_expr(state, args[i])
+    state.asm = a.mov_rsp_disp32_rax(state.asm, base + i * 8)
+  end for
+
+  // Reload the rooted buffer after all argument expressions have run.
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base)
+  state.asm = a.test_r64_r64(state.asm, "r11", "r11")
+  state.asm = a.jcc(state.asm, "e", bad_type)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "r11")
+  state.asm = a.and_r64_imm(state.asm, "r10", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_PTR)
+  state.asm = a.jcc(state.asm, "ne", bad_type)
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
+  state.asm = a.jcc(state.asm, "ne", bad_type)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", base + 8)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rcx")
+  state.asm = a.and_r64_imm(state.asm, "r10", 7)
+  state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+  state.asm = a.jcc(state.asm, "ne", bad_type)
+  if store then
+    state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", base + 16)
+    state.asm = a.mov_r64_r64(state.asm, "r10", "r8")
+    state.asm = a.and_r64_imm(state.asm, "r10", 7)
+    state.asm = a.cmp_r64_imm(state.asm, "r10", c.TAG_INT)
+    state.asm = a.jcc(state.asm, "ne", bad_type)
+  end if
+  state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
+  state.asm = a.shr_r64_imm8(state.asm, "rdx", 2)
+  state.asm = a.test_r64_r64(state.asm, "rcx", "rcx")
+  nonnegative = "packed_i32_nonnegative_" + lid
+  state.asm = a.jcc(state.asm, "ge", nonnegative)
+  state.asm = a.add_r64_r64(state.asm, "rcx", "rdx")
+  state.asm = a.mark(state.asm, nonnegative)
+  // The full-width unsigned comparison rejects both sides of the bounds.
+  state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+  state.asm = a.jcc(state.asm, "ae", bad_index)
+  if store then
+    state.asm = a.sar_r64_imm8(state.asm, "r8", 3)
+    state.asm = a.cmp_r64_imm(state.asm, "r8", -2147483648)
+    state.asm = a.jcc(state.asm, "l", bad_value)
+    state.asm = a.cmp_r64_imm(state.asm, "r8", 2147483647)
+    state.asm = a.jcc(state.asm, "g", bad_value)
+    state.asm = a.mov_mem_bis_r32(state.asm, "r11", "rcx", 4, 8, "r8d")
+    state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  else
+    state.asm = a.mov_r32_mem_bis(state.asm, "eax", "r11", "rcx", 4, 8)
+    // Sign-extend the dword and shift it into tagged-int position.
+    state.asm = a.shl_rax_imm8(state.asm, 32)
+    state.asm = a.sar_rax_imm8(state.asm, 29)
+    state.asm = a.or_rax_imm8(state.asm, c.TAG_INT)
+  end if
+  state.asm = a.jmp(state.asm, done)
+  state.asm = a.mark(state.asm, bad_type)
+  state = _emit_make_error_const(state, c.ERR_TYPE_GUARD, "Int32Array access requires bytes and integer arguments")
+  state = _emit_auto_errprop(state)
+  state.asm = a.jmp(state.asm, done)
+  state.asm = a.mark(state.asm, bad_index)
+  state = _emit_make_error_const(state, c.ERR_INDEX_OOB, "Int32Array index out of bounds")
+  state = _emit_auto_errprop(state)
+  if store then
+    state.asm = a.jmp(state.asm, done)
+    state.asm = a.mark(state.asm, bad_value)
+    state = _emit_make_error_const(state, c.ERR_TYPE_GUARD, "Int32Array element requires a signed 32-bit integer")
+    state = _emit_auto_errprop(state)
+  end if
+  state.asm = a.mark(state.asm, done)
+  return core.free_expr_temps(state, bytes_needed)
+end function
+
+/// Emit direct native builtin calls before trying generic dispatch.
+/// @internal
 function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, nargs)
+  if raw_name == "__ml_packed_i32_get" or raw_name == "__ml_packed_i32_set" then
+    store = raw_name == "__ml_packed_i32_set"
+    expected = 2
+    if store then expected = 3 end if
+    if nargs != expected then
+      state.diagnostics = state.diagnostics + [raw_name + " received the wrong number of arguments"]
+      state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+      return [state, true]
+    end if
+    return [_emit_packed_i32_access(state, call_args, store), true]
+  end if
   // Native string/bytes helpers use the same compact ABI path as the Python
   // compiler.  Keeping this ahead of generic value-call dispatch is important:
   // these names are compiler intrinsics, not rebindable MiniLang functions.
@@ -8021,7 +8347,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
       state.asm = a.jmp(state.asm, l_done_b1)
 
       state.asm = a.mark(state.asm, l_ptr_b1)
-      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
       state.asm = a.jcc(state.asm, "e", l_str_b1)
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
@@ -8540,7 +8866,7 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
       state.asm = a.jmp(state.asm, l_done_b1)
 
       state.asm = a.mark(state.asm, l_ptr_b1)
-      state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+      state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
       state.asm = a.jcc(state.asm, "e", l_str_b1)
       state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
@@ -9567,17 +9893,32 @@ function _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs, 
     state.asm = a.mov_r64_r64(state.asm, "r11", "rax")
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_STRUCT, false)
     state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 4, sid, false)
+    field_contracts = _state_struct_field_types_get(state, scallee)
+    field_failure = ""
+    if typeof(field_contracts) == "array" then
+      for each contract in field_contracts
+        if typeof(contract[0]) == "string" and contract[0] != "" then
+          field_failure = "struct_fields_done_" + _next_lid(state)
+          break
+        end if
+      end for
+    end if
     if nargs > 0 then
-      field_contracts = _state_struct_field_types_get(state, scallee)
       for fi = 0 to nargs - 1
         guarded_arg = call_args[fi]
+        guarded = false
         if typeof(field_contracts) == "array" and fi < len(field_contracts) then
           contract = field_contracts[fi]
           if typeof(contract) == "array" and len(contract) >= 2 and typeof(contract[0]) == "string" then
-            guarded_arg = ml.TypeGuard("TypeGuard", guarded_arg, contract[0], contract[1], t.ast_pos(call_args[fi]), t.ast_filename(call_args[fi]))
+            guarded_arg = ml.TypeGuard("TypeGuard", guarded_arg, contract[0], contract[1], t.ast_pos(call_args[fi]), t.ast_filename(call_args[fi]), 2)
+            guarded = true
           end if
         end if
-        state = cg_emit_expr(state, guarded_arg)
+        if guarded then
+          state = _emit_expr_type_guard(state, guarded_arg, field_failure)
+        else
+          state = cg_emit_expr(state, guarded_arg)
+        end if
         state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_struct)
         state.asm = a.mov_membase_disp_r64(state.asm, "r11", 8 + fi * 8, "rax")
       end for
@@ -9593,7 +9934,9 @@ function _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs, 
       state = _emit_auto_errprop(state)
     end if
     state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", base_struct)
+    if field_failure != "" then state.asm = a.mark(state.asm, field_failure) end if
     if base_struct_ok then state = core.free_expr_temps(state, 8) end if
+    if field_failure != "" then state = _emit_auto_errprop(state) end if
     return state
 end function
 
@@ -10035,6 +10378,7 @@ function _emit_indirect_callable_call(state, cal, callee, raw_name, call_args, n
       state.asm = a.mark(state.asm, l_stt_norm_nm)
     end if
 
+    state = _emit_indirect_struct_guards(state, nargs, base_nm, l_done_nm, cal)
     state.asm = a.mov_rcx_imm32(state.asm, 8 + nargs * 8)
     state.asm = a.call(state.asm, "fn_alloc")
     state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", base_nm)

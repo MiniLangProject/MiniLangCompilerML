@@ -943,6 +943,13 @@ function main(args)
   if _test(compiler_path, repo_root, "oop_monomorphic_dispatch", "tests\\oop_monomorphic_dispatch.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_extensions", "tests\\language_extensions.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_typed_bindings", "tests\\language_typed_bindings.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_typed_fields", "tests\\language_typed_fields.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_typed_arrays", "tests\\language_typed_arrays.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_index_bounds_fast", "tests\\language_index_bounds_fast.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_packed_array", "tests\\language_packed_array.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_strict_types", "tests\\language_strict_types.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_strict_types_fail", "tests\\language_strict_types.ml", "compile_fail", extra_flags + " --strict-types") then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_typed_field_mismatch", "tests\\language_typed_field_mismatch.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_typed_binding_typeof", "tests\\language_typed_binding_typeof.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_typed_binding_mismatch", "tests\\language_typed_binding_mismatch.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_typed_binding_redeclare", "tests\\language_typed_binding_redeclare.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

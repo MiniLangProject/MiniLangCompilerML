@@ -245,7 +245,7 @@ struct TypeGuard
   _pos,
   /// Filename associated with `TypeGuard`.
   _filename,
-  /// 1 for a fixed declaration, 2 for a subsequent checked write.
+  /// 1 for a fixed declaration, 2 for a checked write, 3 for a typed-array copy.
   binding_write = 0,
 end struct
 
@@ -1773,6 +1773,9 @@ _seen_nonpackage_toplevel_stmt = false
 /// Whether this compilation has parsed a fixed variable declaration.
 /// @internal
 _typed_binding_declarations_seen = false
+/// Whether this compilation uses typed-array headers.
+/// @internal
+_typed_array_syntax_seen = false
 /// Track collect errors compiler state.
 _collect_errors = false
 /// Track max errors compiler state.
@@ -2222,6 +2225,23 @@ end function
 function _parse_primary()
   tok = _peek()
 
+  // Only recognize the angle-bracket form when it introduces a call.
+  if _tok_kind_id(tok) == TK_IDENT and _tok_value(tok) == "array" and _tok_value(_peek2()) == "<" then
+    close = tok + 3
+    if _tok_value(close) == "?" then close = close + 1 end if
+    if _tok_value(close) == ">" and _tok_kind_id(close + 1) == TK_LPAREN then
+      _advance()
+      name = _parse_array_type_suffix("array")
+      if _has_error() then return end if
+      _expect_kind(TK_LPAREN)
+      value = _parse_expr(0)
+      if _has_error() then return end if
+      _expect_kind(TK_RPAREN)
+      if _has_error() then return end if
+      return TypeGuard("TypeGuard", value, name, false, _tok_pos(tok), _filename, 3)
+    end if
+  end if
+
   if _tok_kind_id(tok) == TK_IDENT and _tok_value(tok) == "asm" and (_tok_value(_peek2()) == "x64" or _tok_value(_peek2()) == "unsafe") then
     return _parse_asm_expr()
   end if
@@ -2446,8 +2466,61 @@ function _parse_type_ref()
     if _has_error() then return end if
     name = name + "." + _tok_value(seg)
   end while
+  name = _parse_array_type_suffix(name)
+  if _has_error() then return end if
   optional = _match_value(TK_OP, "?")
   return [name, optional]
+end function
+
+/// Read the element contract without consuming an outer optional marker.
+/// @internal
+function _parse_array_type_suffix(name)
+  global _typed_array_syntax_seen
+  if s.toLowerAscii(name) != "array" or _match_value(TK_OP, "<") == false then return name end if
+  token = _advance()
+  key = binding_type_key(_tok_value(token))
+  if _typed_array_element_code(key) == 0 then
+    _set_error("Expected int, float, bool, string or bytes as array element type", _tok_pos(token))
+    return ""
+  end if
+  suffix = ""
+  if _match_value(TK_OP, "?") then suffix = "?" end if
+  if _match_value(TK_OP, ">") == false then
+    _set_error("Expected '>' after array element type", _tok_pos(_peek()))
+    return ""
+  end if
+  _typed_array_syntax_seen = true
+  return "array<" + key + suffix + ">"
+end function
+
+/// Encode the primitive element type in the typed array header.
+/// @internal
+function _typed_array_element_code(name)
+  if name == "int" then return 1 end if
+  if name == "float" then return 2 end if
+  if name == "bool" then return 3 end if
+  if name == "string" then return 4 end if
+  if name == "bytes" then return 5 end if
+  return 0
+end function
+
+/// Return the array contract byte, including the optional-element bit.
+/// @internal
+function typed_array_code(name)
+  if typeof(name) != "string" or s.startsWith(name, "array<") == false or s.endsWith(name, ">") == false then return 0 end if
+  element = s.substr(name, 6, len(name) - 7)
+  if s.endsWith(element, "?") then
+    code = _typed_array_element_code(s.substr(element, 0, len(element) - 1))
+    if code != 0 then return code | 128 end if
+    return 0
+  end if
+  return _typed_array_element_code(element)
+end function
+
+/// Report whether generated stores must recognize typed array contracts.
+/// @internal
+function has_typed_arrays()
+  return _typed_array_syntax_seen
 end function
 
 /// Returns parse parameter list.
@@ -2745,6 +2818,8 @@ function _parse_expr(min_prec)
         ty_raw = ty_raw + "." + _tok_value(seg)
       end while
 
+      ty_raw = _parse_array_type_suffix(ty_raw)
+      if _has_error() then return end if
       ty_l = s.toLowerAscii(ty_raw)
       ty_canon = ty_raw
       if _containsDot(ty_raw) == false then

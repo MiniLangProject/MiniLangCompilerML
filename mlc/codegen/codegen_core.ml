@@ -304,6 +304,9 @@ struct CgState
   _float_loop_disabled,
   /// Type contracts indexed by qualified module storage name.
   global_binding_contracts,
+  /// Validated field stores keyed by member name, and constructors by arity.
+  field_write_contracts,
+  indirect_struct_contracts,
 end struct
 
 /// Compatibility lookup records used where older compiler images pass arrays.
@@ -759,6 +762,8 @@ function cg_core_new(source, filename, import_aliases, extern_sigs, extern_struc
   0,
   [],
   false,
+  void,
+  void,
   void
   )
   cg = _seed_rdata(cg)
@@ -1746,7 +1751,7 @@ function emit_jmp_if_false_rax(state, false_label)
   state.asm = a.jmp(state.asm, l_end)
 
   state.asm = a.mark(state.asm, l_ptr)
-  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+  state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
   state.asm = a.jcc(state.asm, "e", l_float)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_STRING)
@@ -1969,6 +1974,7 @@ function _helper_supported(lbl)
   if lbl == "fn_builtin_input" then return true end if
   if lbl == "fn_builtin_copyBytes" then return true end if
   if lbl == "fn_builtin_copyArray" then return true end if
+  if lbl == "fn_typed_array_element" then return true end if
   if lbl == "fn_builtin_copyStringBytes" then return true end if
   if lbl == "fn_builtin_fillBytes" then return true end if
   if lbl == "fn_builtin_gc_collect" then return true end if
@@ -2104,6 +2110,7 @@ function _emit_helper_by_label_group5(state, lbl)
   if lbl == "fn_builtin_input" then return rt.emit_builtin_input_function(state) end if
   if lbl == "fn_builtin_copyBytes" then return rt.emit_builtin_copyBytes_function(state) end if
   if lbl == "fn_builtin_copyArray" then return rt.emit_builtin_copyArray_function(state) end if
+  if lbl == "fn_typed_array_element" then return rt.emit_typed_array_element_function(state) end if
   if lbl == "fn_builtin_copyStringBytes" then return rt.emit_builtin_copyStringBytes_function(state) end if
   if lbl == "fn_builtin_fillBytes" then return rt.emit_builtin_fillBytes_function(state) end if
   if lbl == "fn_builtin_gc_collect" then return rt.emit_builtin_gc_collect_function(state) end if
@@ -2196,7 +2203,7 @@ function _helper_rank(lbl)
     "fn_add_string", "fn_add_array", "fn_add_bytes", "fn_value_to_string", "fn_box_float", "fn_toNumber",
     "fn_toFloat",
     "fn_typeof", "fn_typeName", "fn_int_to_dec", "fn_strlen", "fn_decode", "fn_decode_slice", "fn_decodeZ", "fn_decode16Z", "fn_hex", "fn_fromHex",
-    "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_copyArray", "fn_builtin_copyStringBytes", "fn_builtin_fillBytes",
+    "fn_slice", "fn_builtin_len", "fn_builtin_input", "fn_builtin_copyBytes", "fn_builtin_copyArray", "fn_typed_array_element", "fn_builtin_copyStringBytes", "fn_builtin_fillBytes",
     "fn_builtin_gc_collect", "fn_builtin_gc_set_limit", "fn_build_args", "fn_init_argvw", "fn_incref",
     "fn_decref", "fn_callStats", "fn_heap_count", "fn_heap_bytes_used", "fn_heap_bytes_committed",
     "fn_heap_bytes_reserved", "fn_heap_free_bytes", "fn_heap_free_blocks", "fn_unhandled_error_exit", "fn_make_error_const", "fn_gc_stat"

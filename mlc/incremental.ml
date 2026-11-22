@@ -3,6 +3,7 @@
 package mlc.incremental
 import mlc.cache_codec as codec
 import mlc.incremental_ast as ast
+import mlc.minilang_parser as ml
 import mlc.tools as t
 import mlc.asm as a
 import mlc.data as d
@@ -147,7 +148,7 @@ function seal(state, contracts)
   _cache.context = codec.key([_cache.options, _cache.declarations, contracts,
     t.fastmap_items(state.dead_functions), state.native_threads_possible,
     t.fastmap_items(state.mutable_user_functions), state.max_inline_call_args_global,
-    state.synchronized_globals, t.fastmap_items(state.global_binding_contracts),
+    state.synchronized_globals, t.fastmap_items(state.global_binding_contracts), ml.has_typed_arrays(),
     t.arr_chunk_finish(globals_view)])
 end function
 

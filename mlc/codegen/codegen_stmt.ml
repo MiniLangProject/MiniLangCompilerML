@@ -2573,7 +2573,7 @@ function _emit_storage_stmt(state, stmt, k)
             contract = contracts[arg_i]
             if typeof(contract) == "array" and len(contract) >= 2 then
               if typeof(contract[0]) == "string" and contract[0] != "" then
-                arg_value = ml.TypeGuard("TypeGuard", arg_value, contract[0], contract[1], t.ast_pos(arg_value), t.ast_filename(arg_value))
+                arg_value = ml.TypeGuard("TypeGuard", arg_value, contract[0], contract[1], t.ast_pos(arg_value), t.ast_filename(arg_value), 2)
               end if
             end if
           end if
@@ -2619,10 +2619,12 @@ function _emit_storage_stmt(state, stmt, k)
 
   if k == "SetMember" then
     obj_expr = try(stmt.obj)
-    scalar_offset = opt.scalar_slot(state, obj_expr, stmt.field)
-    if scalar_offset >= 0 then
-      state = exprmod.cg_emit_expr(state, stmt.expr)
-      state.asm = a.mov_rsp_disp32_rax(state.asm, scalar_offset)
+    scalar_field = opt.scalar_slot(state, obj_expr, stmt.field, true)
+    if typeof(scalar_field) == "array" then
+      value = _checked_field_value(stmt.expr, scalar_field[1], stmt)
+      state = _validate_binding_literal(state, value)
+      state = exprmod.cg_emit_expr(state, value)
+      state.asm = a.mov_rsp_disp32_rax(state.asm, scalar_field[0])
       return state
     end if
     target_expr_sm = try(stmt.target)
@@ -2658,7 +2660,13 @@ function _emit_storage_stmt(state, stmt, k)
             state = exprmod.cg_emit_expr(state, obj_expr)
             target_fast_off = core.alloc_expr_temps(state, 8)
             state.asm = a.mov_rsp_disp32_rax(state.asm, target_fast_off)
-            state = exprmod.cg_emit_expr(state, stmt.expr)
+            contracts = exprmod._state_struct_field_types_get(state, struct_qname_sm)
+            value = stmt.expr
+            if typeof(contracts) == "array" and fi_sm < len(contracts) then
+              value = _checked_field_value(value, contracts[fi_sm], stmt)
+              state = _validate_binding_literal(state, value)
+            end if
+            state = exprmod.cg_emit_expr(state, value)
             state.asm = a.mov_r64_r64(state.asm, "r13", "rax")
             state.asm = a.mov_r64_membase_disp(state.asm, "r12", "rsp", target_fast_off)
             state = core.free_expr_temps(state, 8)
@@ -2677,11 +2685,17 @@ function _emit_storage_stmt(state, stmt, k)
     target_off_sm = core.alloc_expr_temps(state, 8)
     state.asm = a.mov_rsp_disp32_rax(state.asm, target_off_sm)
 
+    contracts = t.fastmap_get(state.field_write_contracts, field, [])
     state = exprmod.cg_emit_expr(state, stmt.expr)
     state.asm = a.mov_r64_r64(state.asm, "r13", "rax")
+    value_off = 0
+    if len(contracts) > 0 then
+      value_off = core.alloc_expr_temps(state, 8)
+      state.asm = a.mov_rsp_disp32_rax(state.asm, value_off)
+    end if
 
     state.asm = a.mov_r64_membase_disp(state.asm, "r12", "rsp", target_off_sm)
-    state = core.free_expr_temps(state, 8)
+    if len(contracts) == 0 then state = core.free_expr_temps(state, 8) end if
 
     lid_sm = state.label_id
     state.label_id = state.label_id + 1
@@ -2701,12 +2715,31 @@ function _emit_storage_stmt(state, stmt, k)
     state = _emit_struct_field_index_dispatch_local(state, field, "edx", "ecx", l_ok_sm, l_fail_sm, "setm_" + lid_sm)
 
     state.asm = a.mark(state.asm, l_ok_sm)
+    if len(contracts) > 0 then
+      store_label = "setm_store_" + lid_sm
+      for each entry in contracts
+        state.asm = a.cmp_r32_imm(state.asm, "edx", entry[0])
+        state.asm = a.jcc(state.asm, "e", "setm_check_" + lid_sm + "_" + entry[0])
+      end for
+      state.asm = a.jmp(state.asm, store_label)
+      for each entry in contracts
+        state.asm = a.mark(state.asm, "setm_check_" + lid_sm + "_" + entry[0])
+        value = ml.DeferredCapture("DeferredCapture", value_off, -1, "")
+        state = exprmod.cg_emit_expr(state, _checked_field_value(value, entry[2], stmt))
+        state.asm = a.mov_r64_r64(state.asm, "r13", "rax")
+        state.asm = a.mov_r64_membase_disp(state.asm, "r12", "rsp", target_off_sm)
+        state.asm = a.mov_r32_imm32(state.asm, "ecx", entry[1])
+        state.asm = a.jmp(state.asm, store_label)
+      end for
+      state.asm = a.mark(state.asm, store_label)
+    end if
     state = mem.emit_gc_write_barrier_index(state, "r12", "rcx", 8)
     state.asm = a.mov_mem_bis_r64(state.asm, "r12", "rcx", 8, 8, "r13")
     state.asm = a.jmp(state.asm, l_done_sm)
 
     state.asm = a.mark(state.asm, l_fail_sm)
     state.asm = a.mark(state.asm, l_done_sm)
+    if len(contracts) > 0 then state = core.free_expr_temps(state, 16) end if
     return state
   end if
 
@@ -2723,6 +2756,11 @@ function _emit_storage_stmt(state, stmt, k)
     l_bad_index = "seti_bad_index_" + lid_si
     l_oob = "seti_oob_" + lid_si
     l_bad_byte = "seti_bad_byte_" + lid_si
+    l_bad_value = "seti_bad_value_" + lid_si
+    checked_element = exprmod._typed_store_check_plan(state, stmt)
+    state = checked_element[0]
+    check_element = checked_element[1]
+    immediate_only = checked_element[2]
     l_done_si = "seti_done_" + lid_si
 
     state = exprmod.cg_emit_expr(state, stmt.target)
@@ -2748,7 +2786,7 @@ function _emit_storage_stmt(state, stmt, k)
     state.asm = a.test_r64_r64(state.asm, "r11", "r11")
     state.asm = a.jcc(state.asm, "e", l_bad_target)
 
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r11", 0)
     l_type_ok = "seti_type_ok_" + lid_si
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
     state.asm = a.jcc(state.asm, "e", l_type_ok)
@@ -2769,30 +2807,35 @@ function _emit_storage_stmt(state, stmt, k)
 
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
     l_ok = "seti_ok_" + lid_si
-    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
     state.asm = a.jcc(state.asm, "ge", l_ok)
-    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.add_r64_r64(state.asm, "rcx", "rdx")
     state.asm = a.mark(state.asm, l_ok)
-    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
-    state.asm = a.jcc(state.asm, "l", l_oob)
-    state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
-    state.asm = a.jcc(state.asm, "ge", l_oob)
+    state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+    // The unsigned comparison also rejects an index below -len.
+    state.asm = a.jcc(state.asm, "ae", l_oob)
 
     l_store_bytes = "seti_store_bytes_" + lid_si
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r11", 0)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_BYTES)
     state.asm = a.jcc(state.asm, "e", l_store_bytes)
 
     l_store_array = "seti_store_array_" + lid_si
-    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
-    state.asm = a.jcc(state.asm, "ne", l_store_array)
-    state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
-    state.asm = a.and_r64_imm(state.asm, "r8", 7)
-    state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
-    state.asm = a.jcc(state.asm, "ne", l_store_array)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
-    state.asm = a.mark(state.asm, l_store_array)
-    state = mem.emit_gc_write_barrier_index(state, "r11", "rcx", 8)
+    if check_element then
+      state = _emit_typed_array_store_check(state, l_bad_value, lid_si)
+      state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r11", 0)
+    end if
+    if immediate_only == false then
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+      state.asm = a.jcc(state.asm, "ne", l_store_array)
+      state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
+      state.asm = a.and_r64_imm(state.asm, "r8", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_store_array)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+      state.asm = a.mark(state.asm, l_store_array)
+      state = mem.emit_gc_write_barrier_index(state, "r11", "rcx", 8)
+    end if
     state.asm = a.mov_mem_bis_r64(state.asm, "r11", "rcx", 8, 8, "r10")
     state.asm = a.jmp(state.asm, l_done_si)
 
@@ -2845,6 +2888,13 @@ function _emit_storage_stmt(state, stmt, k)
     state = exprmod._emit_make_error_const(state, c.ERR_VOID_OP, "Byte value must be an int in range 0..255")
     state = exprmod._emit_auto_errprop(state)
 
+    if check_element then
+      state.asm = a.jmp(state.asm, l_done_si)
+      state.asm = a.mark(state.asm, l_bad_value)
+      state = core.emit_dbg_line(state, stmt)
+      state = exprmod._emit_make_error_const(state, c.ERR_TYPE_GUARD, "Value violates the array element type")
+      state = exprmod._emit_auto_errprop(state)
+    end if
     state.asm = a.mark(state.asm, l_done_si)
     return state
   end if
@@ -2914,7 +2964,7 @@ function _emit_execution_stmt(state, stmt, k)
     state.asm = a.jmp(state.asm, l_end)
 
     state.asm = a.mark(state.asm, l_ptr)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
     l_pstr = "print_ptr_str_" + lid_p
     l_parr = "print_ptr_arr_" + lid_p
     l_pflt = "print_ptr_flt_" + lid_p
@@ -3046,7 +3096,7 @@ function _emit_execution_stmt(state, stmt, k)
     state.asm = a.jmp(state.asm, el_end)
 
     state.asm = a.mark(state.asm, el_ptr)
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "rax", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "rax", 0)
     l_el_str = "arr_el_str_" + elem_id
     l_el_arr = "arr_el_arr_" + elem_id
     l_el_bytes = "arr_el_bytes_" + elem_id
@@ -3434,7 +3484,7 @@ function _emit_for_stmt(state, stmt)
 
     state = scope.emit_load_var_scoped(state, it_name)
     state.asm = a.mov_r64_r64(state.asm, "r14", "rax")
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r14", 0)
+    state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r14", 0)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
     state.asm = a.jcc(state.asm, "e", l_setup_arr_fe)
     state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
@@ -4378,6 +4428,7 @@ function _typeflow_expr_type(state, ex, known, extended = false)
   if k == "TypeGuard" then
     if typeof(try(ex.optional)) == "bool" and ex.optional then return "" end if
     raw_guard_type = _coerce_name(try(ex.type_name))
+    if ml.typed_array_code(raw_guard_type) != 0 then return "array" end if
     lower_guard_type = s.toLowerAscii(raw_guard_type)
     if lower_guard_type == "integer" then lower_guard_type = "int" end if
     if lower_guard_type == "boolean" then lower_guard_type = "bool" end if
@@ -5232,6 +5283,20 @@ end function
 
 /// Lower opt emit known setindex statement behavior to native x64.
 /// @internal
+function _emit_typed_array_store_check(state, bad, lid)
+  allowed = "seti_element_ok_" + lid
+  state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
+  state.asm = a.cmp_r32_imm(state.asm, "edx", 255)
+  state.asm = a.jcc(state.asm, "be", allowed)
+  state.asm = a.call(state.asm, "fn_typed_array_element")
+  state.asm = a.test_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.jcc(state.asm, "e", bad)
+  state.asm = a.mark(state.asm, allowed)
+  return state
+end function
+
+/// Emit a specialized index store using already proven target and index facts.
+/// @internal
 function _opt_emit_known_setindex(state, stmt, plan)
   kind = plan[0]
   base_slot = plan[1]
@@ -5241,6 +5306,15 @@ function _opt_emit_known_setindex(state, stmt, plan)
   l_oob = "seti_fast_oob_" + lid
   l_bad_target = "seti_fast_bad_target_" + lid
   l_bad_byte = "seti_fast_bad_byte_" + lid
+  l_bad_value = "seti_bad_value_" + lid
+  check_element = false
+  immediate_only = false
+  if kind == "array" then
+    checked_element = exprmod._typed_store_check_plan(state, stmt)
+    state = checked_element[0]
+    check_element = checked_element[1]
+    immediate_only = checked_element[2]
+  end if
   l_done = "seti_fast_done_" + lid
   state.asm = a.mark(state.asm, "seti_fast_" + kind + "_" + lid)
   if bounds_proven then
@@ -5280,27 +5354,29 @@ function _opt_emit_known_setindex(state, stmt, plan)
   if bounds_proven == false then
     state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 4)
     l_nonnegative = "seti_fast_nonnegative_" + lid
-    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
+    state.asm = a.cmp_r64_imm(state.asm, "rcx", 0)
     state.asm = a.jcc(state.asm, "ge", l_nonnegative)
-    state.asm = a.add_r32_r32(state.asm, "ecx", "edx")
+    state.asm = a.add_r64_r64(state.asm, "rcx", "rdx")
     state.asm = a.mark(state.asm, l_nonnegative)
-    state.asm = a.cmp_r32_imm(state.asm, "ecx", 0)
-    state.asm = a.jcc(state.asm, "l", l_oob)
-    state.asm = a.cmp_r32_r32(state.asm, "ecx", "edx")
-    state.asm = a.jcc(state.asm, "ge", l_oob)
+    state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+    // A remaining negative index compares above every valid length.
+    state.asm = a.jcc(state.asm, "ae", l_oob)
   end if
   if kind == "array" then
-    l_store = "seti_fast_array_store_" + lid
-    state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
-    state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
-    state.asm = a.jcc(state.asm, "ne", l_store)
-    state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
-    state.asm = a.and_r64_imm(state.asm, "r8", 7)
-    state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
-    state.asm = a.jcc(state.asm, "ne", l_store)
-    state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
-    state.asm = a.mark(state.asm, l_store)
-    state = mem.emit_gc_write_barrier_index(state, "r11", "rcx", 8)
+    if check_element then state = _emit_typed_array_store_check(state, l_bad_value, lid) end if
+    if immediate_only == false then
+      l_store = "seti_fast_array_store_" + lid
+      state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r11", 0)
+      state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
+      state.asm = a.jcc(state.asm, "ne", l_store)
+      state.asm = a.mov_r64_r64(state.asm, "r8", "r10")
+      state.asm = a.and_r64_imm(state.asm, "r8", 7)
+      state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
+      state.asm = a.jcc(state.asm, "ne", l_store)
+      state.asm = a.mov_membase_disp_imm32(state.asm, "r11", 0, c.OBJ_ARRAY, false)
+      state.asm = a.mark(state.asm, l_store)
+      state = mem.emit_gc_write_barrier_index(state, "r11", "rcx", 8)
+    end if
     state.asm = a.mov_mem_bis_r64(state.asm, "r11", "rcx", 8, 8, "r10")
     state.asm = a.jmp(state.asm, l_done)
   else
@@ -5344,6 +5420,12 @@ function _opt_emit_known_setindex(state, stmt, plan)
     state.asm = a.mark(state.asm, l_bad_byte)
     state = core.emit_dbg_line(state, stmt)
     state = exprmod._emit_make_error_const(state, c.ERR_VOID_OP, "Byte value must be an int in range 0..255")
+    state = exprmod._emit_auto_errprop(state)
+  end if
+  if check_element then
+    state.asm = a.mark(state.asm, l_bad_value)
+    state = core.emit_dbg_line(state, stmt)
+    state = exprmod._emit_make_error_const(state, c.ERR_TYPE_GUARD, "Value violates the array element type")
     state = exprmod._emit_auto_errprop(state)
   end if
   state.asm = a.mark(state.asm, l_done)
@@ -6615,6 +6697,7 @@ function _analysis_builtin_has(name)
   if nm == "nativeRawValue" then return true end if
   if nm == "nativeValueFromRaw" then return true end if
   if nm == "nativeCallback" then return true end if
+  if nm == "__ml_packed_i32_get" or nm == "__ml_packed_i32_set" then return true end if
   return exprmod._builtin_label(nm) != ""
 end function
 
@@ -9425,6 +9508,78 @@ end function
 
 /// Lower local writes before inlining and collect module slot contracts.
 /// @internal
+function _checked_field_value(value, contract, stmt)
+  typ = contract[0]
+  if typeof(typ) != "string" or typ == "" then return value end if
+  return ml.TypeGuard("TypeGuard", value, typ, contract[1], t.ast_pos(stmt), t.ast_filename(stmt), 2)
+end function
+
+/// Resolve named field types in the namespace that declared the field.
+/// @internal
+function _qualify_field_contract(state, owner, raw)
+  key = ml.binding_type_key(raw)
+  if _arr_has(["int", "float", "bool", "string", "array", "bytes", "function", "struct", "enum", "error", "thread", "void", "unknown"], key) then return raw end if
+  name = exprmod._apply_import_alias(state, raw)
+  if _has_dot_name(name) then return name end if
+  dot = s.lastIndexOf(owner, ".")
+  while dot >= 0
+    prefix = s.substr(owner, 0, dot)
+    candidate = prefix + "." + name
+    if _named_int_get(state.struct_ids, candidate, 0) != 0 or exprmod._state_enum_id_get(state, candidate, -1) >= 0 or _arr_has(state.interface_names, candidate) then return candidate end if
+    dot = s.lastIndexOf(prefix, ".")
+  end while
+  return name
+end function
+
+/// Index checked stores by member name and indirect construction by arity.
+/// @internal
+function _prepare_field_contracts(state)
+  for each record in state.struct_fields
+    name = ""
+    fields = []
+    if typeof(record) == "struct" then
+      name = record.key
+      fields = record.values
+    else if typeof(record) == "array" and len(record) >= 2 then
+      name = record[0]
+      fields = record[1]
+    end if
+    if name == "" then continue end if
+    contracts = exprmod._state_struct_field_types_get(state, name)
+    if typeof(contracts) != "array" or len(contracts) == 0 then continue end if
+    entries = []
+    for index = 0 to len(contracts) - 1
+      contract = contracts[index]
+      if typeof(contract[0]) != "string" or contract[0] == "" then continue end if
+      owner = name
+      ancestors = _named_array_get(state.class_ancestors, name)
+      if typeof(ancestors) == "array" and len(ancestors) > 0 then
+        for bi = len(ancestors) - 1 to 0
+          base = ancestors[bi]
+          inherited = exprmod._state_struct_fields_get(state, base)
+          if typeof(inherited) == "array" and index < len(inherited) then owner = base; break end if
+        end for
+      end if
+      typ = _qualify_field_contract(state, owner, contract[0])
+      canonical = [typ, contract[1]]
+      contracts[index][0] = typ
+      sid = _named_int_get(state.struct_ids, name, 0)
+      field = fields[index]
+      writes = t.fastmap_get(state.field_write_contracts, field, [])
+      state.field_write_contracts = t.fastmap_set(state.field_write_contracts, field, writes + [[sid, index, canonical]])
+      entries = entries + [[index, typ, contract[1]]]
+    end for
+    if len(entries) > 0 and typeof(_named_array_get(state.class_constructor_arities, name)) != "array" then
+      arity = len(fields)
+      ctors = t.fastmap_get(state.indirect_struct_contracts, arity, [])
+      state.indirect_struct_contracts = t.fastmap_set(state.indirect_struct_contracts, arity, ctors + [[_named_int_get(state.struct_ids, name, 0), entries]])
+    end if
+  end for
+  return state
+end function
+
+/// Lower local writes before inlining and collect module slot contracts.
+/// @internal
 function _prepare_binding_contracts(state, program)
   seen = void
   state.global_binding_contracts = void
@@ -10005,6 +10160,7 @@ end function
 /// Lower emit static callable objects statement behavior to native x64.
 /// @internal
 function _emit_static_callable_objects(state)
+  state = _prepare_field_contracts(state)
   state.function_static_obj_labels = []
   if typeof(state.user_functions) == "array" and len(state.user_functions) > 0 then
     for i = 0 to len(state.user_functions) - 1
@@ -10756,7 +10912,7 @@ function prepare_program_for_objects(state, program)
       fn = rec[1]
       inline_source = ""
       if exprmod._function_wants_inline(fn, state.operator_overloads_present) then inline_source = incremental.sourceIdentity(t.ast_filename(fn)) end if
-      contracts = t.arr_chunk_push(contracts, [rec[0], exprmod._variadic_param_stack_safe(fn), inline_source])
+      contracts = t.arr_chunk_push(contracts, [rec[0], exprmod._variadic_param_stack_safe(fn), inline_source, exprmod._proved_direct_leaf_type(state, fn)])
     end for
     incremental.seal(state, t.arr_chunk_finish(contracts))
   end if

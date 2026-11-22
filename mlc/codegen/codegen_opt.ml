@@ -202,14 +202,21 @@ end function
 /// @param state Current lexical bindings and scalar-replacement plans.
 /// @param target Receiver expression of the field access.
 /// @param field Field name to resolve to a rooted stack slot.
-function scalar_slot(state, target, field)
+function scalar_slot(state, target, field, with_contract = false)
   if t.ast_kind(target) != "Var" or len(state._inline_call_stack) > 0 then return -1 end if
   binding = scope.cg_resolve_binding(state, t.ast_name(target))
   if typeof(binding) != "struct" then return -1 end if
   for each plan in state.scalar_structs
     if binding.id != plan[1].id then continue end if
     for i = 0 to len(plan[2]) - 1
-      if plan[2][i] == field then return plan[3][i] end if
+      if plan[2][i] == field then
+        if with_contract then
+          contract = [void, false]
+          if typeof(plan[4]) == "array" and i < len(plan[4]) then contract = plan[4][i] end if
+          return [plan[3][i], contract]
+        end if
+        return plan[3][i]
+      end if
     end for
   end for
   return -1

@@ -437,6 +437,8 @@ function _clone_state_for_object(base, seed_runtime)
   st.synchronized_globals = _copy_array(base.synchronized_globals)
   // Function objects must see the same read-only module slot contracts.
   st.global_binding_contracts = base.global_binding_contracts
+  st.field_write_contracts = base.field_write_contracts
+  st.indirect_struct_contracts = base.indirect_struct_contracts
   st.operator_overloads_present = base.operator_overloads_present
   st.mutable_user_functions = base.mutable_user_functions
   st.typeflow_function = void

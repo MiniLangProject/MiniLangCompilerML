@@ -511,6 +511,7 @@ function _usage()
   print "Build internals:"
   print "  --object-pipeline    force the memory-bounded .mlo pipeline"
   print "  --no-object-pipeline force the monolithic pipeline"
+  print "  --strict-types       reject provable mismatches at direct calls and typed returns"
   print "  --target TARGET      windows-x64 (default), linux-x64 or minux-x64"
   print "  --gc-concurrent     Windows background SATB collection (no heap shrink)"
   print "Conditional compilation:"
@@ -2544,6 +2545,12 @@ function _collect_runtime_config(args)
   i = 0
   while i < len(args)
     a = args[i]
+
+    if a == "--strict-types" then
+      cfg = _cfg_set(cfg, "strict_types", true)
+      i = i + 1
+      continue
+    end if
 
     if a == "--heap-shrink" then
       cfg = _cfg_set(cfg, "shrink_enabled", true)

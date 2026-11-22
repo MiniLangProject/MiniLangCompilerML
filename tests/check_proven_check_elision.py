@@ -57,6 +57,11 @@ FIXTURES = {
     "language_performance_features": "[OK] optimized language features",
     "language_extensions": "[OK] language extensions",
     "language_typed_bindings": "TYPED BINDINGS [OK]",
+    "language_typed_fields": "TYPED FIELDS [OK]",
+    "language_typed_arrays": "TYPED ARRAYS [OK]",
+    "language_index_bounds_fast": "FAST INDEX BOUNDS [OK]",
+    "language_packed_array": "PACKED ARRAY [OK]",
+    "language_strict_types": "STRICT TYPES RUNTIME FALLBACK [OK]",
     "language_typed_binding_typeof": "TYPED BINDING TYPEOF [OK]",
     "oop_monomorphic_dispatch": "[OK] monomorphic dispatch",
     "language_class": "[OK] classes, inheritance, overrides and runtime interfaces",
@@ -181,6 +186,27 @@ def inspect_assembly(fixture, assembly, *, gc_concurrent=False):
                               ("normalizedLiteralIsNotFloat", True),
                               ("localContract", True)):
             contains(name, "type_guard_valid_", guarded)
+
+    if fixture == "language_index_bounds_fast":
+        for name, label in (("loopRead", "idx_fast_oob_"),
+                            ("loopWrite", "seti_fast_oob_"),
+                            ("readAny", "idx_oob_"),
+                            ("writeAny", "seti_oob_")):
+            emitted = body(name)
+            if not re.search(r"\bjae " + label, emitted):
+                raise AssertionError(f"Missing unsigned single-branch bounds check: {name}")
+            if re.search(r"\bjl " + label, emitted):
+                raise AssertionError(f"Redundant negative-index bounds check: {name}")
+            checks.append({"function": name, "single_unsigned_bounds_branch": True})
+
+    if fixture == "language_packed_array":
+        contains("main", "packed_i32_index_", True)
+        contains("main", "packed_i32_value_", True)
+        dynamic = body("writeTo").split("\nfn_ret_writeTo:", 1)[0]
+        if ("packed_i32_index_" in dynamic
+                or "call fn_user_std.ds.packed_array.Int32Array.set" not in dynamic):
+            raise AssertionError("Packed array writes through an unknown receiver must dispatch")
+        checks.append({"function": "writeTo", "dispatch": "runtime"})
 
     if fixture == "numeric_typeflow_boxing":
         positive = ("fusedAddInts", "fusedAddFloats", "fusedMulFloats",
@@ -765,7 +791,8 @@ def main():
                             "numeric_float_loop", "numeric_float_loop_typeof",
                             "numeric_float_loop_threads", "numeric_float_nested",
                             "numeric_float_nested_typeof", "numeric_float_nested_threads",
-                            "numeric_float_cache", "numeric_float_consumer")
+                            "numeric_float_cache", "numeric_float_consumer", "language_packed_array",
+                            "language_index_bounds_fast")
                         invocation = [*command, str(source), str(output), "-I", str(root),
                                       "--target", target, pipeline, *flags]
                         if inspect_paths:
