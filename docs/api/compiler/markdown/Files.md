@@ -11,13 +11,13 @@
 | [mlc/codegen/codegen.ml](File-mlc-codegen-codegen-ml-1154886880.md) | `mlc.codegen.codegen` | yes | 40 |
 | [mlc/codegen/codegen_builtins_alloc.ml](File-mlc-codegen-codegen-builtins-alloc-ml-1763349803.md) | `mlc.codegen.codegen_builtins_alloc` | yes | 37 |
 | [mlc/codegen/codegen_concurrent_gc.ml](File-mlc-codegen-codegen-concurrent-gc-ml-1336222633.md) | `mlc.codegen.codegen_concurrent_gc` | yes | 18 |
-| [mlc/codegen/codegen_core.ml](File-mlc-codegen-codegen-core-ml-528695596.md) | `mlc.codegen.codegen_core` | yes | 232 |
-| [mlc/codegen/codegen_expr.ml](File-mlc-codegen-codegen-expr-ml-59843844.md) | `mlc.codegen.codegen_expr` | yes | 185 |
+| [mlc/codegen/codegen_core.ml](File-mlc-codegen-codegen-core-ml-528695596.md) | `mlc.codegen.codegen_core` | yes | 241 |
+| [mlc/codegen/codegen_expr.ml](File-mlc-codegen-codegen-expr-ml-59843844.md) | `mlc.codegen.codegen_expr` | yes | 212 |
 | [mlc/codegen/codegen_memory.ml](File-mlc-codegen-codegen-memory-ml-2136639668.md) | `mlc.codegen.codegen_memory` | yes | 63 |
 | [mlc/codegen/codegen_opt.ml](File-mlc-codegen-codegen-opt-ml-1574478370.md) | `mlc.codegen.codegen_opt` | yes | 11 |
-| [mlc/codegen/codegen_runtime.ml](File-mlc-codegen-codegen-runtime-ml-1845689217.md) | `mlc.codegen.codegen_runtime` | yes | 62 |
+| [mlc/codegen/codegen_runtime.ml](File-mlc-codegen-codegen-runtime-ml-1845689217.md) | `mlc.codegen.codegen_runtime` | yes | 63 |
 | [mlc/codegen/codegen_scope.ml](File-mlc-codegen-codegen-scope-ml-1124416197.md) | `mlc.codegen.codegen_scope` | yes | 100 |
-| [mlc/codegen/codegen_stmt.ml](File-mlc-codegen-codegen-stmt-ml-1158291323.md) | `mlc.codegen.codegen_stmt` | yes | 275 |
+| [mlc/codegen/codegen_stmt.ml](File-mlc-codegen-codegen-stmt-ml-1158291323.md) | `mlc.codegen.codegen_stmt` | yes | 299 |
 | [mlc/codegen/codegen_threads.ml](File-mlc-codegen-codegen-threads-ml-1261658982.md) | `mlc.codegen.codegen_threads` | yes | 70 |
 | [mlc/compiler.ml](File-mlc-compiler-ml-344018962.md) | `mlc.compiler` | yes | 423 |
 | [mlc/constants.ml](File-mlc-constants-ml-1024884042.md) | `mlc.constants` | yes | 49 |
@@ -29,7 +29,7 @@
 | [mlc/incremental.ml](File-mlc-incremental-ml-857733037.md) | `mlc.incremental` | yes | 37 |
 | [mlc/incremental_ast.ml](File-mlc-incremental-ast-ml-368481696.md) | `mlc.incremental_ast` | yes | 3 |
 | [mlc/linux_runtime.ml](File-mlc-linux-runtime-ml-1485387394.md) | `mlc.linux_runtime` | yes | 17 |
-| [mlc/minilang_parser.ml](File-mlc-minilang-parser-ml-1485036712.md) | `mlc.minilang_parser` | yes | 664 |
+| [mlc/minilang_parser.ml](File-mlc-minilang-parser-ml-1485036712.md) | `mlc.minilang_parser` | yes | 679 |
 | [mlc/minux_blob.ml](File-mlc-minux-blob-ml-360269822.md) | `mlc.minux_blob` | yes | 6 |
 | [mlc/minux_runtime.ml](File-mlc-minux-runtime-ml-1510058519.md) | `mlc.minux_runtime` | yes | 5 |
 | [mlc/native_packing.ml](File-mlc-native-packing-ml-215987304.md) | `mlc.native_packing` | yes | 21 |

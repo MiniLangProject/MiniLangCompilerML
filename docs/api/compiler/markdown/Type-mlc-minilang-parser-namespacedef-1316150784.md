@@ -12,7 +12,7 @@ struct NamespaceDef
 Represents namespace def.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L405)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L407)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `NamespaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L415)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L417)
 
 <a id="field-field-mlc-minilang-parser-namespacedef-pos-pos-mlc-minilang-parser-ml-1426843975"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `NamespaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L413)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L415)
 
 <a id="field-field-mlc-minilang-parser-namespacedef-body-body-mlc-minilang-parser-ml-1758590125"></a>
 ### body
@@ -50,7 +50,7 @@ body
 Body associated with `NamespaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L411)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L413)
 
 <a id="field-field-mlc-minilang-parser-namespacedef-name-name-mlc-minilang-parser-ml-1889681719"></a>
 ### name
@@ -62,7 +62,7 @@ name
 Name associated with `NamespaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L409)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L411)
 
 <a id="field-field-mlc-minilang-parser-namespacedef-node-kind-node-kind-mlc-minilang-parser-ml-802364177"></a>
 ### node_kind
@@ -74,4 +74,4 @@ node_kind
 Node kind associated with `NamespaceDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L407)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L409)

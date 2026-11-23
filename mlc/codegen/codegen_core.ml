@@ -1602,6 +1602,7 @@ end function
 /// Exact integer results still retag/wrap to signed 61 bits before conversion
 /// back to double. Preserve the existing unordered/equal branch and f32 probe;
 /// the caller must not keep raw XMM0 across a call or a safepoint.
+/// @param state Current code-generation state and x64 assembler stream.
 function emit_normalize_xmm0_for_double_consumer(state)
   lid = new_label_id(state)
   l_int = "norm_double_int_" + lid

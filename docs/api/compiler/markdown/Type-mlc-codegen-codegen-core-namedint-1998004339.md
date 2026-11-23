@@ -12,7 +12,7 @@ struct NamedInt
 Represents named int.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L306)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L321)
 
 ## Members
 
@@ -26,7 +26,7 @@ key
 Key associated with `NamedInt`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L308)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L323)
 
 <a id="field-field-mlc-codegen-codegen-core-namedint-value-value-mlc-codegen-codegen-core-ml-746534384"></a>
 ### value
@@ -38,4 +38,4 @@ value
 Value associated with `NamedInt`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L310)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L325)

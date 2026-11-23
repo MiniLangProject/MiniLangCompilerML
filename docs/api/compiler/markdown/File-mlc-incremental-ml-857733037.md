@@ -14,6 +14,7 @@ Reachable from entry: **yes**
 - `mlc/cache_codec.ml` as `codec` → [mlc/cache_codec.ml](File-mlc-cache-codec-ml-1019638308.md)
 - `mlc/data.ml` as `d` → [mlc/data.ml](File-mlc-data-ml-557434521.md)
 - `mlc/incremental_ast.ml` as `ast` → [mlc/incremental_ast.ml](File-mlc-incremental-ast-ml-368481696.md)
+- `mlc/minilang_parser.ml` as `ml` → [mlc/minilang_parser.ml](File-mlc-minilang-parser-ml-1485036712.md)
 - `mlc/project.ml` as `project` → [mlc/project.ml](File-mlc-project-ml-1332928426.md)
 - `mlc/tools.ml` as `t` → [mlc/tools.ml](File-mlc-tools-ml-988451276.md)
 - `std/checksum/crc32.ml` as `crc32` → `std/checksum/crc32.ml` — external dependency
@@ -33,7 +34,7 @@ _cache
 Active cache is globally rooted across object-emitter collections.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L39)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L40)
 
 <a id="function-function-mlc-incremental-advance-function-advance-value-mlc-incremental-ml-1125236979"></a>
 ### advance
@@ -49,7 +50,7 @@ Fold section changes into the next fragment's input fingerprint.
 | `value` | `dynamic` | — | Primitive value to encode or fingerprint. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L193)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L195)
 
 <a id="function-function-mlc-incremental-begin-function-begin-state-fn-code-name-mlc-incremental-ml-1711623808"></a>
 ### begin
@@ -67,7 +68,7 @@ Start a fragment transaction and return its validated record, if any.
 | `code_name` | `dynamic` | — | Unique native symbol, including nested-function ownership. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L269)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L271)
 
 - [mlc.incremental.Cache](Type-mlc-incremental-cache-1516575215.md) — struct
 <a id="function-function-mlc-incremental-codeslice-function-codeslice-asm-start-mlc-incremental-ml-1122641071"></a>
@@ -85,7 +86,7 @@ Read only the new paged instruction bytes; never materialize the whole stream.
 | `start` | `dynamic` | — | First byte or record offset to include. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L386)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L388)
 
 <a id="function-function-mlc-incremental-configure-function-configure-directory-options-mlc-incremental-ml-1520143719"></a>
 ### configure
@@ -102,7 +103,7 @@ Configure optional caching. Compiler bytes, not version strings, identify codege
 | `options` | `dynamic` | — | Effective compiler options used for invalidation. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L44)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L45)
 
 <a id="function-function-mlc-incremental-count-function-count-chunks-tail-mlc-incremental-ml-1332936426"></a>
 ### count
@@ -119,7 +120,7 @@ Count chunked records without flattening an accumulated assembler.
 | `tail` | `dynamic` | — | Current partial assembler record chunk. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L229)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L231)
 
 <a id="function-function-mlc-incremental-datapatches-function-datapatches-items-mlc-incremental-ml-1706264950"></a>
 ### dataPatches
@@ -135,7 +136,7 @@ Project data relocations without native pointers or class names.
 | `items` | `dynamic` | — | Relocation records to project or validate. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L419)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L421)
 
 <a id="function-function-mlc-incremental-enabled-function-enabled-mlc-incremental-ml-134257110"></a>
 ### enabled
@@ -147,7 +148,7 @@ function enabled()
 Whether fragment caching is configured for this compilation.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L56)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L57)
 
 <a id="function-function-mlc-incremental-finish-function-finish-state-transaction-mlc-incremental-ml-1599860015"></a>
 ### finish
@@ -164,7 +165,7 @@ Complete a successful emission, atomically publish it, and advance the frontier.
 | `transaction` | `dynamic` | — | Cache key, checkpoint and optional saved fragment. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L430)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L432)
 
 <a id="function-function-mlc-incremental-initialize-function-initialize-state-mlc-incremental-ml-742290395"></a>
 ### initialize
@@ -180,7 +181,7 @@ Summarize initial labels, bytes, and pool entries once, not per function.
 | `state` | `dynamic` | — | Prepared code generator and its canonical output stream. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L202)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L204)
 
 <a id="function-function-mlc-incremental-loadtokens-function-loadtokens-source-mlc-incremental-ml-275655037"></a>
 ### loadTokens
@@ -196,7 +197,7 @@ Load a source- and compiler-specific packed token arena, if present.
 | `source` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L62)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L63)
 
 <a id="function-function-mlc-incremental-patches-function-patches-chunks-tail-start-mlc-incremental-ml-228459118"></a>
 ### patches
@@ -214,7 +215,7 @@ Project appended relocation records to primitive cache data.
 | `start` | `dynamic` | — | First byte or record offset to include. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L405)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L407)
 
 <a id="function-function-mlc-incremental-peephole-function-peephole-asm-mlc-incremental-ml-1459237629"></a>
 ### peephole
@@ -230,7 +231,7 @@ Optimizer state crossing a function boundary (normally empty after RET).
 | `asm` | `dynamic` | — | Assembler whose appended bytes or optimizer state is inspected. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L235)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L237)
 
 <a id="function-function-mlc-incremental-prepare-function-prepare-program-mlc-incremental-ml-2039093288"></a>
 ### prepare
@@ -246,7 +247,7 @@ Capture declarations before the frontend releases or mutates function bodies.
 | `program` | `dynamic` | — | Combined current AST before function bodies are released. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L100)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L101)
 
 <a id="function-function-mlc-incremental-recordsource-function-recordsource-filename-source-mlc-incremental-ml-1694551292"></a>
 ### recordSource
@@ -263,7 +264,7 @@ Capture exactly the input parsed by the frontend, including line mappings. Re-re
 | `source` | `dynamic` | — | Exact text read for parsing this module. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L261)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L263)
 
 <a id="function-function-mlc-incremental-replay-function-replay-state-transaction-mlc-incremental-ml-624128703"></a>
 ### replay
@@ -280,7 +281,7 @@ Restore code, relocation and accounting effects without rerunning lowering.
 | `transaction` | `dynamic` | — | Cache key, checkpoint and optional saved fragment. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L515)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L517)
 
 <a id="function-function-mlc-incremental-replaysections-function-replaysections-state-sections-mlc-incremental-ml-1099688919"></a>
 ### replaySections
@@ -297,7 +298,7 @@ Replay a previously validated append-only section journal.
 | `sections` | `dynamic` | — | Validated section bytes, labels, pools and relocations. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L481)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L483)
 
 <a id="function-function-mlc-incremental-report-function-report-mlc-incremental-ml-1561375244"></a>
 ### report
@@ -309,7 +310,7 @@ function report()
 Report real codegen reuse separately from the whole-build artifact cache.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L551)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L553)
 
 <a id="function-function-mlc-incremental-restorestate-function-restorestate-state-values-mlc-incremental-ml-1938508197"></a>
 ### restoreState
@@ -326,7 +327,7 @@ Restore exactly the persistent effects that normal function lowering produces.
 | `values` | `dynamic` | — | Previously validated stream-wide accounting values. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L166)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L168)
 
 <a id="function-function-mlc-incremental-seal-function-seal-state-contracts-mlc-incremental-ml-961346152"></a>
 ### seal
@@ -343,7 +344,7 @@ Include body-derived whole-program facts in every reuse decision.
 | `contracts` | `dynamic` | — | Body-derived callee contracts that can affect callers. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L138)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L139)
 
 <a id="function-function-mlc-incremental-sourceidentity-function-sourceidentity-filename-mlc-incremental-ml-2078511529"></a>
 ### sourceIdentity
@@ -359,7 +360,7 @@ Memoize source identities, including inline dependency debug locations.
 | `filename` | `dynamic` | — | Canonical source path recorded by the frontend. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L251)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L253)
 
 <a id="function-function-mlc-incremental-statevalues-function-statevalues-state-mlc-incremental-ml-204097125"></a>
 ### stateValues
@@ -375,7 +376,7 @@ Snapshot stream-wide effects, excluding disposable analysis arenas.
 | `state` | `dynamic` | — | Prepared code generator and its canonical output stream. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L155)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L157)
 
 <a id="function-function-mlc-incremental-storetokens-function-storetokens-source-record-mlc-incremental-ml-499940170"></a>
 ### storeTokens
@@ -392,7 +393,7 @@ Publish only primitive token columns; never deserialize executable ASTs.
 | `record` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L80)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L81)
 
 <a id="function-function-mlc-incremental-validpatches-function-validpatches-items-mlc-incremental-ml-1719536750"></a>
 ### validPatches
@@ -408,7 +409,7 @@ Check primitive relocation tuples before touching live codegen state.
 | `items` | `dynamic` | — | Relocation records to project or validate. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L314)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L316)
 
 <a id="function-function-mlc-incremental-validrecord-function-validrecord-record-start-mlc-incremental-ml-1966938323"></a>
 ### validRecord
@@ -425,4 +426,4 @@ Verify record shape and bounded offsets; a malformed cache is a miss.
 | `start` | `dynamic` | — | First byte or record offset to include. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L327)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L329)

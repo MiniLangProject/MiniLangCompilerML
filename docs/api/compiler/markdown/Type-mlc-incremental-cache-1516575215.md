@@ -12,7 +12,7 @@ struct Cache
 One build's cache state; no frontend AST is retained here.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L16)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L17)
 
 ## Members
 
@@ -24,7 +24,7 @@ castagnoli
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L29)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L30)
 
 <a id="field-field-mlc-incremental-cache-context-context-mlc-incremental-ml-2081066253"></a>
 ### context
@@ -36,7 +36,7 @@ context
 Prepared global semantic fingerprint.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L24)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L25)
 
 <a id="field-field-mlc-incremental-cache-declarations-declarations-mlc-incremental-ml-128487355"></a>
 ### declarations
@@ -48,7 +48,7 @@ declarations
 Declaration and inline-body fingerprint.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L22)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L23)
 
 <a id="field-field-mlc-incremental-cache-directory-directory-mlc-incremental-ml-926371373"></a>
 ### directory
@@ -60,7 +60,7 @@ directory
 Persistent directory containing one last generation per function.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L18)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L19)
 
 <a id="field-field-mlc-incremental-cache-files-files-mlc-incremental-ml-1256711089"></a>
 ### files
@@ -72,7 +72,7 @@ files
 Per-module content identities.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L26)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L27)
 
 <a id="field-field-mlc-incremental-cache-hits-hits-mlc-incremental-ml-1407742965"></a>
 ### hits
@@ -84,7 +84,7 @@ hits
 Reused, compiled, and invalid-entry counts.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L33)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L34)
 
 <a id="field-field-mlc-incremental-cache-ieee-ieee-mlc-incremental-ml-479185453"></a>
 ### ieee
@@ -96,7 +96,7 @@ ieee
 Rolling section/pool mutation identities.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L28)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L29)
 
 <a id="field-field-mlc-incremental-cache-initialized-initialized-mlc-incremental-ml-261357005"></a>
 ### initialized
@@ -108,7 +108,7 @@ initialized
 Whether the initial section frontier has been fingerprinted.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L31)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L32)
 
 <a id="field-field-mlc-incremental-cache-invalid-invalid-mlc-incremental-ml-1975146141"></a>
 ### invalid
@@ -118,7 +118,7 @@ invalid
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L35)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L36)
 
 <a id="field-field-mlc-incremental-cache-misses-misses-mlc-incremental-ml-1574666013"></a>
 ### misses
@@ -128,7 +128,7 @@ misses
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L34)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L35)
 
 <a id="field-field-mlc-incremental-cache-options-options-mlc-incremental-ml-1695239085"></a>
 ### options
@@ -140,4 +140,4 @@ options
 Compiler identity and effective options.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L20)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/incremental.ml#L21)

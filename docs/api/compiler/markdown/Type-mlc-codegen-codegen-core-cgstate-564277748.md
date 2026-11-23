@@ -100,6 +100,54 @@ Expr temp reg reserved associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L230)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-float-loop-disabled-float-loop-disabled-mlc-codegen-codegen-core-ml-497029837"></a>
+### _float_loop_disabled
+
+```ml
+_float_loop_disabled
+```
+
+Suppress the region hook while emitting its ordinary fallback.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L304)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-float-loop-raw-base-float-loop-raw-base-mlc-codegen-codegen-core-ml-1988022493"></a>
+### _float_loop_raw_base
+
+```ml
+_float_loop_raw_base
+```
+
+Private raw-number arena beyond every publishable expression root.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L298)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-float-loop-raw-size-float-loop-raw-size-mlc-codegen-codegen-core-ml-1133159645"></a>
+### _float_loop_raw_size
+
+```ml
+_float_loop_raw_size
+```
+
+Bytes reserved for bounded transactional float-loop state.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L300)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-float-loop-sites-float-loop-sites-mlc-codegen-codegen-core-ml-1084166915"></a>
+### _float_loop_sites
+
+```ml
+_float_loop_sites
+```
+
+Supported lexical while sites belonging to the active function frame.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L302)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-global-owner-file-global-owner-file-mlc-codegen-codegen-core-ml-1537112657"></a>
 ### _global_owner_file
 
@@ -756,6 +804,18 @@ Extern stub labels associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L140)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-field-write-contracts-field-write-contracts-mlc-codegen-codegen-core-ml-802141587"></a>
+### field_write_contracts
+
+```ml
+field_write_contracts
+```
+
+Validated field stores keyed by member name, and constructors by arity.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L308)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-file-prefix-map-file-prefix-map-mlc-codegen-codegen-core-ml-1325618887"></a>
 ### file_prefix_map
 
@@ -900,6 +960,18 @@ Function static obj labels associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L142)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-global-binding-contracts-global-binding-contracts-mlc-codegen-codegen-core-ml-1769159777"></a>
+### global_binding_contracts
+
+```ml
+global_binding_contracts
+```
+
+Type contracts indexed by qualified module storage name.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L306)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-global-slots-global-slots-mlc-codegen-codegen-core-ml-978148893"></a>
 ### global_slots
 
@@ -984,6 +1056,16 @@ In function associated with `CgState`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L100)
 
+<a id="field-field-mlc-codegen-codegen-core-cgstate-indirect-struct-contracts-indirect-struct-contracts-mlc-codegen-codegen-core-ml-775092095"></a>
+### indirect_struct_contracts
+
+```ml
+indirect_struct_contracts
+```
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L309)
+
 <a id="field-field-mlc-codegen-codegen-core-cgstate-inline-only-functions-inline-only-functions-mlc-codegen-codegen-core-ml-860078815"></a>
 ### inline_only_functions
 
@@ -1055,6 +1137,18 @@ Known int names associated with `CgState`.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L242)
+
+<a id="field-field-mlc-codegen-codegen-core-cgstate-known-numeric-value-types-known-numeric-value-types-mlc-codegen-codegen-core-ml-1688349927"></a>
+### known_numeric_value_types
+
+```ml
+known_numeric_value_types
+```
+
+Stronger facts consumed explicitly by new numeric lowering only.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_core.ml#L296)
 
 <a id="field-field-mlc-codegen-codegen-core-cgstate-known-value-types-known-value-types-mlc-codegen-codegen-core-ml-1246710971"></a>
 ### known_value_types

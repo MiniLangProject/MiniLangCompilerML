@@ -12,7 +12,7 @@ struct ExternFunctionDef
 Represents extern function def.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L902)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L904)
 
 ## Members
 
@@ -26,7 +26,7 @@ _filename
 Filename associated with `ExternFunctionDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L918)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L920)
 
 <a id="field-field-mlc-minilang-parser-externfunctiondef-pos-pos-mlc-minilang-parser-ml-2023430842"></a>
 ### _pos
@@ -38,7 +38,7 @@ _pos
 Pos associated with `ExternFunctionDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L916)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L918)
 
 <a id="field-field-mlc-minilang-parser-externfunctiondef-dll-dll-mlc-minilang-parser-ml-1729680832"></a>
 ### dll
@@ -50,7 +50,7 @@ dll
 Dll associated with `ExternFunctionDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L910)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L912)
 
 <a id="field-field-mlc-minilang-parser-externfunctiondef-name-name-mlc-minilang-parser-ml-1373054714"></a>
 ### name
@@ -62,7 +62,7 @@ name
 Name associated with `ExternFunctionDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L906)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L908)
 
 <a id="field-field-mlc-minilang-parser-externfunctiondef-node-kind-node-kind-mlc-minilang-parser-ml-658024224"></a>
 ### node_kind
@@ -74,7 +74,7 @@ node_kind
 Node kind associated with `ExternFunctionDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L904)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L906)
 
 <a id="field-field-mlc-minilang-parser-externfunctiondef-params-params-mlc-minilang-parser-ml-1502964164"></a>
 ### params
@@ -86,7 +86,7 @@ params
 Params associated with `ExternFunctionDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L908)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L910)
 
 <a id="field-field-mlc-minilang-parser-externfunctiondef-ret-ty-ret-ty-mlc-minilang-parser-ml-2101380498"></a>
 ### ret_ty
@@ -98,7 +98,7 @@ ret_ty
 Ret ty associated with `ExternFunctionDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L914)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L916)
 
 <a id="field-field-mlc-minilang-parser-externfunctiondef-symbol-name-symbol-name-mlc-minilang-parser-ml-1474071696"></a>
 ### symbol_name
@@ -110,4 +110,4 @@ symbol_name
 Symbol name associated with `ExternFunctionDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L912)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L914)

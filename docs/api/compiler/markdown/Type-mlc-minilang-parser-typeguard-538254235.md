@@ -40,6 +40,18 @@ Pos associated with `TypeGuard`.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L245)
 
+<a id="field-field-mlc-minilang-parser-typeguard-binding-write-binding-write-0-mlc-minilang-parser-ml-1247309361"></a>
+### binding_write
+
+```ml
+binding_write = 0
+```
+
+1 for a fixed declaration, 2 for a checked write, 3 for a typed-array copy.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L249)
+
 <a id="field-field-mlc-minilang-parser-typeguard-expr-expr-mlc-minilang-parser-ml-700326782"></a>
 ### expr
 

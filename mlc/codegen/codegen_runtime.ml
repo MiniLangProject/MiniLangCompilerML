@@ -3765,6 +3765,8 @@ function emit_typed_array_element_function(state)
   return state
 end function
 
+/// Emit the runtime helper for copying between checked array buffers.
+/// @param state Current code-generation state and x64 assembler stream.
 function emit_builtin_copyArray_function(state)
   state.asm = a.mark(state.asm, "fn_builtin_copyArray")
   lid = state.label_id

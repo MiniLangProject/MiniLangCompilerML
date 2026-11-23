@@ -26,7 +26,45 @@ function _advance()
 Parse or represent advance in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1901)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1909)
+
+<a id="function-function-mlc-minilang-parser-binding-in-frames-function-binding-in-frames-frames-name-mlc-minilang-parser-ml-452084247"></a>
+### _binding_in_frames
+
+```ml
+function _binding_in_frames(frames, name)
+```
+
+Resolve a local assignment in the current lexical frame chain. Frames carry an untyped sentinel so shadowing also masks a contract.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `frames` | `dynamic` | — |  |
+| `name` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6072)
+
+<a id="function-function-mlc-minilang-parser-binding-walk-function-binding-walk-body-frames-global-names-nested-consume-declarations-module-scope-mlc-minilang-parser-ml-17858362"></a>
+### _binding_walk
+
+```ml
+function _binding_walk(body, frames, global_names, nested, consume_declarations, module_scope)
+```
+
+Lower explicit and subsequent writes to source bindings.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `body` | `dynamic` | — |  |
+| `frames` | `dynamic` | — |  |
+| `global_names` | `dynamic` | — |  |
+| `nested` | `dynamic` | — |  |
+| `consume_declarations` | `dynamic` | — |  |
+| `module_scope` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6082)
 
 <a id="function-function-mlc-minilang-parser-canonical-type-name-function-canonical-type-name-raw-ty-mlc-minilang-parser-ml-248541986"></a>
 ### _canonical_type_name
@@ -42,7 +80,7 @@ Reports whether canonical type name.
 | `raw_ty` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2692)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2770)
 
 <a id="function-function-mlc-minilang-parser-charcode-function-charcode-ch-mlc-minilang-parser-ml-121231781"></a>
 ### _charCode
@@ -58,7 +96,7 @@ Parse or represent char code in the MiniLang front end.
 | `ch` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1002)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1004)
 
 <a id="function-function-mlc-minilang-parser-charfromcode-function-charfromcode-v-mlc-minilang-parser-ml-1255810508"></a>
 ### _charFromCode
@@ -74,7 +112,7 @@ Parse or represent char from code in the MiniLang front end.
 | `v` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1970)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1978)
 
 <a id="function-function-mlc-minilang-parser-chunked-finish-function-chunked-finish-chunks-tail-mlc-minilang-parser-ml-1957454160"></a>
 ### _chunked_finish
@@ -91,7 +129,7 @@ Parse or represent chunked finish in the MiniLang front end.
 | `tail` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1273)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1275)
 
 <a id="function-function-mlc-minilang-parser-chunked-merge-balanced-function-chunked-merge-balanced-chunks-mlc-minilang-parser-ml-1612726450"></a>
 ### _chunked_merge_balanced
@@ -107,7 +145,7 @@ Parse or represent chunked merge balanced in the MiniLang front end.
 | `chunks` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1209)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1211)
 
 <a id="function-function-mlc-minilang-parser-chunked-merge-with-tail-function-chunked-merge-with-tail-chunks-tail-arr-mlc-minilang-parser-ml-1736823946"></a>
 ### _chunked_merge_with_tail
@@ -124,7 +162,7 @@ Parse or represent chunked merge with tail in the MiniLang front end.
 | `tail_arr` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1241)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1243)
 
 <a id="function-function-mlc-minilang-parser-chunked-push-function-chunked-push-chunks-tail-value-cap-mlc-minilang-parser-ml-859819469"></a>
 ### _chunked_push
@@ -143,7 +181,7 @@ Parse or represent chunked push in the MiniLang front end.
 | `cap` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1183)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1185)
 
 <a id="function-function-mlc-minilang-parser-clear-error-function-clear-error-mlc-minilang-parser-ml-595574162"></a>
 ### _clear_error
@@ -155,7 +193,7 @@ function _clear_error()
 Releases or resets clear error.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1838)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1846)
 
 <a id="global-global-mlc-minilang-parser-collect-errors-collect-errors-mlc-minilang-parser-ml-878934478"></a>
 ### _collect_errors
@@ -167,7 +205,7 @@ _collect_errors
 Track collect errors compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1772)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1780)
 
 <a id="function-function-mlc-minilang-parser-compile-argument-pos-function-compile-argument-pos-line-argument-line-start-hash-col-mlc-minilang-parser-ml-1844994201"></a>
 ### _compile_argument_pos
@@ -186,7 +224,7 @@ Parse or represent compile argument pos in the MiniLang front end.
 | `hash_col` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4969)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5058)
 
 <a id="function-function-mlc-minilang-parser-compile-block-comment-state-function-compile-block-comment-state-line-in-block-mlc-minilang-parser-ml-1936692993"></a>
 ### _compile_block_comment_state
@@ -203,7 +241,7 @@ Parse or represent compile block comment state in the MiniLang front end.
 | `in_block` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4909)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4998)
 
 <a id="function-function-mlc-minilang-parser-compile-env-find-function-compile-env-find-env-name-mlc-minilang-parser-ml-1948646458"></a>
 ### _compile_env_find
@@ -220,7 +258,7 @@ Parse or represent compile env find in the MiniLang front end.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4599)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4688)
 
 <a id="function-function-mlc-minilang-parser-compile-env-get-function-compile-env-get-env-name-mlc-minilang-parser-ml-910740190"></a>
 ### _compile_env_get
@@ -237,7 +275,7 @@ Parse or represent compile env get in the MiniLang front end.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4615)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4704)
 
 <a id="function-function-mlc-minilang-parser-compile-env-has-function-compile-env-has-env-name-mlc-minilang-parser-ml-1596409926"></a>
 ### _compile_env_has
@@ -254,7 +292,7 @@ Parse or represent compile env has in the MiniLang front end.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4609)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4698)
 
 <a id="function-function-mlc-minilang-parser-compile-env-set-function-compile-env-set-env-name-value-mlc-minilang-parser-ml-323738911"></a>
 ### _compile_env_set
@@ -272,7 +310,7 @@ Parse or represent compile env set in the MiniLang front end.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4623)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4712)
 
 <a id="function-function-mlc-minilang-parser-compile-eval-function-compile-eval-text-env-filename-base-pos-mlc-minilang-parser-ml-704938159"></a>
 ### _compile_eval
@@ -291,7 +329,7 @@ Parse or represent compile eval in the MiniLang front end.
 | `base_pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4808)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4897)
 
 <a id="function-function-mlc-minilang-parser-compile-eval-node-function-compile-eval-node-expr-env-filename-base-pos-mlc-minilang-parser-ml-307143249"></a>
 ### _compile_eval_node
@@ -310,7 +348,7 @@ Parse or represent compile eval node in the MiniLang front end.
 | `base_pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4704)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4793)
 
 <a id="function-function-mlc-minilang-parser-compile-external-has-function-compile-external-has-name-mlc-minilang-parser-ml-1852269799"></a>
 ### _compile_external_has
@@ -326,7 +364,7 @@ Parse or represent compile external has in the MiniLang front end.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4881)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4970)
 
 <a id="global-global-mlc-minilang-parser-compile-external-values-compile-external-values-mlc-minilang-parser-ml-679147876"></a>
 ### _compile_external_values
@@ -338,7 +376,7 @@ _compile_external_values
 Track compile external values compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L952)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L954)
 
 <a id="function-function-mlc-minilang-parser-compile-frames-active-function-compile-frames-active-frames-mlc-minilang-parser-ml-1694676040"></a>
 ### _compile_frames_active
@@ -354,7 +392,7 @@ Parse or represent compile frames active in the MiniLang front end.
 | `frames` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4951)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5040)
 
 <a id="function-function-mlc-minilang-parser-compile-frames-pop-function-compile-frames-pop-frames-mlc-minilang-parser-ml-326002130"></a>
 ### _compile_frames_pop
@@ -370,7 +408,7 @@ Parse or represent compile frames pop in the MiniLang front end.
 | `frames` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4958)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5047)
 
 <a id="function-function-mlc-minilang-parser-compile-is-error-function-compile-is-error-value-mlc-minilang-parser-ml-1836513363"></a>
 ### _compile_is_error
@@ -386,7 +424,7 @@ Parse or represent compile is error in the MiniLang front end.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4567)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4656)
 
 <a id="function-function-mlc-minilang-parser-compile-is-predefined-function-compile-is-predefined-name-mlc-minilang-parser-ml-1217994489"></a>
 ### _compile_is_predefined
@@ -402,7 +440,7 @@ Parse or represent compile is predefined in the MiniLang front end.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4593)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4682)
 
 <a id="function-function-mlc-minilang-parser-compile-ltrim-index-function-compile-ltrim-index-line-mlc-minilang-parser-ml-1908960260"></a>
 ### _compile_ltrim_index
@@ -418,7 +456,7 @@ Parse or represent compile ltrim index in the MiniLang front end.
 | `line` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4887)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4976)
 
 <a id="function-function-mlc-minilang-parser-compile-maybe-has-directive-function-compile-maybe-has-directive-code-mlc-minilang-parser-ml-1924446191"></a>
 ### _compile_maybe_has_directive
@@ -434,7 +472,7 @@ Parse or represent compile maybe has directive in the MiniLang front end.
 | `code` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4999)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5088)
 
 <a id="function-function-mlc-minilang-parser-compile-node-pos-function-compile-node-pos-expr-base-pos-mlc-minilang-parser-ml-1928481161"></a>
 ### _compile_node_pos
@@ -451,7 +489,7 @@ Parse or represent compile node pos in the MiniLang front end.
 | `base_pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4678)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4767)
 
 <a id="function-function-mlc-minilang-parser-compile-numeric-text-function-compile-numeric-text-raw-mlc-minilang-parser-ml-1435050776"></a>
 ### _compile_numeric_text
@@ -467,7 +505,7 @@ Parse or represent compile numeric text in the MiniLang front end.
 | `raw` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4819)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4908)
 
 <a id="function-function-mlc-minilang-parser-compile-option-parts-function-compile-option-parts-argument-filename-argument-pos-mlc-minilang-parser-ml-311068180"></a>
 ### _compile_option_parts
@@ -485,7 +523,7 @@ Parse or represent compile option parts in the MiniLang front end.
 | `argument_pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4978)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5067)
 
 <a id="function-function-mlc-minilang-parser-compile-parse-cli-value-function-compile-parse-cli-value-raw-mlc-minilang-parser-ml-1275912900"></a>
 ### _compile_parse_cli_value
@@ -501,7 +539,7 @@ Parse or represent compile parse cli value in the MiniLang front end.
 | `raw` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4831)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4920)
 
 <a id="function-function-mlc-minilang-parser-compile-predefined-values-function-compile-predefined-values-mlc-minilang-parser-ml-758642802"></a>
 ### _compile_predefined_values
@@ -513,7 +551,7 @@ function _compile_predefined_values()
 Parse or represent compile predefined values in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4636)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4725)
 
 <a id="function-function-mlc-minilang-parser-compile-split-command-function-compile-split-command-body-mlc-minilang-parser-ml-203604230"></a>
 ### _compile_split_command
@@ -529,7 +567,7 @@ Parse or represent compile split command in the MiniLang front end.
 | `body` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4897)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4986)
 
 <a id="function-function-mlc-minilang-parser-compile-string-compare-function-compile-string-compare-left-right-mlc-minilang-parser-ml-1113506839"></a>
 ### _compile_string_compare
@@ -546,7 +584,7 @@ Parse or represent compile string compare in the MiniLang front end.
 | `right` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4686)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4775)
 
 <a id="global-global-mlc-minilang-parser-compile-target-abi-compile-target-abi-mlc-minilang-parser-ml-1281193878"></a>
 ### _compile_target_abi
@@ -558,7 +596,7 @@ _compile_target_abi
 Track compile target abi compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L956)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L958)
 
 <a id="global-global-mlc-minilang-parser-compile-target-format-compile-target-format-mlc-minilang-parser-ml-1012778146"></a>
 ### _compile_target_format
@@ -570,7 +608,7 @@ _compile_target_format
 Track compile target format compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L958)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L960)
 
 <a id="global-global-mlc-minilang-parser-compile-target-os-compile-target-os-mlc-minilang-parser-ml-172422456"></a>
 ### _compile_target_os
@@ -582,7 +620,7 @@ _compile_target_os
 Track compile target os compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L954)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L956)
 
 <a id="function-function-mlc-minilang-parser-compile-valid-name-function-compile-valid-name-name-mlc-minilang-parser-ml-1605972099"></a>
 ### _compile_valid_name
@@ -598,7 +636,7 @@ Parse or represent compile valid name in the MiniLang front end.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4573)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4662)
 
 <a id="function-function-mlc-minilang-parser-compile-value-type-function-compile-value-type-value-mlc-minilang-parser-ml-995657421"></a>
 ### _compile_value_type
@@ -614,7 +652,7 @@ Parse or represent compile value type in the MiniLang front end.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4585)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4674)
 
 <a id="function-function-mlc-minilang-parser-compound-assignment-base-function-compound-assignment-base-op-symbol-mlc-minilang-parser-ml-1157181954"></a>
 ### _compound_assignment_base
@@ -630,7 +668,7 @@ Returns the binary operator represented by a compound assignment token.
 | `op_symbol` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2175)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2183)
 
 <a id="function-function-mlc-minilang-parser-contains-function-contains-arr-value-mlc-minilang-parser-ml-2103954146"></a>
 ### _contains
@@ -647,7 +685,7 @@ Reports whether contains.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3088)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3168)
 
 <a id="function-function-mlc-minilang-parser-containsdot-function-containsdot-text-mlc-minilang-parser-ml-1728333545"></a>
 ### _containsDot
@@ -663,7 +701,7 @@ Reports whether contains dot.
 | `text` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2582)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2660)
 
 <a id="function-function-mlc-minilang-parser-decode-string-raw-function-decode-string-raw-raw-pos-mlc-minilang-parser-ml-1493201470"></a>
 ### _decode_string_raw
@@ -680,7 +718,7 @@ Returns decode string raw.
 | `pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2002)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2010)
 
 <a id="function-function-mlc-minilang-parser-decode-string-token-function-decode-string-token-tok-mlc-minilang-parser-ml-445520760"></a>
 ### _decode_string_token
@@ -696,7 +734,7 @@ Returns decode string token.
 | `tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2084)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2092)
 
 <a id="global-global-mlc-minilang-parser-errors-errors-mlc-minilang-parser-ml-1686618474"></a>
 ### _errors
@@ -708,7 +746,7 @@ _errors
 Track errors compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1776)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1784)
 
 <a id="function-function-mlc-minilang-parser-expect-block-nl-function-expect-block-nl-mlc-minilang-parser-ml-1670597970"></a>
 ### _expect_block_nl
@@ -720,7 +758,7 @@ function _expect_block_nl()
 Parse or represent expect block nl in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2819)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2899)
 
 <a id="function-function-mlc-minilang-parser-expect-end-of-function-expect-end-of-what-mlc-minilang-parser-ml-804933884"></a>
 ### _expect_end_of
@@ -736,7 +774,7 @@ Parse or represent expect end of in the MiniLang front end.
 | `what` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2835)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2915)
 
 <a id="function-function-mlc-minilang-parser-expect-kind-function-expect-kind-kind-mlc-minilang-parser-ml-1844846740"></a>
 ### _expect_kind
@@ -752,7 +790,7 @@ Parse or represent expect kind in the MiniLang front end.
 | `kind` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1931)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1939)
 
 <a id="function-function-mlc-minilang-parser-expect-value-function-expect-value-kind-value-mlc-minilang-parser-ml-731699205"></a>
 ### _expect_value
@@ -769,7 +807,7 @@ Parse or represent expect value in the MiniLang front end.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1942)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1950)
 
 <a id="global-global-mlc-minilang-parser-filename-filename-mlc-minilang-parser-ml-1544493118"></a>
 ### _filename
@@ -781,7 +819,7 @@ _filename
 Track filename compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1758)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1760)
 
 <a id="global-global-mlc-minilang-parser-func-depth-func-depth-mlc-minilang-parser-ml-1324726842"></a>
 ### _func_depth
@@ -793,7 +831,7 @@ _func_depth
 Track func depth compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1764)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1766)
 
 <a id="function-function-mlc-minilang-parser-has-error-function-has-error-mlc-minilang-parser-ml-1971325894"></a>
 ### _has_error
@@ -805,7 +843,7 @@ function _has_error()
 Reports whether has error.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1848)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1856)
 
 <a id="global-global-mlc-minilang-parser-has-last-error-has-last-error-mlc-minilang-parser-ml-2092681210"></a>
 ### _has_last_error
@@ -817,7 +855,7 @@ _has_last_error
 Track has last error compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1762)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1764)
 
 <a id="function-function-mlc-minilang-parser-hex-value-function-hex-value-ch-mlc-minilang-parser-ml-1017679913"></a>
 ### _hex_value
@@ -833,7 +871,7 @@ Parse or represent hex value in the MiniLang front end.
 | `ch` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1960)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1968)
 
 <a id="global-global-mlc-minilang-parser-i-i-mlc-minilang-parser-ml-828257026"></a>
 ### _i
@@ -845,7 +883,7 @@ _i
 Track i compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1754)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1756)
 
 <a id="function-function-mlc-minilang-parser-is-allowed-type-name-function-is-allowed-type-name-ty-mlc-minilang-parser-ml-162027275"></a>
 ### _is_allowed_type_name
@@ -861,7 +899,7 @@ Reports whether is allowed type name.
 | `ty` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2701)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2779)
 
 <a id="function-function-mlc-minilang-parser-is-case-value-continuation-start-function-is-case-value-continuation-start-tok-mlc-minilang-parser-ml-68020650"></a>
 ### _is_case_value_continuation_start
@@ -877,7 +915,7 @@ Reports whether is case value continuation start.
 | `tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3147)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3227)
 
 <a id="function-function-mlc-minilang-parser-is-end-of-function-is-end-of-what-mlc-minilang-parser-ml-1035425624"></a>
 ### _is_end_of
@@ -893,7 +931,7 @@ Reports whether is end of.
 | `what` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2828)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2908)
 
 <a id="function-function-mlc-minilang-parser-isalpha-function-isalpha-ch-mlc-minilang-parser-ml-393200357"></a>
 ### _isAlpha
@@ -909,7 +947,7 @@ Reports whether is alpha.
 | `ch` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1024)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1026)
 
 <a id="function-function-mlc-minilang-parser-isdigit-function-isdigit-ch-mlc-minilang-parser-ml-110395897"></a>
 ### _isDigit
@@ -925,7 +963,7 @@ Reports whether is digit.
 | `ch` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1010)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1012)
 
 <a id="function-function-mlc-minilang-parser-ishexdigit-function-ishexdigit-ch-mlc-minilang-parser-ml-9886191"></a>
 ### _isHexDigit
@@ -941,7 +979,7 @@ Reports whether is hex digit.
 | `ch` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1017)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1019)
 
 <a id="function-function-mlc-minilang-parser-isidentpart-function-isidentpart-ch-as-string-returns-bool-mlc-minilang-parser-ml-51937513"></a>
 ### _isIdentPart
@@ -957,7 +995,7 @@ Reports whether is ident part.
 | `ch` | `string` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1037)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1039)
 
 <a id="function-function-mlc-minilang-parser-isidentstart-function-isidentstart-ch-as-string-returns-bool-mlc-minilang-parser-ml-121077475"></a>
 ### _isIdentStart
@@ -973,7 +1011,7 @@ Reports whether is ident start.
 | `ch` | `string` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1031)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1033)
 
 <a id="function-function-mlc-minilang-parser-iskeyword-function-iskeyword-word-mlc-minilang-parser-ml-228355970"></a>
 ### _isKeyword
@@ -989,7 +1027,7 @@ Reports whether is keyword.
 | `word` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1043)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1045)
 
 <a id="global-global-mlc-minilang-parser-keywords-keywords-mlc-minilang-parser-ml-717974546"></a>
 ### _keywords
@@ -1001,7 +1039,7 @@ _keywords
 Track keywords compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L961)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L963)
 
 <a id="function-function-mlc-minilang-parser-lang-access-name-function-lang-access-name-qname-raw-mlc-minilang-parser-ml-1520633300"></a>
 ### _lang_access_name
@@ -1018,7 +1056,7 @@ Map member access from a class body to its hidden physical name.
 | `raw` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6306)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6572)
 
 <a id="function-function-mlc-minilang-parser-lang-access-typed-name-function-lang-access-typed-name-current-receiver-raw-mlc-minilang-parser-ml-744902934"></a>
 ### _lang_access_typed_name
@@ -1036,7 +1074,7 @@ Resolve nonpublic access against the declaring class and its ancestors.
 | `raw` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6440)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6706)
 
 <a id="function-function-mlc-minilang-parser-lang-add-unique-function-lang-add-unique-items-value-mlc-minilang-parser-ml-1937050863"></a>
 ### _lang_add_unique
@@ -1053,7 +1091,7 @@ Parse or represent lang add unique in the MiniLang front end.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5562)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5651)
 
 <a id="function-function-mlc-minilang-parser-lang-apply-contracts-function-lang-apply-contracts-fn-mlc-minilang-parser-ml-1085961450"></a>
 ### _lang_apply_contracts
@@ -1069,7 +1107,7 @@ Parse or represent lang apply contracts in the MiniLang front end.
 | `fn` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5298)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5387)
 
 <a id="function-function-mlc-minilang-parser-lang-apply-parameter-contracts-function-lang-apply-parameter-contracts-fn-mlc-minilang-parser-ml-975369642"></a>
 ### _lang_apply_parameter_contracts
@@ -1085,7 +1123,7 @@ Parse or represent lang apply parameter contracts in the MiniLang front end.
 | `fn` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5274)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5363)
 
 <a id="function-function-mlc-minilang-parser-lang-arr-has-function-lang-arr-has-items-wanted-mlc-minilang-parser-ml-12505773"></a>
 ### _lang_arr_has
@@ -1102,7 +1140,7 @@ Membership helper for declaration names.
 | `wanted` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6200)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6466)
 
 <a id="function-function-mlc-minilang-parser-lang-await-helper-function-lang-await-helper-mlc-minilang-parser-ml-1301921598"></a>
 ### _lang_await_helper
@@ -1114,7 +1152,7 @@ function _lang_await_helper()
 Parse or represent lang await helper in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5966)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6232)
 
 <a id="function-function-mlc-minilang-parser-lang-call-function-lang-call-name-args-node-mlc-minilang-parser-ml-1883001620"></a>
 ### _lang_call
@@ -1132,7 +1170,7 @@ Parse or represent lang call in the MiniLang front end.
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5216)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5305)
 
 <a id="function-function-mlc-minilang-parser-lang-class-find-method-function-lang-class-find-method-qname-method-name-mlc-minilang-parser-ml-585007063"></a>
 ### _lang_class_find_method
@@ -1149,7 +1187,7 @@ Find an effective method in a class hierarchy.
 | `method_name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6252)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6518)
 
 <a id="function-function-mlc-minilang-parser-lang-class-find-method-owner-function-lang-class-find-method-owner-qname-method-name-mlc-minilang-parser-ml-1376119467"></a>
 ### _lang_class_find_method_owner
@@ -1166,7 +1204,7 @@ Return the class that originally declared an effective method.
 | `method_name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6267)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6533)
 
 <a id="function-function-mlc-minilang-parser-lang-class-method-hidden-function-lang-class-method-hidden-st-name-mlc-minilang-parser-ml-316330768"></a>
 ### _lang_class_method_hidden
@@ -1183,7 +1221,7 @@ Physical dispatch name used for a source method.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6294)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6560)
 
 <a id="function-function-mlc-minilang-parser-lang-class-method-visibility-function-lang-class-method-visibility-st-name-mlc-minilang-parser-ml-712050468"></a>
 ### _lang_class_method_visibility
@@ -1200,7 +1238,7 @@ Lookup source visibility for a method declared by this class.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6282)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6548)
 
 <a id="function-function-mlc-minilang-parser-lang-collect-contracts-function-lang-collect-contracts-body-prefix-mlc-minilang-parser-ml-1632823090"></a>
 ### _lang_collect_contracts
@@ -1217,7 +1255,7 @@ Parse or represent lang collect contracts in the MiniLang front end.
 | `prefix` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6210)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6476)
 
 <a id="function-function-mlc-minilang-parser-lang-expand-class-function-lang-expand-class-item-visiting-mlc-minilang-parser-ml-1865848904"></a>
 ### _lang_expand_class
@@ -1234,7 +1272,7 @@ Resolve a class before contracts are checked and ordinary structs are collected.
 | `visiting` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6567)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6833)
 
 <a id="function-function-mlc-minilang-parser-lang-expand-classes-function-lang-expand-classes-program-mlc-minilang-parser-ml-501731874"></a>
 ### _lang_expand_classes
@@ -1250,7 +1288,7 @@ Resolve all class hierarchies before interface validation and codegen.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6654)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6920)
 
 <a id="function-function-mlc-minilang-parser-lang-expand-interface-function-lang-expand-interface-qname-path-mlc-minilang-parser-ml-592850977"></a>
 ### _lang_expand_interface
@@ -1267,7 +1305,7 @@ Expand inherited interface requirements and reject cycles or conflicts.
 | `path` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6783)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7049)
 
 <a id="function-function-mlc-minilang-parser-lang-fail-function-lang-fail-message-mlc-minilang-parser-ml-1582786325"></a>
 ### _lang_fail
@@ -1283,7 +1321,7 @@ Parse or represent lang fail in the MiniLang front end.
 | `message` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5179)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5268)
 
 <a id="function-function-mlc-minilang-parser-lang-find-interface-function-lang-find-interface-raw-name-prefix-mlc-minilang-parser-ml-339764222"></a>
 ### _lang_find_interface
@@ -1300,7 +1338,7 @@ Parse or represent lang find interface in the MiniLang front end.
 | `prefix` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6707)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6973)
 
 <a id="function-function-mlc-minilang-parser-lang-find-struct-item-function-lang-find-struct-item-raw-name-prefix-mlc-minilang-parser-ml-412005014"></a>
 ### _lang_find_struct_item
@@ -1317,7 +1355,7 @@ Find a class or struct declaration using the same namespace preference as interf
 | `prefix` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6231)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6497)
 
 <a id="function-function-mlc-minilang-parser-lang-fresh-function-lang-fresh-stem-mlc-minilang-parser-ml-625788787"></a>
 ### _lang_fresh
@@ -1333,7 +1371,7 @@ Parse or represent lang fresh in the MiniLang front end.
 | `stem` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5188)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5277)
 
 <a id="function-function-mlc-minilang-parser-lang-guard-returns-function-lang-guard-returns-body-return-type-return-optional-mlc-minilang-parser-ml-24790194"></a>
 ### _lang_guard_returns
@@ -1351,7 +1389,7 @@ Parse or represent lang guard returns in the MiniLang front end.
 | `return_optional` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5225)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5314)
 
 <a id="function-function-mlc-minilang-parser-lang-interface-qname-function-lang-interface-qname-raw-name-prefix-mlc-minilang-parser-ml-818476150"></a>
 ### _lang_interface_qname
@@ -1368,7 +1406,7 @@ Resolve an interface reference to its qualified declaration name.
 | `prefix` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6728)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6994)
 
 <a id="function-function-mlc-minilang-parser-lang-interface-signature-matches-function-lang-interface-signature-matches-required-actual-mlc-minilang-parser-ml-1141437533"></a>
 ### _lang_interface_signature_matches
@@ -1385,7 +1423,7 @@ Parse or represent lang interface signature matches in the MiniLang front end.
 | `actual` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6759)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7025)
 
 <a id="function-function-mlc-minilang-parser-lang-iterator-append-function-lang-iterator-append-yield-stmt-fn-names-mlc-minilang-parser-ml-1781774224"></a>
 ### _lang_iterator_append
@@ -1403,7 +1441,7 @@ Parse or represent lang iterator append in the MiniLang front end.
 | `names` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5449)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5538)
 
 <a id="function-function-mlc-minilang-parser-lang-lazy-collect-names-function-lang-lazy-collect-names-state-body-mlc-minilang-parser-ml-1375518483"></a>
 ### _lang_lazy_collect_names
@@ -1420,7 +1458,7 @@ Parse or represent lang lazy collect names in the MiniLang front end.
 | `body` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5667)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5756)
 
 <a id="function-function-mlc-minilang-parser-lang-lazy-compile-seq-function-lang-lazy-compile-seq-state-body-cont-break-target-continue-target-mlc-minilang-parser-ml-1854624785"></a>
 ### _lang_lazy_compile_seq
@@ -1440,7 +1478,7 @@ Parse or represent lang lazy compile seq in the MiniLang front end.
 | `continue_target` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5713)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5802)
 
 <a id="function-function-mlc-minilang-parser-lang-lazy-contains-yield-function-lang-lazy-contains-yield-st-mlc-minilang-parser-ml-940831165"></a>
 ### _lang_lazy_contains_yield
@@ -1456,7 +1494,7 @@ Parse or represent lang lazy contains yield in the MiniLang front end.
 | `st` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5611)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5700)
 
 <a id="function-function-mlc-minilang-parser-lang-lazy-jump-function-lang-lazy-jump-state-target-node-mlc-minilang-parser-ml-46189424"></a>
 ### _lang_lazy_jump
@@ -1474,7 +1512,7 @@ Parse or represent lang lazy jump in the MiniLang front end.
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5602)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5691)
 
 <a id="function-function-mlc-minilang-parser-lang-lazy-reserve-function-lang-lazy-reserve-state-mlc-minilang-parser-ml-79448599"></a>
 ### _lang_lazy_reserve
@@ -1490,7 +1528,7 @@ Parse or represent lang lazy reserve in the MiniLang front end.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5595)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5684)
 
 <a id="function-function-mlc-minilang-parser-lang-lower-async-function-lang-lower-async-fn-mlc-minilang-parser-ml-1610227462"></a>
 ### _lang_lower_async
@@ -1506,7 +1544,7 @@ Parse or represent lang lower async in the MiniLang front end.
 | `fn` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5929)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6195)
 
 <a id="function-function-mlc-minilang-parser-lang-lower-block-function-lang-lower-block-body-function-depth-mlc-minilang-parser-ml-809020114"></a>
 ### _lang_lower_block
@@ -1523,7 +1561,7 @@ Parse or represent lang lower block in the MiniLang front end.
 | `function_depth` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6170)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6436)
 
 <a id="function-function-mlc-minilang-parser-lang-lower-expr-function-lang-lower-expr-expr-prelude-mlc-minilang-parser-ml-824621110"></a>
 ### _lang_lower_expr
@@ -1540,7 +1578,7 @@ Parse or represent lang lower expr in the MiniLang front end.
 | `prelude` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5306)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5395)
 
 <a id="function-function-mlc-minilang-parser-lang-lower-iterator-function-lang-lower-iterator-fn-mlc-minilang-parser-ml-1990187370"></a>
 ### _lang_lower_iterator
@@ -1556,7 +1594,7 @@ Parse or represent lang lower iterator in the MiniLang front end.
 | `fn` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5523)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5612)
 
 <a id="function-function-mlc-minilang-parser-lang-lower-lazy-iterator-function-lang-lower-lazy-iterator-fn-mlc-minilang-parser-ml-1036584840"></a>
 ### _lang_lower_lazy_iterator
@@ -1572,7 +1610,7 @@ Parse or represent lang lower lazy iterator in the MiniLang front end.
 | `fn` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5888)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5977)
 
 <a id="function-function-mlc-minilang-parser-lang-lower-stmt-function-lang-lower-stmt-st-function-depth-mlc-minilang-parser-ml-1800530555"></a>
 ### _lang_lower_stmt
@@ -1589,7 +1627,7 @@ Parse or represent lang lower stmt in the MiniLang front end.
 | `function_depth` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6015)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6281)
 
 <a id="function-function-mlc-minilang-parser-lang-make-class-factories-function-lang-make-class-factories-mlc-minilang-parser-ml-1743427430"></a>
 ### _lang_make_class_factories
@@ -1601,7 +1639,7 @@ function _lang_make_class_factories()
 Generate one constructor body and fixed-arity entry points for class values.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6933)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7199)
 
 <a id="function-function-mlc-minilang-parser-lang-mangle-classes-function-lang-mangle-classes-mlc-minilang-parser-ml-25771846"></a>
 ### _lang_mangle_classes
@@ -1613,7 +1651,7 @@ function _lang_mangle_classes()
 Hide nonpublic class members after lexical access has been resolved.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6903)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7169)
 
 <a id="function-function-mlc-minilang-parser-lang-member-qname-function-lang-member-qname-expr-mlc-minilang-parser-ml-77403697"></a>
 ### _lang_member_qname
@@ -1629,7 +1667,7 @@ Read a qualified class name from a member chain.
 | `expr` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6483)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6749)
 
 <a id="function-function-mlc-minilang-parser-lang-method-receivers-function-lang-method-receivers-method-current-mlc-minilang-parser-ml-1501583412"></a>
 ### _lang_method_receivers
@@ -1646,7 +1684,7 @@ Infer stable class references from method parameters and local aliases.
 | `current` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6399)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6665)
 
 <a id="function-function-mlc-minilang-parser-lang-method-writes-function-lang-method-writes-body-mlc-minilang-parser-ml-1626532918"></a>
 ### _lang_method_writes
@@ -1662,7 +1700,7 @@ Collect writes to method locals so aliases are accepted only when stable.
 | `body` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6373)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6639)
 
 <a id="function-function-mlc-minilang-parser-lang-normalize-super-args-function-lang-normalize-super-args-expr-method-mlc-minilang-parser-ml-736283508"></a>
 ### _lang_normalize_super_args
@@ -1679,7 +1717,7 @@ Normalize a super call against the inherited source signature.
 | `method` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6507)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6773)
 
 <a id="function-function-mlc-minilang-parser-lang-num-function-lang-num-value-node-mlc-minilang-parser-ml-448227959"></a>
 ### _lang_num
@@ -1696,7 +1734,7 @@ Parse or represent lang num in the MiniLang front end.
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5204)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5293)
 
 <a id="function-function-mlc-minilang-parser-lang-receiver-get-function-lang-receiver-get-pairs-name-mlc-minilang-parser-ml-229832680"></a>
 ### _lang_receiver_get
@@ -1713,7 +1751,7 @@ Lookup a statically known instance receiver in the current method.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6348)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6614)
 
 <a id="function-function-mlc-minilang-parser-lang-receiver-set-function-lang-receiver-set-pairs-name-qname-mlc-minilang-parser-ml-2012244876"></a>
 ### _lang_receiver_set
@@ -1731,7 +1769,7 @@ Record a receiver type without creating duplicate names.
 | `qname` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6362)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6628)
 
 <a id="function-function-mlc-minilang-parser-lang-receiver-type-function-lang-receiver-type-name-mlc-minilang-parser-ml-1144396101"></a>
 ### _lang_receiver_type
@@ -1745,7 +1783,7 @@ function _lang_receiver_type(name)
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6356)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6622)
 
 <a id="function-function-mlc-minilang-parser-lang-remove-interfaces-function-lang-remove-interfaces-body-mlc-minilang-parser-ml-1622339556"></a>
 ### _lang_remove_interfaces
@@ -1761,7 +1799,7 @@ Parse or represent lang remove interfaces in the MiniLang front end.
 | `body` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7037)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7303)
 
 <a id="function-function-mlc-minilang-parser-lang-resolve-class-type-function-lang-resolve-class-type-raw-current-mlc-minilang-parser-ml-1961496897"></a>
 ### _lang_resolve_class_type
@@ -1778,7 +1816,7 @@ Resolve a source class name using the current namespace.
 | `current` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6334)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6600)
 
 <a id="function-function-mlc-minilang-parser-lang-rewrite-yields-function-lang-rewrite-yields-body-fn-names-mlc-minilang-parser-ml-1323349854"></a>
 ### _lang_rewrite_yields
@@ -1796,7 +1834,7 @@ Parse or represent lang rewrite yields in the MiniLang front end.
 | `names` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5478)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5567)
 
 <a id="function-function-mlc-minilang-parser-lang-select-helper-function-lang-select-helper-mlc-minilang-parser-ml-1613669244"></a>
 ### _lang_select_helper
@@ -1808,7 +1846,7 @@ function _lang_select_helper()
 Parse or represent lang select helper in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5984)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6250)
 
 <a id="function-function-mlc-minilang-parser-lang-sort-strings-function-lang-sort-strings-items-mlc-minilang-parser-ml-356175926"></a>
 ### _lang_sort_strings
@@ -1824,7 +1862,7 @@ Parse or represent lang sort strings in the MiniLang front end.
 | `items` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5569)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5658)
 
 <a id="function-function-mlc-minilang-parser-lang-static-access-name-function-lang-static-access-name-qname-receiver-raw-mlc-minilang-parser-ml-748377603"></a>
 ### _lang_static_access_name
@@ -1842,7 +1880,7 @@ Resolve a private or protected static call made from its declaring class.
 | `raw` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6495)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6761)
 
 <a id="function-function-mlc-minilang-parser-lang-validate-interfaces-function-lang-validate-interfaces-program-mlc-minilang-parser-ml-171382428"></a>
 ### _lang_validate_interfaces
@@ -1858,7 +1896,7 @@ Parse or represent lang validate interfaces in the MiniLang front end.
 | `program` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6848)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7114)
 
 <a id="function-function-mlc-minilang-parser-lang-var-function-lang-var-name-node-mlc-minilang-parser-ml-172090983"></a>
 ### _lang_var
@@ -1875,7 +1913,7 @@ Parse or represent lang var in the MiniLang front end.
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5198)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5287)
 
 <a id="function-function-mlc-minilang-parser-lang-void-function-lang-void-node-mlc-minilang-parser-ml-1408191438"></a>
 ### _lang_void
@@ -1891,7 +1929,7 @@ Parse or represent lang void in the MiniLang front end.
 | `node` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5210)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5299)
 
 <a id="global-global-mlc-minilang-parser-language-async-pool-name-language-async-pool-name-mlc-minilang-parser-ml-535461006"></a>
 ### _language_async_pool_name
@@ -1903,7 +1941,7 @@ _language_async_pool_name
 Track language async pool name compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5165)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5254)
 
 <a id="global-global-mlc-minilang-parser-language-await-file-language-await-file-mlc-minilang-parser-ml-1159632028"></a>
 ### _language_await_file
@@ -1915,7 +1953,7 @@ _language_await_file
 Track language await file compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5169)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5258)
 
 <a id="global-global-mlc-minilang-parser-language-await-pos-language-await-pos-mlc-minilang-parser-ml-1335344342"></a>
 ### _language_await_pos
@@ -1927,7 +1965,7 @@ _language_await_pos
 Track language await pos compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5167)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5256)
 
 <a id="global-global-mlc-minilang-parser-language-current-base-language-current-base-mlc-minilang-parser-ml-1381151328"></a>
 ### _language_current_base
@@ -1939,7 +1977,7 @@ _language_current_base
 Base class for the method currently passing through expression lowering.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6194)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6460)
 
 <a id="global-global-mlc-minilang-parser-language-current-class-language-current-class-mlc-minilang-parser-ml-329781242"></a>
 ### _language_current_class
@@ -1949,7 +1987,7 @@ _language_current_class
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6195)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6461)
 
 <a id="global-global-mlc-minilang-parser-language-current-receiver-types-language-current-receiver-types-mlc-minilang-parser-ml-57594748"></a>
 ### _language_current_receiver_types
@@ -1959,7 +1997,7 @@ _language_current_receiver_types
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6196)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6462)
 
 <a id="global-global-mlc-minilang-parser-language-expanded-classes-language-expanded-classes-mlc-minilang-parser-ml-548209562"></a>
 ### _language_expanded_classes
@@ -1971,7 +2009,7 @@ _language_expanded_classes
 Names of classes whose inheritance has been resolved.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6192)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6458)
 
 <a id="global-global-mlc-minilang-parser-language-failure-language-failure-mlc-minilang-parser-ml-1700825578"></a>
 ### _language_failure
@@ -1983,7 +2021,7 @@ _language_failure
 Track language failure compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5175)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5264)
 
 <a id="global-global-mlc-minilang-parser-language-interfaces-language-interfaces-mlc-minilang-parser-ml-2141610586"></a>
 ### _language_interfaces
@@ -1995,7 +2033,7 @@ _language_interfaces
 Track language interfaces compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6188)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6454)
 
 <a id="global-global-mlc-minilang-parser-language-needs-async-pool-language-needs-async-pool-mlc-minilang-parser-ml-1338149912"></a>
 ### _language_needs_async_pool
@@ -2007,7 +2045,7 @@ _language_needs_async_pool
 Track language needs async pool compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5163)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5252)
 
 <a id="global-global-mlc-minilang-parser-language-needs-await-language-needs-await-mlc-minilang-parser-ml-1576626934"></a>
 ### _language_needs_await
@@ -2019,7 +2057,7 @@ _language_needs_await
 Track language needs await compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5159)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5248)
 
 <a id="global-global-mlc-minilang-parser-language-needs-select-language-needs-select-mlc-minilang-parser-ml-432760030"></a>
 ### _language_needs_select
@@ -2031,7 +2069,7 @@ _language_needs_select
 Track language needs select compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5161)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5250)
 
 <a id="global-global-mlc-minilang-parser-language-select-file-language-select-file-mlc-minilang-parser-ml-1251553414"></a>
 ### _language_select_file
@@ -2043,7 +2081,7 @@ _language_select_file
 Track language select file compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5173)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5262)
 
 <a id="global-global-mlc-minilang-parser-language-select-pos-language-select-pos-mlc-minilang-parser-ml-1275235008"></a>
 ### _language_select_pos
@@ -2055,7 +2093,7 @@ _language_select_pos
 Track language select pos compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5171)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5260)
 
 <a id="global-global-mlc-minilang-parser-language-serial-language-serial-mlc-minilang-parser-ml-1058830922"></a>
 ### _language_serial
@@ -2067,7 +2105,7 @@ _language_serial
 Track language serial compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5157)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5246)
 
 <a id="global-global-mlc-minilang-parser-language-structs-language-structs-mlc-minilang-parser-ml-201932106"></a>
 ### _language_structs
@@ -2079,7 +2117,7 @@ _language_structs
 Track language structs compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6190)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6456)
 
 <a id="global-global-mlc-minilang-parser-last-error-last-error-mlc-minilang-parser-ml-1321459950"></a>
 ### _last_error
@@ -2091,7 +2129,7 @@ _last_error
 Track last error compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1760)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1762)
 
 <a id="function-function-mlc-minilang-parser-line-col-function-line-col-source-pos-mlc-minilang-parser-ml-36477455"></a>
 ### _line_col
@@ -2108,7 +2146,7 @@ Parse or represent line col in the MiniLang front end.
 | `pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1707)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1709)
 
 <a id="function-function-mlc-minilang-parser-match-kind-function-match-kind-kind-mlc-minilang-parser-ml-1282613646"></a>
 ### _match_kind
@@ -2124,7 +2162,7 @@ Parse or represent match kind in the MiniLang front end.
 | `kind` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1912)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1920)
 
 <a id="function-function-mlc-minilang-parser-match-number-has-dot-function-match-number-has-dot-text-mlc-minilang-parser-ml-193975663"></a>
 ### _match_number_has_dot
@@ -2140,7 +2178,7 @@ Parse or represent match number has dot in the MiniLang front end.
 | `text` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2572)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2650)
 
 <a id="function-function-mlc-minilang-parser-match-value-function-match-value-kind-value-mlc-minilang-parser-ml-1343077697"></a>
 ### _match_value
@@ -2157,7 +2195,7 @@ Parse or represent match value in the MiniLang front end.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1921)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1929)
 
 <a id="global-global-mlc-minilang-parser-max-errors-max-errors-mlc-minilang-parser-ml-1741374078"></a>
 ### _max_errors
@@ -2169,7 +2207,7 @@ _max_errors
 Track max errors compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1774)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1782)
 
 <a id="function-function-mlc-minilang-parser-new-function-node-function-new-function-node-name-params-body-is-static-is-inline-is-synchronized-param-types-param-optional-param-defaults-variadic-index-return-type-return-optional-is-async-is-iterator-pos-filename-mlc-minilang-parser-ml-1740795503"></a>
 ### _new_function_node
@@ -2200,7 +2238,7 @@ Keep compiler-internal closure fields centralized when surface syntax creates or
 | `filename` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L987)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L989)
 
 <a id="global-global-mlc-minilang-parser-ns-depth-ns-depth-mlc-minilang-parser-ml-736680906"></a>
 ### _ns_depth
@@ -2212,7 +2250,23 @@ _ns_depth
 Track ns depth compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1766)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1768)
+
+<a id="function-function-mlc-minilang-parser-parse-array-type-suffix-function-parse-array-type-suffix-name-mlc-minilang-parser-ml-685424973"></a>
+### _parse_array_type_suffix
+
+```ml
+function _parse_array_type_suffix(name)
+```
+
+Read the element contract without consuming an outer optional marker.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2477)
 
 <a id="function-function-mlc-minilang-parser-parse-asm-expr-function-parse-asm-expr-mlc-minilang-parser-ml-2137069054"></a>
 ### _parse_asm_expr
@@ -2224,7 +2278,7 @@ function _parse_asm_expr()
 Parse a typed symbolic inline x64 block.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2341)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2366)
 
 <a id="function-function-mlc-minilang-parser-parse-base-int-function-parse-base-int-raw-start-index-base-mlc-minilang-parser-ml-17195282"></a>
 ### _parse_base_int
@@ -2242,7 +2296,7 @@ Returns parse base int.
 | `base` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2096)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2104)
 
 <a id="function-function-mlc-minilang-parser-parse-block-until-function-parse-block-until-stop-keywords-end-type-start-pos-mlc-minilang-parser-ml-2139376230"></a>
 ### _parse_block_until
@@ -2260,7 +2314,7 @@ Returns parse block until.
 | `start_pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3162)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3242)
 
 <a id="function-function-mlc-minilang-parser-parse-block-until-end-function-parse-block-until-end-end-type-start-pos-mlc-minilang-parser-ml-1915823777"></a>
 ### _parse_block_until_end
@@ -2277,7 +2331,7 @@ Returns parse block until end.
 | `start_pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3053)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3133)
 
 <a id="function-function-mlc-minilang-parser-parse-call-arguments-function-parse-call-arguments-mlc-minilang-parser-ml-684252158"></a>
 ### _parse_call_arguments
@@ -2289,7 +2343,7 @@ function _parse_call_arguments()
 Returns parse call arguments.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2531)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2609)
 
 <a id="function-function-mlc-minilang-parser-parse-dotted-name-function-parse-dotted-name-mlc-minilang-parser-ml-475088762"></a>
 ### _parse_dotted_name
@@ -2301,7 +2355,7 @@ function _parse_dotted_name()
 Returns parse dotted name.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2849)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2929)
 
 <a id="function-function-mlc-minilang-parser-parse-expr-function-parse-expr-min-prec-mlc-minilang-parser-ml-1451801121"></a>
 ### _parse_expr
@@ -2317,7 +2371,7 @@ Returns parse expr.
 | `min_prec` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2707)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2785)
 
 <a id="function-function-mlc-minilang-parser-parse-expr-list-function-parse-expr-list-end-kind-mlc-minilang-parser-ml-471735646"></a>
 ### _parse_expr_list
@@ -2333,7 +2387,7 @@ Returns parse expr list.
 | `end_kind` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2191)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2199)
 
 <a id="function-function-mlc-minilang-parser-parse-extern-param-function-parse-extern-param-mlc-minilang-parser-ml-1936636852"></a>
 ### _parse_extern_param
@@ -2345,7 +2399,7 @@ function _parse_extern_param()
 Returns parse extern param.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2879)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2959)
 
 <a id="function-function-mlc-minilang-parser-parse-extern-param-list-function-parse-extern-param-list-end-kind-mlc-minilang-parser-ml-889062222"></a>
 ### _parse_extern_param_list
@@ -2361,7 +2415,7 @@ Returns parse extern param list.
 | `end_kind` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2906)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2986)
 
 <a id="function-function-mlc-minilang-parser-parse-float-literal-function-parse-float-literal-raw-mlc-minilang-parser-ml-1448544044"></a>
 ### _parse_float_literal
@@ -2377,7 +2431,7 @@ Returns parse float literal.
 | `raw` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2120)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2128)
 
 <a id="function-function-mlc-minilang-parser-parse-ident-list-function-parse-ident-list-end-kind-mlc-minilang-parser-ml-791848414"></a>
 ### _parse_ident_list
@@ -2393,7 +2447,7 @@ Returns parse ident list.
 | `end_kind` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2783)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2863)
 
 <a id="function-function-mlc-minilang-parser-parse-int-literal-function-parse-int-literal-raw-mlc-minilang-parser-ml-1603272168"></a>
 ### _parse_int_literal
@@ -2409,7 +2463,7 @@ Returns parse int literal.
 | `raw` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2108)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2116)
 
 <a id="function-function-mlc-minilang-parser-parse-namespace-def-function-parse-namespace-def-start-pos-mlc-minilang-parser-ml-467393215"></a>
 ### _parse_namespace_def
@@ -2425,7 +2479,7 @@ Returns parse namespace def.
 | `start_pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2932)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3012)
 
 <a id="function-function-mlc-minilang-parser-parse-parameter-list-function-parse-parameter-list-mlc-minilang-parser-ml-351279608"></a>
 ### _parse_parameter_list
@@ -2437,7 +2491,7 @@ function _parse_parameter_list()
 Returns parse parameter list.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2450)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2528)
 
 <a id="function-function-mlc-minilang-parser-parse-postfix-function-parse-postfix-mlc-minilang-parser-ml-956530126"></a>
 ### _parse_postfix
@@ -2449,7 +2503,7 @@ function _parse_postfix()
 Returns parse postfix.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2592)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2670)
 
 <a id="function-function-mlc-minilang-parser-parse-primary-function-parse-primary-mlc-minilang-parser-ml-186727750"></a>
 ### _parse_primary
@@ -2461,7 +2515,7 @@ function _parse_primary()
 Returns parse primary.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2217)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2225)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-function-parse-stmt-mlc-minilang-parser-ml-1644404112"></a>
 ### _parse_stmt
@@ -2473,7 +2527,7 @@ function _parse_stmt()
 Returns parse stmt.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3203)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3283)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-break-function-parse-stmt-break-start-pos-t-mlc-minilang-parser-ml-1876806755"></a>
 ### _parse_stmt_break
@@ -2490,7 +2544,7 @@ Returns parse stmt break.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3438)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3518)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-const-function-parse-stmt-const-start-pos-t-mlc-minilang-parser-ml-1610490731"></a>
 ### _parse_stmt_const
@@ -2507,7 +2561,7 @@ Returns parse stmt const.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3382)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3462)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-continue-function-parse-stmt-continue-start-pos-t-mlc-minilang-parser-ml-1042039421"></a>
 ### _parse_stmt_continue
@@ -2524,7 +2578,7 @@ Returns parse stmt continue.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3455)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3535)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-defer-function-parse-stmt-defer-start-pos-t-mlc-minilang-parser-ml-999751397"></a>
 ### _parse_stmt_defer
@@ -2541,7 +2595,7 @@ Returns parse stmt defer.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3535)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3615)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-enum-function-parse-stmt-enum-start-pos-t-mlc-minilang-parser-ml-817767041"></a>
 ### _parse_stmt_enum
@@ -2558,7 +2612,7 @@ Returns parse stmt enum.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4066)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4146)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-extern-function-parse-stmt-extern-start-pos-t-mlc-minilang-parser-ml-403281573"></a>
 ### _parse_stmt_extern
@@ -2575,7 +2629,7 @@ Returns parse stmt extern.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3555)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3635)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-for-function-parse-stmt-for-start-pos-t-mlc-minilang-parser-ml-1144812571"></a>
 ### _parse_stmt_for
@@ -2592,7 +2646,7 @@ Returns parse stmt for.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4406)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4486)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-function-function-parse-stmt-function-start-pos-t-mlc-minilang-parser-ml-95524909"></a>
 ### _parse_stmt_function
@@ -2609,7 +2663,7 @@ Returns parse stmt function.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4141)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4221)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-global-function-parse-stmt-global-start-pos-t-mlc-minilang-parser-ml-2138045605"></a>
 ### _parse_stmt_global
@@ -2626,7 +2680,7 @@ Returns parse stmt global.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3465)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3545)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-ident-function-parse-stmt-ident-start-pos-first-tok-mlc-minilang-parser-ml-1453814254"></a>
 ### _parse_stmt_ident
@@ -2643,7 +2697,7 @@ Returns parse stmt ident.
 | `first_tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4446)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4526)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-if-function-parse-stmt-if-start-pos-t-mlc-minilang-parser-ml-1322990389"></a>
 ### _parse_stmt_if
@@ -2660,7 +2714,7 @@ Returns parse stmt if.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4347)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4427)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-import-function-parse-stmt-import-start-pos-t-mlc-minilang-parser-ml-662978865"></a>
 ### _parse_stmt_import
@@ -2677,7 +2731,7 @@ Returns parse stmt import.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3350)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3430)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-interface-function-parse-stmt-interface-start-pos-tok-mlc-minilang-parser-ml-1030662077"></a>
 ### _parse_stmt_interface
@@ -2694,7 +2748,7 @@ Returns parse stmt interface.
 | `tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3649)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3729)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-loop-function-parse-stmt-loop-start-pos-t-mlc-minilang-parser-ml-117125565"></a>
 ### _parse_stmt_loop
@@ -2711,7 +2765,7 @@ Returns parse stmt loop.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4199)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4279)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-namespace-function-parse-stmt-namespace-start-pos-t-mlc-minilang-parser-ml-1071847403"></a>
 ### _parse_stmt_namespace
@@ -2728,7 +2782,7 @@ Returns parse stmt namespace.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3341)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3421)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-package-function-parse-stmt-package-start-pos-t-mlc-minilang-parser-ml-421259793"></a>
 ### _parse_stmt_package
@@ -2745,7 +2799,7 @@ Returns parse stmt package.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3316)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3396)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-print-function-parse-stmt-print-start-pos-t-mlc-minilang-parser-ml-256477979"></a>
 ### _parse_stmt_print
@@ -2762,7 +2816,7 @@ Returns parse stmt print.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3426)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3506)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-recover-function-parse-stmt-recover-stop-keywords-end-type-mlc-minilang-parser-ml-1546652525"></a>
 ### _parse_stmt_recover
@@ -2779,7 +2833,7 @@ Returns parse stmt recover.
 | `end_type` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4511)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4600)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-return-function-parse-stmt-return-start-pos-t-mlc-minilang-parser-ml-86255477"></a>
 ### _parse_stmt_return
@@ -2796,7 +2850,7 @@ Returns parse stmt return.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3496)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3576)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-struct-function-parse-stmt-struct-start-pos-t-mlc-minilang-parser-ml-1886394821"></a>
 ### _parse_stmt_struct
@@ -2813,7 +2867,7 @@ Returns parse stmt struct.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3710)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3790)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-switch-function-parse-stmt-switch-start-pos-t-mlc-minilang-parser-ml-1183801933"></a>
 ### _parse_stmt_switch
@@ -2830,7 +2884,7 @@ Returns parse stmt switch.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4252)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4332)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-synchronized-function-parse-stmt-synchronized-start-pos-t-mlc-minilang-parser-ml-2088041877"></a>
 ### _parse_stmt_synchronized
@@ -2847,7 +2901,7 @@ Returns parse stmt synchronized.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3398)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3478)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-while-function-parse-stmt-while-start-pos-t-mlc-minilang-parser-ml-272909159"></a>
 ### _parse_stmt_while
@@ -2864,7 +2918,7 @@ Returns parse stmt while.
 | `t` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4389)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4469)
 
 <a id="function-function-mlc-minilang-parser-parse-stmt-yield-function-parse-stmt-yield-start-pos-tok-mlc-minilang-parser-ml-1674674669"></a>
 ### _parse_stmt_yield
@@ -2881,7 +2935,7 @@ Returns parse stmt yield.
 | `tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3515)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3595)
 
 <a id="extern_function-extern-function-mlc-minilang-parser-parse-strtod-extern-function-parse-strtod-text-as-cstr-endptr-as-ptr-from-msvcrt-dll-symbol-strtod-returns-double-mlc-minilang-parser-ml-2007867238"></a>
 ### _parse_strtod
@@ -2910,7 +2964,7 @@ function _parse_type_ref()
 Returns parse type ref.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2432)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2457)
 
 <a id="function-function-mlc-minilang-parser-parse-unary-function-parse-unary-mlc-minilang-parser-ml-704063402"></a>
 ### _parse_unary
@@ -2922,7 +2976,7 @@ function _parse_unary()
 Returns parse unary.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2644)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2722)
 
 <a id="function-function-mlc-minilang-parser-parser-chunk-tail-from-array-function-parser-chunk-tail-from-array-arr-cap-mlc-minilang-parser-ml-1785272287"></a>
 ### _parser_chunk_tail_from_array
@@ -2939,7 +2993,7 @@ Returns parser chunk tail from array.
 | `cap` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1120)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1122)
 
 <a id="function-function-mlc-minilang-parser-parser-chunk-tail-len-function-parser-chunk-tail-len-tail-mlc-minilang-parser-ml-1487200976"></a>
 ### _parser_chunk_tail_len
@@ -2955,7 +3009,7 @@ Returns parser chunk tail len.
 | `tail` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1134)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1136)
 
 <a id="function-function-mlc-minilang-parser-parser-chunk-tail-new-function-parser-chunk-tail-new-cap-mlc-minilang-parser-ml-299071438"></a>
 ### _parser_chunk_tail_new
@@ -2971,7 +3025,7 @@ Returns parser chunk tail new.
 | `cap` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1112)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1114)
 
 <a id="function-function-mlc-minilang-parser-parser-chunk-tail-to-array-function-parser-chunk-tail-to-array-tail-mlc-minilang-parser-ml-974082346"></a>
 ### _parser_chunk_tail_to_array
@@ -2987,7 +3041,7 @@ Returns parser chunk tail to array.
 | `tail` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1147)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1149)
 
 <a id="function-function-mlc-minilang-parser-parser-chunk-unwrap-value-function-parser-chunk-unwrap-value-value-mlc-minilang-parser-ml-257964935"></a>
 ### _parser_chunk_unwrap_value
@@ -3003,7 +3057,7 @@ Returns parser chunk unwrap value.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1100)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1102)
 
 <a id="global-global-mlc-minilang-parser-parser-chunk-void-sentinel-parser-chunk-void-sentinel-mlc-minilang-parser-ml-745592910"></a>
 ### _parser_chunk_void_sentinel
@@ -3015,7 +3069,7 @@ _parser_chunk_void_sentinel
 Track parser chunk void sentinel compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1087)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1089)
 
 <a id="function-function-mlc-minilang-parser-parser-chunk-wrap-value-function-parser-chunk-wrap-value-value-mlc-minilang-parser-ml-1167373083"></a>
 ### _parser_chunk_wrap_value
@@ -3031,7 +3085,7 @@ Returns parser chunk wrap value.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1091)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1093)
 
 <a id="function-function-mlc-minilang-parser-peek-function-peek-mlc-minilang-parser-ml-336315198"></a>
 ### _peek
@@ -3043,7 +3097,7 @@ function _peek()
 Parse or represent peek in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1877)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1885)
 
 <a id="function-function-mlc-minilang-parser-peek2-function-peek2-mlc-minilang-parser-ml-947026934"></a>
 ### _peek2
@@ -3055,7 +3109,7 @@ function _peek2()
 Parse or represent peek2 in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1889)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1897)
 
 <a id="function-function-mlc-minilang-parser-peek3-function-peek3-mlc-minilang-parser-ml-1307291770"></a>
 ### _peek3
@@ -3067,7 +3121,7 @@ function _peek3()
 Parse or represent peek3 in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2072)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2080)
 
 <a id="function-function-mlc-minilang-parser-peek-non-nl-function-peek-non-nl-mlc-minilang-parser-ml-267832150"></a>
 ### _peek_non_nl
@@ -3079,7 +3133,7 @@ function _peek_non_nl()
 Parse or represent peek non nl in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2863)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2943)
 
 <a id="function-function-mlc-minilang-parser-precedence-function-precedence-op-mlc-minilang-parser-ml-311473671"></a>
 ### _precedence
@@ -3095,7 +3149,7 @@ Parse or represent precedence in the MiniLang front end.
 | `op` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2128)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2136)
 
 <a id="function-function-mlc-minilang-parser-record-error-function-record-error-err-mlc-minilang-parser-ml-104933803"></a>
 ### _record_error
@@ -3111,7 +3165,7 @@ Parse or represent record error in the MiniLang front end.
 | `err` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3098)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3178)
 
 <a id="function-function-mlc-minilang-parser-repeat-function-repeat-text-n-mlc-minilang-parser-ml-457637029"></a>
 ### _repeat
@@ -3128,7 +3182,7 @@ Parse or represent repeat in the MiniLang front end.
 | `n` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1693)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1695)
 
 <a id="function-function-mlc-minilang-parser-replacedotswithslash-function-replacedotswithslash-name-mlc-minilang-parser-ml-1287845457"></a>
 ### _replaceDotsWithSlash
@@ -3144,7 +3198,7 @@ Parse or represent replace dots with slash in the MiniLang front end.
 | `name` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4532)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4621)
 
 <a id="function-function-mlc-minilang-parser-reset-function-reset-tokens-source-filename-collect-errors-max-errors-mlc-minilang-parser-ml-1225112460"></a>
 ### _reset
@@ -3164,7 +3218,7 @@ Releases or resets reset.
 | `max_errors` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1857)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1865)
 
 <a id="global-global-mlc-minilang-parser-seen-nonpackage-toplevel-stmt-seen-nonpackage-toplevel-stmt-mlc-minilang-parser-ml-2079644968"></a>
 ### _seen_nonpackage_toplevel_stmt
@@ -3176,7 +3230,7 @@ _seen_nonpackage_toplevel_stmt
 Track seen nonpackage toplevel stmt compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1770)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1772)
 
 <a id="global-global-mlc-minilang-parser-seen-package-seen-package-mlc-minilang-parser-ml-153827270"></a>
 ### _seen_package
@@ -3188,7 +3242,7 @@ _seen_package
 Track seen package compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1768)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1770)
 
 <a id="function-function-mlc-minilang-parser-set-error-function-set-error-message-pos-mlc-minilang-parser-ml-1563176001"></a>
 ### _set_error
@@ -3205,7 +3259,7 @@ Updates set error.
 | `pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1827)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1835)
 
 <a id="function-function-mlc-minilang-parser-skip-newlines-function-skip-newlines-mlc-minilang-parser-ml-1349351774"></a>
 ### _skip_newlines
@@ -3217,7 +3271,7 @@ function _skip_newlines()
 Parse or represent skip newlines in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1953)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1961)
 
 <a id="function-function-mlc-minilang-parser-skip-stmt-seps-function-skip-stmt-seps-mlc-minilang-parser-ml-447601712"></a>
 ### _skip_stmt_seps
@@ -3229,7 +3283,7 @@ function _skip_stmt_seps()
 Parse or represent skip stmt seps in the MiniLang front end.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2809)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2889)
 
 <a id="global-global-mlc-minilang-parser-source-source-mlc-minilang-parser-ml-434310726"></a>
 ### _source
@@ -3241,7 +3295,7 @@ _source
 Track source compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1756)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1758)
 
 <a id="function-function-mlc-minilang-parser-substr-function-substr-text-start-length-mlc-minilang-parser-ml-1655674179"></a>
 ### _substr
@@ -3259,7 +3313,7 @@ Parse or represent substr in the MiniLang front end.
 | `length` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L993)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L995)
 
 <a id="function-function-mlc-minilang-parser-sync-stmt-function-sync-stmt-stop-keywords-end-type-mlc-minilang-parser-ml-1693418281"></a>
 ### _sync_stmt
@@ -3276,7 +3330,7 @@ Parse or represent sync stmt in the MiniLang front end.
 | `end_type` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3109)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L3189)
 
 <a id="function-function-mlc-minilang-parser-tok-desc-function-tok-desc-tok-mlc-minilang-parser-ml-353689570"></a>
 ### _tok_desc
@@ -3308,7 +3362,7 @@ Converts tok kind.
 | `tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1796)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1804)
 
 <a id="function-function-mlc-minilang-parser-tok-kind-id-inline-function-tok-kind-id-tok-mlc-minilang-parser-ml-940568509"></a>
 ### _tok_kind_id
@@ -3324,7 +3378,7 @@ Parse or represent inline in the MiniLang front end.
 | `tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1786)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1794)
 
 <a id="function-function-mlc-minilang-parser-tok-pos-inline-function-tok-pos-tok-mlc-minilang-parser-ml-1463903453"></a>
 ### _tok_pos
@@ -3340,7 +3394,7 @@ Parse or represent inline in the MiniLang front end.
 | `tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1817)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1825)
 
 <a id="function-function-mlc-minilang-parser-tok-text-part-function-tok-text-part-v-mlc-minilang-parser-ml-396664280"></a>
 ### _tok_text_part
@@ -3372,7 +3426,7 @@ Parse or represent inline in the MiniLang front end.
 | `tok` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1802)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1810)
 
 <a id="function-function-mlc-minilang-parser-token-arena-grow-function-token-arena-grow-arena-mlc-minilang-parser-ml-2029556189"></a>
 ### _token_arena_grow
@@ -3388,7 +3442,7 @@ Converts token arena grow.
 | `arena` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1382)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1384)
 
 <a id="function-function-mlc-minilang-parser-token-arena-new-function-token-arena-new-source-len-mlc-minilang-parser-ml-349777331"></a>
 ### _token_arena_new
@@ -3404,7 +3458,7 @@ Converts token arena new.
 | `source_len` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1304)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1306)
 
 <a id="function-function-mlc-minilang-parser-token-count-inline-function-token-count-tokens-mlc-minilang-parser-ml-93148851"></a>
 ### _token_count
@@ -3420,7 +3474,7 @@ Parse or represent inline in the MiniLang front end.
 | `tokens` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1780)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1788)
 
 <a id="function-function-mlc-minilang-parser-token-fixed-value-inline-function-token-fixed-value-kind-mlc-minilang-parser-ml-1959595933"></a>
 ### _token_fixed_value
@@ -3436,7 +3490,7 @@ Parse or represent inline in the MiniLang front end.
 | `kind` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1368)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1370)
 
 <a id="function-function-mlc-minilang-parser-token-kind-name-function-token-kind-name-kind-id-mlc-minilang-parser-ml-1488996580"></a>
 ### _token_kind_name
@@ -3452,7 +3506,7 @@ Converts token kind name.
 | `kind_id` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1284)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1286)
 
 <a id="function-function-mlc-minilang-parser-token-pos-read-inline-function-token-pos-read-buf-index-mlc-minilang-parser-ml-680922676"></a>
 ### _token_pos_read
@@ -3469,7 +3523,7 @@ Parse or represent inline in the MiniLang front end.
 | `index` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1340)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1342)
 
 <a id="function-function-mlc-minilang-parser-token-pos-write-function-token-pos-write-buf-index-value-mlc-minilang-parser-ml-800373794"></a>
 ### _token_pos_write
@@ -3487,7 +3541,7 @@ Converts token pos write.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1334)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1336)
 
 <a id="function-function-mlc-minilang-parser-token-push-function-token-push-arena-tail-kind-value-pos-mlc-minilang-parser-ml-55978270"></a>
 ### _token_push
@@ -3507,7 +3561,7 @@ Converts token push.
 | `pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1401)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1403)
 
 <a id="function-function-mlc-minilang-parser-token-text-store-function-token-text-store-arena-kind-value-mlc-minilang-parser-ml-1527974076"></a>
 ### _token_text_store
@@ -3525,7 +3579,7 @@ Converts token text store.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1346)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1348)
 
 <a id="function-function-mlc-minilang-parser-token-u32-read-inline-function-token-u32-read-buf-index-mlc-minilang-parser-ml-1385632836"></a>
 ### _token_u32_read
@@ -3542,7 +3596,7 @@ Parse or represent inline in the MiniLang front end.
 | `index` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1325)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1327)
 
 <a id="function-function-mlc-minilang-parser-token-u32-write-function-token-u32-write-buf-index-value-mlc-minilang-parser-ml-1588777074"></a>
 ### _token_u32_write
@@ -3560,7 +3614,7 @@ Converts token u32 write.
 | `value` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1315)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1317)
 
 <a id="global-global-mlc-minilang-parser-tokens-tokens-mlc-minilang-parser-ml-2015272622"></a>
 ### _tokens
@@ -3572,7 +3626,47 @@ _tokens
 Track tokens compiler state.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1752)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1754)
+
+<a id="function-function-mlc-minilang-parser-typed-array-element-code-function-typed-array-element-code-name-mlc-minilang-parser-ml-1428387169"></a>
+### _typed_array_element_code
+
+```ml
+function _typed_array_element_code(name)
+```
+
+Encode the primitive element type in the typed array header.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2498)
+
+<a id="global-global-mlc-minilang-parser-typed-array-syntax-seen-typed-array-syntax-seen-mlc-minilang-parser-ml-31856924"></a>
+### _typed_array_syntax_seen
+
+```ml
+_typed_array_syntax_seen
+```
+
+Whether this compilation uses typed-array headers.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1778)
+
+<a id="global-global-mlc-minilang-parser-typed-binding-declarations-seen-typed-binding-declarations-seen-mlc-minilang-parser-ml-835688296"></a>
+### _typed_binding_declarations_seen
+
+```ml
+_typed_binding_declarations_seen
+```
+
+Whether this compilation has parsed a fixed variable declaration.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1775)
 
 <a id="function-function-mlc-minilang-parser-unknownchar-function-unknownchar-code-pos-mlc-minilang-parser-ml-1408950211"></a>
 ### _unknownChar
@@ -3589,12 +3683,62 @@ Parse or represent unknown char in the MiniLang front end.
 | `pos` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1054)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1056)
+
+<a id="function-function-mlc-minilang-parser-apply-local-binding-contracts-function-apply-local-binding-contracts-fn-inherited-consume-declarations-false-mlc-minilang-parser-ml-1761458815"></a>
+### apply_local_binding_contracts
+
+```ml
+function apply_local_binding_contracts(fn, inherited = [], consume_declarations = false)
+```
+
+Resolve lexical writes before codegen makes copies for inlining.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `fn` | `dynamic` | — |  |
+| `inherited` | `dynamic` | `[]` |  |
+| `consume_declarations` | `dynamic` | `false` |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6154)
+
+<a id="function-function-mlc-minilang-parser-apply-module-binding-contracts-function-apply-module-binding-contracts-program-mlc-minilang-parser-ml-420962422"></a>
+### apply_module_binding_contracts
+
+```ml
+function apply_module_binding_contracts(program)
+```
+
+Apply contracts to variables scoped to a module initializer block.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `program` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6189)
 
 - [mlc.minilang_parser.ArrayLit](Type-mlc-minilang-parser-arraylit-656474808.md) — struct
 - [mlc.minilang_parser.AsmExpr](Type-mlc-minilang-parser-asmexpr-44308314.md) — struct
 - [mlc.minilang_parser.Assign](Type-mlc-minilang-parser-assign-1007761259.md) — struct
 - [mlc.minilang_parser.Bin](Type-mlc-minilang-parser-bin-1998589439.md) — struct
+<a id="function-function-mlc-minilang-parser-binding-type-key-function-binding-type-key-name-mlc-minilang-parser-ml-1828433865"></a>
+### binding_type_key
+
+```ml
+function binding_type_key(name)
+```
+
+Normalize primitive spellings while preserving qualified type names.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6026)
+
 - [mlc.minilang_parser.Bool](Type-mlc-minilang-parser-bool-603315534.md) — struct
 - [mlc.minilang_parser.Break](Type-mlc-minilang-parser-break-1655790281.md) — struct
 - [mlc.minilang_parser.Call](Type-mlc-minilang-parser-call-1897501670.md) — struct
@@ -3604,6 +3748,22 @@ Parse or represent unknown char in the MiniLang front end.
 - [mlc.minilang_parser.CompileValue](Type-mlc-minilang-parser-compilevalue-2038743176.md) — struct
 - [mlc.minilang_parser.ConstDecl](Type-mlc-minilang-parser-constdecl-754746585.md) — struct
 - [mlc.minilang_parser.Continue](Type-mlc-minilang-parser-continue-985699467.md) — struct
+<a id="function-function-mlc-minilang-parser-declares-binding-type-function-declares-binding-type-st-mlc-minilang-parser-ml-319379957"></a>
+### declares_binding_type
+
+```ml
+function declares_binding_type(st)
+```
+
+Distinguish fixed declarations from the original single-write contracts.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `st` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6065)
+
 - [mlc.minilang_parser.Defer](Type-mlc-minilang-parser-defer-1019681826.md) — struct
 - [mlc.minilang_parser.DeferredCapture](Type-mlc-minilang-parser-deferredcapture-1728292781.md) — struct
 - [mlc.minilang_parser.DoWhile](Type-mlc-minilang-parser-dowhile-251897496.md) — struct
@@ -3631,10 +3791,52 @@ Converts format error.
 | `kind` | `dynamic` | — | Value supplied for `kind`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1729)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1731)
 
 - [mlc.minilang_parser.FunctionDef](Type-mlc-minilang-parser-functiondef-216648509.md) — struct
 - [mlc.minilang_parser.GlobalDecl](Type-mlc-minilang-parser-globaldecl-403376821.md) — struct
+<a id="function-function-mlc-minilang-parser-guard-binding-write-function-guard-binding-write-st-contract-qualify-false-mlc-minilang-parser-ml-1182567172"></a>
+### guard_binding_write
+
+```ml
+function guard_binding_write(st, contract, qualify = false)
+```
+
+Keep an established type contract on a write before its store.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `st` | `dynamic` | — |  |
+| `contract` | `dynamic` | — |  |
+| `qualify` | `dynamic` | `false` |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6040)
+
+<a id="function-function-mlc-minilang-parser-has-typed-arrays-function-has-typed-arrays-mlc-minilang-parser-ml-524225278"></a>
+### has_typed_arrays
+
+```ml
+function has_typed_arrays()
+```
+
+Report whether generated stores must recognize typed array contracts.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2522)
+
+<a id="function-function-mlc-minilang-parser-has-typed-binding-declarations-function-has-typed-binding-declarations-mlc-minilang-parser-ml-1142996226"></a>
+### has_typed_binding_declarations
+
+```ml
+function has_typed_binding_declarations()
+```
+
+Avoid an extra AST walk for programs using only the original syntax.
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6183)
+
 - [mlc.minilang_parser.If](Type-mlc-minilang-parser-if-362822741.md) — struct
 - [mlc.minilang_parser.Import](Type-mlc-minilang-parser-import-1360417695.md) — struct
 - [mlc.minilang_parser.Index](Type-mlc-minilang-parser-index-874095030.md) — struct
@@ -3651,7 +3853,7 @@ function language_interface_names()
 Names retained for runtime interface type checks after declarations are lowered.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6747)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7013)
 
 - [mlc.minilang_parser.LazyIteratorState](Type-mlc-minilang-parser-lazyiteratorstate-395155783.md) — struct
 - [mlc.minilang_parser.Member](Type-mlc-minilang-parser-member-2130365468.md) — struct
@@ -3673,7 +3875,7 @@ Creates new parse error.
 | `filename` | `dynamic` | — | Value supplied for `filename`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L981)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L983)
 
 <a id="function-function-mlc-minilang-parser-newtoken-function-newtoken-kind-value-pos-mlc-minilang-parser-ml-1173034097"></a>
 ### newToken
@@ -3691,7 +3893,7 @@ Creates new token.
 | `pos` | `dynamic` | — | Value supplied for `pos`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L973)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L975)
 
 - [mlc.minilang_parser.Num](Type-mlc-minilang-parser-num-328799274.md) — struct
 <a id="function-function-mlc-minilang-parser-operator-method-name-function-operator-method-name-op-symbol-arity-mlc-minilang-parser-ml-311626071"></a>
@@ -3709,7 +3911,7 @@ Maps one supported source operator and arity to its reserved static method.
 | `arity` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2145)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2153)
 
 - [mlc.minilang_parser.ParameterList](Type-mlc-minilang-parser-parameterlist-241020273.md) — struct
 <a id="function-function-mlc-minilang-parser-parse-expression-function-parse-expression-source-filename-mlc-minilang-parser-ml-299887402"></a>
@@ -3727,7 +3929,7 @@ Returns parse expression.
 | `filename` | `dynamic` | — | Value supplied for `filename`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4548)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4637)
 
 <a id="function-function-mlc-minilang-parser-parse-program-function-parse-program-source-filename-mlc-minilang-parser-ml-1849808790"></a>
 ### parse_program
@@ -3744,7 +3946,7 @@ Returns parse program.
 | `filename` | `dynamic` | — | Value supplied for `filename`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7100)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7366)
 
 <a id="function-function-mlc-minilang-parser-parse-program-keepgoing-function-parse-program-keepgoing-source-filename-max-errors-mlc-minilang-parser-ml-2140012046"></a>
 ### parse_program_keepgoing
@@ -3762,7 +3964,7 @@ Returns parse program keepgoing.
 | `max_errors` | `dynamic` | — | Value supplied for `max_errors`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7136)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7402)
 
 <a id="function-function-mlc-minilang-parser-parse-program-tokens-function-parse-program-tokens-source-filename-toks-mlc-minilang-parser-ml-957410717"></a>
 ### parse_program_tokens
@@ -3780,7 +3982,7 @@ Parse caller-supplied tokens, used by the persistent lexer cache.
 | `toks` | `dynamic` | — | Token arena supplied by the lexer cache. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7109)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7375)
 
 - [mlc.minilang_parser.ParseError](Type-mlc-minilang-parser-parseerror-782081393.md) — struct
 - [mlc.minilang_parser.ParseKeepResult](Type-mlc-minilang-parser-parsekeepresult-1025636913.md) — struct
@@ -3800,7 +4002,7 @@ Parse or represent prepare language features in the MiniLang front end.
 | `program` | `dynamic` | — | Value supplied for `program`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7051)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L7317)
 
 <a id="function-function-mlc-minilang-parser-preprocess-compile-directives-function-preprocess-compile-directives-code-filename-mlc-minilang-parser-ml-1776364800"></a>
 ### preprocess_compile_directives
@@ -3817,7 +4019,7 @@ Evaluate line-oriented directives and retain every original byte offset.
 | `filename` | `dynamic` | — | Value supplied for `filename`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5017)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L5106)
 
 - [mlc.minilang_parser.Print](Type-mlc-minilang-parser-print-631789685.md) — struct
 - [mlc.minilang_parser.Return](Type-mlc-minilang-parser-return-1467374892.md) — struct
@@ -3836,7 +4038,7 @@ Install command-line/project values. Later -D occurrences override earlier ones.
 | `specs` | `dynamic` | — | Value supplied for `specs`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4849)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4938)
 
 <a id="function-function-mlc-minilang-parser-set-compile-target-function-set-compile-target-target-mlc-minilang-parser-ml-1786509371"></a>
 ### set_compile_target
@@ -3852,7 +4054,7 @@ Select immutable values for subsequent source parses.
 | `target` | `dynamic` | — | Value supplied for `target`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4649)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L4738)
 
 - [mlc.minilang_parser.SetIndex](Type-mlc-minilang-parser-setindex-553174214.md) — struct
 - [mlc.minilang_parser.SetMember](Type-mlc-minilang-parser-setmember-1055617036.md) — struct
@@ -3872,7 +4074,7 @@ const TK_COMMA = 12
 Track tk comma.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1081)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1083)
 
 <a id="constant-constant-mlc-minilang-parser-tk-dot-const-tk-dot-7-mlc-minilang-parser-ml-490268796"></a>
 ### TK_DOT
@@ -3884,7 +4086,7 @@ const TK_DOT = 7
 Track tk dot.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1071)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1073)
 
 <a id="constant-constant-mlc-minilang-parser-tk-eof-const-tk-eof-14-mlc-minilang-parser-ml-605410542"></a>
 ### TK_EOF
@@ -3896,7 +4098,7 @@ const TK_EOF = 14
 Track tk eof.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1085)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1087)
 
 <a id="constant-constant-mlc-minilang-parser-tk-ident-const-tk-ident-5-mlc-minilang-parser-ml-1806349288"></a>
 ### TK_IDENT
@@ -3908,7 +4110,7 @@ const TK_IDENT = 5
 Track tk ident.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1067)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1069)
 
 <a id="constant-constant-mlc-minilang-parser-tk-kw-const-tk-kw-4-mlc-minilang-parser-ml-628864999"></a>
 ### TK_KW
@@ -3920,7 +4122,7 @@ const TK_KW = 4
 Track tk kw.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1065)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1067)
 
 <a id="constant-constant-mlc-minilang-parser-tk-lbrack-const-tk-lbrack-10-mlc-minilang-parser-ml-1186816136"></a>
 ### TK_LBRACK
@@ -3932,7 +4134,7 @@ const TK_LBRACK = 10
 Track tk lbrack.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1077)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1079)
 
 <a id="constant-constant-mlc-minilang-parser-tk-lparen-const-tk-lparen-8-mlc-minilang-parser-ml-1975969363"></a>
 ### TK_LPAREN
@@ -3944,7 +4146,7 @@ const TK_LPAREN = 8
 Track tk lparen.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1073)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1075)
 
 <a id="constant-constant-mlc-minilang-parser-tk-nl-const-tk-nl-1-mlc-minilang-parser-ml-1302957582"></a>
 ### TK_NL
@@ -3956,7 +4158,7 @@ const TK_NL = 1
 Compact discriminants stored in the token arena's byte kind column.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1059)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1061)
 
 <a id="constant-constant-mlc-minilang-parser-tk-number-const-tk-number-2-mlc-minilang-parser-ml-1801718313"></a>
 ### TK_NUMBER
@@ -3968,7 +4170,7 @@ const TK_NUMBER = 2
 Track tk number.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1061)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1063)
 
 <a id="constant-constant-mlc-minilang-parser-tk-op-const-tk-op-6-mlc-minilang-parser-ml-381245417"></a>
 ### TK_OP
@@ -3980,7 +4182,7 @@ const TK_OP = 6
 Track tk op.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1069)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1071)
 
 <a id="constant-constant-mlc-minilang-parser-tk-rbrack-const-tk-rbrack-11-mlc-minilang-parser-ml-2101395197"></a>
 ### TK_RBRACK
@@ -3992,7 +4194,7 @@ const TK_RBRACK = 11
 Track tk rbrack.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1079)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1081)
 
 <a id="constant-constant-mlc-minilang-parser-tk-rparen-const-tk-rparen-9-mlc-minilang-parser-ml-1884949334"></a>
 ### TK_RPAREN
@@ -4004,7 +4206,7 @@ const TK_RPAREN = 9
 Track tk rparen.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1075)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1077)
 
 <a id="constant-constant-mlc-minilang-parser-tk-semi-const-tk-semi-13-mlc-minilang-parser-ml-1445543147"></a>
 ### TK_SEMI
@@ -4016,7 +4218,7 @@ const TK_SEMI = 13
 Track tk semi.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1083)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1085)
 
 <a id="constant-constant-mlc-minilang-parser-tk-string-const-tk-string-3-mlc-minilang-parser-ml-1919192320"></a>
 ### TK_STRING
@@ -4028,7 +4230,7 @@ const TK_STRING = 3
 Track tk string.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1063)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1065)
 
 - [mlc.minilang_parser.Token](Type-mlc-minilang-parser-token-1078023415.md) — struct
 <a id="function-function-mlc-minilang-parser-token-cache-export-function-token-cache-export-tokens-mlc-minilang-parser-ml-586210556"></a>
@@ -4045,7 +4247,7 @@ Export packed lexer columns without retaining spare arena capacity.
 | `tokens` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1666)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1668)
 
 <a id="function-function-mlc-minilang-parser-token-cache-import-function-token-cache-import-record-mlc-minilang-parser-ml-1828139495"></a>
 ### token_cache_import
@@ -4061,7 +4263,7 @@ Rebuild a bounded, data-only lexer arena from a validated cache record.
 | `record` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1675)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1677)
 
 - [mlc.minilang_parser.TokenArena](Type-mlc-minilang-parser-tokenarena-1905929590.md) — struct
 <a id="function-function-mlc-minilang-parser-tokenize-function-tokenize-code-mlc-minilang-parser-ml-697094663"></a>
@@ -4078,7 +4280,23 @@ Converts tokenize.
 | `code` | `dynamic` | — | Source code to process. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1417)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L1419)
+
+<a id="function-function-mlc-minilang-parser-typed-array-code-function-typed-array-code-name-mlc-minilang-parser-ml-808062801"></a>
+### typed_array_code
+
+```ml
+function typed_array_code(name)
+```
+
+Return the array contract byte, including the optional-element bit.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `dynamic` | — |  |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L2509)
 
 - [mlc.minilang_parser.TypeGuard](Type-mlc-minilang-parser-typeguard-538254235.md) — struct
 - [mlc.minilang_parser.Unary](Type-mlc-minilang-parser-unary-1983916477.md) — struct

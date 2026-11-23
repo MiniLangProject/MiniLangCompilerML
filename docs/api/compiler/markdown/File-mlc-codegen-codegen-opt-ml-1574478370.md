@@ -82,11 +82,11 @@ ASCII token predicate; non-ASCII declaration names are never pruned.
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_opt.ml#L26)
 
-<a id="function-function-mlc-codegen-codegen-opt-scalar-slot-function-scalar-slot-state-target-field-mlc-codegen-codegen-opt-ml-1131777581"></a>
+<a id="function-function-mlc-codegen-codegen-opt-scalar-slot-function-scalar-slot-state-target-field-with-contract-false-mlc-codegen-codegen-opt-ml-1639168588"></a>
 ### scalar_slot
 
 ```ml
-function scalar_slot(state, target, field)
+function scalar_slot(state, target, field, with_contract = false)
 ```
 
 Resolve a scalar field only for its original lexical binding, not inline shadows.
@@ -96,9 +96,10 @@ Resolve a scalar field only for its original lexical binding, not inline shadows
 | `state` | `dynamic` | — | Current lexical bindings and scalar-replacement plans. |
 | `target` | `dynamic` | — | Receiver expression of the field access. |
 | `field` | `dynamic` | — | Field name to resolve to a rooted stack slot. |
+| `with_contract` | `dynamic` | `false` | Whether the slot must retain the field's declared contract. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_opt.ml#L205)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_opt.ml#L206)
 
 <a id="function-function-mlc-codegen-codegen-opt-scalar-uses-function-scalar-uses-records-declaration-index-fields-mlc-codegen-codegen-opt-ml-1870508664"></a>
 ### scalar_uses

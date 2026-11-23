@@ -202,6 +202,7 @@ end function
 /// @param state Current lexical bindings and scalar-replacement plans.
 /// @param target Receiver expression of the field access.
 /// @param field Field name to resolve to a rooted stack slot.
+/// @param with_contract Whether the slot must retain the field's declared contract.
 function scalar_slot(state, target, field, with_contract = false)
   if t.ast_kind(target) != "Var" or len(state._inline_call_stack) > 0 then return -1 end if
   binding = scope.cg_resolve_binding(state, t.ast_name(target))

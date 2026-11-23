@@ -223,14 +223,14 @@ Emit emit build args function in the native runtime.
 function emit_builtin_copyArray_function(state)
 ```
 
-Copy tagged array cells in one native bulk operation. Bounds and type handling deliberately match copyBytes(): invalid inputs are a no-op and the requested length is clipped to both remaining array tails.
+Emit the runtime helper for copying between checked array buffers.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `state` | `dynamic` | — | Value supplied for `state`. |
+| `state` | `dynamic` | — | Current code-generation state and x64 assembler stream. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3699)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3770)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-copybytes-function-function-emit-builtin-copybytes-function-state-mlc-codegen-codegen-runtime-ml-367431250"></a>
 ### emit_builtin_copyBytes_function
@@ -278,7 +278,7 @@ Emit emit builtin fill bytes function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3818)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3901)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-collect-async-function-function-emit-builtin-gc-collect-async-function-state-mlc-codegen-codegen-runtime-ml-1097920536"></a>
 ### emit_builtin_gc_collect_async_function
@@ -294,7 +294,7 @@ Emit first-class gc_collect_async, falling back to synchronous collection by def
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3966)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4049)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-collect-function-function-emit-builtin-gc-collect-function-state-mlc-codegen-codegen-runtime-ml-1836857400"></a>
 ### emit_builtin_gc_collect_function
@@ -310,7 +310,7 @@ Emit first-class gc_collect with aligned shadow space for native callbacks.
 | `state` | `dynamic` | — | Backend state receiving the synchronous builtin wrapper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3981)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4064)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-set-limit-function-function-emit-builtin-gc-set-limit-function-state-mlc-codegen-codegen-runtime-ml-1019220532"></a>
 ### emit_builtin_gc_set_limit_function
@@ -326,7 +326,7 @@ Emit emit builtin gc set limit function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3996)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4079)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-input-function-function-emit-builtin-input-function-state-mlc-codegen-codegen-runtime-ml-1368324302"></a>
 ### emit_builtin_input_function
@@ -342,7 +342,7 @@ Emit emit builtin input function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3940)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4023)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-len-function-function-emit-builtin-len-function-state-mlc-codegen-codegen-runtime-ml-919784296"></a>
 ### emit_builtin_len_function
@@ -358,7 +358,7 @@ Emit emit builtin len function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3899)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3982)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-bytes-compare-function-function-emit-bytes-compare-function-state-mlc-codegen-codegen-runtime-ml-170599544"></a>
 ### emit_bytes_compare_function
@@ -486,7 +486,7 @@ Emit emit call stats function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4062)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4145)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-copy-bytes-function-function-emit-copy-bytes-function-state-mlc-codegen-codegen-runtime-ml-710271692"></a>
 ### emit_copy_bytes_function
@@ -919,6 +919,22 @@ Emit emit to number function in the native runtime.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2309)
+
+<a id="function-function-mlc-codegen-codegen-runtime-emit-typed-array-element-function-function-emit-typed-array-element-function-state-mlc-codegen-codegen-runtime-ml-1819255596"></a>
+### emit_typed_array_element_function
+
+```ml
+function emit_typed_array_element_function(state)
+```
+
+Copy tagged array cells in one native bulk operation. Bounds and type handling deliberately match copyBytes(): invalid inputs are a no-op and the requested length is clipped to both remaining array tails.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `state` | `dynamic` | — | Value supplied for `state`. Check R10 against the contract byte in EDX, preserving store inputs. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3701)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-typename-function-function-emit-typename-function-state-mlc-codegen-codegen-runtime-ml-604461264"></a>
 ### emit_typeName_function

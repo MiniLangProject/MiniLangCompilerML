@@ -12,7 +12,7 @@ struct StructDef
 Represents struct def.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L791)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L793)
 
 ## Members
 
@@ -26,7 +26,7 @@ _class_ancestors
 Qualified ancestor class names, nearest first.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L821)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L823)
 
 <a id="field-field-mlc-minilang-parser-structdef-extern-field-types-extern-field-types-mlc-minilang-parser-ml-799623371"></a>
 ### _extern_field_types
@@ -38,7 +38,7 @@ _extern_field_types
 Extern field types associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L809)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L811)
 
 <a id="field-field-mlc-minilang-parser-structdef-filename-filename-mlc-minilang-parser-ml-665802743"></a>
 ### _filename
@@ -50,7 +50,7 @@ _filename
 Filename associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L813)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L815)
 
 <a id="field-field-mlc-minilang-parser-structdef-pos-pos-mlc-minilang-parser-ml-1103713793"></a>
 ### _pos
@@ -62,7 +62,7 @@ _pos
 Pos associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L811)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L813)
 
 <a id="field-field-mlc-minilang-parser-structdef-abstract-methods-abstract-methods-mlc-minilang-parser-ml-328688493"></a>
 ### abstract_methods
@@ -72,7 +72,7 @@ abstract_methods
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L826)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L828)
 
 <a id="field-field-mlc-minilang-parser-structdef-base-base-mlc-minilang-parser-ml-1665617969"></a>
 ### base
@@ -84,7 +84,7 @@ base
 Parent class before and after inheritance resolution.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L815)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L817)
 
 <a id="field-field-mlc-minilang-parser-structdef-constructor-max-constructor-max-mlc-minilang-parser-ml-1417506183"></a>
 ### constructor_max
@@ -94,7 +94,7 @@ constructor_max
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L832)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L834)
 
 <a id="field-field-mlc-minilang-parser-structdef-constructor-min-constructor-min-mlc-minilang-parser-ml-2044366239"></a>
 ### constructor_min
@@ -104,7 +104,7 @@ constructor_min
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L831)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L833)
 
 <a id="field-field-mlc-minilang-parser-structdef-field-defaults-field-defaults-mlc-minilang-parser-ml-1790405473"></a>
 ### field_defaults
@@ -116,7 +116,7 @@ field_defaults
 Default initializer expressions parallel to fields.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L805)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L807)
 
 <a id="field-field-mlc-minilang-parser-structdef-field-optional-field-optional-mlc-minilang-parser-ml-1491382565"></a>
 ### field_optional
@@ -128,7 +128,7 @@ field_optional
 Field optional associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L803)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L805)
 
 <a id="field-field-mlc-minilang-parser-structdef-field-owners-field-owners-mlc-minilang-parser-ml-761383705"></a>
 ### field_owners
@@ -138,7 +138,7 @@ field_owners
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L828)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L830)
 
 <a id="field-field-mlc-minilang-parser-structdef-field-types-field-types-mlc-minilang-parser-ml-1788495147"></a>
 ### field_types
@@ -150,7 +150,7 @@ field_types
 Field types associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L801)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L803)
 
 <a id="field-field-mlc-minilang-parser-structdef-field-visibility-field-visibility-mlc-minilang-parser-ml-1145471137"></a>
 ### field_visibility
@@ -160,7 +160,7 @@ field_visibility
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L824)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L826)
 
 <a id="field-field-mlc-minilang-parser-structdef-fields-fields-mlc-minilang-parser-ml-1696056085"></a>
 ### fields
@@ -172,7 +172,7 @@ fields
 Fields associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L797)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L799)
 
 <a id="field-field-mlc-minilang-parser-structdef-final-methods-final-methods-mlc-minilang-parser-ml-1821882635"></a>
 ### final_methods
@@ -182,7 +182,7 @@ final_methods
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L827)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L829)
 
 <a id="field-field-mlc-minilang-parser-structdef-interfaces-interfaces-mlc-minilang-parser-ml-125975155"></a>
 ### interfaces
@@ -194,7 +194,7 @@ interfaces
 Interfaces associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L807)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L809)
 
 <a id="field-field-mlc-minilang-parser-structdef-is-abstract-is-abstract-mlc-minilang-parser-ml-277639471"></a>
 ### is_abstract
@@ -204,7 +204,7 @@ is_abstract
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L822)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L824)
 
 <a id="field-field-mlc-minilang-parser-structdef-is-class-is-class-mlc-minilang-parser-ml-1782528141"></a>
 ### is_class
@@ -216,7 +216,7 @@ is_class
 Whether this declaration uses class semantics.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L817)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L819)
 
 <a id="field-field-mlc-minilang-parser-structdef-is-final-is-final-mlc-minilang-parser-ml-948165429"></a>
 ### is_final
@@ -226,7 +226,7 @@ is_final
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L823)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L825)
 
 <a id="field-field-mlc-minilang-parser-structdef-method-hidden-names-method-hidden-names-mlc-minilang-parser-ml-1546123575"></a>
 ### method_hidden_names
@@ -236,7 +236,7 @@ method_hidden_names
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L829)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L831)
 
 <a id="field-field-mlc-minilang-parser-structdef-method-visibility-method-visibility-mlc-minilang-parser-ml-511301611"></a>
 ### method_visibility
@@ -246,7 +246,7 @@ method_visibility
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L825)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L827)
 
 <a id="field-field-mlc-minilang-parser-structdef-methods-methods-mlc-minilang-parser-ml-1134397163"></a>
 ### methods
@@ -258,7 +258,7 @@ methods
 Methods associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L799)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L801)
 
 <a id="field-field-mlc-minilang-parser-structdef-name-name-mlc-minilang-parser-ml-539143569"></a>
 ### name
@@ -270,7 +270,7 @@ name
 Name associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L795)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L797)
 
 <a id="field-field-mlc-minilang-parser-structdef-node-kind-node-kind-mlc-minilang-parser-ml-929239723"></a>
 ### node_kind
@@ -282,7 +282,7 @@ node_kind
 Node kind associated with `StructDef`.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L793)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L795)
 
 <a id="field-field-mlc-minilang-parser-structdef-override-methods-override-methods-mlc-minilang-parser-ml-1237404837"></a>
 ### override_methods
@@ -294,7 +294,7 @@ override_methods
 Names explicitly marked override in this declaration.
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L819)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L821)
 
 <a id="field-field-mlc-minilang-parser-structdef-qualified-name-qualified-name-mlc-minilang-parser-ml-1812341539"></a>
 ### qualified_name
@@ -304,4 +304,4 @@ qualified_name
 ```
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L830)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L832)
