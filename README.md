@@ -9,11 +9,15 @@ itself. The [Python reference compiler](https://github.com/MiniLangProject/MiniL
 provides the bootstrap implementation and a second code-generation path.
 
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
-or read the [binary installation guide](README-BINARY.md). Version 1.3.10
+or read the [binary installation guide](README-BINARY.md). Version 1.3.11
 includes Windows, Linux and MinUX packages with SHA-256 sidecars; see the
-[release notes](RELEASE_NOTES_1.3.10.md) and [changelog](CHANGELOG.md).
+[release notes](RELEASE_NOTES_1.3.11.md) and [changelog](CHANGELOG.md).
 
-Version 1.3.10 adds fixed variable types and expands typed numeric code generation.
+Version 1.3.11 makes `copyBytes` and `copyArray` safe for overlapping ranges,
+corrects native helper dispatch, and keeps string lengths consistent with the
+Python compiler's UTF-8 byte-length contract. Shared regressions cover direct
+and indirect calls, managed references, and both compilation pipelines.
+Version 1.3.10 introduced fixed variable types and expanded typed numeric code generation.
 Native MinUX output, packing and compiler selfhosting arrived in 1.3.9,
 including MinUX standard-library, TLS/crypto, file, terminal and media adapters.
 See the [MinUX guide](docs/MINUX.md) for setup, verified capabilities and limits.
@@ -132,7 +136,7 @@ self-hosted monolithic compiler and self-hosted `.mlo` pipeline are expected
 to emit identical target bytes. Version 1.3.2 restored this for the OOP
 regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 [OOP regression](tests/check_oop_binary_parity.py) and
-[1.3.10 release verification matrix](docs/reports/release-1.3.10-version-matrix.json).
+[1.3.11 release verification matrix](docs/reports/release-1.3.11-version-matrix.json).
 
 ## Documentation and development
 

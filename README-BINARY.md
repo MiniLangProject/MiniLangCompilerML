@@ -1,25 +1,25 @@
 # Binary compiler packages
 
-Release 1.3.10 provides Windows x64 ZIP, Linux x64 tar.gz and MinUX x64 tar.gz
+Release 1.3.11 provides Windows x64 ZIP, Linux x64 tar.gz and MinUX x64 tar.gz
 packages. Each contains a native compiler (`mlc.exe` or `mlc`), matching `std/`
 sources, runtime libraries, a Hello example, license notices, documentation,
 release notes and BUILD_INFO.json. Every download has a SHA-256 sidecar.
 The compilers run without a Python installation.
 
-## Release 1.3.10 checksums
+## Release 1.3.11 checksums
 
-The download archives are `MiniLangCompilerML-1.3.10-windows-x64.zip` and
-`MiniLangCompilerML-1.3.10-linux-x64.tar.gz`, plus
-`MiniLangCompilerML-1.3.10-minux-x64.tar.gz`. Verify each archive with its
-adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.10).
+The download archives are `MiniLangCompilerML-1.3.11-windows-x64.zip` and
+`MiniLangCompilerML-1.3.11-linux-x64.tar.gz`, plus
+`MiniLangCompilerML-1.3.11-minux-x64.tar.gz`. Verify each archive with its
+adjacent `.sha256` download on the [release page](https://github.com/MiniLangProject/MiniLangCompilerML/releases/tag/v1.3.11).
 The `BUILD_INFO.json` inside each archive records the executable SHA-256 and
 the exact tagged compiler-source revision.
 
 | Executable | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Windows `mlc.exe` | 67,020,800 | `d58437fc45cf01bfbbf3a69fa129cca57db1fbb2b5429fb8c58c67200a864abe` |
-| Linux `mlc` | 67,044,416 | `8f877a387918f0d349dc94e7cfa04cde1329355a978390da77c83ab417027caf` |
-| MinUX `mlc` (packed) | 15,005,650 | `dcc56f6df560bdbba94a7513d9dbe959960d30786f0a2cf9a77ea851b0535b88` |
+| Windows `mlc.exe` | 68,022,272 | `cadacd2b4d2425d492fea2e94b4d4db48b54cb07b3ae810b3247bcf42b9b1efc` |
+| Linux `mlc` | 68,044,016 | `7a61fe5447d0e81d700c834c7f02dce2259c0bd2418050b056653bea742b8c67` |
+| MinUX `mlc` (packed) | 15,240,011 | `65dd1c354b2d8e1a4e8b163f27466ab603522dc64465b6f00fa1eb0c85276e1c` |
 
 Extract the whole package before use. From its directory, on Windows:
 
@@ -54,15 +54,18 @@ manifest records every bundled library hash. See [MINUX.md](docs/MINUX.md) for
 native filesystem, networking, media and GUI limits. Source for all MinUX
 adapters and the Mbed TLS license are included.
 
-The Linux tar archive preserves the executable bit. These builds were tested on
-Ubuntu 24.04 x86-64 (glibc 2.39) and Windows 11 x64. Older Linux distributions
-and musl-based systems are not covered. Keep `-I /path/to/extracted/package`
+The Linux tar archive preserves the executable bit. Release 1.3.11 was built
+and executed on Debian 13.7 x86-64 (glibc 2.41). Windows and MinUX images were
+cross-compiled and compared; this release's checks do not include execution
+on Windows or in a MinUX guest. Older Linux distributions and musl-based
+systems are not covered. See the [release verification matrix](docs/reports/release-1.3.11-version-matrix.json)
+for the build and regression results. Keep `-I /path/to/extracted/package`
 when building from another directory so standard-library imports resolve.
 Windows remains the compiler's default output target; select `--target linux-x64`
 explicitly when producing Linux applications. Either host compiler can emit
 all three targets, but the resulting program runs on its selected target OS.
 
-The manifest identifies the 1.3.10 compiler-source revision and executable hash.
+The manifest identifies the 1.3.11 compiler-source revision and executable hash.
 Source archives remain available alongside the binary assets generated for this
 release.
 
@@ -92,9 +95,14 @@ startup/memory trade-offs and signing constraints.
 
 ## Native media runtime
 
-Release 1.3.10 packages include the native-media
+Release 1.3.11 packages include the native-media
 bridge source and the matching prebuilt runtime. BUILD_INFO.json records that
 bridge's ABI, relative path and SHA-256.
+
+The video and MinUX runtime sources are unchanged from 1.3.10. Their prebuilt
+libraries are reused from the official 1.3.10 packages after verifying the
+archive and library hashes. The compiler executables are newly built from
+the 1.3.11 sources.
 
 Applications importing `std.video` or `std.audio` must deploy the matching file from
 `runtimes/<target>/` beside the generated executable. Windows supplies Media
