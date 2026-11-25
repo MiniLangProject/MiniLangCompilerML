@@ -2091,6 +2091,100 @@ function emit_copy_bytes_function(state)
   return state
 end function
 
+/// Move RCX/RDX/R8D bytes safely across overlapping source and destination.
+/// Disjoint intervals retain the optimized copy helper. Directional qword copies
+/// keep aligned array cells intact while concurrent GC scans their tagged values.
+/// @param state Value supplied for `state`.
+function emit_move_bytes_function(state)
+  state.asm = a.mark(state.asm, "fn_move_bytes")
+  // Tail jumps do not participate in the assembler's call tracking.
+  state.used_helpers = state.used_helpers + ["fn_copy_bytes"]
+  lid = state.label_id
+  state.label_id = state.label_id + 1
+  l_ret = "move_ret_" + lid
+  l_lower = "move_lower_" + lid
+  l_copy = "move_copy_" + lid
+  l_backward = "move_backward_" + lid
+  l_backward_bytes = "move_backward_bytes_" + lid
+  l_backward_byte_loop = "move_backward_byte_loop_" + lid
+  l_forward = "move_forward_" + lid
+  l_forward_bytes = "move_forward_bytes_" + lid
+  l_forward_byte_loop = "move_forward_byte_loop_" + lid
+
+  state.asm = a.test_r32_r32(state.asm, "r8d", "r8d")
+  state.asm = a.jcc(state.asm, "e", l_ret)
+  state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+  state.asm = a.jcc(state.asm, "e", l_ret)
+  state.asm = a.mov_r32_r32(state.asm, "r8d", "r8d")
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rdx")
+  state.asm = a.mov_r32_r32(state.asm, "r11d", "r8d")
+  state.asm = a.cmp_r64_r64(state.asm, "rcx", "rdx")
+  state.asm = a.jcc(state.asm, "b", l_lower)
+
+  // dst > src: use the pointer distance to avoid end-address overflow.
+  state.asm = a.mov_r64_r64(state.asm, "rax", "rcx")
+  state.asm = a.sub_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.cmp_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.jcc(state.asm, "ae", l_copy)
+  state.asm = a.add_r64_r64(state.asm, "r9", "r8")
+  state.asm = a.add_r64_r64(state.asm, "r10", "r8")
+  state.asm = a.mark(state.asm, l_backward)
+  state.asm = a.cmp_r32_imm(state.asm, "r11d", 8)
+  state.asm = a.jcc(state.asm, "b", l_backward_bytes)
+  state.asm = a.sub_r64_imm(state.asm, "r9", 8)
+  state.asm = a.sub_r64_imm(state.asm, "r10", 8)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r10", 0)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r9", 0, "rax")
+  state.asm = a.sub_r32_imm(state.asm, "r11d", 8)
+  state.asm = a.jmp(state.asm, l_backward)
+
+  state.asm = a.mark(state.asm, l_backward_bytes)
+  state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
+  state.asm = a.jcc(state.asm, "e", l_ret)
+  state.asm = a.mark(state.asm, l_backward_byte_loop)
+  state.asm = a.dec_r64(state.asm, "r9")
+  state.asm = a.dec_r64(state.asm, "r10")
+  state.asm = a.mov_r8_membase_disp(state.asm, "al", "r10", 0)
+  state.asm = a.mov_membase_disp_r8(state.asm, "r9", 0, "al")
+  state.asm = a.dec_r32(state.asm, "r11d")
+  state.asm = a.jcc(state.asm, "ne", l_backward_byte_loop)
+  state.asm = a.jmp(state.asm, l_ret)
+
+  // dst < src: forward copies preserve unread source bytes.
+  state.asm = a.mark(state.asm, l_lower)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.sub_r64_r64(state.asm, "rax", "rcx")
+  state.asm = a.cmp_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.jcc(state.asm, "ae", l_copy)
+  state.asm = a.mark(state.asm, l_forward)
+  state.asm = a.cmp_r32_imm(state.asm, "r11d", 8)
+  state.asm = a.jcc(state.asm, "b", l_forward_bytes)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r10", 0)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r9", 0, "rax")
+  state.asm = a.add_r64_imm(state.asm, "r9", 8)
+  state.asm = a.add_r64_imm(state.asm, "r10", 8)
+  state.asm = a.sub_r32_imm(state.asm, "r11d", 8)
+  state.asm = a.jmp(state.asm, l_forward)
+
+  state.asm = a.mark(state.asm, l_forward_bytes)
+  state.asm = a.test_r32_r32(state.asm, "r11d", "r11d")
+  state.asm = a.jcc(state.asm, "e", l_ret)
+  state.asm = a.mark(state.asm, l_forward_byte_loop)
+  state.asm = a.mov_r8_membase_disp(state.asm, "al", "r10", 0)
+  state.asm = a.mov_membase_disp_r8(state.asm, "r9", 0, "al")
+  state.asm = a.inc_r64(state.asm, "r9")
+  state.asm = a.inc_r64(state.asm, "r10")
+  state.asm = a.dec_r32(state.asm, "r11d")
+  state.asm = a.jcc(state.asm, "ne", l_forward_byte_loop)
+  state.asm = a.mark(state.asm, l_ret)
+  state.asm = a.ret(state.asm)
+
+  state.asm = a.mark(state.asm, l_copy)
+  state.asm = a.jmp(state.asm, "fn_copy_bytes")
+  return state
+end function
+
 /// Fill bounded ranges with SSE2 through 256 bytes, then the established REP STOSB path. Avoid dispatch loads and unnecessary vector setup for large fills; FSRM is not a store capability.
 /// @param state Value supplied for `state`.
 function emit_fill_bytes_function(state)
@@ -3686,7 +3780,7 @@ function emit_builtin_copyBytes_function(state)
   state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r10", 8)
   state.asm = a.add_r64_r64(state.asm, "rdx", "r8")
   state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rsp", 0x20)
-  state.asm = a.call(state.asm, "fn_copy_bytes")
+  state.asm = a.call(state.asm, "fn_move_bytes")
 
   state.asm = a.mark(state.asm, l_ret_void)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -3888,7 +3982,7 @@ function emit_builtin_copyArray_function(state)
   state.asm = a.mov_r32_membase_disp(state.asm, "r8d", "rsp", 0x20)
   state.asm = a.shl_r64_imm8(state.asm, "r8", 3)
   state = mem.emit_gc_write_barrier_range(state)
-  state.asm = a.call(state.asm, "fn_copy_bytes")
+  state.asm = a.call(state.asm, "fn_move_bytes")
 
   state.asm = a.mark(state.asm, l_ret_void)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())

@@ -1937,6 +1937,7 @@ function _helper_supported(lbl)
   if lbl == "fn_scan_byte2_bytes" then return true end if
   if lbl == "fn_scan_nul_wchars" then return true end if
   if lbl == "fn_copy_bytes" then return true end if
+  if lbl == "fn_move_bytes" then return true end if
   if lbl == "fn_fill_bytes" then return true end if
   if lbl == "fn_fill_qwords" then return true end if
   if lbl == "fn_box_float" then return true end if
@@ -2023,6 +2024,7 @@ function _emit_helper_by_label_group0(state, lbl)
     return mem.emit_gc_collect_function(state)
   end if
   if lbl == "fn_copy_bytes" then return rt.emit_copy_bytes_function(state) end if
+  if lbl == "fn_move_bytes" then return rt.emit_move_bytes_function(state) end if
   if lbl == "fn_fill_bytes" then return rt.emit_fill_bytes_function(state) end if
   if lbl == "fn_fill_qwords" then return rt.emit_fill_qwords_function(state) end if
   if lbl == "fn_mem_eq_bytes" then return rt.emit_mem_eq_bytes_function(state) end if
@@ -2168,13 +2170,13 @@ end function
 /// @internal
 function _emit_helper_by_label(state, lbl)
   rank = _helper_rank(lbl)
-  if rank < 47 then return _emit_helper_by_label_group0(state, lbl) end if
-  if rank < 57 then return _emit_helper_by_label_group1(state, lbl) end if
-  if rank < 67 then return _emit_helper_by_label_group2(state, lbl) end if
-  if rank < 77 then return _emit_helper_by_label_group3(state, lbl) end if
-  // Group boundaries follow the canonical table, including fn_decode_slice.
-  if rank < 88 then return _emit_helper_by_label_group4(state, lbl) end if
-  if rank < 99 then return _emit_helper_by_label_group5(state, lbl) end if
+  if rank < 48 then return _emit_helper_by_label_group0(state, lbl) end if
+  if rank < 58 then return _emit_helper_by_label_group1(state, lbl) end if
+  if rank < 68 then return _emit_helper_by_label_group2(state, lbl) end if
+  if rank < 78 then return _emit_helper_by_label_group3(state, lbl) end if
+  // Group boundaries follow the canonical table, including fn_move_bytes.
+  if rank < 89 then return _emit_helper_by_label_group4(state, lbl) end if
+  if rank < 101 then return _emit_helper_by_label_group5(state, lbl) end if
   if rank < 1048576 then return _emit_helper_by_label_group6(state, lbl) end if
   return _emit_helper_by_label_other(state, lbl)
 end function
@@ -2191,7 +2193,7 @@ function _helper_rank(lbl)
     "fn_thread_logical_id", "fn_thread_set_logical_id", "fn_thread_current_logical_id",
     "fn_thread_result", "fn_thread_status",
     "fn_thread_close", "fn_thread_stop_requested", "fn_thread_entry", "fn_thread_alloc",
-    "fn_alloc", "fn_heap_grow", "fn_gc_collect", "fn_copy_bytes", "fn_fill_bytes",
+    "fn_alloc", "fn_heap_grow", "fn_gc_collect", "fn_copy_bytes", "fn_move_bytes", "fn_fill_bytes",
     "fn_fill_qwords", "fn_mem_eq_bytes", "fn_bytes_constant_time_eq",
     "fn_find_byte_forward", "fn_find_byte_reverse", "fn_mem_indexof", "fn_mem_lastindexof",
     "fn_crc32c_update_raw", "fn_crc32_update_raw", "fn_native_crc32c", "fn_native_crc32",

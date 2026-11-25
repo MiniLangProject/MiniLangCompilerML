@@ -2,6 +2,18 @@
 
 All notable changes to the MiniLang compiler are documented here.
 
+## Unreleased
+
+- Make `copyBytes` and `copyArray` safe for overlapping source and destination
+  ranges, including indirect calls, while retaining the optimized disjoint-copy
+  path and the array GC write barrier.
+- Explicitly retain UTF-8 byte counts for constant and runtime string lengths,
+  matching the corrected Python compiler and existing byte-based string APIs.
+- Correct native helper dispatch boundaries, including the `fn_decref` entry,
+  and preserve the source address in the generic direct byte-copy path.
+- Add shared native regressions for overlapping copies, Unicode byte lengths,
+  initializer scope, and Boolean/integer equality.
+
 ## 1.3.10 - 2026-11-21
 
 - Add fixed variable types through `var name as Type = expression`, including

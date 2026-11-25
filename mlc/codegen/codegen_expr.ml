@@ -7777,6 +7777,8 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
     cv_len = _opt_try_const_value(state, arg_len)
     if typeof(cv_len) == "struct" and cv_len.ok then
       if typeof(cv_len.value) == "string" then
+        // Native strings use UTF-8 byte lengths, including embedded NULs.
+        // Keep constexpr lengths identical to fn_builtin_len and Python codegen.
         const_len = len(cv_len.value)
       else
         const_len = _opt_try_pure_const_array_len(state, arg_len)
@@ -8148,7 +8150,7 @@ function _emit_expr_call_early_builtins(state, callee, raw_name, call_args, narg
     state.asm = a.mov_r32_membase_disp(state.asm, "eax", "rsp", tmp_cb + 24)
     state.asm = a.add_r64_r64(state.asm, "rdx", "rax")
     state.asm = a.mov_r32_r32(state.asm, "r8d", "r9d")
-    state.asm = a.call(state.asm, "fn_copy_bytes")
+    state.asm = a.call(state.asm, "fn_move_bytes")
     state.asm = a.jmp(state.asm, l_cb_done)
 
     state.asm = a.mark(state.asm, l_cb_fail)
@@ -9007,6 +9009,8 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
     cv0 = _opt_try_const_value(state, arg0)
     if typeof(cv0) == "struct" and cv0.ok then
       if typeof(cv0.value) == "string" then
+        // Native strings use UTF-8 byte lengths, including embedded NULs.
+        // Keep constexpr lengths identical to fn_builtin_len and Python codegen.
         const_len = len(cv0.value)
       else
         const_len = _opt_try_pure_const_array_len(state, arg0)
@@ -9260,12 +9264,12 @@ function _emit_generic_call_builtin_cases(state, callee, raw_name, call_args, na
     state.asm = a.test_r32_r32(state.asm, "ecx", "ecx")
     state.asm = a.jcc(state.asm, "le", l_cb_done)
 
+    state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r8", 8)
+    state.asm = a.add_r64_r64(state.asm, "rdx", "r9")
     state.asm = a.mov_r32_r32(state.asm, "r8d", "ecx")
     state.asm = a.lea_r64_membase_disp(state.asm, "rcx", "r11", 8)
     state.asm = a.add_r64_r64(state.asm, "rcx", "rax")
-    state.asm = a.lea_r64_membase_disp(state.asm, "rdx", "r8", 8)
-    state.asm = a.add_r64_r64(state.asm, "rdx", "r9")
-    state.asm = a.call(state.asm, "fn_copy_bytes")
+    state.asm = a.call(state.asm, "fn_move_bytes")
     state.asm = a.jmp(state.asm, l_cb_done)
 
     state.asm = a.mark(state.asm, l_cb_fail)
