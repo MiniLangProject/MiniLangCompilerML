@@ -947,6 +947,16 @@ function main(args)
   if _test(compiler_path, repo_root, "language_typed_arrays", "tests\\language_typed_arrays.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_index_bounds_fast", "tests\\language_index_bounds_fast.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_packed_array", "tests\\language_packed_array.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "struct_namespace_arity", "tests\\struct_namespace_identity\\arity_collision.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "struct_namespace_field_order", "tests\\struct_namespace_identity\\field_order.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "struct_namespace_typed_returns", "tests\\struct_namespace_identity\\typed_returns.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "struct_namespace_lexical_bindings", "tests\\struct_namespace_identity\\lexical_bindings.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "struct_namespace_global_fallback", "tests\\struct_namespace_identity\\global_fallback.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "struct_namespace_default_context", "tests\\struct_namespace_identity\\default_context.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "struct_namespace_builtin_methods", "tests\\struct_namespace_identity\\builtin_methods.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "nested_constant_loops", "tests\\nested_constant_loops.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "language_default_stack_args", "tests\\language_default_stack_args.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
+  if _test(compiler_path, repo_root, "namespace_builtins", "tests\\namespace_builtins.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_strict_types", "tests\\language_strict_types.ml", "run_ok", extra_flags) then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_strict_types_fail", "tests\\language_strict_types.ml", "compile_fail", extra_flags + " --strict-types") then pass = pass + 1 else fail = fail + 1 end if
   if _test(compiler_path, repo_root, "language_typed_field_mismatch", "tests\\language_typed_field_mismatch.ml", "compile_fail", extra_flags) then pass = pass + 1 else fail = fail + 1 end if

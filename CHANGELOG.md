@@ -4,6 +4,20 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## Unreleased
 
+- Resolve unqualified constructors and other symbols in their defining
+  namespace/package before falling back to unrelated entry-module declarations.
+  Preserve local, parameter and captured callable bindings, including stored
+  and returned constructor values.
+- Resolve inferred struct layouts and omitted argument/field defaults in the
+  declaration's context. Caller locals cannot capture an imported default;
+  explicitly supplied arguments retain the caller's context.
+- Add shared regressions for constructor-name collisions, reordered fields,
+  typed returns, methods, dynamic callables, builtin-name collisions and defaults.
+- Reserve outgoing call frames for complete signatures, implicit receivers
+  and calls inside omitted defaults. Mirror the Python scanner in the native
+  compiler so expanded stack arguments cannot overwrite caller locals.
+- Add shared nested-constant-loop coverage alongside the Python label fix.
+
 - Normalize `mlfmt` spacing around grouped expressions, array literals and
   word operators; keep unary signs attached to their operands and preserve
   compact function calls, indexing and operator declaration names.

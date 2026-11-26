@@ -68,6 +68,92 @@ struct ArgNormalizeResult
   message,
 end struct
 
+/// Compiler-only expression evaluated in the namespace declaring its default.
+struct DeclaredDefault
+  node_kind,
+  expr,
+  name,
+  _pos,
+  _filename,
+end struct
+
+/// Keep inserted defaults independent of the caller's lexical bindings.
+/// @internal
+function _declared_default_expr(expr, qname, filename = "")
+  kind = t.ast_kind(expr)
+  if kind == "Num" or kind == "Bool" or kind == "Str" or kind == "VoidLit" then return expr end if
+  source_file = filename
+  if typeof(source_file) != "string" or source_file == "" then source_file = t.ast_filename(expr) end if
+  return DeclaredDefault("DeclaredDefault", expr, qname, t.ast_pos(expr), source_file)
+end function
+
+/// Borrow the caller's frame and error boundary without its name/type scope.
+/// @internal
+function _emit_declared_default(state, expr)
+  saved_stack = state.scope_stack
+  saved_declared = state.scope_declared
+  saved_indexes = state.scope_index_stack
+  saved_declared_indexes = state.scope_declared_index_stack
+  saved_globals = state.func_globals
+  saved_global_map = state.func_global_map
+  saved_global_index = state.func_global_map_index
+  saved_value_types = state.known_value_types
+  saved_numeric_types = state.known_numeric_value_types
+  saved_int_names = state.known_int_names
+  saved_loops = state.loop_index_fast_stack
+  saved_scalars = state.scalar_structs
+  saved_qprefix = state.current_qname_prefix
+  saved_fprefix = state.current_file_prefix
+  saved_qualify = state.qualify_cache
+  saved_param_names = try(state.current_fn_param_names)
+
+  globals = []
+  global_index = t.fastmap_new(16)
+  if typeof(saved_stack) == "array" and len(saved_stack) > 0 then globals = saved_stack[0] end if
+  if typeof(saved_indexes) == "array" and len(saved_indexes) > 0 then global_index = saved_indexes[0] end if
+  state.scope_stack = [globals, []]
+  state.scope_declared = [[], []]
+  state.scope_index_stack = [global_index, t.fastmap_new(16)]
+  state.scope_declared_index_stack = [t.fastmap_new(16), t.fastmap_new(16)]
+  state.func_globals = []
+  state.func_global_map = []
+  state.func_global_map_index = t.fastmap_new(16)
+  state.known_value_types = t.fastmap_new(16)
+  state.known_numeric_value_types = []
+  state.known_int_names = t.fastmap_new(16)
+  state.loop_index_fast_stack = []
+  state.scalar_structs = []
+  if typeof(saved_param_names) == "array" then state.current_fn_param_names = [] end if
+  qname = _coerce_name(expr.name)
+  dot = s.lastIndexOf(qname, ".")
+  state.current_qname_prefix = ""
+  if dot >= 0 then state.current_qname_prefix = s.substr(qname, 0, dot + 1) end if
+  state.current_file_prefix = _strpair_get(state.file_prefix_map, expr._filename)
+  state.qualify_cache = t.fastmap_new(64)
+
+  // Native inline emission stores its callback in _inline_param_stack; its
+  // parameter bindings are in the isolated scopes above, so retain the callback.
+  state = cg_emit_expr(state, expr.expr)
+
+  state.scope_stack = saved_stack
+  state.scope_declared = saved_declared
+  state.scope_index_stack = saved_indexes
+  state.scope_declared_index_stack = saved_declared_indexes
+  state.func_globals = saved_globals
+  state.func_global_map = saved_global_map
+  state.func_global_map_index = saved_global_index
+  state.known_value_types = saved_value_types
+  state.known_numeric_value_types = saved_numeric_types
+  state.known_int_names = saved_int_names
+  state.loop_index_fast_stack = saved_loops
+  state.scalar_structs = saved_scalars
+  if typeof(saved_param_names) == "array" then state.current_fn_param_names = saved_param_names end if
+  state.current_qname_prefix = saved_qprefix
+  state.current_file_prefix = saved_fprefix
+  state.qualify_cache = saved_qualify
+  return state
+end function
+
 /// Lower variadic is direct var expression behavior to native x64.
 /// @internal
 function _variadic_is_direct_var(ex, name)
@@ -261,7 +347,7 @@ function _normalize_declared_call_args(expr, fn, implicit)
         default_value = void
         if i < len(defaults) then default_value = defaults[i] end if
         if typeof(default_value) == "void" then return ArgNormalizeResult(false, [], "Missing required argument '" + params[i] + "' for " + fn.name) end if
-        slots[i] = default_value
+        slots[i] = _declared_default_expr(default_value, _coerce_name(try(fn.name)), t.ast_filename(fn))
       end if
     end for
   end if
@@ -972,6 +1058,17 @@ function _qualify_identifier(state, name)
 
   n1 = _apply_import_alias(state, name)
 
+  // A source-local binding keeps its lexical meaning. Unrelated root globals
+  // and declarations must not hide a declaration in the defining namespace.
+  bare_name = s.contains(n1, ".") == false
+  if bare_name then
+    local_binding = scope.cg_resolve_binding(state, n1)
+    if typeof(local_binding) == "struct" and local_binding.kind != "global" then
+      state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, n1)
+      return n1
+    end if
+  end if
+
   fn_pref = ""
   if typeof(state.current_qname_prefix) == "string" then fn_pref = state.current_qname_prefix end if
   pkg_pref = ""
@@ -979,12 +1076,31 @@ function _qualify_identifier(state, name)
   if pkg_pref == "" then pkg_pref = fn_pref end if
 
   cands_b = t.arr_chunk_new(8)
-  cands_b = t.arr_chunk_push(cands_b, n1)
+  // Already-qualified names keep their explicit target. Bare names search
+  // the function namespace, then the source package, then the root scope.
+  if bare_name == false then cands_b = t.arr_chunk_push(cands_b, n1) end if
+  method_candidate = ""
   if fn_pref != "" then
     if fn_pref[len(fn_pref) - 1] != "." then fn_pref = fn_pref + "." end if
     c1 = fn_pref + n1
-    cands = t.arr_chunk_finish(cands_b)
-    if _arr_has_str(cands, c1) == false then cands_b = t.arr_chunk_push(cands_b, c1) end if
+    // A method's owner is not a namespace for ordinary bare names. Preserve
+    // builtin/package lookups such as len(text) even when the owner has len().
+    if bare_name then
+      owner = s.substr(fn_pref, 0, len(fn_pref) - 1)
+      if s.endsWith(owner, ".__static__") then owner = s.substr(owner, 0, len(owner) - 11) end if
+      if typeof(_state_struct_fields_get(state, owner)) == "array" then
+        method_candidate = c1
+        owner_dot = s.lastIndexOf(owner, ".")
+        owner_candidate = n1
+        if owner_dot >= 0 then owner_candidate = s.substr(owner, 0, owner_dot + 1) + n1 end if
+        owner_cands = t.arr_chunk_finish(cands_b)
+        if _arr_has_str(owner_cands, owner_candidate) == false then cands_b = t.arr_chunk_push(cands_b, owner_candidate) end if
+      end if
+    end if
+    if method_candidate == "" then
+      cands = t.arr_chunk_finish(cands_b)
+      if _arr_has_str(cands, c1) == false then cands_b = t.arr_chunk_push(cands_b, c1) end if
+    end if
   end if
   if pkg_pref != "" then
     if pkg_pref[len(pkg_pref) - 1] != "." then pkg_pref = pkg_pref + "." end if
@@ -992,22 +1108,21 @@ function _qualify_identifier(state, name)
     cands2 = t.arr_chunk_finish(cands_b)
     if _arr_has_str(cands2, c2) == false then cands_b = t.arr_chunk_push(cands_b, c2) end if
   end if
+  if bare_name then
+    root_cands = t.arr_chunk_finish(cands_b)
+    if _arr_has_str(root_cands, n1) == false then cands_b = t.arr_chunk_push(cands_b, n1) end if
+  end if
+  if method_candidate != "" then
+    method_cands = t.arr_chunk_finish(cands_b)
+    if _arr_has_str(method_cands, method_candidate) == false then cands_b = t.arr_chunk_push(cands_b, method_candidate) end if
+  end if
   cands = t.arr_chunk_finish(cands_b)
 
   if len(cands) > 0 then
     for i = 0 to len(cands) - 1
-      b = scope.cg_resolve_binding(state, cands[i])
-      if typeof(b) == "struct" then
-        state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, cands[i])
-        return cands[i]
-      end if
-    end for
-  end if
-
-  if len(cands) > 0 then
-    for ci = 0 to len(cands) - 1
-      cand = cands[ci]
-      if _compile_symbol_has(state, cand) then
+      cand = cands[i]
+      b = scope.cg_resolve_binding(state, cand)
+      if typeof(b) == "struct" or _compile_symbol_has(state, cand) then
         state.qualify_cache = t.fastmap_set(state.qualify_cache, qkey, cand)
         return cand
       end if
@@ -1594,6 +1709,8 @@ function cg_emit_expr(state, expr)
 
   k = _coerce_name(t.ast_kind(expr))
   if k == "" and typeof(expr) == "struct" then k = _coerce_name(try(expr.kind)) end if
+
+  if k == "DeclaredDefault" then return _emit_declared_default(state, expr) end if
 
   if k == "COMMA" then
     state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -2924,15 +3041,9 @@ function _emit_expr_var(state, expr)
     return state
   end if
 
-  nm = nm_raw
-  if s.contains(nm_raw, ".") then
-    nm = _apply_import_alias(state, nm_raw)
-  else
-    b0 = scope.cg_resolve_binding(state, nm_raw)
-    if typeof(b0) != "struct" then
-      nm = _qualify_identifier(state, nm_raw)
-    end if
-  end if
+  // First-class constructor/function values follow the same namespace lookup
+  // as calls. The qualifier preserves lexical locals and parameters itself.
+  nm = _qualify_identifier(state, nm_raw)
   return scope.emit_load_var_scoped(state, nm)
 end function
 
@@ -3590,28 +3701,51 @@ function _opt_same_local_int_expr(state, left, right, depth)
   return false
 end function
 
-/// Convert a declared operator type into the optimizer's canonical type fact.
+/// Resolve a signature type in its declaration's namespace, including calls
+/// and inline expansions emitted in a different package.
 /// @internal
 function _operator_declared_type_fact(state, raw_type, owner_qname, node)
   if typeof(raw_type) != "string" or raw_type == "" then return "" end if
-  lowered = s.toLowerAscii(s.trim(raw_type))
+  raw = s.trim(raw_type)
+  lowered = s.toLowerAscii(raw)
   if lowered == "integer" then lowered = "int" end if
   if lowered == "boolean" then lowered = "bool" end if
   if lowered == "str" then lowered = "string" end if
   if lowered == "int" or lowered == "float" or lowered == "bool" or lowered == "string" or lowered == "array" or lowered == "bytes" or lowered == "function" or lowered == "thread" or lowered == "error" or lowered == "void" then
     return lowered
   end if
-  raw_leaf = raw_type
-  raw_dot = s.lastIndexOf(raw_leaf, ".")
-  if raw_dot >= 0 then raw_leaf = s.substr(raw_leaf, raw_dot + 1, len(raw_leaf) - raw_dot - 1) end if
-  owner_leaf = owner_qname
-  owner_dot = s.lastIndexOf(owner_leaf, ".")
-  if owner_dot >= 0 then owner_leaf = s.substr(owner_leaf, owner_dot + 1, len(owner_leaf) - owner_dot - 1) end if
-  if owner_qname != "" and raw_leaf == owner_leaf then return "struct:" + owner_qname end if
-  aliased = _apply_import_alias(state, raw_type)
-  qualified = _qualify_identifier(state, aliased)
-  if _state_struct_id_get(state, qualified, 0) != 0 then return "struct:" + qualified end if
-  if _state_struct_id_get(state, aliased, 0) != 0 then return "struct:" + aliased end if
+  aliased = _apply_import_alias(state, raw)
+  candidates = []
+  if s.contains(aliased, ".") == false then
+    owner_leaf = owner_qname
+    owner_dot = s.lastIndexOf(owner_qname, ".")
+    if owner_dot >= 0 then owner_leaf = s.substr(owner_qname, owner_dot + 1, len(owner_qname) - owner_dot - 1) end if
+    if owner_qname != "" and owner_leaf == aliased then candidates = candidates + [owner_qname] end if
+    if owner_dot >= 0 then candidates = candidates + [s.substr(owner_qname, 0, owner_dot + 1) + aliased] end if
+
+    // Caller bindings cannot change the identity of a callee's declared type.
+    fn_name = _coerce_name(try(node.name))
+    fn_dot = s.lastIndexOf(fn_name, ".")
+    if fn_dot >= 0 then
+      prefix = s.substr(fn_name, 0, fn_dot)
+      if s.endsWith(prefix, ".__static__") then prefix = s.substr(prefix, 0, len(prefix) - 11) end if
+      if typeof(_state_struct_fields_get(state, prefix)) == "array" then
+        prefix_dot = s.lastIndexOf(prefix, ".")
+        if prefix_dot >= 0 then prefix = s.substr(prefix, 0, prefix_dot) else prefix = "" end if
+      end if
+      if prefix != "" then candidates = candidates + [prefix + "." + aliased] end if
+    end if
+    fn_file = _coerce_name(try(node._filename))
+    file_prefix = _strpair_get(state.file_prefix_map, fn_file)
+    if file_prefix != "" then candidates = candidates + [file_prefix + aliased] end if
+    if fn_name == "" then candidates = candidates + [_qualify_identifier(state, aliased)] end if
+  end if
+  candidates = candidates + [aliased]
+  for each candidate in candidates
+    if typeof(_state_struct_fields_get(state, candidate)) == "array" then return "struct:" + candidate end if
+  end for
+  suffix_hits = _pool_collect_suffix(state.struct_fields, "", "." + aliased, [])
+  if typeof(suffix_hits) == "array" and len(suffix_hits) == 1 then return "struct:" + suffix_hits[0] end if
   return ""
 end function
 
@@ -3876,6 +4010,9 @@ function _opt_expr_known_type(state, ex, extended = false)
         end if
       end if
     end if
+    // A callable local/parameter may return any struct, even when its source
+    // name matches a constructor. Do not infer that constructor's field layout.
+    if _member_base_shadowed(state, callee) then return "" end if
     constructor_qname = _expr_to_qualname(state, callee)
     if _state_struct_id_get(state, constructor_qname, 0) != 0 then return "struct:" + constructor_qname end if
   end if
@@ -6676,6 +6813,16 @@ function _emit_expr_call(state, expr)
     end if
   end if
   if callee == "" and raw_name != "" then callee = raw_name end if
+  // All call paths must use the resolved declaration. A bare spelling such
+  // as slice must not reactivate a builtin after resolving to package.slice.
+  if callee != "" and raw_name != "" and callee != raw_name then raw_name = callee end if
+  if typeof(_state_struct_fields_get(state, callee)) == "array" then
+    constructor_binding = scope.cg_resolve_binding(state, callee)
+    if typeof(constructor_binding) == "struct" and constructor_binding.kind != "global" then
+      // The local value chooses the constructor, including its arity/defaults.
+      callee = ""
+    end if
+  end if
 
   // Normalize named/default/variadic syntax before direct-call and inline
   // paths. The native ABI remains fixed; a variadic tail is one array value.
@@ -6771,7 +6918,7 @@ function _emit_expr_call(state, expr)
         if typeof(values[fi]) == "void" and typeof(ctor_contracts) == "array" and fi < len(ctor_contracts) then
           contract = ctor_contracts[fi]
           if typeof(contract) == "array" and len(contract) >= 3 and typeof(contract[2]) != "void" then
-            values[fi] = contract[2]
+            values[fi] = _declared_default_expr(contract[2], callee + ".__default__")
           end if
         end if
       end for
@@ -6806,7 +6953,7 @@ function _emit_expr_call(state, expr)
         state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
         return state
       end if
-      call_args = call_args + [default_expr]
+      call_args = call_args + [_declared_default_expr(default_expr, callee + ".__default__")]
     end while
     expr.args = call_args
     expr.arg_names = array(len(call_args), void)
@@ -9684,11 +9831,13 @@ end function
 function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs, member_runtime, raw_class_constructor)
   skip_call_args_eval = false
   direct_struct_constructor = false
+  constructor_shadowed = _member_base_shadowed(state, cal)
   direct_user_global = false
   direct_user_name = ""
   generic_nonmember_candidate = false
   compiletime_member_callable = false
   cal_kind_skip = _coerce_name(t.ast_kind(cal))
+  if constructor_shadowed and cal_kind_skip != "Member" then generic_nonmember_candidate = true end if
   if cal_kind_skip == "Member" and member_runtime == false then
     compiletime_member_callable = true
   end if
@@ -9742,7 +9891,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
       skip_sid = skip_sid2
     end if
   end if
-  if skip_sid != 0 then direct_struct_constructor = true end if
+  if skip_sid != 0 and constructor_shadowed == false then direct_struct_constructor = true end if
   // Generic indirect calls materialize [callee, arg0, ...] in one dedicated temp area later.
   // Runtime member function values like state.action.acp2 must also use that path,
   // otherwise the later callee temp can reuse and overwrite the pre-evaluated args.
@@ -9827,7 +9976,7 @@ function _emit_expr_call_generic(state, cal, callee, raw_name, call_args, nargs,
       scallee = raw_name
     end if
   end if
-  if sid != 0 then return _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs, raw_class_constructor) end if
+  if sid != 0 and constructor_shadowed == false then return _emit_direct_struct_constructor(state, scallee, sid, call_args, nargs, raw_class_constructor) end if
   if direct_user_global and direct_user_name != "" then
     return _emit_direct_user_call(state, direct_user_name, call_args, nargs)
   end if
@@ -12370,13 +12519,15 @@ end function
 
 /// Lower inline declared type fact expression behavior to native x64.
 /// @internal
-function _inline_declared_type_fact(state, raw_type)
+function _inline_declared_type_fact(state, raw_type, fn)
   if typeof(raw_type) != "string" or raw_type == "" then return "" end if
   lower = s.toLowerAscii(raw_type)
   if lower == "integer" then lower = "int" end if
   if lower == "boolean" then lower = "bool" end if
   if lower == "str" then lower = "string" end if
   if lower == "int" or lower == "float" or lower == "bool" or lower == "string" or lower == "array" or lower == "bytes" or lower == "function" or lower == "thread" or lower == "error" or lower == "void" then return lower end if
+  declared = _operator_declared_type_fact(state, raw_type, "", fn)
+  if declared != "" then return declared end if
   qualified = _qualify_identifier(state, raw_type)
   if qualified == "" then qualified = raw_type end if
   return "struct:" + qualified
@@ -12539,7 +12690,7 @@ function _emit_inline_call(state, callee, args)
         continue
       end if
       if optional or pti >= len(param_types) then continue end if
-      fact = _inline_declared_type_fact(state, param_types[pti])
+      fact = _inline_declared_type_fact(state, param_types[pti], fn)
       if fact == "" then continue end if
       pname = _coerce_name(params[pti])
       state.known_value_types = t.fastmap_set(state.known_value_types, pname, fact)

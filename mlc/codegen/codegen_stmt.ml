@@ -4396,8 +4396,14 @@ end function
 function _typeflow_struct_qname(state, callee)
   raw = _member_qname(callee)
   if raw == "" then return "" end if
+  base_name = raw
+  base_dot = s.indexOf(raw, ".", 0)
+  if base_dot >= 0 then base_name = s.substr(raw, 0, base_dot) end if
+  owner = state.typeflow_function
+  if typeof(owner) == "struct" then
+    if _arr_has(try(owner._ml_locals), base_name) or _arr_has(try(owner._ml_captures), base_name) or _arr_has(try(owner.params), base_name) then return "" end if
+  end if
   aliased = exprmod._apply_import_alias(state, raw)
-  if typeof(exprmod._state_struct_fields_get(state, aliased)) == "array" then return aliased end if
   qualified = exprmod._qualify_identifier(state, aliased)
   if typeof(exprmod._state_struct_fields_get(state, qualified)) == "array" then return qualified end if
   // Match the Python backend's unique suffix fallback while function-prefix
@@ -4528,8 +4534,11 @@ function _typeflow_expr_type(state, ex, known, extended = false)
     if fn_qname != "" then
       declared_fn = exprmod._user_function_get(state, fn_qname)
       if typeof(declared_fn) == "struct" and (typeof(try(declared_fn.return_optional)) != "bool" or declared_fn.return_optional == false) and typeof(try(declared_fn.return_type)) == "string" then
-        guarded_call = ml.TypeGuard("TypeGuard", ex, declared_fn.return_type, false, t.ast_pos(ex), t.ast_filename(ex))
-        declared_result = _typeflow_expr_type(state, guarded_call, known, extended)
+        declared_result = exprmod._operator_declared_type_fact(state, declared_fn.return_type, "", declared_fn)
+        if s.startsWith(declared_result, "struct:") == false then
+          guarded_call = ml.TypeGuard("TypeGuard", ex, declared_fn.return_type, false, t.ast_pos(ex), t.ast_filename(ex))
+          declared_result = _typeflow_expr_type(state, guarded_call, known, extended)
+        end if
         // An annotation alone does not cover implicit void fallthrough or
         // another namespace's custom typeof.
         declared_base = _typeflow_base(declared_result)
@@ -11449,7 +11458,7 @@ function emit_user_function(state, fn_node, analysis_scratch)
   defer_sites = dcr[1]
   defer_lbl = ret_lbl
   if len(defer_sites) > 0 then defer_lbl = "fn_defer_" + code_name end if
-  max_call_args = max_calls_stmts(state, fn_node.body)
+  max_call_args = max_calls_stmts(state, fn_node.body, fn_node)
   if typeof(max_call_args) != "int" or max_call_args < 0 then max_call_args = 0 end if
   if typeof(state.max_inline_call_args_global) == "int" and state.max_inline_call_args_global > max_call_args then
     max_call_args = state.max_inline_call_args_global
@@ -12235,71 +12244,135 @@ function inline _max_calls_int(a, b)
   return b
 end function
 
-/// Lower max calls expr statement behavior to native x64.
-/// @param state Value supplied for `state`.
-/// @param ex Value supplied for `ex`.
-function max_calls_expr(state, ex)
+/// Visit a default once while following a potentially recursive default graph.
+/// @internal
+function _max_calls_default(state, value, owner, seen)
+  if t.ast_is_node(value) == false then return 0 end if
+  if t.fastmap_has(seen[0], value) then return 0 end if
+  seen[0] = t.fastmap_set(seen[0], value, true)
+  return max_calls_expr(state, value, owner, seen)
+end function
+
+/// Reserve outgoing slots for signatures and calls hidden inside defaults.
+/// The declaration context is explicit: caller locals and a previous emission
+/// namespace must not affect frame planning before argument expansion.
+function max_calls_expr(state, ex, owner = void, seen_defaults = void)
   if t.ast_is_node(ex) == false then return 0 end if
   nk = _coerce_name(t.ast_kind(ex))
+  if nk == "DeclaredDefault" then return max_calls_expr(state, ex.expr, ex, seen_defaults) end if
+  if nk == "Num" or nk == "Str" or nk == "Bool" or nk == "VoidLit" or nk == "Var" then return 0 end if
+  if typeof(seen_defaults) != "array" then seen_defaults = [t.fastmap_new(32)] end if
   m = 0
   if nk == "Call" then
     args = _analysis_call_args(ex)
     cal = _analysis_call_callee(ex)
-    call_arity = len(args)
-    ext_qn = exprmod._expr_to_qualname(state, cal)
-    ext_qn = exprmod._apply_import_alias(state, ext_qn)
-    ext_sig = exprmod._extern_sig_get(state, ext_qn)
-    if typeof(ext_sig) == "struct" and typeof(try(ext_sig.params)) == "array" and len(ext_sig.params) > call_arity then
-      call_arity = len(ext_sig.params)
-    end if
-    if t.ast_kind(cal) == "Member" then
-      mname = _coerce_name(try(cal.name))
-      if _struct_methods_any_has(state, mname) then
-        call_arity = call_arity + 1
+    m = len(args)
+    declarations = []
+    raw = _member_qname(cal)
+    if raw != "" then
+      raw = exprmod._apply_import_alias(state, raw)
+      owner_name = ""
+      if typeof(owner) == "string" then owner_name = owner else owner_name = _coerce_name(try(owner.name)) end if
+      qprefix = _qname_parent_prefix(owner_name)
+      filename = t.ast_filename(owner)
+      if filename == "" then filename = t.ast_filename(ex) end if
+      fprefix = _strpair_get(state.file_prefix_map, filename)
+      candidate_key = "@callframe|" + len(state.user_functions) + "|" + len(state.extern_sigs) + "|" + len(state.struct_fields) + "|" + qprefix + "|" + fprefix + "|" + typeof(owner) + "|" + raw
+      if typeof(state.qualify_cache) != "struct" then state.qualify_cache = t.fastmap_new(128) end if
+      candidates = t.fastmap_get(state.qualify_cache, candidate_key, void)
+      if typeof(candidates) != "array" then
+        candidates = [raw]
+        candidates = _arr_add_unique(candidates, qprefix + raw)
+        candidates = _arr_add_unique(candidates, fprefix + raw)
+        if _has_dot_name(raw) == false then
+          prefix = fprefix
+          if prefix == "" then prefix = qprefix end if
+          if prefix != "" or typeof(owner) == "void" then
+            candidates = exprmod._pool_collect_suffix(state.user_functions, prefix, "." + raw, candidates)
+            candidates = exprmod._pool_collect_suffix(state.extern_sigs, prefix, "." + raw, candidates)
+            candidates = exprmod._pool_collect_suffix(state.struct_fields, prefix, "." + raw, candidates)
+          end if
+        end if
+        state.qualify_cache = t.fastmap_set(state.qualify_cache, candidate_key, candidates)
       end if
-    end if
-    m = _max_calls_int(m, call_arity)
-    m = _max_calls_int(m, max_calls_expr(state, cal))
-    if len(args) > 0 then
-      for each aa in args
-        if t.ast_is_node(aa) then
-          m = _max_calls_int(m, max_calls_expr(state, aa))
+      for each name in candidates
+        if typeof(_user_function_get_node(state, name)) == "struct" then declarations = _arr_add_unique(declarations, name) end if
+        signature = exprmod._extern_sig_get(state, name)
+        if typeof(signature) == "struct" and typeof(try(signature.params)) == "array" then m = _max_calls_int(m, len(signature.params)) end if
+        ctor = _named_array_get(state.class_constructor_arities, name)
+        if typeof(ctor) == "array" and len(ctor) >= 2 then
+          ctor_name = "__ml_ctor$" + name + "$" + ctor[1]
+          if typeof(_user_function_get_node(state, ctor_name)) == "struct" then declarations = _arr_add_unique(declarations, ctor_name) end if
+        end if
+        if typeof(exprmod._state_struct_fields_get(state, name)) == "array" then
+          contracts = exprmod._state_struct_field_types_get(state, name)
+          if typeof(contracts) == "array" then
+            for each contract in contracts
+              if typeof(contract) == "array" and len(contract) >= 3 then
+                m = _max_calls_int(m, _max_calls_default(state, contract[2], name + ".__default__", seen_defaults))
+              end if
+            end for
+          end if
+        end if
+        dot = s.lastIndexOf(name, ".")
+        if dot >= 0 then
+          type_name = s.substr(name, 0, dot)
+          method_name = s.substr(name, dot + 1, len(name) - dot - 1)
+          static_name = _strpair_get(exprmod._state_struct_static_methods_get(state, type_name), method_name)
+          if static_name != "" and typeof(_user_function_get_node(state, static_name)) == "struct" then declarations = _arr_add_unique(declarations, static_name) end if
         end if
       end for
     end if
-    return m
-  end if
-  if nk == "Unary" then return max_calls_expr(state, t.ast_right(ex)) end if
-  if nk == "Bin" then return _max_calls_int(max_calls_expr(state, t.ast_left(ex)), max_calls_expr(state, t.ast_right(ex))) end if
-  if nk == "ArrayLit" then
-    items_mc = try(ex.items)
-    if typeof(items_mc) == "array" and len(items_mc) > 0 then
-      for each it in items_mc
-        m = _max_calls_int(m, max_calls_expr(state, it))
+    if t.ast_kind(cal) == "Member" then
+      method_name = _coerce_name(try(cal.name))
+      for each entry in state.struct_methods
+        methods = 0
+        if typeof(entry) == "struct" then methods = entry.values end if
+        if typeof(entry) == "array" and len(entry) >= 2 then methods = entry[1] end if
+        method = _strpair_get(methods, method_name)
+        if method != "" then
+          m = _max_calls_int(m, len(args) + 1)
+          if typeof(_user_function_get_node(state, method)) == "struct" then declarations = _arr_add_unique(declarations, method) end if
+        end if
       end for
     end if
+    for each name in declarations
+      declaration = _user_function_get_node(state, name)
+      if typeof(try(declaration.params)) == "array" then m = _max_calls_int(m, len(declaration.params)) end if
+      defaults = try(declaration.param_defaults)
+      if typeof(defaults) == "array" then
+        for each value in defaults
+          m = _max_calls_int(m, _max_calls_default(state, value, declaration, seen_defaults))
+        end for
+      end if
+    end for
+    m = _max_calls_int(m, max_calls_expr(state, cal, owner, seen_defaults))
+    for each arg in args
+      m = _max_calls_int(m, max_calls_expr(state, arg, owner, seen_defaults))
+    end for
     return m
   end if
-  if nk == "Index" then return _max_calls_int(max_calls_expr(state, try(ex.target)), max_calls_expr(state, try(ex.index))) end if
-  if nk == "Member" then
-    return max_calls_expr(state, _analysis_member_target(ex))
+  if nk == "Unary" then return max_calls_expr(state, t.ast_right(ex), owner, seen_defaults) end if
+  if nk == "Bin" or nk == "Coalesce" then return _max_calls_int(max_calls_expr(state, t.ast_left(ex), owner, seen_defaults), max_calls_expr(state, t.ast_right(ex), owner, seen_defaults)) end if
+  if nk == "TypeGuard" or nk == "IsType" then return max_calls_expr(state, ex.expr, owner, seen_defaults) end if
+  if nk == "Index" then return _max_calls_int(max_calls_expr(state, ex.target, owner, seen_defaults), max_calls_expr(state, ex.index, owner, seen_defaults)) end if
+  if nk == "Member" or nk == "SafeMember" then return max_calls_expr(state, _analysis_member_target(ex), owner, seen_defaults) end if
+  values = []
+  if nk == "ArrayLit" then values = try(ex.items) end if
+  if nk == "AsmExpr" then values = try(ex.args) end if
+  if nk == "StructInit" then values = try(ex.values) end if
+  if typeof(values) == "array" then
+    for each value in values
+      m = _max_calls_int(m, max_calls_expr(state, value, owner, seen_defaults))
+    end for
   end if
-  if nk == "StructInit" then
-    vals_mc = try(ex.values)
-    if typeof(vals_mc) == "array" and len(vals_mc) > 0 then
-      for each vv in vals_mc
-        m = _max_calls_int(m, max_calls_expr(state, vv))
-      end for
-    end if
-    return m
-  end if
-  return 0
+  return m
 end function
 
 /// Lower max calls stmts statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param stmts Value supplied for `stmts`.
-function max_calls_stmts(state, stmts)
+function max_calls_stmts(state, stmts, owner = void)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return 0 end if
   m = 0
   for i = 0 to len(stmts) - 1
@@ -12308,19 +12381,19 @@ function max_calls_stmts(state, stmts)
     if typeof(st) != "struct" then continue end if
     nk = _coerce_name(st.node_kind)
     if nk == "Assign" or nk == "SynchronizedDecl" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       continue
     end if
     if nk == "ConstDecl" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       continue
     end if
     if nk == "Print" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       continue
     end if
     if nk == "ExprStmt" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       continue
     end if
     if nk == "SetMember" then
@@ -12329,59 +12402,59 @@ function max_calls_stmts(state, stmts)
       tgt_try = try(st.target)
       if t.ast_is_node(obj_try) then obj_expr = obj_try end if
       if t.ast_is_node(obj_expr) == false and t.ast_is_node(tgt_try) then obj_expr = tgt_try end if
-      m = _max_calls_int(m, max_calls_expr(state, obj_expr))
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, obj_expr, owner))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       continue
     end if
     if nk == "SetIndex" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.target)))
-      m = _max_calls_int(m, max_calls_expr(state, try(st.index)))
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.target), owner))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.index), owner))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       continue
     end if
     if nk == "If" then
       then_body_mc = try(st.then_body)
       elifs_mc = try(st.elifs)
       else_body_mc = try(st.else_body)
-      m = _max_calls_int(m, max_calls_expr(state, try(st.cond)))
-      m = _max_calls_int(m, max_calls_stmts(state, then_body_mc))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.cond), owner))
+      m = _max_calls_int(m, max_calls_stmts(state, then_body_mc, owner))
       if typeof(elifs_mc) == "array" and len(elifs_mc) > 0 then
         for ei = 0 to len(elifs_mc) - 1
           if ei < 0 or ei >= len(elifs_mc) then break end if
           eb = elifs_mc[ei]
           if typeof(eb) == "array" and len(eb) >= 2 then
-            m = _max_calls_int(m, max_calls_expr(state, eb[0]))
-            m = _max_calls_int(m, max_calls_stmts(state, eb[1]))
+            m = _max_calls_int(m, max_calls_expr(state, eb[0], owner))
+            m = _max_calls_int(m, max_calls_stmts(state, eb[1], owner))
           end if
         end for
       end if
-      m = _max_calls_int(m, max_calls_stmts(state, else_body_mc))
+      m = _max_calls_int(m, max_calls_stmts(state, else_body_mc, owner))
       continue
     end if
     if nk == "While" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.cond)))
-      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.cond), owner))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body), owner))
       continue
     end if
     if nk == "DoWhile" then
-      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
-      m = _max_calls_int(m, max_calls_expr(state, try(st.cond)))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body), owner))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.cond), owner))
       continue
     end if
     if nk == "For" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.start)))
-      m = _max_calls_int(m, max_calls_expr(state, _analysis_for_end_expr(st)))
-      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.start), owner))
+      m = _max_calls_int(m, max_calls_expr(state, _analysis_for_end_expr(st), owner))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body), owner))
       continue
     end if
     if nk == "ForEach" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.iterable)))
-      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.iterable), owner))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body), owner))
       continue
     end if
     if nk == "Switch" then
       cases_mc = try(st.cases)
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       if typeof(cases_mc) == "array" and len(cases_mc) > 0 then
         for ci = 0 to len(cases_mc) - 1
           if ci < 0 or ci >= len(cases_mc) then break end if
@@ -12394,34 +12467,34 @@ function max_calls_stmts(state, stmts)
                 if vi < 0 or vi >= len(vals) then break end if
                 vv = vals[vi]
                 if typeof(vv) == "array" and len(vv) >= 2 then
-                  m = _max_calls_int(m, max_calls_expr(state, vv[0]))
-                  m = _max_calls_int(m, max_calls_expr(state, vv[1]))
+                  m = _max_calls_int(m, max_calls_expr(state, vv[0], owner))
+                  m = _max_calls_int(m, max_calls_expr(state, vv[1], owner))
                 else
-                  m = _max_calls_int(m, max_calls_expr(state, vv))
+                  m = _max_calls_int(m, max_calls_expr(state, vv, owner))
                 end if
               end for
             end if
           else
-            m = _max_calls_int(m, max_calls_expr(state, try(cs.range_start)))
-            m = _max_calls_int(m, max_calls_expr(state, try(cs.range_end)))
+            m = _max_calls_int(m, max_calls_expr(state, try(cs.range_start), owner))
+            m = _max_calls_int(m, max_calls_expr(state, try(cs.range_end), owner))
           end if
-          m = _max_calls_int(m, max_calls_stmts(state, cs.body))
+          m = _max_calls_int(m, max_calls_stmts(state, cs.body, owner))
         end for
       end if
-      m = _max_calls_int(m, max_calls_stmts(state, try(st.default_body)))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.default_body), owner))
       continue
     end if
     if nk == "Return" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       continue
     end if
     if nk == "SynchronizedBlock" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.lock)))
-      m = _max_calls_int(m, max_calls_stmts(state, try(st.body)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.lock), owner))
+      m = _max_calls_int(m, max_calls_stmts(state, try(st.body), owner))
       continue
     end if
     if nk == "Defer" then
-      m = _max_calls_int(m, max_calls_expr(state, try(st.expr)))
+      m = _max_calls_int(m, max_calls_expr(state, try(st.expr), owner))
       continue
     end if
   end for
