@@ -9,18 +9,21 @@ itself. The [Python reference compiler](https://github.com/MiniLangProject/MiniL
 provides the bootstrap implementation and a second code-generation path.
 
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
-or read the [binary installation guide](README-BINARY.md). Version 1.3.11
+or read the [binary installation guide](README-BINARY.md). Version 1.3.14
 includes Windows, Linux and MinUX packages with SHA-256 sidecars; see the
-[source release notes](RELEASE_NOTES_1.3.13.md) and [changelog](CHANGELOG.md).
+[release notes](RELEASE_NOTES_1.3.14.md) and [changelog](CHANGELOG.md).
 
-Version 1.3.13 fixes large-array equality, terminates cyclic comparisons and
-memoizes shared subgraphs with safely growing GC-traced storage. Flat arrays
-remain allocation-free; the source notes document the additional cost for deep
-graphs and the exact validation scope.
+Version 1.3.14 fixes struct and function namespace identity, declaration-context
+defaults and outgoing argument frames. It also preserves resolved names through
+native builtin lowering and repairs formatter spacing, indentation and multiline
+literal preservation. The [namespace audit](docs/reports/STRUCT_NAMESPACE_IDENTITY_2026-11-26.md)
+documents the reproducer, silent field-layout failure and regression coverage.
 
-Version 1.3.12 preserves NaN through optimized arithmetic and adds complete
-allocation/full-stop GC diagnostics. Rebuild the self-hosted compiler to use the
-new source changes; previously published binary archives keep their recorded versions.
+This release also includes the source changes from 1.3.12 and 1.3.13: NaN-safe
+numeric normalization, complete allocation counts and full-stop GC diagnostics,
+native-thread reachability through defaults, and scalable, cycle-safe array equality.
+See the [1.3.14 release notes](RELEASE_NOTES_1.3.14.md) for behavior and validation
+scope; deep array comparisons have documented memory and performance costs.
 
 Version 1.3.11 makes `copyBytes` and `copyArray` safe for overlapping ranges,
 corrects native helper dispatch, and keeps string lengths consistent with the
@@ -145,7 +148,7 @@ self-hosted monolithic compiler and self-hosted `.mlo` pipeline are expected
 to emit identical target bytes. Version 1.3.2 restored this for the OOP
 regression programs on both targets. See the [parity guide](COMPILER_PARITY.md),
 [OOP regression](tests/check_oop_binary_parity.py) and
-[1.3.11 release verification matrix](docs/reports/release-1.3.11-version-matrix.json).
+[1.3.14 release verification matrix](docs/reports/release-1.3.14-version-matrix.json).
 
 ## Documentation and development
 

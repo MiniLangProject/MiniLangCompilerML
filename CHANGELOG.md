@@ -4,10 +4,15 @@ All notable changes to the MiniLang compiler are documented here.
 
 ## Unreleased
 
+## 1.3.14 - 2026-11-26
+
 - Resolve unqualified constructors and other symbols in their defining
   namespace/package before falling back to unrelated entry-module declarations.
   Preserve local, parameter and captured callable bindings, including stored
   and returned constructor values.
+- Keep the canonical resolved function through native builtin/intrinsic
+  lowering, so module functions such as `slice`, `len`, `decode` and `typeof`
+  cannot be replaced by a same-named builtin fallback.
 - Resolve inferred struct layouts and omitted argument/field defaults in the
   declaration's context. Caller locals cannot capture an imported default;
   explicitly supplied arguments retain the caller's context.
