@@ -3015,11 +3015,15 @@ function emit_string_eq_function(state)
   return state
 end function
 
-/// Emit emit value eq function in the native runtime.
-/// @param state Value supplied for `state`.
+/// Compare values with streamed array continuations and an exact pair memo.
+/// Flat arrays use constant inline space; nested graphs grow a traced workspace
+/// only after 32 distinct pairs. Memo collisions compare both array pointers;
+/// cycles terminate and shared DAG nodes are visited once per ordered pair.
+/// @param state Code-generation state, returned with the helper emitted.
 function emit_value_eq_function(state)
   state.asm = a.mark(state.asm, "fn_val_eq")
 
+  // Save non-volatile regs (Windows x64 ABI)
   state.asm = a.push_rbx(state.asm)
   state.asm = a.push_reg(state.asm, "rsi")
   state.asm = a.push_reg(state.asm, "rdi")
@@ -3028,41 +3032,64 @@ function emit_value_eq_function(state)
   state.asm = a.push_r14(state.asm)
   state.asm = a.push_r15(state.asm)
 
-  pair_stack_bytes = 0x1000
-  frame_bytes = 0x28 + pair_stack_bytes
-  state.asm = a.sub_rsp_imm32(state.asm, frame_bytes)
-
-  state.asm = a.lea_r64_membase_disp(state.asm, "r14", "rsp", 40)
+  state.used_helpers = state.used_helpers + ["fn_alloc"]
+  // Seven pushes align RSP to 16 bytes. Keep shadow space separate from
+  // the spill-only GC record and five rooted values at +0x30..+0x50.
+  // Continuations contain array1, array2, next index and length (32 bytes).
+  INLINE_BYTES = 32 * 32
+  FRAME_BYTES = 160 + 2 * INLINE_BYTES
+  state.asm = a.sub_rsp_imm32(state.asm, FRAME_BYTES)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 32, 0, true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 40, 0, true)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 64, "rcx")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 72, "rdx")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 80, t.enc_void(), true)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 88, 0, true)
+  state.asm = a.lea_r64_membase_disp(state.asm, "r14", "rsp", 160)
   state.asm = a.mov_r64_r64(state.asm, "r13", "r14")
-  state.asm = a.mov_r64_r64(state.asm, "r15", "r14")
-  state.asm = a.add_r64_imm(state.asm, "r15", pair_stack_bytes)
-  state.asm = a.mov_membase_disp_r64(state.asm, "r13", 0, "rcx")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r13", 8, "rdx")
-  state.asm = a.add_r64_imm(state.asm, "r13", 16)
+  state.asm = a.lea_r64_membase_disp(state.asm, "r15", "r14", INLINE_BYTES)
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rcx")
+  state.asm = a.mov_r64_r64(state.asm, "r11", "rdx")
 
   lid = state.label_id
   state.label_id = state.label_id + 1
   l_loop = "vale_it_loop_" + lid
+  l_pair = "vale_it_pair_" + lid
   l_false = "vale_it_false_" + lid
   l_true = "vale_it_true_" + lid
   l_done = "vale_it_done_" + lid
   l_ptr = "vale_it_ptr_" + lid
   l_num = "vale_it_num_" + lid
   l_enum = "vale_it_enum_" + lid
-  l_is_arr = "vale_it_is_arr_" + lid
-  l_is_flt = "vale_it_is_flt_" + lid
-  l_is_other = "vale_it_is_other_" + lid
 
+  state.asm = a.jmp(state.asm, l_pair)
   state.asm = a.mark(state.asm, l_loop)
+  // Resume the innermost array. Its index advances before visiting a
+  // child, retaining the ancestor pair until all siblings were checked.
   state.asm = a.cmp_r64_r64(state.asm, "r13", "r14")
   state.asm = a.jcc(state.asm, "e", l_true)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "r13", -16)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "r13", -8)
+  state.asm = a.cmp_r64_r64(state.asm, "rcx", "rax")
+  state.asm = a.jcc(state.asm, "b", "vale_it_element_" + lid)
+  state.asm = a.sub_r64_imm(state.asm, "r13", 32)
+  state.asm = a.jmp(state.asm, l_loop)
+  state.asm = a.mark(state.asm, "vale_it_element_" + lid)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rsi", "r13", -32)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rdi", "r13", -24)
+  // Encoded index i*8+TAG_INT addresses element i with displacement 7;
+  // it remains a valid non-pointer if collection scans a spilled frame.
+  state.asm = a.mov_r64_mem_bis(state.asm, "r10", "rsi", "rcx", 1, 8 - c.TAG_INT)
+  state.asm = a.mov_r64_mem_bis(state.asm, "r11", "rdi", "rcx", 1, 8 - c.TAG_INT)
+  state.asm = a.add_r64_imm(state.asm, "rcx", 8)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r13", -16, "rcx")
 
-  state.asm = a.sub_r64_imm(state.asm, "r13", 16)
-  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "r13", 0)
-  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r13", 8)
+  state.asm = a.mark(state.asm, l_pair)
+  // Fast path: identical tagged values -> continue
   state.asm = a.cmp_r64_r64(state.asm, "r10", "r11")
   state.asm = a.jcc(state.asm, "e", l_loop)
 
+  // tag1 -> r8, tag2 -> r9
   state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
   state.asm = a.and_rax_imm8(state.asm, 7)
   state.asm = a.mov_r64_r64(state.asm, "r8", "rax")
@@ -3070,25 +3097,38 @@ function emit_value_eq_function(state)
   state.asm = a.and_rax_imm8(state.asm, 7)
   state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
 
+  // Enums are not numeric: enum == enum only by identity (handled by fast-path)
+  // If either operand is TAG_ENUM here, values differ -> not equal.
   state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_ENUM)
   state.asm = a.jcc(state.asm, "e", l_enum)
   state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_ENUM)
   state.asm = a.jcc(state.asm, "e", l_enum)
 
-  state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
+  // If both pointers -> pointer path else numeric path
+  state.asm = a.cmp_r64_imm(state.asm, "r8", 0)
   state.asm = a.jcc(state.asm, "ne", l_num)
-  state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_PTR)
+  state.asm = a.cmp_r64_imm(state.asm, "r9", 0)
   state.asm = a.jcc(state.asm, "e", l_ptr)
   state.asm = a.jmp(state.asm, l_num)
 
+  // ---- pointer path ----
   state.asm = a.mark(state.asm, l_ptr)
+  // type1 in eax, type2 in edx
   state.asm = a.movzx_r32_membase_disp(state.asm, "eax", "r10", 0)
   state.asm = a.movzx_r32_membase_disp(state.asm, "edx", "r11", 0)
 
+  // if type == OBJ_STRING
   state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_STRING)
+  l_is_arr = "vale_it_is_arr_" + lid
+  l_is_flt = "vale_it_is_flt_" + lid
+  l_is_other = "vale_it_is_other_" + lid
+  l_arr_pair = "vale_it_arr_pair_" + lid
+  l_arr_scan = "vale_it_arr_scan_" + lid
+  l_type_mismatch = "vale_it_type_mismatch_" + lid
   state.asm = a.jcc(state.asm, "ne", l_is_arr)
   state.asm = a.cmp_r32_r32(state.asm, "eax", "edx")
   state.asm = a.jcc(state.asm, "ne", l_false)
+  // call fn_str_eq(r10,r11) -> bool in rax
   state.asm = a.mov_r64_r64(state.asm, "rcx", "r10")
   state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
   state.asm = a.call(state.asm, "fn_str_eq")
@@ -3096,50 +3136,212 @@ function emit_value_eq_function(state)
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.jmp(state.asm, l_loop)
 
+  // if type == OBJ_ARRAY / OBJ_ARRAY_IMM
   state.asm = a.mark(state.asm, l_is_arr)
   state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_ARRAY)
-  state.asm = a.jcc(state.asm, "e", "vale_arr_pair_" + lid)
+  state.asm = a.jcc(state.asm, "e", l_arr_pair)
   state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_ARRAY_IMM)
-  state.asm = a.jcc(state.asm, "e", "vale_arr_pair_" + lid)
+  state.asm = a.jcc(state.asm, "e", l_arr_pair)
   state.asm = a.jmp(state.asm, l_is_flt)
 
-  state.asm = a.mark(state.asm, "vale_arr_pair_" + lid)
+  state.asm = a.mark(state.asm, l_arr_pair)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY)
-  state.asm = a.jcc(state.asm, "e", "vale_arr_scan_" + lid)
+  state.asm = a.jcc(state.asm, "e", l_arr_scan)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_ARRAY_IMM)
-  state.asm = a.jcc(state.asm, "ne", l_is_other)
-  state.asm = a.mark(state.asm, "vale_arr_scan_" + lid)
+  state.asm = a.jcc(state.asm, "ne", l_type_mismatch)
+  state.asm = a.mark(state.asm, l_arr_scan)
+  // Compare lengths
   state.asm = a.mov_r32_membase_disp(state.asm, "ebx", "r10", 4)
   state.asm = a.mov_r32_membase_disp(state.asm, "ecx", "r11", 4)
   state.asm = a.cmp_r32_r32(state.asm, "ebx", "ecx")
   state.asm = a.jcc(state.asm, "ne", l_false)
+  // if len==0 -> continue
   state.asm = a.test_r32_r32(state.asm, "ebx", "ebx")
   state.asm = a.jcc(state.asm, "e", l_loop)
-  state.asm = a.lea_r64_membase_disp(state.asm, "rsi", "r10", 8)
-  state.asm = a.lea_r64_membase_disp(state.asm, "rdi", "r11", 8)
-  state.asm = a.xor_r32_r32(state.asm, "r9d", "r9d")
-  state.asm = a.mark(state.asm, "vale_it_ap_loop_" + lid)
-  state.asm = a.cmp_r32_r32(state.asm, "r9d", "ebx")
-  state.asm = a.jcc(state.asm, "ge", "vale_it_ap_done_" + lid)
-  state.asm = a.mov_r64_r64(state.asm, "rax", "r13")
-  state.asm = a.add_r64_imm(state.asm, "rax", 16)
-  state.asm = a.cmp_r64_r64(state.asm, "rax", "r15")
-  state.asm = a.jcc(state.asm, "a", l_false)
-  state.asm = a.mov_r64_mem_bis(state.asm, "rax", "rsi", "r9", 8, 0)
-  state.asm = a.mov_r64_mem_bis(state.asm, "rdx", "rdi", "r9", 8, 0)
-  state.asm = a.mov_membase_disp_r64(state.asm, "r13", 0, "rax")
-  state.asm = a.mov_membase_disp_r64(state.asm, "r13", 8, "rdx")
-  state.asm = a.add_r64_imm(state.asm, "r13", 16)
-  state.asm = a.inc_r32(state.asm, "r9d")
-  state.asm = a.jmp(state.asm, "vale_it_ap_loop_" + lid)
-  state.asm = a.mark(state.asm, "vale_it_ap_done_" + lid)
+
+  // A flat array needs neither a hash initialization nor allocation.
+  // Initialize the pair memo lazily on the first distinct nested pair.
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 88)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "ne", "vale_it_memo_" + lid)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 88, 1, true)
+  state.asm = a.jmp(state.asm, "vale_it_push_" + lid)
+  state.asm = a.mark(state.asm, "vale_it_memo_" + lid)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 32)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "ne", "vale_it_lookup_" + lid)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 48, "r10")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 56, "r11")
+  state.asm = a.mov_r64_r64(state.asm, "rdi", "r15")
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "r15")
+  state.asm = a.sub_r64_r64(state.asm, "rcx", "r14")
+  state.asm = a.lea_r64_membase_disp(state.asm, "r8", "rcx", -16)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 120, "r8")
+  state.asm = a.shr_r64_imm8(state.asm, "rcx", 3)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.rep_stosq(state.asm)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "r14", 0)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "r14", 8)
+  state.asm = a.call(state.asm, "vale_it_hash_" + lid)
+  state.asm = a.mov_mem_bis_r64(state.asm, "r15", "r9", 1, 0, "r10")
+  state.asm = a.mov_mem_bis_r64(state.asm, "r15", "r9", 1, 8, "r11")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 32, 1, true)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 48)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 56)
+
+  // Every collision checks both pointers. Completed pairs remain memoized
+  // too: any later mismatch aborts the entire comparison, and retaining
+  // these pairs prevents exponential work on diamond-shaped shared DAGs.
+  state.asm = a.mark(state.asm, "vale_it_lookup_" + lid)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r8", "rsp", 120)
+  state.asm = a.call(state.asm, "vale_it_hash_" + lid)
+  state.asm = a.mark(state.asm, "vale_it_probe_" + lid)
+  state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r15", "r9", 1, 0)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", t.enc_void())
+  state.asm = a.jcc(state.asm, "e", "vale_it_capacity_" + lid)
+  state.asm = a.cmp_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.jcc(state.asm, "ne", "vale_it_collision_" + lid)
+  state.asm = a.mov_r64_mem_bis(state.asm, "rax", "r15", "r9", 1, 8)
+  state.asm = a.cmp_r64_r64(state.asm, "rax", "r11")
+  state.asm = a.jcc(state.asm, "e", l_loop)
+  state.asm = a.mark(state.asm, "vale_it_collision_" + lid)
+  state.asm = a.add_r64_imm(state.asm, "r9", 16)
+  state.asm = a.and_r64_r64(state.asm, "r9", "r8")
+  state.asm = a.jmp(state.asm, "vale_it_probe_" + lid)
+
+  // Capacity is measured in distinct pairs, keeping the memo at <= 50%
+  // load. Active continuation depth can never exceed the pair count.
+  state.asm = a.mark(state.asm, "vale_it_capacity_" + lid)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 88)
+  state.asm = a.shl_rax_imm8(state.asm, 5)
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "r15")
+  state.asm = a.sub_r64_r64(state.asm, "rcx", "r14")
+  state.asm = a.cmp_r64_r64(state.asm, "rax", "rcx")
+  state.asm = a.jcc(state.asm, "b", "vale_it_insert_" + lid)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 48, "r10")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 56, "r11")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 152, "rbx")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 40)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "ne", "vale_it_rooted_" + lid)
+  // On the first spill, publish all initialized inline pairs as precise
+  // roots. Unused continuation slots are cleared before the record is
+  // linked; raw indices in record/hash metadata never become GC values.
+  state.asm = a.mov_r64_r64(state.asm, "rdi", "r13")
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "r15")
+  state.asm = a.sub_r64_r64(state.asm, "rcx", "r13")
+  state.asm = a.shr_r64_imm8(state.asm, "rcx", 3)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.rep_stosq(state.asm)
+  state = mem.emit_gc_push_root_frame(state, 96, 48, 88)
+  state = mem.emit_gc_push_root_frame(state, 128, 160, 160 + 2 * INLINE_BYTES)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rsp", 40, 1, true)
+  state.asm = a.mark(state.asm, "vale_it_rooted_" + lid)
+  // Double both banks. The workspace is a real traced array: all visited
+  // arrays are independently retained, even after their frame completes.
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "r15")
+  state.asm = a.sub_r64_r64(state.asm, "rcx", "r14")
+  state.asm = a.add_r64_r64(state.asm, "rcx", "rcx")
+  state.asm = a.jcc(state.asm, "b", "vale_it_exhausted_" + lid)
+  state.asm = a.add_r64_r64(state.asm, "rcx", "rcx")
+  state.asm = a.jcc(state.asm, "b", "vale_it_exhausted_" + lid)
+  // OBJ_ARRAY's length field is u32; refuse an unrepresentable workspace
+  // through the fatal resource path rather than truncate its root span.
+  state.asm = a.mov_r64_r64(state.asm, "rax", "rcx")
+  state.asm = a.shr_r64_imm8(state.asm, "rax", 35)
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "ne", "vale_it_exhausted_" + lid)
+  state.asm = a.add_r64_imm(state.asm, "rcx", 8)
+  state.asm = a.jcc(state.asm, "b", "vale_it_exhausted_" + lid)
+  state.asm = a.call(state.asm, "fn_alloc")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 0, c.OBJ_ARRAY, false)
+  state.asm = a.mov_membase_disp_imm32(state.asm, "rax", 4, 0, false)
+  state.asm = a.lea_r64_membase_disp(state.asm, "r12", "rax", 8)
+  state.asm = a.mov_r64_r64(state.asm, "rdi", "r12")
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "r15")
+  state.asm = a.sub_r64_r64(state.asm, "rcx", "r14")
+  state.asm = a.shr_r64_imm8(state.asm, "rcx", 1)
+  state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
+  state.asm = a.rep_stosq(state.asm)
+  // Use the 64-bit REP count directly. The generic byte-copy helper has
+  // a u32 byte-count contract, smaller than a representable workspace.
+  state.asm = a.mov_r64_r64(state.asm, "rdi", "r12")
+  state.asm = a.mov_r64_r64(state.asm, "rsi", "r14")
+  state.asm = a.mov_r64_r64(state.asm, "rcx", "r13")
+  state.asm = a.sub_r64_r64(state.asm, "rcx", "r14")
+  state.asm = a.shr_r64_imm8(state.asm, "rcx", 3)
+  state.asm = a.rep_movsq(state.asm)
+  // Rehash into the larger bank; copying bucket offsets would silently
+  // break collision chains when the mask changes.
+  state.asm = a.mov_r64_r64(state.asm, "rbx", "r15")
+  state.asm = a.sub_r64_r64(state.asm, "rbx", "r14")
+  state.asm = a.add_r64_r64(state.asm, "rbx", "rbx")
+  state.asm = a.lea_r64_membase_disp(state.asm, "r8", "rbx", -16)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 120, "r8")
+  state.asm = a.add_r64_r64(state.asm, "rbx", "r12")
+  state.asm = a.mov_r64_r64(state.asm, "rsi", "r15")
+  state.asm = a.mov_r64_r64(state.asm, "rdi", "r15")
+  state.asm = a.sub_r64_r64(state.asm, "rdi", "r14")
+  state.asm = a.add_r64_r64(state.asm, "rdi", "r15")
+  state.asm = a.mark(state.asm, "vale_it_rehash_" + lid)
+  state.asm = a.cmp_r64_r64(state.asm, "rsi", "rdi")
+  state.asm = a.jcc(state.asm, "ae", "vale_it_rehashed_" + lid)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsi", 0)
+  state.asm = a.cmp_r64_imm(state.asm, "r10", t.enc_void())
+  state.asm = a.jcc(state.asm, "e", "vale_it_rehash_next_" + lid)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsi", 8)
+  state.asm = a.call(state.asm, "vale_it_hash_" + lid)
+  state.asm = a.mark(state.asm, "vale_it_rehash_probe_" + lid)
+  state.asm = a.mov_r64_mem_bis(state.asm, "rax", "rbx", "r9", 1, 0)
+  state.asm = a.cmp_r64_imm(state.asm, "rax", t.enc_void())
+  state.asm = a.jcc(state.asm, "e", "vale_it_rehash_store_" + lid)
+  state.asm = a.add_r64_imm(state.asm, "r9", 16)
+  state.asm = a.and_r64_r64(state.asm, "r9", "r8")
+  state.asm = a.jmp(state.asm, "vale_it_rehash_probe_" + lid)
+  state.asm = a.mark(state.asm, "vale_it_rehash_store_" + lid)
+  state.asm = a.mov_mem_bis_r64(state.asm, "rbx", "r9", 1, 0, "r10")
+  state.asm = a.mov_mem_bis_r64(state.asm, "rbx", "r9", 1, 8, "r11")
+  state.asm = a.mark(state.asm, "vale_it_rehash_next_" + lid)
+  state.asm = a.add_r64_imm(state.asm, "rsi", 16)
+  state.asm = a.jmp(state.asm, "vale_it_rehash_" + lid)
+  state.asm = a.mark(state.asm, "vale_it_rehashed_" + lid)
+  state.asm = a.sub_r64_r64(state.asm, "r13", "r14")
+  state.asm = a.add_r64_r64(state.asm, "r13", "r12")
+  state.asm = a.mov_r64_r64(state.asm, "r15", "rbx")
+  state.asm = a.mov_r64_r64(state.asm, "r14", "r12")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r15")
+  state.asm = a.sub_r64_r64(state.asm, "rax", "r14")
+  state.asm = a.shr_r64_imm8(state.asm, "rax", 2)
+  state.asm = a.mov_membase_disp_r32(state.asm, "r12", -4, "eax")
+  state.asm = a.lea_r64_membase_disp(state.asm, "rax", "r12", -8)
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 80, "rax")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rbx", "rsp", 152)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 48)
+  state.asm = a.mov_r64_membase_disp(state.asm, "r11", "rsp", 56)
+  state.asm = a.jmp(state.asm, "vale_it_lookup_" + lid)
+  state.asm = a.mark(state.asm, "vale_it_insert_" + lid)
+  state.asm = a.mov_mem_bis_r64(state.asm, "r15", "r9", 1, 0, "r10")
+  state.asm = a.mov_mem_bis_r64(state.asm, "r15", "r9", 1, 8, "r11")
+  state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 88)
+  state.asm = a.inc_r64(state.asm, "rax")
+  state.asm = a.mov_membase_disp_r64(state.asm, "rsp", 88, "rax")
+  state.asm = a.mark(state.asm, "vale_it_push_" + lid)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r13", 0, "r10")
+  state.asm = a.mov_membase_disp_r64(state.asm, "r13", 8, "r11")
+  state.asm = a.mov_membase_disp_imm32(state.asm, "r13", 16, t.enc_int(0), true)
+  state.asm = a.shl_r64_imm8(state.asm, "rbx", 3)
+  state.asm = a.or_r64_imm(state.asm, "rbx", c.TAG_INT)
+  state.asm = a.mov_membase_disp_r64(state.asm, "r13", 24, "rbx")
+  state.asm = a.add_r64_imm(state.asm, "r13", 32)
   state.asm = a.jmp(state.asm, l_loop)
 
+  // if type == OBJ_FLOAT
   state.asm = a.mark(state.asm, l_is_flt)
   state.asm = a.cmp_r32_r32(state.asm, "eax", "edx")
-  state.asm = a.jcc(state.asm, "ne", l_is_other)
+  state.asm = a.jcc(state.asm, "ne", l_type_mismatch)
   state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_FLOAT)
   state.asm = a.jcc(state.asm, "ne", l_is_other)
+  // Compare doubles: NaN => false
   state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "r10", 8)
   state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm1", "r11", 8)
   state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
@@ -3147,18 +3349,24 @@ function emit_value_eq_function(state)
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.jmp(state.asm, l_loop)
 
+  // unknown ptr types -> false (identity already handled)
   state.asm = a.mark(state.asm, l_is_other)
+  state.asm = a.mark(state.asm, l_type_mismatch)
   state.asm = a.jmp(state.asm, l_false)
 
+  // ---- numeric path (int/bool/float mix) ----
   state.asm = a.mark(state.asm, l_num)
-  state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
-  state.asm = a.jcc(state.asm, "e", l_num + "_mix")
-  state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_PTR)
-  state.asm = a.jcc(state.asm, "e", l_num + "_mix")
+  // If both immediates (non-pointer) -> compare raw integers
+  state.asm = a.cmp_r64_imm(state.asm, "r8", 0)
+  l_num_mix = "vale_it_num_mix_" + lid
+  state.asm = a.jcc(state.asm, "e", l_num_mix)
+  state.asm = a.cmp_r64_imm(state.asm, "r9", 0)
+  state.asm = a.jcc(state.asm, "e", l_num_mix)
   state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_FLOAT)
-  state.asm = a.jcc(state.asm, "e", l_num + "_mix")
+  state.asm = a.jcc(state.asm, "e", l_num_mix)
   state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_FLOAT)
-  state.asm = a.jcc(state.asm, "e", l_num + "_mix")
+  state.asm = a.jcc(state.asm, "e", l_num_mix)
+  // rax = v1>>3, rdx = v2>>3
   state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
   state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
   state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
@@ -3167,49 +3375,66 @@ function emit_value_eq_function(state)
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.jmp(state.asm, l_loop)
 
-  state.asm = a.mark(state.asm, l_num + "_mix")
-  state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_PTR)
-  state.asm = a.jcc(state.asm, "ne", l_num + "_v1_imm")
+  // Mixed numeric or float: convert both to double and compare
+  state.asm = a.mark(state.asm, l_num_mix)
+  // v1 -> xmm0
+  l_v1_imm = "vale_it_v1_imm_" + lid
+  l_v1_immf = "vale_it_v1_immf_" + lid
+  l_v1_done = "vale_it_v1_done_" + lid
+  state.asm = a.cmp_r64_imm(state.asm, "r8", 0)
+  state.asm = a.jcc(state.asm, "ne", l_v1_imm)
+  // pointer: must be float
   state.asm = a.mov_r32_membase_disp(state.asm, "eax", "r10", 0)
   state.asm = a.cmp_r32_imm(state.asm, "eax", c.OBJ_FLOAT)
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm0", "r10", 8)
-  state.asm = a.jmp(state.asm, l_num + "_v1_done")
-  state.asm = a.mark(state.asm, l_num + "_v1_imm")
+  state.asm = a.jmp(state.asm, l_v1_done)
+
+  state.asm = a.mark(state.asm, l_v1_imm)
   state.asm = a.cmp_r64_imm(state.asm, "r8", c.TAG_FLOAT)
-  state.asm = a.jcc(state.asm, "e", l_num + "_v1_immf")
+  state.asm = a.jcc(state.asm, "e", l_v1_immf)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
   state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
   state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm0", "rax")
-  state.asm = a.jmp(state.asm, l_num + "_v1_done")
-  state.asm = a.mark(state.asm, l_num + "_v1_immf")
+  state.asm = a.jmp(state.asm, l_v1_done)
+
+  state.asm = a.mark(state.asm, l_v1_immf)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
   state = _emit_to_double_xmm(state, 0, l_false)
-  state.asm = a.mark(state.asm, l_num + "_v1_done")
 
-  state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_PTR)
-  state.asm = a.jcc(state.asm, "ne", l_num + "_v2_imm")
+  state.asm = a.mark(state.asm, l_v1_done)
+
+  // v2 -> xmm1
+  l_v2_imm = "vale_it_v2_imm_" + lid
+  l_v2_immf = "vale_it_v2_immf_" + lid
+  l_v2_done = "vale_it_v2_done_" + lid
+  state.asm = a.cmp_r64_imm(state.asm, "r9", 0)
+  state.asm = a.jcc(state.asm, "ne", l_v2_imm)
   state.asm = a.mov_r32_membase_disp(state.asm, "edx", "r11", 0)
   state.asm = a.cmp_r32_imm(state.asm, "edx", c.OBJ_FLOAT)
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.movsd_xmm_membase_disp(state.asm, "xmm1", "r11", 8)
-  state.asm = a.jmp(state.asm, l_num + "_v2_done")
-  state.asm = a.mark(state.asm, l_num + "_v2_imm")
+  state.asm = a.jmp(state.asm, l_v2_done)
+
+  state.asm = a.mark(state.asm, l_v2_imm)
   state.asm = a.cmp_r64_imm(state.asm, "r9", c.TAG_FLOAT)
-  state.asm = a.jcc(state.asm, "e", l_num + "_v2_immf")
+  state.asm = a.jcc(state.asm, "e", l_v2_immf)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
   state.asm = a.sar_r64_imm8(state.asm, "rax", 3)
   state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm1", "rax")
-  state.asm = a.jmp(state.asm, l_num + "_v2_done")
-  state.asm = a.mark(state.asm, l_num + "_v2_immf")
+  state.asm = a.jmp(state.asm, l_v2_done)
+
+  state.asm = a.mark(state.asm, l_v2_immf)
   state.asm = a.mov_r64_r64(state.asm, "rax", "r11")
   state = _emit_to_double_xmm(state, 1, l_false)
-  state.asm = a.mark(state.asm, l_num + "_v2_done")
+
+  state.asm = a.mark(state.asm, l_v2_done)
   state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
   state.asm = a.jcc(state.asm, "p", l_false)
   state.asm = a.jcc(state.asm, "ne", l_false)
   state.asm = a.jmp(state.asm, l_loop)
 
+  // ---- return paths ----
   state.asm = a.mark(state.asm, l_true)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(true))
   state.asm = a.jmp(state.asm, l_done)
@@ -3221,7 +3446,13 @@ function emit_value_eq_function(state)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_bool(false))
 
   state.asm = a.mark(state.asm, l_done)
-  state.asm = a.add_rsp_imm32(state.asm, frame_bytes)
+  state.asm = a.mov_r64_membase_disp(state.asm, "rcx", "rsp", 40)
+  state.asm = a.test_r64_r64(state.asm, "rcx", "rcx")
+  state.asm = a.jcc(state.asm, "e", "vale_it_unrooted_" + lid)
+  state = mem.emit_gc_pop_root_frame(state, 128)
+  state = mem.emit_gc_pop_root_frame(state, 96)
+  state.asm = a.mark(state.asm, "vale_it_unrooted_" + lid)
+  state.asm = a.add_rsp_imm32(state.asm, FRAME_BYTES)
   state.asm = a.pop_r15(state.asm)
   state.asm = a.pop_r14(state.asm)
   state.asm = a.pop_r13(state.asm)
@@ -3230,6 +3461,36 @@ function emit_value_eq_function(state)
   state.asm = a.pop_reg(state.asm, "rsi")
   state.asm = a.pop_rbx(state.asm)
   state.asm = a.ret(state.asm)
+
+  // Local non-allocating leaf: R10/R11 are an ordered pointer pair,
+  // R8 is a byte-offset mask, R9 receives a bucket offset. Mixing both
+  // pointers before masking avoids aligned/adjacent allocator clusters.
+  state.asm = a.mark(state.asm, "vale_it_hash_" + lid)
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  state.asm = a.shr_r64_imm8(state.asm, "rax", 3)
+  state.asm = a.imul_r64_r64_imm(state.asm, "rax", "rax", 73244475)
+  state.asm = a.mov_r64_r64(state.asm, "rdx", "r11")
+  state.asm = a.shr_r64_imm8(state.asm, "rdx", 3)
+  state.asm = a.xor_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+  state.asm = a.shr_r64_imm8(state.asm, "rdx", 16)
+  state.asm = a.xor_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.imul_r64_r64_imm(state.asm, "rax", "rax", 73244475)
+  state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+  state.asm = a.shr_r64_imm8(state.asm, "rdx", 16)
+  state.asm = a.xor_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.shl_rax_imm8(state.asm, 4)
+  state.asm = a.and_r64_r64(state.asm, "rax", "r8")
+  state.asm = a.mov_r64_r64(state.asm, "r9", "rax")
+  state.asm = a.ret(state.asm)
+
+  // Resource exhaustion must not masquerade as a legitimate inequality.
+  // Normal exhaustion uses fn_alloc's diagnostic/fatal path; this guard
+  // covers an impossible-to-represent doubled workspace size.
+  state.asm = a.mark(state.asm, "vale_it_exhausted_" + lid)
+  state.asm = a.mov_rcx_imm32(state.asm, 1)
+  state.asm = a.call_rip_qword(state.asm, "iat_ExitProcess")
+  state.asm = a.emit(state.asm, fromHex("0f0b"))
   return state
 end function
 
