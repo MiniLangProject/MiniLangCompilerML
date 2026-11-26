@@ -133,7 +133,7 @@ function Invoke-CompilerVersionCheck {
   Write-LogLine ""
   Write-LogLine "== $Name =="
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
-  $expected = "MiniLang Compiler 1.3.11"
+  $expected = "MiniLang Compiler 1.3.12"
   $exitCode = 0
 
   foreach ($flag in @("-version", "--version")) {
@@ -568,6 +568,10 @@ try {
     [pscustomobject]@{ Name = "runtime codegen"; Source = "runtime_codegen.ml" },
     [pscustomobject]@{ Name = "memory management"; Source = "memory_management.ml" },
     [pscustomobject]@{ Name = "heap ceiling"; Source = "memory_heap_ceiling.ml" },
+    [pscustomobject]@{ Name = "NaN normalization"; Source = "numeric_nan_normalization.ml" },
+    [pscustomobject]@{ Name = "complete allocation totals and GC work timing"; Source = "gc_allocation_totals.ml" },
+    [pscustomobject]@{ Name = "atomic threaded allocation totals"; Source = "gc_allocation_totals_threads.ml" },
+    [pscustomobject]@{ Name = "default-only first-class GC reference"; Source = "gc_stats_default_reference.ml" },
     [pscustomobject]@{ Name = "GC thread lifetime"; Source = "gc_thread_lifetime.ml" },
     [pscustomobject]@{ Name = "GC handoff lifetime"; Source = "gc_handoff_lifetime.ml" },
     [pscustomobject]@{ Name = "GC bitmap words"; Source = "gc_bitmap_words.ml" },

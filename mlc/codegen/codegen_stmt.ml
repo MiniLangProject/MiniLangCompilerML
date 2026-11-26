@@ -1934,7 +1934,7 @@ function _opt_emit_float_loop_raw(state, expr, env, state_count, saved, l_slow, 
     state.asm = a.mark(state.asm, resume)
   else
     // Assignment roots and children without a proven-float sibling retain
-    // the integer/NaN bailout and committed rollback state.
+    // the integer bailout and committed rollback state.
     state = exprmod._emit_float_tree_normalize(state, l_slow)
   end if
   return state
@@ -10506,6 +10506,117 @@ function _stmts_use_native_threads(stmts)
   return false
 end function
 
+/// Detect explicit and first-class diagnostic references, excluding builtin hoisting.
+/// @internal
+function _expr_uses_gc_stats(ex)
+  if typeof(ex) == "array" then
+    for each child in ex
+      if _expr_uses_gc_stats(child) then return true end if
+    end for
+    return false
+  end if
+  if t.ast_is_node(ex) == false then return false end if
+  nk = _coerce_name(t.ast_kind(ex))
+  if nk == "Var" or nk == "Member" then
+    nm = _coerce_name(t.ast_name(ex))
+    if nm == "gc_stat" or s.endsWith(nm, ".gc_stat") then return true end if
+  end if
+  if nk == "Member" or nk == "SafeMember" then return _expr_uses_gc_stats(try(ex.target)) end if
+  if nk == "TypeGuard" or nk == "IsType" then return _expr_uses_gc_stats(ex.expr) end if
+  if nk == "Coalesce" then return _expr_uses_gc_stats(ex.left) or _expr_uses_gc_stats(ex.right) end if
+  if nk == "AsmExpr" then return _expr_uses_gc_stats(ex.args) end if
+  if nk == "Lambda" then return _stmts_use_gc_stats(ex.body) or _expr_uses_gc_stats(ex.param_defaults) end if
+  if nk == "Unary" then return _expr_uses_gc_stats(t.ast_right(ex)) end if
+  if nk == "Bin" then
+    return _expr_uses_gc_stats(t.ast_left(ex)) or _expr_uses_gc_stats(t.ast_right(ex))
+  end if
+  if nk == "Index" then
+    return _expr_uses_gc_stats(try(ex.target)) or _expr_uses_gc_stats(try(ex.index))
+  end if
+  if nk == "Call" then
+    if _expr_uses_gc_stats(_analysis_call_callee(ex)) then return true end if
+    args_nt = _analysis_call_args(ex)
+    if len(args_nt) > 0 then
+      for each arg_nt in args_nt
+        if _expr_uses_gc_stats(arg_nt) then return true end if
+      end for
+    end if
+    return false
+  end if
+  values_nt = 0
+  if nk == "ArrayLit" then values_nt = try(ex.items) end if
+  if nk == "StructInit" then values_nt = try(ex.values) end if
+  if typeof(values_nt) == "array" and len(values_nt) > 0 then
+    for each value_nt in values_nt
+      if typeof(value_nt) == "array" and len(value_nt) >= 2 then
+        if _expr_uses_gc_stats(value_nt[1]) then return true end if
+      else
+        if _expr_uses_gc_stats(value_nt) then return true end if
+      end if
+    end for
+  end if
+  return false
+end function
+
+/// Scan all statement/default-expression positions for diagnostic references.
+/// @internal
+function _stmts_use_gc_stats(stmts)
+  if typeof(stmts) != "array" or len(stmts) <= 0 then return false end if
+  for each st_nt in stmts
+    if typeof(st_nt) != "struct" then continue end if
+    exprs_nt = [
+      try(st_nt.expr), try(st_nt.cond), try(st_nt.start), _analysis_for_end_expr(st_nt),
+      try(st_nt.step), try(st_nt.iterable), try(st_nt.obj),
+      try(st_nt.target), try(st_nt.index), try(st_nt.lock),
+      try(st_nt.param_defaults), try(st_nt.field_defaults), try(st_nt.values)
+    ]
+    for each expr_nt in exprs_nt
+      if _expr_uses_gc_stats(expr_nt) then return true end if
+    end for
+
+    bodies_nt = [
+      try(st_nt.body), try(st_nt.then_body), try(st_nt.else_body),
+      try(st_nt.default_body), try(st_nt.methods), try(st_nt.cleanup)
+    ]
+    for each body_nt in bodies_nt
+      if _stmts_use_gc_stats(body_nt) then return true end if
+    end for
+
+    elifs_nt = try(st_nt.elifs)
+    if typeof(elifs_nt) == "array" and len(elifs_nt) > 0 then
+      for each elif_nt in elifs_nt
+        if typeof(elif_nt) == "array" and len(elif_nt) >= 2 then
+          if _expr_uses_gc_stats(elif_nt[0]) then return true end if
+          if _stmts_use_gc_stats(elif_nt[1]) then return true end if
+        end if
+      end for
+    end if
+
+    cases_nt = try(st_nt.cases)
+    if typeof(cases_nt) == "array" and len(cases_nt) > 0 then
+      for each case_nt in cases_nt
+        if typeof(case_nt) != "struct" then continue end if
+        if _expr_uses_gc_stats(try(case_nt.range_start)) then return true end if
+        if _expr_uses_gc_stats(try(case_nt.range_end)) then return true end if
+        case_values_nt = try(case_nt.values)
+        if typeof(case_values_nt) == "array" and len(case_values_nt) > 0 then
+          for each case_value_nt in case_values_nt
+            if typeof(case_value_nt) == "array" and len(case_value_nt) >= 2 then
+              if _expr_uses_gc_stats(case_value_nt[0]) then return true end if
+              if _expr_uses_gc_stats(case_value_nt[1]) then return true end if
+            else
+              if _expr_uses_gc_stats(case_value_nt) then return true end if
+            end if
+          end for
+        end if
+        if _stmts_use_gc_stats(try(case_nt.body)) then return true end if
+      end for
+    end if
+  end for
+  return false
+end function
+
+
 /// Lower prepare program for objects statement behavior to native x64.
 /// @param state Value supplied for `state`.
 /// @param program Value supplied for `program`.
@@ -10514,6 +10625,19 @@ function prepare_program_for_objects(state, program)
   // Imported modules are part of program, so this closed-program scan safely
   // removes TLS/GC polling and heap synchronization when Thread is unreachable.
   state.native_threads_possible = _stmts_use_native_threads(program) or mem._heap_cfg_get_bool(state, "gc_concurrent", false)
+  stats_requested = _stmts_use_gc_stats(program)
+  if typeof(state.heap_config) != "array" then state.heap_config = [] end if
+  stats_configured = false
+  stats_at = 0
+  while stats_at < len(state.heap_config)
+    stats_item = state.heap_config[stats_at]
+    if typeof(stats_item) == "array" and len(stats_item)>=2 and stats_item[0] == "gc_stats_requested" then
+      state.heap_config[stats_at] = ["gc_stats_requested", stats_requested]
+      stats_configured = true
+    end if
+    stats_at = stats_at + 1
+  end while
+  if not stats_configured then state.heap_config = state.heap_config + [["gc_stats_requested", stats_requested]] end if
   state.extern_structs = []
   state.value_enum_values = []
   state.class_bases = []

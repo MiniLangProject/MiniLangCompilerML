@@ -152,6 +152,8 @@ function _emit_normalize_xmm0_to_value(state)
   state.asm = a.cvttsd2si_r64_xmm(state.asm, "rax", "xmm0")
   state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm1", "rax")
   state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+  // NaN sets both PF and ZF; only ordered equality may normalize to int.
+  state.asm = a.jcc(state.asm, "p", l_try_immf)
   state.asm = a.jcc(state.asm, "e", l_int)
   state.asm = a.jmp(state.asm, l_try_immf)
 

@@ -11,7 +11,11 @@ provides the bootstrap implementation and a second code-generation path.
 Download the [latest native compiler packages](https://github.com/MiniLangProject/MiniLangCompilerML/releases/latest)
 or read the [binary installation guide](README-BINARY.md). Version 1.3.11
 includes Windows, Linux and MinUX packages with SHA-256 sidecars; see the
-[release notes](RELEASE_NOTES_1.3.11.md) and [changelog](CHANGELOG.md).
+[source release notes](RELEASE_NOTES_1.3.12.md) and [changelog](CHANGELOG.md).
+
+Version 1.3.12 preserves NaN through optimized arithmetic and adds complete
+allocation/full-stop GC diagnostics. Rebuild the self-hosted compiler to use the
+new source changes; previously published binary archives keep their recorded versions.
 
 Version 1.3.11 makes `copyBytes` and `copyArray` safe for overlapping ranges,
 corrects native helper dispatch, and keeps string lengths consistent with the

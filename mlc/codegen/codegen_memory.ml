@@ -198,10 +198,85 @@ function _gc_stat_labels(state)
           "gc_tlab_retired_bytes", "gc_bytes_limit", "gc_young_bytes_limit",
           "gc_adaptive", "gc_central_bytes", "gc_mark_capacity", "gc_purged_bytes",
           "gc_thread_contexts"]
-  if _heap_cfg_get_bool(state, "gc_concurrent", false) then
-    labels = labels + ["gc_concurrent_completed", "gc_concurrent_phase", "gc_concurrent_pause_ticks", "gc_concurrent_pause_max", "gc_concurrent_overflows", "gc_concurrent_marked"]
+  // Keep disabled collector-specific indices reserved.
+  labels = labels + ["gc_concurrent_completed", "gc_concurrent_phase", "gc_concurrent_pause_ticks", "gc_concurrent_pause_max", "gc_concurrent_overflows", "gc_concurrent_marked"]
+  return labels + ["gc_object_requests", "gc_object_requested_bytes", "gc_pause_total_ns", "gc_pause_max_ns", "gc_pause_last_ns"]
+end function
+
+/// Read a monotonic clock without managed allocation; collector regs are saved.
+/// @internal
+function emit_gc_pause_clock(state, prefix)
+  failed = prefix + "_failed"
+  done = prefix + "_done"
+  if state.is_elf_target then
+    state.asm = a.mov_r32_imm32(state.asm, "edi", 1)
+    state.asm = a.lea_r64_membase_disp(state.asm, "rsi", "rsp", 8)
+    state.asm = a.mov_rax_imm64(state.asm, 228)
+    state.asm = a.emit8(state.asm, 15)
+    state.asm = a.emit8(state.asm, 5)
+    state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+    state.asm = a.jcc(state.asm, "ne", failed)
+    state.asm = a.mov_r64_membase_disp(state.asm, "rax", "rsp", 8)
+    state.asm = a.imul_r64_r64_imm(state.asm, "rax", "rax", 1000000000)
+    state.asm = a.mov_r64_membase_disp(state.asm, "r10", "rsp", 16)
+    state.asm = a.add_r64_r64(state.asm, "rax", "r10")
+  else
+    state.asm = a.mov_rax_rip_qword(state.asm, "gc_pause_frequency")
+    state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+    state.asm = a.jcc(state.asm, "ne", prefix + "_frequency_ready")
+    state.asm = a.lea_r64_rip(state.asm, "rcx", "gc_pause_frequency")
+    state.asm = a.mov_rax_rip_qword(state.asm, "iat_QueryPerformanceFrequency")
+    state.asm = a.call_rax(state.asm)
+    state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+    state.asm = a.jcc(state.asm, "e", failed)
+    state.asm = a.mark(state.asm, prefix + "_frequency_ready")
+    state.asm = a.lea_r64_rip(state.asm, "rcx", "gc_pause_clock_value")
+    state.asm = a.mov_rax_rip_qword(state.asm, "iat_QueryPerformanceCounter")
+    state.asm = a.call_rax(state.asm)
+    state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+    state.asm = a.jcc(state.asm, "e", failed)
+    state.asm = a.mov_rax_rip_qword(state.asm, "gc_pause_clock_value")
   end if
-  return labels
+  state.asm = a.jmp(state.asm, done)
+  state.asm = a.mark(state.asm, failed)
+  state.asm = a.xor_r32_r32(state.asm, "eax", "eax")
+  state.asm = a.mark(state.asm, done)
+  return state
+end function
+
+/// Record collector work after rendezvous and before mutators resume.
+/// @internal
+function emit_gc_pause_finish(state)
+  state = emit_gc_pause_clock(state, "gc_pause_end_clock")
+  state.asm = a.mov_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.mov_rax_rip_qword(state.asm, "gc_pause_started")
+  state.asm = a.test_r64_r64(state.asm, "rax", "rax")
+  state.asm = a.jcc(state.asm, "e", "gc_pause_record_done")
+  state.asm = a.cmp_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.jcc(state.asm, "b", "gc_pause_record_done")
+  state.asm = a.sub_r64_r64(state.asm, "r10", "rax")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "r10")
+  if not state.is_elf_target then
+    state.asm = a.lea_r11_rip(state.asm, "gc_pause_frequency")
+    state.asm = a.mov_r64_membase_disp(state.asm, "r10", "r11", 0)
+    state.asm = a.test_r64_r64(state.asm, "r10", "r10")
+    state.asm = a.jcc(state.asm, "e", "gc_pause_record_done")
+    state.asm = a.mov_rcx_imm32(state.asm, 1000000000)
+    state.asm = a.mul_r64(state.asm, "rcx")
+    state.asm = a.div_r64(state.asm, "r10")
+  end if
+  state.asm = a.mov_rip_qword_rax(state.asm, "gc_pause_last_ns")
+  state.asm = a.mov_r64_r64(state.asm, "rdx", "rax")
+  state.asm = a.mov_rax_rip_qword(state.asm, "gc_pause_total_ns")
+  state.asm = a.add_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.mov_rip_qword_rax(state.asm, "gc_pause_total_ns")
+  state.asm = a.mov_rax_rip_qword(state.asm, "gc_pause_max_ns")
+  state.asm = a.cmp_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.jcc(state.asm, "ae", "gc_pause_record_done")
+  state.asm = a.mov_r64_r64(state.asm, "rax", "rdx")
+  state.asm = a.mov_rip_qword_rax(state.asm, "gc_pause_max_ns")
+  state.asm = a.mark(state.asm, "gc_pause_record_done")
+  return state
 end function
 
 /// Emit init in the managed-memory runtime.
@@ -250,6 +325,9 @@ function ensure_gc_data(state)
     value = 0
     if stat_labels[i] == "gc_adaptive" and configured_limit == 0 and _heap_cfg_get_any(state, "gc_disable_periodic") != true then value = 1 end if
     db = _ensure_data_u64(db, stat_labels[i], value)
+  end for
+  for each label in ["gc_pause_started", "gc_pause_clock_value", "gc_pause_frequency"]
+    db = _ensure_data_u64(db, label, 0)
   end for
   db = _ensure_data_u64(db, "gc_free_miss_size", 0)
 
@@ -648,6 +726,21 @@ function emit_alloc_function(state)
     state.used_helpers = _append_unique(state.used_helpers, "fn_gc_free_push")
   end if
   state.asm = a.mark(state.asm, "fn_alloc")
+  if _uses_gc_stats(state) then
+    // Public requests include bump/TLAB hits but exclude internal refills.
+    state.asm = a.lea_r64_membase_disp(state.asm, "r10", "rcx", 15)
+    state.asm = a.and_r64_imm(state.asm, "r10", -8)
+    state.asm = a.lea_rax_rip(state.asm, "gc_object_requests")
+    if threaded_heap then state.asm = a.emit8(state.asm, 240) end if
+    state.asm = a.emit8(state.asm, 72)
+    state.asm = a.emit8(state.asm, 255)
+    state.asm = a.emit8(state.asm, 0)
+    state.asm = a.lea_rax_rip(state.asm, "gc_object_requested_bytes")
+    if threaded_heap then state.asm = a.emit8(state.asm, 240) end if
+    state.asm = a.emit8(state.asm, 76)
+    state.asm = a.emit8(state.asm, 1)
+    state.asm = a.emit8(state.asm, 16)
+  end if
   // Single-threaded targets do not initialize MiniLang's GS context slot.
   // Avoid interpreting Windows' arbitrary TEB user pointer as a TLAB context.
   if threaded_heap == false then
@@ -1548,6 +1641,15 @@ function emit_gc_collect_function(state)
   end if
   threaded_gc = state.native_threads_possible
   concurrent_gc = _heap_cfg_get_bool(state, "gc_concurrent", false)
+  measure_pause = _uses_gc_stats(state) and not concurrent_gc and (state.target == "linux-x64" or state.target == "windows-x64")
+  if measure_pause and not state.is_elf_target then
+    for each item in state.imports
+      if item.key == "kernel32.dll" then
+        item.values = _append_unique(item.values, "QueryPerformanceCounter")
+        item.values = _append_unique(item.values, "QueryPerformanceFrequency")
+      end if
+    end for
+  end if
   collector_label = "fn_gc_collect"
   sweep_frontier_label = "heap_ptr"
   free_head_label = "gc_free_head"
@@ -1584,6 +1686,10 @@ function emit_gc_collect_function(state)
     state.asm = a.call(state.asm, "fn_heap_enter")
     if concurrent_gc then state = emit_gc_concurrent_pause_begin(state)
     else state.asm = a.call(state.asm, "fn_gc_world_stop") end if
+  end if
+  if measure_pause then
+    state = emit_gc_pause_clock(state, "gc_pause_begin_clock")
+    state.asm = a.mov_rip_qword_rax(state.asm, "gc_pause_started")
   end if
 
   lid = state.label_id
@@ -2635,6 +2741,7 @@ function emit_gc_collect_function(state)
   state.asm = a.mov_rip_qword_rax(state.asm, "gc_young_bytes_limit")
   state.asm = a.mark(state.asm, L_MARK_DONE + "_adaptive_done")
 
+  if measure_pause then state = emit_gc_pause_finish(state) end if
   if concurrent_gc then
     state.asm = a.mov_rax_rip_qword(state.asm, "gc_concurrent_completed")
     state.asm = a.inc_r64(state.asm, "rax")
@@ -2757,6 +2864,10 @@ function emit_gc_stat_function(state)
   state.asm = a.sar_r64_imm8(state.asm, "rcx", 3)
   labels = _gc_stat_labels(state)
   for index = 0 to len(labels) - 1
+    enabled = true
+    if index >= 16 and index <= 21 and not _heap_cfg_get_bool(state, "gc_concurrent", false) then enabled = false end if
+    if index >= 24 and (_heap_cfg_get_bool(state, "gc_concurrent", false) or (state.target != "linux-x64" and state.target != "windows-x64")) then enabled = false end if
+    if enabled then
     next_label = "gc_stat_next_" + lid + "_" + index
     state.asm = a.cmp_r64_imm(state.asm, "rcx", index)
     state.asm = a.jcc(state.asm, "ne", next_label)
@@ -2765,6 +2876,7 @@ function emit_gc_stat_function(state)
     state.asm = a.or_rax_imm8(state.asm, 1)
     state.asm = a.jmp(state.asm, done)
     state.asm = a.mark(state.asm, next_label)
+    end if
   end for
   state.asm = a.mark(state.asm, invalid)
   state.asm = a.mov_rax_imm64(state.asm, t.enc_void())
@@ -2776,6 +2888,8 @@ end function
 /// Reports whether application code references diagnostic counters.
 /// @internal
 function _uses_gc_stats(state)
+  requested = _heap_cfg_get_any(state, "gc_stats_requested")
+  if typeof(requested) == "bool" then return requested end if
   // Direct calls and first-class builtin addresses precede the support tail.
   tracked = a.get_tracked_helpers(state.asm)
   for each helpers in [state.used_helpers, tracked]

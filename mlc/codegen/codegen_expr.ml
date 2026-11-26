@@ -1228,7 +1228,8 @@ function _try_const_bin(op, lv, rv)
 
   if op == "/" then
     if _is_number_no_bool(lv) and _is_number_no_bool(rv) then
-      if rv == 0 then return ConstEvalResult(false, 0) end if
+      // Zero and unordered divisors keep the runtime void-producing path.
+      if rv == 0 or rv != rv then return ConstEvalResult(false, 0) end if
       return ConstEvalResult(true, lv / rv)
     end if
     return ConstEvalResult(false, 0)
@@ -4463,21 +4464,23 @@ function _float_tree_plan(state, expr, depth)
 end function
 
 /// Keep an intermediate raw only if normal materialization would remain float.
-/// The unordered/equal normalizer branch includes NaN and exact integers; both
-/// restart the original pure expression before an int result could lose bits.
+/// Exact integers restart the original pure expression before bits are lost.
+/// Unordered results remain floats, just as they do in the scalar normalizer.
 /// @internal
 function _emit_float_tree_normalize(state, l_slow)
   lid = _next_lid(state)
+  l_float = "float_tree_float_" + lid
   state.asm = a.mark(state.asm, "float_tree_normalize_" + lid)
   state.asm = a.cvttsd2si_r64_xmm(state.asm, "rax", "xmm0")
   state.asm = a.cvtsi2sd_xmm_r64(state.asm, "xmm1", "rax")
   state.asm = a.ucomisd_xmm_xmm(state.asm, "xmm0", "xmm1")
+  state.asm = a.jcc(state.asm, "p", l_float)
   state.asm = a.jcc(state.asm, "e", l_slow)
+  state.asm = a.mark(state.asm, l_float)
   // Retain both f32 conversions and their floating-point status effects.
-  // The old final UCOMISD only produced dead EFLAGS: NaNs already leave through
-  // the unordered/equal branch above, and any denormal XMM0 already raised DE
-  // there. Widening a non-NaN f32 produces zero, a normal double or infinity,
-  // so comparing XMM0 with that result cannot add a new MXCSR exception flag.
+  // The final comparison only produced dead EFLAGS. The first comparison
+  // already reports NaN and any denormal XMM0; widening f32 to f64 cannot
+  // introduce a double denormal or another floating-point exception flag.
   state.asm = a.cvtsd2ss_xmm_xmm(state.asm, "xmm2", "xmm0")
   state.asm = a.cvtss2sd_xmm_xmm(state.asm, "xmm3", "xmm2")
   return state
