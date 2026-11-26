@@ -1,10 +1,9 @@
 <#
-Build and exercise mlfmt against the complete modern MiniLang syntax surface.
-
-The regression covers canonical output, byte-idempotence, unchanged generated
-Windows code, recursive directory mode, native Linux execution and formatted
-program execution. It is intentionally host-side because the formatter is a
-standalone compiler output rather than a library linked into runtests.ml.
+Build and exercise mlfmt with the self-hosted Windows compiler.
+Checks exact golden source (including literal CRLF bytes), idempotence, runtime
+output, PE/ELF image parity and recursive directory mode. Linux execution is
+checked through WSL when installed. For a native Linux host use:
+  python3 tests/check_formatter.py --compiler /path/to/mlc-native
 #>
 param(
   [Parameter(Mandatory = $true)]
@@ -14,9 +13,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
-$ScriptDir = Split-Path -Parent $PSCommandPath
-$Root = Split-Path -Parent $ScriptDir
+$Root = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $Compiler = [IO.Path]::GetFullPath($Compiler)
 $ownsArtifacts = [string]::IsNullOrWhiteSpace($ArtifactsDir)
 if ($ownsArtifacts) {
@@ -24,118 +21,155 @@ if ($ownsArtifacts) {
 }
 $ArtifactsDir = [IO.Path]::GetFullPath($ArtifactsDir)
 New-Item -ItemType Directory -Force -Path $ArtifactsDir | Out-Null
+$utf8 = [Text.UTF8Encoding]::new($false)
+$hasWsl = $null -ne (Get-Command wsl.exe -ErrorAction SilentlyContinue)
 
 function Invoke-Checked {
   param([string]$Name, [string]$FilePath, [string[]]$Arguments)
-  & $FilePath @Arguments
-  if ($LASTEXITCODE -ne 0) {
-    throw "$Name failed with exit code $LASTEXITCODE"
+  & $FilePath @Arguments | Out-Host
+  if ($LASTEXITCODE -ne 0) { throw "$Name failed with exit code $LASTEXITCODE" }
+}
+
+function Assert-Bytes {
+  param([string]$Name, [byte[]]$Actual, [byte[]]$Expected)
+  if (-not [Linq.Enumerable]::SequenceEqual([byte[]]$Actual, [byte[]]$Expected)) {
+    throw "$Name differs (actual $($Actual.Length) bytes, expected $($Expected.Length) bytes)"
   }
 }
 
-function Normalize-Text {
-  param([string]$Value)
-  return $Value.Replace("`r`n", "`n").Replace("`r", "`n")
+function Read-Fixture {
+  param([string]$Name)
+  # Ignore Git checkout EOL conversion; the CRLF test constructs literal bytes explicitly.
+  return ([IO.File]::ReadAllText((Join-Path $Root "tests\$Name"))).Replace("`r`n", "`n")
 }
 
 function Convert-ToWslPath {
   param([string]$Path)
   $value = @(& wsl.exe wslpath -a -u ([IO.Path]::GetFullPath($Path).Replace('\', '/')) 2>&1)
-  if ($LASTEXITCODE -ne 0 -or $value.Count -eq 0) {
-    throw "wslpath failed for $Path"
-  }
+  if ($LASTEXITCODE -ne 0 -or $value.Count -eq 0) { throw "wslpath failed for $Path" }
   return ("" + $value[0]).Trim()
+}
+
+function Build-Image {
+  param([string]$Source, [string]$Image, [string]$Target)
+  Invoke-Checked "$Target build of $Source" $Compiler @($Source, $Image, "-I", $Root, "--target", $Target)
+  $bytes = [IO.File]::ReadAllBytes($Image)
+  $magic = if ($Target -eq "windows-x64") { [byte[]]@(0x4d, 0x5a) } else { [byte[]]@(0x7f, 0x45, 0x4c, 0x46) }
+  Assert-Bytes "$Image executable magic" $bytes[0..($magic.Length - 1)] $magic
+}
+
+function Invoke-Program {
+  param([string]$Target, [string]$Image)
+  if ($Target -eq "windows-x64") {
+    $output = @(& $Image 2>&1) -join "`n"
+  } else {
+    $linuxPath = Convert-ToWslPath $Image
+    Invoke-Checked "mark Linux executable" "wsl.exe" @("chmod", "+x", $linuxPath)
+    $output = @(& wsl.exe timeout 240s $linuxPath 2>&1) -join "`n"
+  }
+  if ($LASTEXITCODE -ne 0) { throw "$Target program failed: $Image`n$output" }
+  return $output
+}
+
+function Invoke-Formatter {
+  param([string]$Target, [string]$Source, [string[]]$Options)
+  if ($Target -eq "windows-x64") {
+    Invoke-Checked "Windows formatter" $formatterExe (@($Source) + $Options)
+  } else {
+    $sourceWsl = Convert-ToWslPath $Source
+    Invoke-Checked "Linux formatter" "wsl.exe" (@("timeout", "240s", $formatterWsl, $sourceWsl) + $Options)
+  }
 }
 
 try {
   $formatterSource = Join-Path $Root "tools\mlfmt.ml"
-  $inputFixture = Join-Path $Root "tests\formatter_modern_input.ml"
-  $expectedFixture = Join-Path $Root "tests\formatter_modern_expected.ml"
   $formatterExe = Join-Path $ArtifactsDir "mlfmt.exe"
-  $source = Join-Path $ArtifactsDir "formatter_modern.ml"
-  $beforeExe = Join-Path $ArtifactsDir "formatter_before.exe"
-  $afterExe = Join-Path $ArtifactsDir "formatter_after.exe"
-  $marker = "[OK] formatter modern syntax"
-
-  Invoke-Checked "Windows formatter build" $Compiler @($formatterSource, $formatterExe, "-I", $Root)
-  Copy-Item -LiteralPath $inputFixture -Destination $source -Force
-  Invoke-Checked "unformatted fixture build" $Compiler @($source, $beforeExe, "-I", $Root)
-  $beforeOutput = @(& $beforeExe 2>&1) -join "`n"
-  if ($LASTEXITCODE -ne 0 -or -not $beforeOutput.Contains($marker)) {
-    throw "unformatted fixture failed at runtime"
-  }
-
-  Invoke-Checked "Windows formatter execution" $formatterExe @($source, "--inplace")
-  $expected = Normalize-Text ([IO.File]::ReadAllText($expectedFixture))
-  $actual = Normalize-Text ([IO.File]::ReadAllText($source))
-  if ($actual -cne $expected) { throw "formatted source differs from formatter_modern_expected.ml" }
-  foreach ($required in @("=>", "?.", "??", "///", "/**", "lazy iterator function", "async function", "synchronized(guard)", "end match")) {
-    if (-not $actual.Contains($required)) { throw "formatted source lost required syntax: $required" }
-  }
-
-  $firstPass = [IO.File]::ReadAllBytes($source)
-  Invoke-Checked "formatter idempotence pass" $formatterExe @($source, "--inplace")
-  $secondPass = [IO.File]::ReadAllBytes($source)
-  if (-not [Linq.Enumerable]::SequenceEqual([byte[]]$firstPass, [byte[]]$secondPass)) {
-    throw "formatter is not byte-idempotent"
-  }
-
-  Invoke-Checked "formatted fixture build" $Compiler @($source, $afterExe, "-I", $Root)
-  $afterOutput = @(& $afterExe 2>&1) -join "`n"
-  if ($LASTEXITCODE -ne 0 -or -not $afterOutput.Contains($marker)) {
-    throw "formatted fixture failed at runtime"
-  }
-  $beforeHash = (Get-FileHash -LiteralPath $beforeExe -Algorithm SHA256).Hash
-  $afterHash = (Get-FileHash -LiteralPath $afterExe -Algorithm SHA256).Hash
-  if ($beforeHash -cne $afterHash) { throw "formatting changed the generated Windows executable" }
-
-  $treeRoot = Join-Path $ArtifactsDir "tree"
-  $treeDir = Join-Path $treeRoot "nested"
-  $treeSource = Join-Path $treeDir "tree.ml"
-  New-Item -ItemType Directory -Force -Path $treeDir | Out-Null
-  [IO.File]::WriteAllText(
-    $treeSource,
-    "function main(args)`nif true then`nprint `"tree`"`nend if`nreturn 0`nend function`n",
-    [Text.UTF8Encoding]::new($false))
-  Invoke-Checked "recursive Windows formatter execution" $formatterExe @($treeRoot)
-  $treeExpected = "function main(args)`n  if true then`n    print `"tree`"`n  end if`n  return 0`nend function`n"
-  if ((Normalize-Text ([IO.File]::ReadAllText($treeSource))) -cne $treeExpected) {
-    throw "recursive directory formatting produced unexpected output"
-  }
-
   $linuxFormatter = Join-Path $ArtifactsDir "mlfmt-linux"
-  Invoke-Checked "Linux formatter build" $Compiler @($formatterSource, $linuxFormatter, "-I", $Root, "--target", "linux-x64")
-  $linuxMagic = [IO.File]::ReadAllBytes($linuxFormatter)
-  if ($linuxMagic.Length -lt 4 -or $linuxMagic[0] -ne 0x7f -or $linuxMagic[1] -ne 0x45 -or
-      $linuxMagic[2] -ne 0x4c -or $linuxMagic[3] -ne 0x46) {
-    throw "Linux formatter output is not ELF64"
-  }
-
-  if ($null -ne (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
-    $linuxSource = Join-Path $ArtifactsDir "formatter_modern_linux.ml"
-    $linuxProgram = Join-Path $ArtifactsDir "formatter_modern_linux"
-    Copy-Item -LiteralPath $inputFixture -Destination $linuxSource -Force
+  Build-Image $formatterSource $formatterExe "windows-x64"
+  Build-Image $formatterSource $linuxFormatter "linux-x64"
+  if ($hasWsl) {
     $formatterWsl = Convert-ToWslPath $linuxFormatter
-    $sourceWsl = Convert-ToWslPath $linuxSource
     Invoke-Checked "mark Linux formatter executable" "wsl.exe" @("chmod", "+x", $formatterWsl)
-    Invoke-Checked "Linux formatter execution" "wsl.exe" @("timeout", "120s", $formatterWsl, $sourceWsl, "--inplace")
-    if ((Normalize-Text ([IO.File]::ReadAllText($linuxSource))) -cne $expected) {
-      throw "Linux and Windows formatter output differs"
-    }
-    Invoke-Checked "Linux formatted fixture build" $Compiler @($linuxSource, $linuxProgram, "-I", $Root, "--target", "linux-x64")
-    $programWsl = Convert-ToWslPath $linuxProgram
-    Invoke-Checked "mark Linux fixture executable" "wsl.exe" @("chmod", "+x", $programWsl)
-    $linuxOutput = @(& wsl.exe timeout 120s $programWsl 2>&1) -join "`n"
-    if ($LASTEXITCODE -ne 0 -or -not $linuxOutput.Contains($marker)) {
-      throw "Linux formatted fixture failed at runtime"
-    }
+  } else {
+    Write-Host "[NOTE] Linux/WSL runtime unavailable; still checking ELF builds and before/after image bytes."
   }
 
-  Write-Host "[OK] formatter modern syntax, idempotence and Windows/Linux parity"
+  $edges = Read-Fixture "formatter_edges_input.ml"
+  $edgesExpected = Read-Fixture "formatter_edges_expected.ml"
+  $start = $edges.IndexOf('s = "hello')
+  $end = $edges.IndexOf('if len(s)', $start)
+  $literalRegion = $edges.Substring($start, $end - $start)
+  $crlfRegion = $literalRegion.Replace("`n", "`r`n")
+  $blankInput = "function main(args)`n`n`n`ns = `"hello`n`n`n`nworld`"`nif len(s)!=14 then return 1 end if`nprint `"[OK] formatter blank lines`"`nreturn 0`nend function`n"
+  $blankExpected = "function main(args)`ns = `"hello`n`n`n`nworld`"`n  if len(s) != 14 then return 1 end if`n  print `"[OK] formatter blank lines`"`n  return 0`nend function`n"
+  $cases = @(
+    @{ Name = "modern"; Input = (Read-Fixture "formatter_modern_input.ml"); Expected = (Read-Fixture "formatter_modern_expected.ml"); Marker = "[OK] formatter modern syntax"; Options = @() },
+    @{ Name = "edges"; Input = $edges; Expected = $edgesExpected; Marker = "[OK] formatter lexical edges"; Options = @() },
+    @{ Name = "literal-crlf"; Input = $edges.Replace($literalRegion, $crlfRegion); Expected = $edgesExpected.Replace($literalRegion, $crlfRegion); Marker = "[OK] formatter lexical edges"; Options = @() },
+    @{ Name = "max-blank-zero"; Input = $blankInput; Expected = $blankExpected; Marker = "[OK] formatter blank lines"; Options = @("--max-blank", "0") }
+  )
+  foreach ($case in $cases) {
+    # Removing layout-only blank lines legitimately changes embedded diagnostic line numbers.
+    $preserveLines = ($case.Input.Split("`n").Length -eq $case.Expected.Split("`n").Length)
+    $caseDir = Join-Path $ArtifactsDir $case.Name
+    New-Item -ItemType Directory -Force -Path $caseDir | Out-Null
+    $source = Join-Path $caseDir "fixture.ml"
+    [IO.File]::WriteAllBytes($source, $utf8.GetBytes($case.Input))
+    $expectedBytes = $utf8.GetBytes($case.Expected)
+    $beforeHashes = @{}
+    $beforeOutputs = @{}
+    foreach ($target in @("windows-x64", "linux-x64")) {
+      $before = Join-Path $caseDir "before-$target.exe"
+      Build-Image $source $before $target
+      $beforeHashes[$target] = (Get-FileHash -LiteralPath $before -Algorithm SHA256).Hash
+      if ($target -eq "windows-x64" -or $hasWsl) {
+        $beforeOutputs[$target] = Invoke-Program $target $before
+        if (-not $beforeOutputs[$target].Contains($case.Marker)) { throw "$($case.Name): $target success marker missing" }
+      }
+    }
+    $options = @("--inplace") + $case.Options
+    Invoke-Formatter "windows-x64" $source $options
+    Assert-Bytes "$($case.Name) golden source" ([IO.File]::ReadAllBytes($source)) $expectedBytes
+    Invoke-Formatter "windows-x64" $source $options
+    Assert-Bytes "$($case.Name) idempotence" ([IO.File]::ReadAllBytes($source)) $expectedBytes
+    foreach ($target in @("windows-x64", "linux-x64")) {
+      $after = Join-Path $caseDir "after-$target.exe"
+      Build-Image $source $after $target
+      if ($preserveLines -and (Get-FileHash -LiteralPath $after -Algorithm SHA256).Hash -cne $beforeHashes[$target]) {
+        throw "$($case.Name): formatting changed the $target executable"
+      }
+      if ($target -eq "windows-x64" -or $hasWsl) {
+        if ((Invoke-Program $target $after) -cne $beforeOutputs[$target]) { throw "$($case.Name): $target runtime output changed" }
+      }
+    }
+    if ($hasWsl) {
+      $alternate = Join-Path $caseDir "alternate.ml"
+      [IO.File]::WriteAllBytes($alternate, $utf8.GetBytes($case.Input))
+      Invoke-Formatter "linux-x64" $alternate $options
+      Assert-Bytes "$($case.Name) Linux formatter parity" ([IO.File]::ReadAllBytes($alternate)) $expectedBytes
+      Invoke-Formatter "linux-x64" $alternate $options
+      Assert-Bytes "$($case.Name) Linux idempotence" ([IO.File]::ReadAllBytes($alternate)) $expectedBytes
+    }
+    $imageCheck = if ($preserveLines) { "image parity" } else { "builds (source line numbers changed)" }
+    Write-Host "[OK] $($case.Name): exact source, idempotence, runtime output and PE/ELF $imageCheck"
+  }
+
+  foreach ($target in @("windows-x64", "linux-x64")) {
+    if ($target -eq "linux-x64" -and -not $hasWsl) { continue }
+    $treeRoot = Join-Path $ArtifactsDir "tree-$target"
+    $treeDir = Join-Path $treeRoot "nested"
+    New-Item -ItemType Directory -Force -Path $treeDir | Out-Null
+    $treeSource = Join-Path $treeDir "tree.ml"
+    [IO.File]::WriteAllText($treeSource, "function main(args)`nif true then`nprint `"tree`"`nend if`nreturn 0`nend function`n", $utf8)
+    Invoke-Formatter $target $treeRoot @()
+    $treeExpected = "function main(args)`n  if true then`n    print `"tree`"`n  end if`n  return 0`nend function`n"
+    Assert-Bytes "$target recursive directory formatting" ([IO.File]::ReadAllBytes($treeSource)) ($utf8.GetBytes($treeExpected))
+    Write-Host "[OK] ${target}: recursive directory formatting"
+  }
   exit 0
 }
 catch {
-  Write-Error $_
+  Write-Error $_ -ErrorAction Continue
   exit 1
 }
 finally {
