@@ -104,6 +104,7 @@ try {
   $blankExpected = "function main(args)`ns = `"hello`n`n`n`nworld`"`n  if len(s) != 14 then return 1 end if`n  print `"[OK] formatter blank lines`"`n  return 0`nend function`n"
   $cases = @(
     @{ Name = "modern"; Input = (Read-Fixture "formatter_modern_input.ml"); Expected = (Read-Fixture "formatter_modern_expected.ml"); Marker = "[OK] formatter modern syntax"; Options = @() },
+    @{ Name = "spacing"; Input = (Read-Fixture "formatter_spacing_input.ml"); Expected = (Read-Fixture "formatter_spacing_expected.ml"); Marker = "[OK] formatter spacing"; Options = @() },
     @{ Name = "edges"; Input = $edges; Expected = $edgesExpected; Marker = "[OK] formatter lexical edges"; Options = @() },
     @{ Name = "literal-crlf"; Input = $edges.Replace($literalRegion, $crlfRegion); Expected = $edgesExpected.Replace($literalRegion, $crlfRegion); Marker = "[OK] formatter lexical edges"; Options = @() },
     @{ Name = "max-blank-zero"; Input = $blankInput; Expected = $blankExpected; Marker = "[OK] formatter blank lines"; Options = @("--max-blank", "0") }
