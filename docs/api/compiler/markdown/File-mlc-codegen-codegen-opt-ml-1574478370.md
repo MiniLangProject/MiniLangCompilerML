@@ -96,7 +96,7 @@ Resolve a scalar field only for its original lexical binding, not inline shadows
 | `state` | `dynamic` | — | Current lexical bindings and scalar-replacement plans. |
 | `target` | `dynamic` | — | Receiver expression of the field access. |
 | `field` | `dynamic` | — | Field name to resolve to a rooted stack slot. |
-| `with_contract` | `dynamic` | `false` | Whether the slot must retain the field's declared contract. |
+| `with_contract` | `dynamic` | <code>false</code> | Whether the slot must retain the field's declared contract. |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_opt.ml#L206)

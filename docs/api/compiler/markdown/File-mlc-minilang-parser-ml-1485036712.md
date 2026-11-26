@@ -3697,8 +3697,8 @@ Resolve lexical writes before codegen makes copies for inlining.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `fn` | `dynamic` | — |  |
-| `inherited` | `dynamic` | `[]` |  |
-| `consume_declarations` | `dynamic` | `false` |  |
+| `inherited` | `dynamic` | <code>&#91;&#93;</code> |  |
+| `consume_declarations` | `dynamic` | <code>false</code> |  |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6154)
@@ -3808,7 +3808,7 @@ Keep an established type contract on a write before its store.
 | --- | --- | --- | --- |
 | `st` | `dynamic` | — |  |
 | `contract` | `dynamic` | — |  |
-| `qualify` | `dynamic` | `false` |  |
+| `qualify` | `dynamic` | <code>false</code> |  |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/minilang_parser.ml#L6040)

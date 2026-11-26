@@ -1034,7 +1034,7 @@ Collect the statement facts shared by integer inference, value-type flow and loc
 | --- | --- | --- | --- |
 | `fn_node` | `dynamic` | — |  |
 | `analysis_scratch` | `dynamic` | — |  |
-| `extended` | `dynamic` | `false` |  |
+| `extended` | `dynamic` | <code>false</code> |  |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L4082)
@@ -2286,7 +2286,7 @@ Lower infer known value types statement behavior to native x64.
 | `fn_node` | `dynamic` | — |  |
 | `flow_inputs` | `dynamic` | — |  |
 | `analysis_scratch` | `dynamic` | — |  |
-| `extended` | `dynamic` | `false` |  |
+| `extended` | `dynamic` | <code>false</code> |  |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L4759)
@@ -4302,7 +4302,7 @@ Lower typeflow expr type statement behavior to native x64.
 | `state` | `dynamic` | — |  |
 | `ex` | `dynamic` | — |  |
 | `known` | `dynamic` | — |  |
-| `extended` | `dynamic` | `false` |  |
+| `extended` | `dynamic` | <code>false</code> |  |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L4412)
@@ -4336,7 +4336,7 @@ Lower typeflow merge statement behavior to native x64.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `inferred` | `dynamic` | — |  |
-| `extended` | `dynamic` | `false` |  |
+| `extended` | `dynamic` | <code>false</code> |  |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L4568)
@@ -4411,7 +4411,7 @@ Lower typeflow scan read order statement behavior to native x64.
 | `initialized` | `dynamic` | — |  |
 | `read_before` | `dynamic` | — |  |
 | `direct` | `dynamic` | — |  |
-| `extended` | `dynamic` | `false` |  |
+| `extended` | `dynamic` | <code>false</code> |  |
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_stmt.ml#L4628)

@@ -32,7 +32,7 @@ Emit emit build args linux in the native runtime.
 | `state` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3333)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3427)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-force-xmm0-to-float-value-function-emit-force-xmm0-to-float-value-state-mlc-codegen-codegen-runtime-ml-26923332"></a>
 ### _emit_force_xmm0_to_float_value
@@ -214,7 +214,7 @@ Emit emit build args function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3421)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3515)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-copyarray-function-function-emit-builtin-copyarray-function-state-mlc-codegen-codegen-runtime-ml-1370754338"></a>
 ### emit_builtin_copyArray_function
@@ -230,7 +230,7 @@ Emit the runtime helper for copying between checked array buffers.
 | `state` | `dynamic` | — | Current code-generation state and x64 assembler stream. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3770)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3864)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-copybytes-function-function-emit-builtin-copybytes-function-state-mlc-codegen-codegen-runtime-ml-367431250"></a>
 ### emit_builtin_copyBytes_function
@@ -246,7 +246,7 @@ Emit emit builtin copy bytes function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3593)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3687)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-copystringbytes-function-function-emit-builtin-copystringbytes-function-state-mlc-codegen-codegen-runtime-ml-1181575084"></a>
 ### emit_builtin_copyStringBytes_function
@@ -278,7 +278,7 @@ Emit emit builtin fill bytes function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3901)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3995)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-collect-async-function-function-emit-builtin-gc-collect-async-function-state-mlc-codegen-codegen-runtime-ml-1097920536"></a>
 ### emit_builtin_gc_collect_async_function
@@ -294,7 +294,7 @@ Emit first-class gc_collect_async, falling back to synchronous collection by def
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4049)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4143)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-collect-function-function-emit-builtin-gc-collect-function-state-mlc-codegen-codegen-runtime-ml-1836857400"></a>
 ### emit_builtin_gc_collect_function
@@ -310,7 +310,7 @@ Emit first-class gc_collect with aligned shadow space for native callbacks.
 | `state` | `dynamic` | — | Backend state receiving the synchronous builtin wrapper. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4064)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4158)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-gc-set-limit-function-function-emit-builtin-gc-set-limit-function-state-mlc-codegen-codegen-runtime-ml-1019220532"></a>
 ### emit_builtin_gc_set_limit_function
@@ -326,7 +326,7 @@ Emit emit builtin gc set limit function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4079)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4173)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-input-function-function-emit-builtin-input-function-state-mlc-codegen-codegen-runtime-ml-1368324302"></a>
 ### emit_builtin_input_function
@@ -342,7 +342,7 @@ Emit emit builtin input function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4023)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4117)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-builtin-len-function-function-emit-builtin-len-function-state-mlc-codegen-codegen-runtime-ml-919784296"></a>
 ### emit_builtin_len_function
@@ -358,7 +358,7 @@ Emit emit builtin len function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3982)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4076)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-bytes-compare-function-function-emit-bytes-compare-function-state-mlc-codegen-codegen-runtime-ml-170599544"></a>
 ### emit_bytes_compare_function
@@ -486,7 +486,7 @@ Emit emit call stats function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4145)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L4239)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-copy-bytes-function-function-emit-copy-bytes-function-state-mlc-codegen-codegen-runtime-ml-710271692"></a>
 ### emit_copy_bytes_function
@@ -566,7 +566,7 @@ Fill bounded ranges with SSE2 through 256 bytes, then the established REP STOSB 
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2096)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2190)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-fill-qwords-function-function-emit-fill-qwords-function-state-mlc-codegen-codegen-runtime-ml-1398510114"></a>
 ### emit_fill_qwords_function
@@ -582,7 +582,7 @@ Emit emit fill qwords function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2201)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2295)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-find-byte-forward-function-function-emit-find-byte-forward-function-state-mlc-codegen-codegen-runtime-ml-948367850"></a>
 ### emit_find_byte_forward_function
@@ -630,7 +630,7 @@ Emit emit init argvw function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3298)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3392)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-int-to-dec-function-function-emit-int-to-dec-function-state-mlc-codegen-codegen-runtime-ml-1742139360"></a>
 ### emit_int_to_dec_function
@@ -646,7 +646,7 @@ Emit emit int to dec function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2248)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2342)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-make-error-const-function-function-emit-make-error-const-function-state-mlc-codegen-codegen-runtime-ml-2096214464"></a>
 ### emit_make_error_const_function
@@ -711,6 +711,22 @@ Emit emit mem lastindexof function in the native runtime.
 
 
 [View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L803)
+
+<a id="function-function-mlc-codegen-codegen-runtime-emit-move-bytes-function-function-emit-move-bytes-function-state-mlc-codegen-codegen-runtime-ml-435740628"></a>
+### emit_move_bytes_function
+
+```ml
+function emit_move_bytes_function(state)
+```
+
+Move RCX/RDX/R8D bytes safely across overlapping source and destination. Disjoint intervals retain the optimized copy helper. Directional qword copies keep aligned array cells intact while concurrent GC scans their tagged values.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `state` | `dynamic` | — | Value supplied for `state`. |
+
+
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2098)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-native-crc32-function-function-emit-native-crc32-function-state-mlc-codegen-codegen-runtime-ml-296402724"></a>
 ### emit_native_crc32_function
@@ -854,7 +870,7 @@ Emit emit string eq function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2885)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2979)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-string-hash-function-function-emit-string-hash-function-state-mlc-codegen-codegen-runtime-ml-325949198"></a>
 ### emit_string_hash_function
@@ -886,7 +902,7 @@ Emit emit strlen function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2864)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2958)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-tofloat-function-function-emit-tofloat-function-state-mlc-codegen-codegen-runtime-ml-1619213004"></a>
 ### emit_toFloat_function
@@ -902,7 +918,7 @@ Emit emit to float function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2504)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2598)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-tonumber-function-function-emit-tonumber-function-state-mlc-codegen-codegen-runtime-ml-612955968"></a>
 ### emit_toNumber_function
@@ -918,7 +934,7 @@ Emit emit to number function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2309)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2403)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-typed-array-element-function-function-emit-typed-array-element-function-state-mlc-codegen-codegen-runtime-ml-1819255596"></a>
 ### emit_typed_array_element_function
@@ -934,7 +950,7 @@ Copy tagged array cells in one native bulk operation. Bounds and type handling d
 | `state` | `dynamic` | — | Value supplied for `state`. Check R10 against the contract byte in EDX, preserving store inputs. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3701)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3795)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-typename-function-function-emit-typename-function-state-mlc-codegen-codegen-runtime-ml-604461264"></a>
 ### emit_typeName_function
@@ -950,7 +966,7 @@ Emit emit type name function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2665)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2759)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-typeof-function-function-emit-typeof-function-state-mlc-codegen-codegen-runtime-ml-884885964"></a>
 ### emit_typeof_function
@@ -966,7 +982,7 @@ Emit emit typeof function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2532)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2626)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-function-emit-unhandled-error-exit-function-state-mlc-codegen-codegen-runtime-ml-856176908"></a>
 ### emit_unhandled_error_exit_function
@@ -982,7 +998,7 @@ Emit emit unhandled error exit function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3142)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3236)
 
 <a id="nested_function-nested-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-local-emit-writefile-function-emit-writefile-state2-lbl-ln-mlc-codegen-codegen-runtime-ml-54962409"></a>
 ### _emit_writefile
@@ -1000,7 +1016,7 @@ Emit native x64 code for writefile.
 | `ln` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3159)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3253)
 
 <a id="nested_function-nested-function-mlc-codegen-codegen-runtime-emit-unhandled-error-exit-function-local-emit-writefile-ptr-len-function-emit-writefile-ptr-len-state2-mlc-codegen-codegen-runtime-ml-338525475"></a>
 ### _emit_writefile_ptr_len
@@ -1016,7 +1032,7 @@ Emit native x64 code for writefile ptr len.
 | `state2` | `dynamic` | — |  |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3148)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3242)
 
 <a id="function-function-mlc-codegen-codegen-runtime-emit-value-eq-function-function-emit-value-eq-function-state-mlc-codegen-codegen-runtime-ml-183796344"></a>
 ### emit_value_eq_function
@@ -1032,4 +1048,4 @@ Emit emit value eq function in the native runtime.
 | `state` | `dynamic` | — | Value supplied for `state`. |
 
 
-[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L2924)
+[View source](https://github.com/MiniLangProject/MiniLangCompilerML/blob/main/mlc/codegen/codegen_runtime.ml#L3018)
