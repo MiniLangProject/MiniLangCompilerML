@@ -572,6 +572,7 @@ try {
     [pscustomobject]@{ Name = "complete allocation totals and GC work timing"; Source = "gc_allocation_totals.ml" },
     [pscustomobject]@{ Name = "atomic threaded allocation totals"; Source = "gc_allocation_totals_threads.ml" },
     [pscustomobject]@{ Name = "default-only first-class GC reference"; Source = "gc_stats_default_reference.ml" },
+    [pscustomobject]@{ Name = "default-only native thread factory"; Source = "thread_default_reference.ml" },
     [pscustomobject]@{ Name = "GC thread lifetime"; Source = "gc_thread_lifetime.ml" },
     [pscustomobject]@{ Name = "GC handoff lifetime"; Source = "gc_handoff_lifetime.ml" },
     [pscustomobject]@{ Name = "GC bitmap words"; Source = "gc_bitmap_words.ml" },

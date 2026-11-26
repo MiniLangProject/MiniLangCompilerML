@@ -10407,111 +10407,12 @@ function _build_module_init_recs(state, program)
   return [state, t.arr_chunk_finish(module_init_recs_b)]
 end function
 
-/// Lower expr uses native threads statement behavior to native x64.
+/// Detect explicit and first-class builtin references before helper hoisting.
 /// @internal
-function _expr_uses_native_threads(ex)
-  if t.ast_is_node(ex) == false then return false end if
-  nk = _coerce_name(t.ast_kind(ex))
-  if nk == "Var" or nk == "Member" then
-    nm = _coerce_name(t.ast_name(ex))
-    if nm == "Thread" or s.endsWith(nm, ".Thread") then return true end if
-  end if
-  if nk == "Member" then return _expr_uses_native_threads(try(ex.target)) end if
-  if nk == "Unary" then return _expr_uses_native_threads(t.ast_right(ex)) end if
-  if nk == "Bin" then
-    return _expr_uses_native_threads(t.ast_left(ex)) or _expr_uses_native_threads(t.ast_right(ex))
-  end if
-  if nk == "Index" then
-    return _expr_uses_native_threads(try(ex.target)) or _expr_uses_native_threads(try(ex.index))
-  end if
-  if nk == "Call" then
-    if _expr_uses_native_threads(_analysis_call_callee(ex)) then return true end if
-    args_nt = _analysis_call_args(ex)
-    if len(args_nt) > 0 then
-      for each arg_nt in args_nt
-        if _expr_uses_native_threads(arg_nt) then return true end if
-      end for
-    end if
-    return false
-  end if
-  values_nt = 0
-  if nk == "ArrayLit" then values_nt = try(ex.items) end if
-  if nk == "StructInit" then values_nt = try(ex.values) end if
-  if typeof(values_nt) == "array" and len(values_nt) > 0 then
-    for each value_nt in values_nt
-      if typeof(value_nt) == "array" and len(value_nt) >= 2 then
-        if _expr_uses_native_threads(value_nt[1]) then return true end if
-      else
-        if _expr_uses_native_threads(value_nt) then return true end if
-      end if
-    end for
-  end if
-  return false
-end function
-
-/// Lower stmts use native threads statement behavior to native x64.
-/// @internal
-function _stmts_use_native_threads(stmts)
-  if typeof(stmts) != "array" or len(stmts) <= 0 then return false end if
-  for each st_nt in stmts
-    if typeof(st_nt) != "struct" then continue end if
-    exprs_nt = [
-      try(st_nt.expr), try(st_nt.cond), try(st_nt.start), _analysis_for_end_expr(st_nt),
-      try(st_nt.step), try(st_nt.iterable), try(st_nt.obj),
-      try(st_nt.target), try(st_nt.index)
-    ]
-    for each expr_nt in exprs_nt
-      if _expr_uses_native_threads(expr_nt) then return true end if
-    end for
-
-    bodies_nt = [
-      try(st_nt.body), try(st_nt.then_body), try(st_nt.else_body),
-      try(st_nt.default_body), try(st_nt.methods)
-    ]
-    for each body_nt in bodies_nt
-      if _stmts_use_native_threads(body_nt) then return true end if
-    end for
-
-    elifs_nt = try(st_nt.elifs)
-    if typeof(elifs_nt) == "array" and len(elifs_nt) > 0 then
-      for each elif_nt in elifs_nt
-        if typeof(elif_nt) == "array" and len(elif_nt) >= 2 then
-          if _expr_uses_native_threads(elif_nt[0]) then return true end if
-          if _stmts_use_native_threads(elif_nt[1]) then return true end if
-        end if
-      end for
-    end if
-
-    cases_nt = try(st_nt.cases)
-    if typeof(cases_nt) == "array" and len(cases_nt) > 0 then
-      for each case_nt in cases_nt
-        if typeof(case_nt) != "struct" then continue end if
-        if _expr_uses_native_threads(try(case_nt.range_start)) then return true end if
-        if _expr_uses_native_threads(try(case_nt.range_end)) then return true end if
-        case_values_nt = try(case_nt.values)
-        if typeof(case_values_nt) == "array" and len(case_values_nt) > 0 then
-          for each case_value_nt in case_values_nt
-            if typeof(case_value_nt) == "array" and len(case_value_nt) >= 2 then
-              if _expr_uses_native_threads(case_value_nt[0]) then return true end if
-              if _expr_uses_native_threads(case_value_nt[1]) then return true end if
-            else
-              if _expr_uses_native_threads(case_value_nt) then return true end if
-            end if
-          end for
-        end if
-        if _stmts_use_native_threads(try(case_nt.body)) then return true end if
-      end for
-    end if
-  end for
-  return false
-end function
-
-/// Detect explicit and first-class diagnostic references, excluding builtin hoisting.
-/// @internal
-function _expr_uses_gc_stats(ex)
+function _expr_references_builtin(builtin_name, ex)
   if typeof(ex) == "array" then
     for each child in ex
-      if _expr_uses_gc_stats(child) then return true end if
+      if _expr_references_builtin(builtin_name, child) then return true end if
     end for
     return false
   end if
@@ -10519,26 +10420,26 @@ function _expr_uses_gc_stats(ex)
   nk = _coerce_name(t.ast_kind(ex))
   if nk == "Var" or nk == "Member" then
     nm = _coerce_name(t.ast_name(ex))
-    if nm == "gc_stat" or s.endsWith(nm, ".gc_stat") then return true end if
+    if nm == builtin_name or s.endsWith(nm, "." + builtin_name) then return true end if
   end if
-  if nk == "Member" or nk == "SafeMember" then return _expr_uses_gc_stats(try(ex.target)) end if
-  if nk == "TypeGuard" or nk == "IsType" then return _expr_uses_gc_stats(ex.expr) end if
-  if nk == "Coalesce" then return _expr_uses_gc_stats(ex.left) or _expr_uses_gc_stats(ex.right) end if
-  if nk == "AsmExpr" then return _expr_uses_gc_stats(ex.args) end if
-  if nk == "Lambda" then return _stmts_use_gc_stats(ex.body) or _expr_uses_gc_stats(ex.param_defaults) end if
-  if nk == "Unary" then return _expr_uses_gc_stats(t.ast_right(ex)) end if
+  if nk == "Member" or nk == "SafeMember" then return _expr_references_builtin(builtin_name, try(ex.target)) end if
+  if nk == "TypeGuard" or nk == "IsType" then return _expr_references_builtin(builtin_name, ex.expr) end if
+  if nk == "Coalesce" then return _expr_references_builtin(builtin_name, ex.left) or _expr_references_builtin(builtin_name, ex.right) end if
+  if nk == "AsmExpr" then return _expr_references_builtin(builtin_name, ex.args) end if
+  if nk == "Lambda" then return _stmts_reference_builtin(builtin_name, ex.body) or _expr_references_builtin(builtin_name, ex.param_defaults) end if
+  if nk == "Unary" then return _expr_references_builtin(builtin_name, t.ast_right(ex)) end if
   if nk == "Bin" then
-    return _expr_uses_gc_stats(t.ast_left(ex)) or _expr_uses_gc_stats(t.ast_right(ex))
+    return _expr_references_builtin(builtin_name, t.ast_left(ex)) or _expr_references_builtin(builtin_name, t.ast_right(ex))
   end if
   if nk == "Index" then
-    return _expr_uses_gc_stats(try(ex.target)) or _expr_uses_gc_stats(try(ex.index))
+    return _expr_references_builtin(builtin_name, try(ex.target)) or _expr_references_builtin(builtin_name, try(ex.index))
   end if
   if nk == "Call" then
-    if _expr_uses_gc_stats(_analysis_call_callee(ex)) then return true end if
+    if _expr_references_builtin(builtin_name, _analysis_call_callee(ex)) then return true end if
     args_nt = _analysis_call_args(ex)
     if len(args_nt) > 0 then
       for each arg_nt in args_nt
-        if _expr_uses_gc_stats(arg_nt) then return true end if
+        if _expr_references_builtin(builtin_name, arg_nt) then return true end if
       end for
     end if
     return false
@@ -10549,18 +10450,18 @@ function _expr_uses_gc_stats(ex)
   if typeof(values_nt) == "array" and len(values_nt) > 0 then
     for each value_nt in values_nt
       if typeof(value_nt) == "array" and len(value_nt) >= 2 then
-        if _expr_uses_gc_stats(value_nt[1]) then return true end if
+        if _expr_references_builtin(builtin_name, value_nt[1]) then return true end if
       else
-        if _expr_uses_gc_stats(value_nt) then return true end if
+        if _expr_references_builtin(builtin_name, value_nt) then return true end if
       end if
     end for
   end if
   return false
 end function
 
-/// Scan all statement/default-expression positions for diagnostic references.
+/// Scan all statement/default-expression positions for builtin references.
 /// @internal
-function _stmts_use_gc_stats(stmts)
+function _stmts_reference_builtin(builtin_name, stmts)
   if typeof(stmts) != "array" or len(stmts) <= 0 then return false end if
   for each st_nt in stmts
     if typeof(st_nt) != "struct" then continue end if
@@ -10571,7 +10472,7 @@ function _stmts_use_gc_stats(stmts)
       try(st_nt.param_defaults), try(st_nt.field_defaults), try(st_nt.values)
     ]
     for each expr_nt in exprs_nt
-      if _expr_uses_gc_stats(expr_nt) then return true end if
+      if _expr_references_builtin(builtin_name, expr_nt) then return true end if
     end for
 
     bodies_nt = [
@@ -10579,15 +10480,15 @@ function _stmts_use_gc_stats(stmts)
       try(st_nt.default_body), try(st_nt.methods), try(st_nt.cleanup)
     ]
     for each body_nt in bodies_nt
-      if _stmts_use_gc_stats(body_nt) then return true end if
+      if _stmts_reference_builtin(builtin_name, body_nt) then return true end if
     end for
 
     elifs_nt = try(st_nt.elifs)
     if typeof(elifs_nt) == "array" and len(elifs_nt) > 0 then
       for each elif_nt in elifs_nt
         if typeof(elif_nt) == "array" and len(elif_nt) >= 2 then
-          if _expr_uses_gc_stats(elif_nt[0]) then return true end if
-          if _stmts_use_gc_stats(elif_nt[1]) then return true end if
+          if _expr_references_builtin(builtin_name, elif_nt[0]) then return true end if
+          if _stmts_reference_builtin(builtin_name, elif_nt[1]) then return true end if
         end if
       end for
     end if
@@ -10596,26 +10497,39 @@ function _stmts_use_gc_stats(stmts)
     if typeof(cases_nt) == "array" and len(cases_nt) > 0 then
       for each case_nt in cases_nt
         if typeof(case_nt) != "struct" then continue end if
-        if _expr_uses_gc_stats(try(case_nt.range_start)) then return true end if
-        if _expr_uses_gc_stats(try(case_nt.range_end)) then return true end if
+        if _expr_references_builtin(builtin_name, try(case_nt.range_start)) then return true end if
+        if _expr_references_builtin(builtin_name, try(case_nt.range_end)) then return true end if
         case_values_nt = try(case_nt.values)
         if typeof(case_values_nt) == "array" and len(case_values_nt) > 0 then
           for each case_value_nt in case_values_nt
             if typeof(case_value_nt) == "array" and len(case_value_nt) >= 2 then
-              if _expr_uses_gc_stats(case_value_nt[0]) then return true end if
-              if _expr_uses_gc_stats(case_value_nt[1]) then return true end if
+              if _expr_references_builtin(builtin_name, case_value_nt[0]) then return true end if
+              if _expr_references_builtin(builtin_name, case_value_nt[1]) then return true end if
             else
-              if _expr_uses_gc_stats(case_value_nt) then return true end if
+              if _expr_references_builtin(builtin_name, case_value_nt) then return true end if
             end if
           end for
         end if
-        if _stmts_use_gc_stats(try(case_nt.body)) then return true end if
+        if _stmts_reference_builtin(builtin_name, try(case_nt.body)) then return true end if
       end for
     end if
   end for
   return false
 end function
 
+
+/// Determine whether the complete program can create native threads.
+/// Defaults, lock expressions and expression wrappers retain their references.
+/// @internal
+function _stmts_use_native_threads(stmts)
+  return _stmts_reference_builtin("Thread", stmts)
+end function
+
+/// Detect diagnostic references before builtin hoisting creates unused helpers.
+/// @internal
+function _stmts_use_gc_stats(stmts)
+  return _stmts_reference_builtin("gc_stat", stmts)
+end function
 
 /// Lower prepare program for objects statement behavior to native x64.
 /// @param state Value supplied for `state`.
